@@ -6,6 +6,8 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/domain/updates/updates.dart';
 import 'package:field_notes/features/settings/sections/about_section.dart';
+import 'package:field_notes/features/streak/streak.dart';
+import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/features/updates/ui/update_notes_surface.dart';
 import 'package:field_notes/features/updates/update_controller.dart';
 import 'package:field_notes/features/updates/update_providers.dart';
@@ -200,6 +202,8 @@ Future<void> _pumpNotes(
   await tester.pumpAndSettle();
 }
 
+DateTime _greetingClock() => DateTime(2026, 10, 26, 18);
+
 Future<void> _pumpGreeting(WidgetTester tester, A11yVariant variant) async {
   variant.useWindow(tester);
   await tester.pumpWidget(
@@ -207,6 +211,8 @@ Future<void> _pumpGreeting(WidgetTester tester, A11yVariant variant) async {
       variant,
       overrides: <Override>[
         ...shellOverrides(),
+        todayClockProvider.overrideWithValue(_greetingClock),
+        streakClockProvider.overrideWithValue(_greetingClock),
         appSettingsProvider.overrideWith(
           (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
         ),
