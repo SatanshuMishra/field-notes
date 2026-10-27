@@ -1,40 +1,22 @@
-flutter-text-contrast | o1-opening-unplanted-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o1-opening-unplanted-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o11-moment-saved-sidebar | <unlabelled> | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o11-moment-saved-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o11-moment-saved-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o13-moment-failed-sidebar | <unlabelled> | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o13-moment-failed-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o13-moment-failed-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o15-month-empty-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o15-month-empty-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o17-month-full-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o17-month-full-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o19-year-playing-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o19-year-playing-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o21-year-finished-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o21-year-finished-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o23-theme-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o23-theme-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o25-reminder-time-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o25-reminder-time-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o27-reminder-off-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o27-reminder-off-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o29-week-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o29-week-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o3-opening-grown-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o3-opening-grown-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o31-map-end-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o31-map-end-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o33-map-replay-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o33-map-replay-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o35-reminder-notifications-off-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o35-reminder-notifications-off-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o5-day-happy-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o5-day-happy-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o7-day-calm-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o7-day-calm-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o9-moment-empty-sidebar | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o9-moment-empty-sidebar@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 keyboard | o1-opening-unplanted-sidebar | Close | <root> # open: Tab never reaches it
 keyboard | o1-opening-unplanted-sidebar | Maximize | <root> # open: Tab never reaches it
@@ -106,9 +88,6 @@ overflow | o31-map-end-sidebar@2x | field / notes | one last thing / Here's wher
 overflow | o33-map-replay-sidebar@2x | field / notes | one last thing / Here's where everything lives. # open: layout overflows
 overlapping-text | o31-map-end-sidebar@2x | 4 days + 5 | one last thing / Here's where everything lives. # open: text overlaps other text at 2x text
 overlapping-text | o33-map-replay-sidebar@2x | 4 days + 5 | one last thing / Here's where everything lives. # open: text overlaps other text at 2x text
-text-contrast | o1-opening-unplanted-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o11-moment-saved-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o13-moment-failed-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o15-month-empty-sidebar | 1 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o15-month-empty-sidebar | 10 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o15-month-empty-sidebar | 11 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
@@ -139,7 +118,6 @@ text-contrast | o15-month-empty-sidebar | 6 | July 20, today, Happy # open: text
 text-contrast | o15-month-empty-sidebar | 7 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o15-month-empty-sidebar | 8 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o15-month-empty-sidebar | 9 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o15-month-empty-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o15-month-empty-sidebar@2x | 1 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o15-month-empty-sidebar@2x | 10 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o15-month-empty-sidebar@2x | 11 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
@@ -189,7 +167,6 @@ text-contrast | o17-month-full-sidebar | 6 | July 20, today, Happy # open: text 
 text-contrast | o17-month-full-sidebar | 7 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o17-month-full-sidebar | 8 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o17-month-full-sidebar | 9 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o17-month-full-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o17-month-full-sidebar@2x | 1 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o17-month-full-sidebar@2x | 10 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o17-month-full-sidebar@2x | 11 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
@@ -211,43 +188,28 @@ text-contrast | o17-month-full-sidebar@2x | 8 | July 20, today, Happy # open: te
 text-contrast | o17-month-full-sidebar@2x | 9 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o19-year-playing-sidebar | This is roughly what a year of you looks like. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o19-year-playing-sidebar | a year | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o19-year-playing-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o19-year-playing-sidebar@2x | This is roughly what a year of you looks like. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o19-year-playing-sidebar@2x | a year | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o19-year-playing-sidebar@2x | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o21-year-finished-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o23-theme-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o25-reminder-time-sidebar | evening | and you / When should we check in? / 8:30 PM # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o25-reminder-time-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o25-reminder-time-sidebar@2x | evening | and you / When should we check in? / 8:30 PM # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o27-reminder-off-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o27-reminder-off-sidebar | no nudge | and you / When should we check in? / — # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o27-reminder-off-sidebar@2x | no nudge | and you / When should we check in? / — # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o29-week-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o3-opening-grown-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o31-map-end-sidebar | 1 | one last thing / Here's where everything lives. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o31-map-end-sidebar | 2 | one last thing / Here's where everything lives. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o31-map-end-sidebar | 3 | one last thing / Here's where everything lives. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o31-map-end-sidebar | 4 | one last thing / Here's where everything lives. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o31-map-end-sidebar | 5 | one last thing / Here's where everything lives. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o31-map-end-sidebar | 6 | one last thing / Here's where everything lives. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o31-map-end-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o33-map-replay-sidebar | 1 | one last thing / Here's where everything lives. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o33-map-replay-sidebar | 2 | one last thing / Here's where everything lives. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o33-map-replay-sidebar | 3 | one last thing / Here's where everything lives. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o33-map-replay-sidebar | 4 | one last thing / Here's where everything lives. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o33-map-replay-sidebar | 5 | one last thing / Here's where everything lives. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o33-map-replay-sidebar | 6 | one last thing / Here's where everything lives. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o33-map-replay-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o35-reminder-notifications-off-sidebar | evening | and you / When should we check in? / 8:30 PM # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o35-reminder-notifications-off-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o35-reminder-notifications-off-sidebar@2x | evening | and you / When should we check in? / 8:30 PM # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o5-day-happy-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o7-day-calm-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o7-day-calm-sidebar@2x | lavender | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o9-moment-empty-sidebar | What happened today? | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o9-moment-empty-sidebar | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o9-moment-empty-sidebar@2x | What happened today? | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 truncated-text | o23-theme-sidebar@2x | System | and you / Daylight or lamplight? # open: text is cut short at 2x text
 truncated-text | o25-reminder-time-sidebar@2x | 12:30 PM | and you / When should we check in? / 8:30 PM # open: text is cut short at 2x text
 truncated-text | o25-reminder-time-sidebar@2x | 8:00 AM | and you / When should we check in? / 8:30 PM # open: text is cut short at 2x text

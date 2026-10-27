@@ -1,39 +1,6 @@
-flutter-text-contrast | d1-viewer-todos | 9:30 AM | Friday, September 18 / Morning note # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d1-viewer-todos@2x | 9:30 AM | Friday, September 18 / Morning note # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d11-mood-picker | choose today's bloom | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d11-mood-picker@2x | choose today's bloom | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d12-mood-set | Change | Feeling Calm / Lavender · today's bloom # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d12-mood-set@2x | Change | Feeling Calm / Lavender · today's bloom # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d13-change-mood-dialog | Set today to Peony · Happy? Your current bloom will be replaced. | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d13-change-mood-dialog@2x | Set today to Peony · Happy? Your current bloom will be replaced. | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d14-delete-entry-dialog | This log will be removed from today. This can’t be undone. | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d14-delete-entry-dialog@2x | This log will be removed from today. This can’t be undone. | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d15-viewer-middle-entry | 9:00 AM | Friday, September 18 / Morning note / 2 of 3 # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d15-viewer-middle-entry@2x | 9:00 AM | Friday, September 18 / Morning note / 2 of 3 # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d16-day-past-mood | 1 log that day | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d16-day-past-mood | Chrysanthemum · the day's bloom | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d16-day-past-mood | a day in the garden | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d16-day-past-mood@2x | 1 log that day | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d16-day-past-mood@2x | 9:30 AM · morning · note | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d16-day-past-mood@2x | Chrysanthemum · the day's bloom | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d16-day-past-mood@2x | a day in the garden | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d2-viewer-photo | 9:30 AM · 1 photo | Friday, September 18 / Morning note # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d2-viewer-photo@2x | 9:30 AM · 1 photo | Friday, September 18 / Morning note # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d5-reader-menu@2x | 9:30 AM | Friday, September 18 / Morning note # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d6-task-toast | 9:30 AM | Friday, September 18 / Morning note # open: fails Flutter's text contrast guideline
 flutter-text-contrast | d6-task-toast | Task ticked | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | d6-task-toast | Undo | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d6-task-toast@2x | 9:30 AM | Friday, September 18 / Morning note # open: fails Flutter's text contrast guideline
 flutter-text-contrast | d6-task-toast@2x | Undo | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d7-day-with-entries | 2 logs that day | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d7-day-with-entries@2x | 2 logs that day | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d7-day-with-entries@2x | 2:30 PM · afternoon · note | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d7-day-with-entries@2x | 9:30 AM · morning · note | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d7-day-with-entries@2x | a day in the garden | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d8-day-empty | 0 logs that day | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d8-day-empty | a day in the garden | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d8-day-empty@2x | 0 logs that day | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d8-day-empty@2x | a day in the garden | <root> # open: fails Flutter's text contrast guideline
 focus-visible | d1-viewer-todos | Delete entry | Friday, September 18 / Morning note # open: focus indicator below 3:1
 focus-visible | d1-viewer-todos | Edit note | Friday, September 18 / Morning note # open: focus indicator below 3:1
 focus-visible | d15-viewer-middle-entry | Delete entry | Friday, September 18 / Morning note / 2 of 3 # open: focus indicator below 3:1
@@ -72,55 +39,8 @@ small-target | d6-task-toast | call the ferry office | Friday, September 18 / Mo
 small-target | d6-task-toast | pack the tide tables | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
 small-target | d6-task-toast@2x | call the ferry office | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
 small-target | d6-task-toast@2x | pack the tide tables | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
-text-contrast | d1-viewer-todos | 9:30 AM | Friday, September 18 / Morning note # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d1-viewer-todos | Friday, September 18 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d1-viewer-todos@2x | 9:30 AM | Friday, September 18 / Morning note # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d10-mood-prompt-past | tap to plant this day's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d10-mood-prompt-past@2x | tap to plant this day's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d11-mood-picker | choose today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d11-mood-picker@2x | choose today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d12-mood-set | Change | Feeling Calm / Lavender · today's bloom # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d12-mood-set | Lavender · today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d12-mood-set@2x | Change | Feeling Calm / Lavender · today's bloom # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d12-mood-set@2x | Lavender · today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d13-change-mood-dialog | Set today to Peony · Happy? Your current bloom will be re... | Set today to Peony · Happy? Your current bloom will be replaced. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d14-delete-entry-dialog | This log will be removed from today. This can’t be undone. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d14-delete-entry-dialog@2x | Friday, September 18 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d15-viewer-middle-entry | 2 of 3 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d15-viewer-middle-entry | 9:00 AM | Friday, September 18 / Morning note / 2 of 3 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d15-viewer-middle-entry | Friday, September 18 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d15-viewer-middle-entry@2x | 9:00 AM | Friday, September 18 / Morning note / 2 of 3 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d16-day-past-mood | 1 log that day | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d16-day-past-mood | 9:30 AM · morning · note | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d16-day-past-mood | Chrysanthemum · the day's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d16-day-past-mood | a day in the garden | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d16-day-past-mood@2x | 9:30 AM · morning · note | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d16-day-past-mood@2x | Chrysanthemum · the day's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d2-viewer-photo | 9:30 AM · 1 photo | Friday, September 18 / Morning note # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d2-viewer-photo | Friday, September 18 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d2-viewer-photo@2x | 9:30 AM · 1 photo | Friday, September 18 / Morning note # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d5-reader-menu | 9:30 AM | Friday, September 18 / Morning note # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d5-reader-menu | Friday, September 18 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d5-reader-menu@2x | 9:30 AM | Friday, September 18 / Morning note # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d6-task-toast | 9:30 AM | Friday, September 18 / Morning note # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d6-task-toast | Friday, September 18 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | d6-task-toast | Task ticked | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | d6-task-toast | Undo | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d6-task-toast@2x | 9:30 AM | Friday, September 18 / Morning note # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d7-day-with-entries | 2 logs that day | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d7-day-with-entries | 2:30 PM · afternoon · note | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d7-day-with-entries | 9:30 AM · morning · note | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d7-day-with-entries | a day in the garden | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d7-day-with-entries | tap to plant this day's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d7-day-with-entries@2x | 2:30 PM · afternoon · note | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d7-day-with-entries@2x | 9:30 AM · morning · note | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d7-day-with-entries@2x | tap to plant this day's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d8-day-empty | 0 logs that day | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d8-day-empty | a day in the garden | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d8-day-empty | tap to plant this day's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d8-day-empty@2x | tap to plant this day's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d9-mood-prompt-today | tap to plant today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d9-mood-prompt-today@2x | tap to plant today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 truncated-text | d12-mood-set@2x | Feeling Calm | <root> # open: text is cut short at 2x text
 truncated-text | d12-mood-set@2x | Lavender · today's bloom | <root> # open: text is cut short at 2x text
 truncated-text | d15-viewer-middle-entry@2x | 10:00 AM · note | Later log # open: text is cut short at 2x text

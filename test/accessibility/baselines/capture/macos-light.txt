@@ -1,5 +1,4 @@
 flutter-text-contrast | c11-draft-chip | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # open: fails Flutter's text contrast guideline
-flutter-text-contrast | c11-draft-chip@2x | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # open: fails Flutter's text contrast guideline
 flutter-text-contrast | c19-photo-removed-toast | Photo removed | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | c19-photo-removed-toast@2x | Photo removed | <root> # open: fails Flutter's text contrast guideline
 focus-visible | c6-photo-selected | Note | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus indicator below 3:1
@@ -54,31 +53,20 @@ small-target | c9-selection-menu | Cut | <root> # Flutter's own control
 small-target | c9-selection-menu | Paste | <root> # Flutter's own control
 small-target | c9-selection-menu | Select All | <root> # Flutter's own control
 text-contrast | c11-draft-chip | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c11-draft-chip | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c11-draft-chip | Today · 9:30 AM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c11-draft-chip | · | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c11-draft-chip@2x | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c19-photo-removed-toast | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c19-photo-removed-toast | Photo removed | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c19-photo-removed-toast | Today · 9:30 AM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c19-photo-removed-toast | Undo | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c19-photo-removed-toast@2x | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c19-photo-removed-toast@2x | Undo | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c4-more-formats | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c4-more-formats | Today · 9:30 AM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c4-more-formats@2x | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c6-photo-selected | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c6-photo-selected | Today · 9:30 AM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c6-photo-selected@2x | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c7-photo-caption | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c7-photo-caption | Caption | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c7-photo-caption | Today · 9:30 AM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c7-photo-caption@2x | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c7-photo-caption@2x | Caption | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c8-table-toolbar | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c8-table-toolbar | Today · 9:30 AM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c8-table-toolbar@2x | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c9-selection-menu | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c9-selection-menu | Today · 9:30 AM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c9-selection-menu@2x | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 truncated-text | c9-selection-menu@2x | Select All | <root> # Flutter's own control

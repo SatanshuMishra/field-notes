@@ -1,44 +1,3 @@
-flutter-text-contrast | b1-settings | Your journal is only on this phone. Sync keeps it on your other devices, encrypted. | Sync & storage # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b1-settings | settings | Sync & storage # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b1-settings@2x | Your journal is only on this phone. Sync keeps it on your other devices, encrypted. | Sync & storage # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b1-settings@2x | settings | Sync & storage # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b10-settings-about-phone | Up to date · checked just now | About # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b10-settings-about-phone | settings | About # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b10-settings-about-phone | © 2026 Satanshu Mishra · Licensed under the Apache License 2.0 | About # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b10-settings-about-phone@2x | Up to date · checked just now | About # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b10-settings-about-phone@2x | author | About # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b10-settings-about-phone@2x | settings | About # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b10-settings-about-phone@2x | © 2026 Satanshu Mishra · Licensed under the Apache License 2.0 | About # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b11-select-dropdown-input-profile | settings | Voice # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b11-select-dropdown-input-profile@2x | settings | Voice # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b12-select-dropdown-microphone | settings | Voice # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b12-select-dropdown-microphone@2x | settings | Voice # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b13-select-dropdown-speaker | settings | Voice # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b13-select-dropdown-speaker@2x | settings | Voice # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b15-settings-data-error | settings | Data # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b15-settings-data-error@2x | settings | Data # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b16-settings-sync-paused | Sync paused | Sync & storage # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b16-settings-sync-paused | https://sync.example.com | Sync & storage # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b16-settings-sync-paused | settings | Sync & storage # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b16-settings-sync-paused@2x | Sync paused | Sync & storage # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b16-settings-sync-paused@2x | https://sync.example.com | Sync & storage # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b16-settings-sync-paused@2x | settings | Sync & storage # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b2-settings-spell-unavailable | Performance | Journal # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b2-settings-spell-unavailable | settings | Journal # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b2-settings-spell-unavailable@2x | Performance | Journal # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b2-settings-spell-unavailable@2x | settings | Journal # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b3-settings-notice | settings | Data # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b3-settings-notice@2x | settings | Data # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b5-delete-all-dialog | This erases every entry, photo, and mood on this device. It cannot be undone. | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b5-delete-all-dialog@2x | This erases every entry, photo, and mood on this device. It cannot be undone. | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b6-settings-reminders | settings | Reminders & sound # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b6-settings-reminders@2x | settings | Reminders & sound # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b7-settings-journal | Performance | Journal # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b7-settings-journal | settings | Journal # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b7-settings-journal@2x | Performance | Journal # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b7-settings-journal@2x | settings | Journal # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b8-settings-data | settings | Data # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b8-settings-data@2x | settings | Data # open: fails Flutter's text contrast guideline
 focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Input volume # open: focus indicator below 3:1
 focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Output volume # open: focus indicator below 3:1
 focus-visible | b12-select-dropdown-microphone | <unlabelled> | Input volume # open: focus indicator below 3:1
@@ -73,127 +32,30 @@ small-target | b13-select-dropdown-speaker | Output device | Voice # open: tap t
 small-target | b13-select-dropdown-speaker | System output | <root> # open: tap target under the platform minimum
 small-target | b13-select-dropdown-speaker@2x | Input device | Voice # open: tap target under the platform minimum
 small-target | b13-select-dropdown-speaker@2x | Output device | Voice # open: tap target under the platform minimum
-text-contrast | b1-settings | First device. Server address and invite code. | Start syncing # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b1-settings | Scan the code on your other device. | Join my journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b1-settings | Use your 12 words. | Restore with recovery phrase # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b1-settings | Your journal is only on this phone. Sync keeps it on your... | Your journal is only on this phone. Sync keeps it on your other devices, encrypted. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b1-settings | settings | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b1-settings@2x | First device. Server address and invite code. | Start syncing # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b1-settings@2x | Scan the code on your other device. | Join my journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b1-settings@2x | Use your 12 words. | Restore with recovery phrase # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b1-settings@2x | Your journal is only on this phone. Sync keeps it on your... | Your journal is only on this phone. Sync keeps it on your other devices, encrypted. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b1-settings@2x | settings | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone | Designed and built Field Notes. | About # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone | Once a day. Nothing installs until you choose. | About # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone | Up to date · checked just now | About # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone | What changed in version 1.4.2 | Release notes # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone | author | About # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone | settings | About # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone | © 2026 Satanshu Mishra · Licensed under the Apache Licens... | © 2026 Satanshu Mishra · Licensed under the Apache License 2.0 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone@2x | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b10-settings-about-phone@2x | Check for updates | About # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone@2x | Designed and built Field Notes. | About # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone@2x | Once a day. Nothing installs until you choose. | About # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone@2x | What changed in version 1.4.2 | Release notes # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone@2x | author | About # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone@2x | settings | About # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b10-settings-about-phone@2x | © 2026 Satanshu Mishra · Licensed under the Apache Licens... | © 2026 Satanshu Mishra · Licensed under the Apache License 2.0 # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b11-select-dropdown-input-profile | 100% | Voice # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b11-select-dropdown-input-profile | 100% | Voice #2 # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b11-select-dropdown-input-profile | Clears background noise like fans, traffic and typing fro... | Voice Isolation / Clears background noise like fans, traffic and typing from your voice. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b11-select-dropdown-input-profile | Input level | Voice # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b11-select-dropdown-input-profile | Studio | Input profile # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b11-select-dropdown-input-profile | System default | Input device # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b11-select-dropdown-input-profile | System output | Output device # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b11-select-dropdown-input-profile | Your microphone as it is, with no processing. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b11-select-dropdown-input-profile | settings | Voice # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b11-select-dropdown-input-profile@2x | Studio | Input profile # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b11-select-dropdown-input-profile@2x | settings | Voice # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b12-select-dropdown-microphone | 100% | Voice # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b12-select-dropdown-microphone | 100% | Voice #2 # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b12-select-dropdown-microphone | Input level | Voice # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b12-select-dropdown-microphone | Studio | Input profile # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b12-select-dropdown-microphone | System default | Input device # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b12-select-dropdown-microphone | System output | Output device # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b12-select-dropdown-microphone | settings | Voice # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b12-select-dropdown-microphone@2x | Studio | Input profile # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b12-select-dropdown-microphone@2x | settings | Voice # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b13-select-dropdown-speaker | 100% | Voice # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b13-select-dropdown-speaker | 100% | Voice #2 # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b13-select-dropdown-speaker | Input level | Voice # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b13-select-dropdown-speaker | Studio | Input profile # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b13-select-dropdown-speaker | System default | Input device # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b13-select-dropdown-speaker | System output | Output device # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b13-select-dropdown-speaker | settings | Voice # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b13-select-dropdown-speaker@2x | Studio | Input profile # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b13-select-dropdown-speaker@2x | settings | Voice # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b14-sync-delete-all-dialog | Erase every entry, photo, and mood on this device. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog | Erases it from your server and from every device the next... | Delete journal everywhere / Erases it from your server and from every device the next time they connect. This can't be undone. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog | Erases the journal, keys and media here. Your other devic... | Remove from this device / Erases the journal, keys and media here. Your other devices and your server keep everything. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b14-sync-delete-all-dialog | Remove photo files no entry or draft still refers to. | Data # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b14-sync-delete-all-dialog | Save a zip of every entry and photo. | Data # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b14-sync-delete-all-dialog | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b14-sync-delete-all-dialog | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog@2x | Erase every entry, photo, and mood on this device. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog@2x | Erases it from your server and from every device the next... | Delete journal everywhere / Erases it from your server and from every device the next time they connect. This can't be undone. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog@2x | Erases the journal, keys and media here. Your other devic... | Remove from this device / Erases the journal, keys and media here. Your other devices and your server keep everything. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog@2x | Remove photo files no entry or draft still refers to. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog@2x | Save a zip of every entry and photo. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog@2x | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b14-sync-delete-all-dialog@2x | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b15-settings-data-error | Erase every entry, photo, and mood on this device. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b15-settings-data-error | Remove photo files no entry or draft still refers to. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b15-settings-data-error | Save a zip of every entry and photo. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b15-settings-data-error | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b15-settings-data-error | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b15-settings-data-error@2x | Erase every entry, photo, and mood on this device. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b15-settings-data-error@2x | Remove photo files no entry or draft still refers to. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b15-settings-data-error@2x | Save a zip of every entry and photo. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b15-settings-data-error@2x | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b15-settings-data-error@2x | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused | 0 devices · add or remove | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused | Battery: Optimised | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused | Off: full videos move on Wi-Fi only | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused | Off: videos download when you open them | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused | Stops sending and receiving until you switch it back | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused | Sync paused | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused | https://sync.example.com | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused | https://sync.example.com | Sync & storage #2 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused | settings | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused@2x | 0 devices · add or remove | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused@2x | Battery: Optimised | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused@2x | Off: full videos move on Wi-Fi only | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused@2x | Off: videos download when you open them | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused@2x | Stops sending and receiving until you switch it back | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused@2x | https://sync.example.com | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused@2x | https://sync.example.com | Sync & storage #2 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b16-settings-sync-paused@2x | settings | Sync & storage # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable | A map of where everything lives. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable | Applies across the app. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable | Light, dark, or match your device. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable | Performance | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable | Stops the Meadow's motion while Field Notes is open but a... | Pause the Meadow in the background / Stops the Meadow's motion while Field Notes is open but another window or app is in front. Saves battery. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable | Used by the calendar and this-week garden. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable | Your keyboard's spell checker isn't available to Field No... | Spell check / Your keyboard's spell checker isn't available to Field Notes. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable | settings | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable@2x | A map of where everything lives. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable@2x | Applies across the app. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable@2x | Light, dark, or match your device. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable@2x | Stops the Meadow's motion while Field Notes is open but a... | Pause the Meadow in the background / Stops the Meadow's motion while Field Notes is open but another window or app is in front. Saves battery. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable@2x | Used by the calendar and this-week garden. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable@2x | Your keyboard's spell checker isn't available to Field No... | Spell check / Your keyboard's spell checker isn't available to Field Notes. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b2-settings-spell-unavailable@2x | settings | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b3-settings-notice | Erase every entry, photo, and mood on this device. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b3-settings-notice | Remove photo files no entry or draft still refers to. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b3-settings-notice | Save a zip of every entry and photo. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b3-settings-notice | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b3-settings-notice | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b3-settings-notice@2x | Erase every entry, photo, and mood on this device. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b3-settings-notice@2x | Remove photo files no entry or draft still refers to. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b3-settings-notice@2x | Save a zip of every entry and photo. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b3-settings-notice@2x | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b3-settings-notice@2x | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b4-select-open | A map of where everything lives. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b4-select-open | Applies across the app. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b4-select-open | Dark | Journal # open: text contrast below 4.5:1, or 3:1 for large text
@@ -206,64 +68,17 @@ text-contrast | b4-select-open | System | Journal # open: text contrast below 4.
 text-contrast | b4-select-open | Underlines misspelled words as you write. Checked on this... | Spell check / Underlines misspelled words as you write. Checked on this device only. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b4-select-open | Used by the calendar and this-week garden. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b4-select-open | settings | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open@2x | A map of where everything lives. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open@2x | Applies across the app. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b4-select-open@2x | Dark | Journal # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b4-select-open@2x | Large | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open@2x | Light, dark, or match your device. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open@2x | Performance | Journal # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b4-select-open@2x | Small | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open@2x | Stops the Meadow's motion while Field Notes is open but a... | Pause the Meadow in the background / Stops the Meadow's motion while Field Notes is open but another window or app is in front. Saves battery. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b4-select-open@2x | System | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open@2x | Underlines misspelled words as you write. Checked on this... | Spell check / Underlines misspelled words as you write. Checked on this device only. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open@2x | Used by the calendar and this-week garden. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b4-select-open@2x | settings | Journal # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b5-delete-all-dialog | Erase every entry, photo, and mood on this device. | Data # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b5-delete-all-dialog | Remove photo files no entry or draft still refers to. | Data # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b5-delete-all-dialog | Save a zip of every entry and photo. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b5-delete-all-dialog | This erases every entry, photo, and mood on this device. ... | This erases every entry, photo, and mood on this device. It cannot be undone. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b5-delete-all-dialog | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b5-delete-all-dialog | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b5-delete-all-dialog@2x | Erase every entry, photo, and mood on this device. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b5-delete-all-dialog@2x | Remove photo files no entry or draft still refers to. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b5-delete-all-dialog@2x | Save a zip of every entry and photo. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b5-delete-all-dialog@2x | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b5-delete-all-dialog@2x | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b6-settings-reminders | A soft pencil sound when you plant a mood. | Reminders & sound # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b6-settings-reminders | One nudge a day, skipped once you have written. | Reminders & sound # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b6-settings-reminders | Show a gentle prompt when recording voice or video. | Reminders & sound # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b6-settings-reminders | When the nudge arrives. | Reminders & sound # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b6-settings-reminders | settings | Reminders & sound # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b6-settings-reminders@2x | A soft pencil sound when you plant a mood. | Reminders & sound # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b6-settings-reminders@2x | One nudge a day, skipped once you have written. | Reminders & sound # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b6-settings-reminders@2x | Show a gentle prompt when recording voice or video. | Reminders & sound # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b6-settings-reminders@2x | When the nudge arrives. | Reminders & sound # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b6-settings-reminders@2x | settings | Reminders & sound # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal | A map of where everything lives. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal | Applies across the app. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal | Light, dark, or match your device. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal | Performance | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal | Stops the Meadow's motion while Field Notes is open but a... | Pause the Meadow in the background / Stops the Meadow's motion while Field Notes is open but another window or app is in front. Saves battery. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal | Underlines misspelled words as you write. Checked on this... | Spell check / Underlines misspelled words as you write. Checked on this device only. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal | Used by the calendar and this-week garden. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal | settings | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal@2x | A map of where everything lives. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal@2x | Applies across the app. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal@2x | Light, dark, or match your device. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal@2x | Stops the Meadow's motion while Field Notes is open but a... | Pause the Meadow in the background / Stops the Meadow's motion while Field Notes is open but another window or app is in front. Saves battery. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal@2x | Underlines misspelled words as you write. Checked on this... | Spell check / Underlines misspelled words as you write. Checked on this device only. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal@2x | Used by the calendar and this-week garden. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b7-settings-journal@2x | settings | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b8-settings-data | Erase every entry, photo, and mood on this device. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b8-settings-data | Remove photo files no entry or draft still refers to. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b8-settings-data | Save a zip of every entry and photo. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b8-settings-data | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b8-settings-data | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b8-settings-data@2x | Erase every entry, photo, and mood on this device. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b8-settings-data@2x | Remove photo files no entry or draft still refers to. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b8-settings-data@2x | Save a zip of every entry and photo. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b8-settings-data@2x | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b8-settings-data@2x | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
 truncated-text | b11-select-dropdown-input-profile@2x | Input device | Voice # open: text is cut short at 2x text
 truncated-text | b11-select-dropdown-input-profile@2x | Input volume | Voice # open: text is cut short at 2x text
 truncated-text | b11-select-dropdown-input-profile@2x | Output device | Voice # open: text is cut short at 2x text

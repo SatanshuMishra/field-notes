@@ -10,10 +10,4 @@ missing-role | s5-change-server | Dismiss | <root> # Flutter's own control
 missing-role | s5-change-server@2x | Dismiss | <root> # Flutter's own control
 missing-role | s7-sync-error-unreachable | Dismiss | <root> # Flutter's own control
 missing-role | s7-sync-error-unreachable@2x | Dismiss | <root> # Flutter's own control
-text-contrast | s1-sync-start | https://sync.example.com | Server address # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | s1-sync-start@2x | https://sync.example.com | Server address # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | s3-sync-restore | https://sync.example.com | Server address # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | s3-sync-restore@2x | https://sync.example.com | Server address # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | s5-change-server | https://sync.example.com | New server address # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | s5-change-server@2x | https://sync.example.com | New server address # open: text contrast below 4.5:1, or 3:1 for large text
 truncated-text | s2-sync-join@2x | Type the 8 words instead | <root> # open: text is cut short at 2x text

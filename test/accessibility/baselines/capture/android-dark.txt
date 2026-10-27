@@ -42,9 +42,7 @@ text-contrast | c5-edit-note@2x | Cancel | Friday, September 18 / Editing mornin
 text-contrast | c6-photo-selected | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c6-photo-selected@2x | Cancel | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c7-photo-caption | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c7-photo-caption | Caption | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c7-photo-caption@2x | Cancel | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c7-photo-caption@2x | Caption | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c8-table-toolbar | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c8-table-toolbar@2x | Cancel | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c9-selection-menu | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
