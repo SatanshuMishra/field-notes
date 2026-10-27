@@ -79,9 +79,8 @@ Color _labelColorOf(_WeekCellState state, FieldNotesColors colors) {
     case _WeekCellState.today:
       return colors.accentInk;
     case _WeekCellState.filled:
-      return colors.muted;
     case _WeekCellState.empty:
-      return colors.dashMuted;
+      return colors.muted;
   }
 }
 

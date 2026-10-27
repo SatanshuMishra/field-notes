@@ -12,7 +12,6 @@ import 'calendar_chevron_button.dart';
 
 const Key calendarActivityDotKey = Key('calendar-activity-dot');
 
-const double _neighbourOpacity = 0.35;
 const double _futureOpacity = 0.55;
 const double _compactWidthBelow = 64;
 const double _compactHeightBelow = 60;
@@ -49,9 +48,7 @@ class CalendarDayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double? dimming = !cell.isInMonth
-        ? _neighbourOpacity
-        : (isFuture ? _futureOpacity : null);
+    final double? dimming = isFuture ? _futureOpacity : null;
     return CalendarTapArea(
       reach: onTap == null ? EdgeInsets.zero : tapReach,
       child: LayoutBuilder(
@@ -85,6 +82,7 @@ class CalendarDayCell extends StatelessWidget {
           if (onTap == null) {
             return Semantics(
               label: semanticLabel,
+              enabled: isFuture ? false : null,
               excludeSemantics: true,
               child: faceWith(false),
             );

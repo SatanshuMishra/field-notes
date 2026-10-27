@@ -151,7 +151,7 @@ void main() {
   });
 
   testWidgets(
-    'neighbouring-month days show dimmed numbers and follow the tap rule',
+    'neighbouring-month days show their numbers at full ink and follow the tap rule',
     (WidgetTester tester) async {
       final List<String> openedDays = <String>[];
       await _pumpCalendar(
@@ -162,7 +162,7 @@ void main() {
 
       final Finder neighbour = _dayCell('2026-06-29');
       expect(neighbour, findsOneWidget);
-      expect(_opacitiesIn(tester, neighbour), contains(0.35));
+      expect(_opacitiesIn(tester, neighbour), isEmpty);
       expect(
         find.descendant(of: neighbour, matching: find.byType(FlowerBloom)),
         findsNothing,
