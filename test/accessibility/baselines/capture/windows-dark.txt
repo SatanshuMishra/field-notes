@@ -1,4 +1,4 @@
-flutter-text-contrast | c11-draft-chip | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # open: flutter-text-contrast
+flutter-text-contrast | c11-draft-chip | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # measured: 7.05:1 by token arithmetic
 focus-visible | c9-selection-menu | Copy | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Cut | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Paste | <root> # Flutter's own control

@@ -1,11 +1,7 @@
-flutter-text-contrast | c11-draft-chip | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # open: flutter-text-contrast
+flutter-text-contrast | c11-draft-chip | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # measured: 6.92:1 by token arithmetic
 flutter-text-contrast | c19-photo-removed-toast | Photo removed | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | c19-photo-removed-toast@2x | Photo removed | <root> # open: fails Flutter's text contrast guideline
-focus-visible | c4-more-formats | Bold | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
-focus-visible | c4-more-formats | Bullet list | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
-focus-visible | c4-more-formats | Heading | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
-focus-visible | c4-more-formats | Italic | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
-focus-visible | c9-selection-menu | <unlabelled> | <root> # open: focus indicator below 3:1
+focus-visible | c9-selection-menu | <unlabelled> | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Copy | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Cut | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Paste | <root> # Flutter's own control
@@ -23,7 +19,7 @@ small-target | c9-selection-menu | Select all | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | <unlabelled> | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Copy | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Cut | <root> # Flutter's own control
-text-contrast | c10-discard-dialog | Today · 9:30 AM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | c10-discard-dialog | Today · 9:30 AM | <root> # measured: 6.53:1 by token arithmetic
 text-contrast | c19-photo-removed-toast | Photo removed | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c19-photo-removed-toast | Undo | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c19-photo-removed-toast@2x | Photo removed | <root> # open: text contrast below 4.5:1, or 3:1 for large text
