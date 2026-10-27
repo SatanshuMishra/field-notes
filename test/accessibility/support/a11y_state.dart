@@ -55,15 +55,22 @@ final class A11yPump {
     },
   );
 
-  Future<void> call(WidgetTester tester, [A11yVariant? variant]) async {
+  Future<void> call(WidgetTester tester, [A11yVariant? variant]) {
     final A11yVariant chosen = variant ?? defaultVariant;
-    final TargetPlatform? previous = debugDefaultTargetPlatformOverride;
-    debugDefaultTargetPlatformOverride = chosen.platform;
-    try {
-      await _body(tester, chosen);
-    } finally {
-      debugDefaultTargetPlatformOverride = previous;
-    }
+    return _onPlatform(chosen.platform, () => _body(tester, chosen));
+  }
+}
+
+Future<T> _onPlatform<T>(
+  TargetPlatform platform,
+  Future<T> Function() body,
+) async {
+  final TargetPlatform? previous = debugDefaultTargetPlatformOverride;
+  debugDefaultTargetPlatformOverride = platform;
+  try {
+    return await body();
+  } finally {
+    debugDefaultTargetPlatformOverride = previous;
   }
 }
 
@@ -190,18 +197,18 @@ Future<A11yStateResult> runA11yState(
     );
   }
   final SemanticsHandle handle = tester.ensureSemantics();
-  final TargetPlatform? previous = debugDefaultTargetPlatformOverride;
   _useVariantEnvironment(tester, chosen);
-  debugDefaultTargetPlatformOverride = chosen.platform;
   final A11yWatch? watch = switch (checks) {
     A11yChecks.full => A11yWatch.start(tester),
     A11yChecks.semantic => null,
   };
   try {
-    return await _loadAndCheck(tester, state, chosen, checks, watch);
+    return await _onPlatform(
+      chosen.platform,
+      () => _loadAndCheck(tester, state, chosen, checks, watch),
+    );
   } finally {
     watch?.close();
-    debugDefaultTargetPlatformOverride = previous;
     handle.dispose();
   }
 }

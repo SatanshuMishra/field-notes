@@ -148,9 +148,7 @@ class _Visited {
 
   bool get labelled => _oneLine(data.label).isNotEmpty;
 
-  bool get tappable =>
-      data.hasAction(ui.SemanticsAction.tap) ||
-      data.hasAction(ui.SemanticsAction.longPress);
+  bool get tappable => _tappable(data);
 
   bool get clipped => switch (whole) {
     final Rect whole =>
@@ -1232,11 +1230,11 @@ List<SemanticsNode> _focusedNodes(List<SemanticsNode> nodes) => <SemanticsNode>[
           .firstWhere((SemanticsNode owner) => !owner.isMergedIntoParent),
 ];
 
-bool _tappableNode(SemanticsNode node) {
-  final SemanticsData data = node.getSemanticsData();
-  return data.hasAction(ui.SemanticsAction.tap) ||
-      data.hasAction(ui.SemanticsAction.longPress);
-}
+bool _tappable(SemanticsData data) =>
+    data.hasAction(ui.SemanticsAction.tap) ||
+    data.hasAction(ui.SemanticsAction.longPress);
+
+bool _tappableNode(SemanticsNode node) => _tappable(node.getSemanticsData());
 
 Set<int> _reachedBy(
   WidgetTester tester,
@@ -1365,9 +1363,6 @@ List<A11yFinding> _keyboardFindings(
   ];
 }
 
-bool _desktop(TargetPlatform platform) =>
-    platform == TargetPlatform.macOS || platform == TargetPlatform.windows;
-
 Future<List<A11yFinding>> a11yFullFindings(
   WidgetTester tester, {
   required String state,
@@ -1412,7 +1407,7 @@ Future<List<A11yFinding>> a11yFullFindings(
     ...found,
     for (final _Stop stop in stops)
       if (stop.finding case final A11yFinding finding) finding,
-    if (_desktop(platform) && !variant.largeText)
+    if (variant.desktop && !variant.largeText)
       ..._keyboardFindings(judged, stops, state),
     ..._overflowFindings(watch, state),
   ]);
