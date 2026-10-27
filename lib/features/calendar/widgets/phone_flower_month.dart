@@ -239,12 +239,7 @@ class PhoneFlowerMonth extends StatelessWidget {
             phoneMonthEyebrow,
             style: _eyebrowStyle.copyWith(color: colors.accentInk),
           ),
-          Text(
-            month.title,
-            style: _titleStyle.copyWith(color: colors.ink),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          Text(month.title, style: _titleStyle.copyWith(color: colors.ink)),
           const SizedBox(height: _subtitleGap),
           Text(
             daysByDate == null
@@ -300,17 +295,22 @@ class PhoneFlowerMonth extends StatelessWidget {
   }
 
   Widget _week(int index, List<CalendarCell> week) {
+    final bool isCurrentWeek = week.any(
+      (CalendarCell cell) => cell.dateKey == todayKey,
+    );
     return _PhoneWeekRow(
       key: phoneMonthWeekKey(index),
-      isCurrentWeek: week.any((CalendarCell cell) => cell.dateKey == todayKey),
+      isCurrentWeek: isCurrentWeek,
       children: <Widget>[
         for (final CalendarCell cell in week)
-          cell.isInMonth ? _cell(cell) : const SizedBox.shrink(),
+          cell.isInMonth
+              ? _cell(cell, isInCurrentWeek: isCurrentWeek)
+              : const SizedBox.shrink(),
       ],
     );
   }
 
-  Widget _cell(CalendarCell cell) {
+  Widget _cell(CalendarCell cell, {required bool isInCurrentWeek}) {
     final String dateKey = cell.dateKey;
     final bool isFuture = dateKey.compareTo(todayKey) > 0;
     final Map<String, Day>? daysByDate = this.daysByDate;
@@ -322,6 +322,7 @@ class PhoneFlowerMonth extends StatelessWidget {
       hasEntries: journaledDates.contains(dateKey),
       isToday: dateKey == todayKey,
       isFuture: isFuture,
+      isInCurrentWeek: isInCurrentWeek,
       onTap: isFuture ? null : () => onSelectDay(dateKey),
     );
   }
@@ -539,6 +540,7 @@ class _PhoneDayCell extends StatelessWidget {
     required this.hasEntries,
     required this.isToday,
     required this.isFuture,
+    required this.isInCurrentWeek,
     required this.onTap,
   });
 
@@ -548,6 +550,7 @@ class _PhoneDayCell extends StatelessWidget {
   final bool hasEntries;
   final bool isToday;
   final bool isFuture;
+  final bool isInCurrentWeek;
   final VoidCallback? onTap;
 
   String get _semanticLabel => <String>[
@@ -579,6 +582,8 @@ class _PhoneDayCell extends StatelessWidget {
     if (onTap == null) {
       return Semantics(
         container: true,
+        button: true,
+        enabled: false,
         label: _semanticLabel,
         excludeSemantics: true,
         child: centred,
@@ -662,7 +667,7 @@ class _PhoneDayCell extends StatelessWidget {
       child: Text(
         '$dayOfMonth',
         style: _numberStyle.copyWith(
-          color: mood == null ? colors.muted : colors.ink,
+          color: mood == null && !isInCurrentWeek ? colors.muted : colors.ink,
         ),
       ),
     );

@@ -6,7 +6,6 @@ import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/garden/model/meadow_key_provider.dart';
 import 'package:field_notes/features/garden/model/meadow_random.dart';
 import 'package:field_notes/features/garden/model/meadow_view_state.dart';
-import 'package:field_notes/features/garden/scene/meadow_palette.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:field_notes/features/garden/scene/meadow_view.dart';
 import 'package:field_notes/features/garden/sky/sky_location.dart';
@@ -157,14 +156,7 @@ void main() {
     expect(state.debugIsReady, isTrue);
     final Finder message = find.text(_waiting);
     expect(message, findsOneWidget);
-    expect(
-      tester.widget<Text>(message).style?.color,
-      MeadowPalette.from(
-        sky: stage.sky,
-        morning: stage.morning,
-        heavyShare: 0,
-      ).captionColour,
-    );
+    expect(tester.widget<Text>(message).style?.color, meadowTextInk);
     final Rect scene = tester.getRect(find.byType(MeadowStage));
     expect(scene.contains(tester.getCenter(message)), isTrue);
     expect(tester.getCenter(message).dx, closeTo(scene.center.dx, 1));

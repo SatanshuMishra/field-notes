@@ -461,12 +461,12 @@ Future<void> _phoneRows(WidgetTester tester, TestGesture mouse) async {
         14,
       ),
       _Row(
-        'phone progress mark',
-        _labelled('Opening'),
-        'Opening',
+        'phone progress pill',
+        find.byKey(onboardingProgressKey),
+        'Chapters',
         _dark,
         _Shape.rounded,
-        16,
+        18,
       ),
     ]);
 

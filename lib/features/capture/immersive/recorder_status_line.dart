@@ -176,11 +176,13 @@ class _RecorderStatusLineState extends State<RecorderStatusLine>
       children: <Widget>[
         status,
         const SizedBox(height: _stackedTimerGap),
-        SizedBox(
-          height: layout == ShellLayout.sidebar
-              ? _sidebarTimerBand
-              : _bottomBarTimerBand,
-          child: Center(child: timer),
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: layout == ShellLayout.sidebar
+                ? _sidebarTimerBand
+                : _bottomBarTimerBand,
+          ),
+          child: Center(heightFactor: 1, child: timer),
         ),
       ],
     );

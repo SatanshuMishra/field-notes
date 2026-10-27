@@ -18,7 +18,7 @@ import 'support/search_harness.dart';
 const Size _phone = Size(384, 832);
 const double _statusBar = 34;
 const double _gestureBar = 24;
-const double _headerBottom = _statusBar + 44;
+const double _headerBottom = _statusBar + 48;
 const double _keyboard = 300;
 
 final Finder _field = find.byType(SearchField);

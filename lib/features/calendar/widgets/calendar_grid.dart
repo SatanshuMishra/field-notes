@@ -64,13 +64,19 @@ class CalendarGrid extends StatelessWidget {
   }
 
   Widget _weekRow(List<CalendarCell> week) {
+    final bool isCurrentWeek = week.any(
+      (CalendarCell cell) => cell.dateKey == todayKey,
+    );
     return _CalendarWeekRow(
-      isCurrentWeek: week.any((CalendarCell cell) => cell.dateKey == todayKey),
-      children: <Widget>[for (final CalendarCell cell in week) _cell(cell)],
+      isCurrentWeek: isCurrentWeek,
+      children: <Widget>[
+        for (final CalendarCell cell in week)
+          _cell(cell, inCurrentWeek: isCurrentWeek),
+      ],
     );
   }
 
-  Widget _cell(CalendarCell cell) {
+  Widget _cell(CalendarCell cell, {required bool inCurrentWeek}) {
     final String dateKey = cell.dateKey;
     final String? today = todayKey;
     final bool isFuture = today != null && dateKey.compareTo(today) > 0;
@@ -80,6 +86,7 @@ class CalendarGrid extends StatelessWidget {
       day: cell.isInMonth ? daysByDate[dateKey] : null,
       isToday: dateKey == today,
       isFuture: isFuture,
+      inCurrentWeek: inCurrentWeek,
       hasEntries: cell.isInMonth && journaledDates.contains(dateKey),
       onTap: isFuture ? null : () => onSelectDay(dateKey),
       tapReach: _dayTapReach,

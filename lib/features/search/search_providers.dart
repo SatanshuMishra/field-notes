@@ -18,8 +18,7 @@ class SearchQuery extends _$SearchQuery {
 
 @riverpod
 List<SearchDayView> searchDayViews(Ref ref) {
-  final List<Day> days =
-      ref.watch(allDaysProvider).value ?? const <Day>[];
+  final List<Day> days = ref.watch(allDaysProvider).value ?? const <Day>[];
   final List<Entry> entries =
       ref.watch(searchAllEntriesProvider).value ?? const <Entry>[];
   return buildSearchDayViews(days, entries);

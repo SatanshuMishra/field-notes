@@ -535,31 +535,34 @@ class _ThemeCard extends StatelessWidget {
                 const SizedBox(height: _cardInnerGap),
                 Padding(
                   padding: _cardLabelPadding,
-                  child: Row(
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: <Widget>[
-                      _ModeIcon(
-                        appearance: appearance,
-                        color: colors.ink,
-                        size: _cardIcon,
-                      ),
-                      const SizedBox(width: _cardLabelGap),
-                      Flexible(
-                        child: Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: TypographyTokens.sans,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: selected ? colors.accentInk : colors.ink,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          _ModeIcon(
+                            appearance: appearance,
+                            color: colors.ink,
+                            size: _cardIcon,
                           ),
-                        ),
+                          const SizedBox(width: _cardLabelGap),
+                          Flexible(
+                            child: Text(
+                              label,
+                              style: TextStyle(
+                                fontFamily: TypographyTokens.sans,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: selected ? colors.accentInk : colors.ink,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const Spacer(),
                       Text(
                         caption,
-                        maxLines: 1,
                         style: TextStyle(
                           fontFamily: TypographyTokens.sans,
                           fontSize: 11,
@@ -981,8 +984,6 @@ class _ThemeRow extends StatelessWidget {
                     children: <Widget>[
                       Text(
                         label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: TypographyTokens.sans,
                           fontSize: 14,
@@ -993,8 +994,6 @@ class _ThemeRow extends StatelessWidget {
                       const SizedBox(height: 1),
                       Text(
                         caption,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: TypographyTokens.sans,
                           fontSize: 11.5,

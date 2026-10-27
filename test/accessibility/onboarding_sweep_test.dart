@@ -14,7 +14,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'states/onboarding_states.dart';
 import 'support/a11y_baseline.dart';
-import 'support/a11y_rules.dart';
 import 'support/a11y_state.dart';
 import 'support/reading_order.dart';
 
@@ -30,6 +29,9 @@ const List<String> _notificationsOffIds = <String>[
 ];
 const String _openSystemSettings = 'Open System Settings';
 const double _minimumTarget = 48;
+const String _onboardingBaselines = 'test/accessibility/baselines/onboarding';
+const String _reasonMark = ' # ';
+const String _openReason = '# open';
 
 const List<String> _layoutNames = <String>['sidebar', 'bottom-bar'];
 
@@ -438,19 +440,7 @@ void main() {
         if (result case A11yNotLoaded(:final String message)) {
           fail(message);
         }
-        final List<String> found = <String>[
-          for (final A11yFinding finding in (result as A11yLoaded).findings)
-            finding.id,
-        ];
-        final List<String> expected = <String>[
-          if (!state.id.endsWith(_sidebarSuffix)) ...<String>[
-            for (final OnboardingChapter past in OnboardingChapter.values)
-              if (past.index < OnboardingChapter.reminder.index)
-                'small-target | ${state.id} | ${past.progressName} | <root>',
-            'small-target | ${state.id} | Switch to dark | <root>',
-          ],
-        ];
-        expect(found, unorderedEquals(expected), reason: state.id);
+        expect((result as A11yLoaded).findings, isEmpty, reason: state.id);
         expect(
           <String>[
             for (final A11yBaselineLine line in _baselineLines(state))
@@ -458,7 +448,7 @@ void main() {
                   line.id.contains(' | ${state.id} | '))
                 line.id,
           ],
-          unorderedEquals(expected),
+          isEmpty,
           reason: '${state.id} baseline',
         );
 
@@ -497,6 +487,21 @@ void main() {
       }
     },
   );
+
+  test('onboarding baselines hold no open lines', () {
+    final List<String> open = <String>[
+      for (final File file in Directory(
+        _onboardingBaselines,
+      ).listSync().whereType<File>())
+        for (final String line in file.readAsLinesSync())
+          if (line.contains(_reasonMark) &&
+              line
+                  .substring(line.lastIndexOf(_reasonMark) + 1)
+                  .startsWith(_openReason))
+            '${file.path}: $line',
+    ];
+    expect(open, isEmpty);
+  });
 
   group('every onboarding chapter fits the smallest windows', () {
     final List<A11yState> smallest = onboardingStatesAt(

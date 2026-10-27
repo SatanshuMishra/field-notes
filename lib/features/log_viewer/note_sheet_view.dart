@@ -11,12 +11,11 @@ import 'package:field_notes/features/entry_cards/entry_cards.dart'
     show
         MediaResolver,
         logActionsDeleteKey,
-        logActionsDeleteLabel,
         logActionsEditKey,
         logActionsEditLabel,
         logPreviewOf;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
-    show logViewerBackKey;
+    show logViewerBackKey, logViewerDeleteLabel;
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
 import 'package:field_notes/features/log_viewer/note_reading.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
@@ -34,6 +33,9 @@ const double _backGlyphGap = 6;
 const double _backHorizontalPadding = 12;
 const double _actionGlyphSize = 17;
 const double _buttonHeight = 48;
+const double _labelVerticalPadding = 6;
+const double _deleteGlyphSize = 15;
+const double _headerDeleteGap = 8;
 
 class NoteSheetView extends StatelessWidget {
   const NoteSheetView({
@@ -106,19 +108,30 @@ class NoteSheetView extends StatelessWidget {
         ),
       ),
       if (onEdit != null)
-        _ActionSquare(
-          key: logActionsEditKey,
-          glyph: IconStickerGlyph.edit,
-          label: logActionsEditLabel,
-          onPressed: onEdit,
+        Flexible(
+          child: _EditButton(
+            key: logActionsEditKey,
+            label: logActionsEditLabel,
+            onPressed: onEdit,
+          ),
         ),
-      _ActionSquare(
-        key: logActionsDeleteKey,
-        glyph: IconStickerGlyph.trash,
-        label: logActionsDeleteLabel,
-        onPressed: scene.onDelete,
-      ),
     ];
+  }
+
+  Widget _delete(BuildContext context) {
+    const StickerButtonVariant variant = StickerButtonVariant.danger;
+    return StickerButton(
+      key: logActionsDeleteKey,
+      label: logViewerDeleteLabel,
+      onPressed: scene.onDelete,
+      variant: variant,
+      padTapTarget: true,
+      icon: IconStickerGlyphIcon(
+        glyph: IconStickerGlyph.trash,
+        color: variant.inkOn(StickerGround.page, context.colors),
+        size: _deleteGlyphSize,
+      ),
+    );
   }
 
   Widget _header(BuildContext context) {
@@ -130,23 +143,32 @@ class NoteSheetView extends StatelessWidget {
       children: <Widget>[
         Padding(
           padding: _headerPadding,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                scene.dayTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textStyles.stampAccent.copyWith(color: colors.accentInk),
-              ),
-              Text(
-                logPreviewOf(scene.entry).heading,
-                style: textStyles.headlineSerif.copyWith(
-                  fontSize: _titleSize,
-                  height: _titleLineHeight,
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      scene.dayTitle,
+                      style: textStyles.stampAccent.copyWith(
+                        color: colors.accentInk,
+                      ),
+                    ),
+                    Text(
+                      logPreviewOf(scene.entry).heading,
+                      style: textStyles.headlineSerif.copyWith(
+                        fontSize: _titleSize,
+                        height: _titleLineHeight,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(width: _headerDeleteGap),
+              _delete(context),
             ],
           ),
         ),
@@ -175,7 +197,7 @@ class _BackButton extends StatelessWidget {
         hovered: hovered,
         borderRadius: _buttonRadius,
         child: Container(
-          height: _buttonHeight,
+          constraints: const BoxConstraints(minHeight: _buttonHeight),
           padding: const EdgeInsets.symmetric(
             horizontal: _backHorizontalPadding,
           ),
@@ -186,27 +208,14 @@ class _BackButton extends StatelessWidget {
             borderRadius: _buttonRadius,
             boxShadow: shadows.chip,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ChevronGlyph(
-                pointsBack: true,
-                color: colors.ink,
-                size: _backGlyphSize,
-              ),
-              const SizedBox(width: _backGlyphGap),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textStyles.captureLabelSans.copyWith(
-                    fontSize: _labelSize,
-                    color: colors.ink,
-                  ),
-                ),
-              ),
-            ],
+          child: _ButtonLabel(
+            glyph: ChevronGlyph(
+              pointsBack: true,
+              color: colors.ink,
+              size: _backGlyphSize,
+            ),
+            label: label,
+            color: colors.ink,
           ),
         ),
       ),
@@ -214,24 +223,18 @@ class _BackButton extends StatelessWidget {
   }
 }
 
-class _ActionSquare extends StatelessWidget {
-  const _ActionSquare({
-    super.key,
-    required this.glyph,
-    required this.label,
-    required this.onPressed,
-  });
+class _EditButton extends StatelessWidget {
+  const _EditButton({super.key, required this.label, required this.onPressed});
 
-  final IconStickerGlyph glyph;
   final String label;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesShadows shadows = context.shadows;
     return Pressable(
       label: label,
       onPressed: onPressed,
-      surface: FocusRingSurface.dark,
       borderRadius: _buttonRadius,
       paintsHover: false,
       builder: (BuildContext context, bool hovered) => HoverFill(
@@ -239,21 +242,66 @@ class _ActionSquare extends StatelessWidget {
         surface: FocusRingSurface.dark,
         borderRadius: _buttonRadius,
         child: Container(
-          width: _buttonHeight,
-          height: _buttonHeight,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: Palette.toolbarInk,
-            borderRadius: _buttonRadius,
-            boxShadow: Shadows.toastLift,
+          constraints: const BoxConstraints(minHeight: _buttonHeight),
+          padding: const EdgeInsets.symmetric(
+            horizontal: _backHorizontalPadding,
           ),
-          child: IconStickerGlyphIcon(
-            glyph: glyph,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Palette.coral,
+            border: shadows.outline,
+            borderRadius: _buttonRadius,
+            boxShadow: shadows.emphasis,
+          ),
+          child: _ButtonLabel(
+            glyph: const IconStickerGlyphIcon(
+              glyph: IconStickerGlyph.edit,
+              color: Palette.onAccent,
+              size: _actionGlyphSize,
+            ),
+            label: label,
             color: Palette.onAccent,
-            size: _actionGlyphSize,
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ButtonLabel extends StatelessWidget {
+  const _ButtonLabel({
+    required this.glyph,
+    required this.label,
+    required this.color,
+  });
+
+  final Widget glyph;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        glyph,
+        const SizedBox(width: _backGlyphGap),
+        Flexible(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: _labelVerticalPadding,
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: context.textStyles.captureLabelSans.copyWith(
+                fontSize: _labelSize,
+                color: color,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

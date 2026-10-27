@@ -54,6 +54,7 @@ const Key videoKeepGoingKey = ValueKey<String>('video-keep-going');
 const Key videoCameraKey = ValueKey<String>('video-camera');
 const Key videoKeyboardHintKey = ValueKey<String>('video-keyboard-hint');
 const Key videoFlipCameraKey = ValueKey<String>('video-flip-camera');
+const Key videoTryAgainKey = ValueKey<String>('video-try-again');
 
 const String videoFeedLabel = 'CAMERA FEED';
 const String videoCameraOffTitle = 'Camera off.';
@@ -66,6 +67,7 @@ const String videoPauseLabel = 'Pause recording';
 const String videoResumeLabel = 'Resume recording';
 const String videoStopAndKeepLabel = 'Stop and keep';
 const String videoCameraLabel = 'Camera';
+const String videoTryAgainLabel = 'Try again';
 const String videoSavingHint = 'Saving your video…';
 
 String videoSwitchCameraLabel(VideoCaptureDevice device) =>
@@ -138,6 +140,7 @@ const double _deniedGutter = 24;
 const double _deniedTextSize = 14;
 const double _deniedLeading = 1.45;
 const double _deniedEdgeWidth = 1;
+const double _deniedActionGap = 16;
 const BorderRadius _deniedRadius = BorderRadius.all(Radius.circular(18));
 const EdgeInsets _deniedPadding = EdgeInsets.symmetric(
   horizontal: 22,
@@ -272,7 +275,11 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   }
 
   RecorderPrimaryVerb? get _shutterVerb {
-    if (_isSaving || _isGettingReady || _isAsking || _cannotHear) {
+    if (_isSaving ||
+        _isGettingReady ||
+        _isAsking ||
+        _cannotHear ||
+        _isDenied) {
       return null;
     }
     if (_isRecording) {
@@ -287,7 +294,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   }
 
   VoidCallback? _primaryAction(RecorderPrimaryVerb? verb) => switch (verb) {
-    RecorderPrimaryVerb.start => widget.onStart,
+    RecorderPrimaryVerb.start || RecorderPrimaryVerb.retry => widget.onStart,
     RecorderPrimaryVerb.pause => widget.onPause,
     RecorderPrimaryVerb.resume => widget.onResume,
     RecorderPrimaryVerb.keep => widget.onStop,
@@ -297,6 +304,9 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   VoidCallback? get _shutterTap => _primaryAction(_shutterVerb);
 
   RecorderPrimaryVerb? get _primaryVerb {
+    if (_isDenied) {
+      return RecorderPrimaryVerb.retry;
+    }
     if (_isRecording && !_canPause) {
       return null;
     }
@@ -615,28 +625,46 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   Widget _deniedPanel() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: _deniedGutter),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: _deniedMaxWidth),
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            color: _deniedFill,
-            border: Border.fromBorderSide(
-              BorderSide(color: _deniedEdge, width: _deniedEdgeWidth),
-            ),
-            borderRadius: _deniedRadius,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          _deniedMessage(),
+          const SizedBox(height: _deniedActionGap),
+          StickerButton(
+            key: videoTryAgainKey,
+            label: videoTryAgainLabel,
+            ground: StickerGround.media,
+            focusSurface: FocusRingSurface.dark,
+            padTapTarget: true,
+            onPressed: widget.onStart,
           ),
-          child: Padding(
-            padding: _deniedPadding,
-            child: Text(
-              widget.deniedMessage,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: TypographyTokens.sans,
-                fontSize: _deniedTextSize,
-                fontWeight: FontWeight.w400,
-                height: _deniedLeading,
-                color: _deniedInk,
-              ),
+        ],
+      ),
+    );
+  }
+
+  Widget _deniedMessage() {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: _deniedMaxWidth),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: _deniedFill,
+          border: Border.fromBorderSide(
+            BorderSide(color: _deniedEdge, width: _deniedEdgeWidth),
+          ),
+          borderRadius: _deniedRadius,
+        ),
+        child: Padding(
+          padding: _deniedPadding,
+          child: Text(
+            widget.deniedMessage,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: TypographyTokens.sans,
+              fontSize: _deniedTextSize,
+              fontWeight: FontWeight.w400,
+              height: _deniedLeading,
+              color: _deniedInk,
             ),
           ),
         ),

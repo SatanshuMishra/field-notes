@@ -16,7 +16,10 @@ import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
+import 'package:field_notes/design/widgets/sticker_button.dart';
 import 'package:field_notes/domain/mood/mood.dart';
+import 'package:field_notes/features/entry_cards/cards/video_body.dart'
+    show VideoDownloadRing;
 import 'package:field_notes/features/entry_cards/cards/voice_body.dart'
     show PlayPauseGlyph;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
@@ -38,17 +41,21 @@ const double _glowRadius = 0.7;
 const double _tapTarget = 48;
 const double _disabledOpacity = 0.5;
 const double _primaryGlyphShare = 0.32;
+const double _primaryRingShare = 0.6;
 
 const double _quietFlowerSize = 16;
 const double _quietFlowerGap = 8;
 
 const double _dockSideInset = 16;
 const double _dockLabelGap = 6;
+const double _dockAboveGap = 8;
 
 const double _topBarTop = 16;
 const double _topBarSide = 18;
 const double _topBarCentreShare = 0.5;
+const double _topBarGap = 12;
 const double _exitPillHeight = 34;
+const double _exitPillLabelPadding = 4;
 const double _exitGlyphSize = 14;
 const double _exitGap = 7;
 const EdgeInsets _exitPillPadding = EdgeInsets.fromLTRB(12, 0, 15, 0);
@@ -58,12 +65,20 @@ const BorderRadius _exitPillRadius = BorderRadius.all(
 const double _deleteFace = 40;
 const double _deleteGlyphSize = 15;
 const double _deleteHoverAlpha = 0.45;
+const EdgeInsets _deletePlatePadding = EdgeInsets.symmetric(horizontal: 4);
+const BorderRadius _deletePlateRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusMd),
+);
 
 const double _capsuleRound = 999;
 const BorderRadius _capsuleRadius = BorderRadius.all(
   Radius.circular(_capsuleRound),
 );
 const EdgeInsets _capsulePadding = EdgeInsets.all(7);
+const EdgeInsets _labelScrimPadding = EdgeInsets.symmetric(
+  horizontal: 8,
+  vertical: 4,
+);
 
 const double _shadeHeight = 140;
 const double _shadeAlpha = 0.7;
@@ -359,25 +374,42 @@ class ViewerQuietLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Mood? mood = this.mood;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        if (mood != null) ...<Widget>[
-          ExcludeSemantics(
-            child: FlowerBloom.forMood(mood, size: _quietFlowerSize),
+    return ViewerLabelScrim(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (mood != null) ...<Widget>[
+            ExcludeSemantics(
+              child: FlowerBloom.forMood(mood, size: _quietFlowerSize),
+            ),
+            const SizedBox(width: _quietFlowerGap),
+          ],
+          Flexible(
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: context.textStyles.captionSans.copyWith(color: color),
+            ),
           ),
-          const SizedBox(width: _quietFlowerGap),
         ],
-        Flexible(
-          child: Text(
-            text,
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.ellipsis,
-            style: context.textStyles.captionSans.copyWith(color: color),
-          ),
-        ),
-      ],
+      ),
+    );
+  }
+}
+
+class ViewerLabelScrim extends StatelessWidget {
+  const ViewerLabelScrim({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: Palette.mediaScrim,
+        borderRadius: _capsuleRadius,
+      ),
+      child: Padding(padding: _labelScrimPadding, child: child),
     );
   }
 }
@@ -388,14 +420,18 @@ class ViewerPrimaryButton extends StatelessWidget {
     required this.playing,
     required this.diameter,
     required this.onPressed,
+    this.download,
   });
 
   final bool playing;
   final double diameter;
   final VoidCallback? onPressed;
+  final double? download;
 
   @override
   Widget build(BuildContext context) {
+    final double? download = this.download;
+    final VoidCallback? onPressed = download == null ? this.onPressed : null;
     final bool enabled = onPressed != null;
     final BorderRadius round = BorderRadius.circular(diameter / 2);
     return Pressable(
@@ -407,28 +443,55 @@ class ViewerPrimaryButton extends StatelessWidget {
       builder: (BuildContext context, bool hovered) => SizedBox.square(
         dimension: math.max(_tapTarget, diameter),
         child: Center(
-          child: Opacity(
-            opacity: enabled ? 1 : _disabledOpacity,
-            child: HoverFill(
-              hovered: hovered,
-              surface: FocusRingSurface.dark,
-              borderRadius: round,
-              child: Container(
-                width: diameter,
-                height: diameter,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Palette.coral,
-                  shape: BoxShape.circle,
-                  border: context.shadows.outline,
-                ),
-                child: PlayPauseGlyph(
-                  playing: playing,
-                  color: Palette.onAccent,
-                  size: diameter * _primaryGlyphShare,
-                ),
-              ),
-            ),
+          child: download == null
+              ? _face(context, hovered: hovered, enabled: enabled, round: round)
+              : _downloadFace(download),
+        ),
+      ),
+    );
+  }
+
+  Widget _downloadFace(double download) {
+    return Container(
+      width: diameter,
+      height: diameter,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        color: Palette.mediaVeil,
+        shape: BoxShape.circle,
+      ),
+      child: VideoDownloadRing(
+        fraction: download,
+        size: diameter * _primaryRingShare,
+      ),
+    );
+  }
+
+  Widget _face(
+    BuildContext context, {
+    required bool hovered,
+    required bool enabled,
+    required BorderRadius round,
+  }) {
+    return Opacity(
+      opacity: enabled ? 1 : _disabledOpacity,
+      child: HoverFill(
+        hovered: hovered,
+        surface: FocusRingSurface.dark,
+        borderRadius: round,
+        child: Container(
+          width: diameter,
+          height: diameter,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Palette.coral,
+            shape: BoxShape.circle,
+            border: context.shadows.outline,
+          ),
+          child: PlayPauseGlyph(
+            playing: playing,
+            color: Palette.onAccent,
+            size: diameter * _primaryGlyphShare,
           ),
         ),
       ),
@@ -478,9 +541,10 @@ final class ViewerDockSlot {
 }
 
 class ViewerDock extends StatefulWidget {
-  const ViewerDock({super.key, required this.slots});
+  const ViewerDock({super.key, required this.slots, this.above});
 
   final List<ViewerDockSlot?> slots;
+  final Widget? above;
 
   @override
   State<ViewerDock> createState() => _ViewerDockState();
@@ -492,6 +556,18 @@ class _ViewerDockState extends State<ViewerDock> {
   @override
   Widget build(BuildContext context) {
     final double gestureBar = phoneGestureBarInset(MediaQuery.of(context));
+    final Widget? above = widget.above;
+    final Widget row = Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: <Widget>[
+        for (final ViewerDockSlot? slot in widget.slots)
+          Expanded(
+            child: slot == null
+                ? const SizedBox.shrink()
+                : _DockColumn(key: slot.key, slot: slot),
+          ),
+      ],
+    );
     return Align(
       alignment: Alignment.bottomCenter,
       child: Padding(
@@ -503,17 +579,16 @@ class _ViewerDockState extends State<ViewerDock> {
         ),
         child: BackdropGroup(
           backdropKey: _glassGroup,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: <Widget>[
-              for (final ViewerDockSlot? slot in widget.slots)
-                Expanded(
-                  child: slot == null
-                      ? const SizedBox.shrink()
-                      : _DockColumn(key: slot.key, slot: slot),
+          child: above == null
+              ? row
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    above,
+                    const SizedBox(height: _dockAboveGap),
+                    row,
+                  ],
                 ),
-            ],
-          ),
         ),
       ),
     );
@@ -533,14 +608,13 @@ class _DockColumn extends StatelessWidget {
         slot.control,
         const SizedBox(height: _dockLabelGap),
         ExcludeSemantics(
-          child: Text(
-            slot.label,
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: context.textStyles.caption11Sans.copyWith(
-              color: Palette.mediaInk,
+          child: ViewerLabelScrim(
+            child: Text(
+              slot.label,
+              textAlign: TextAlign.center,
+              style: context.textStyles.caption11Sans.copyWith(
+                color: Palette.mediaInk,
+              ),
             ),
           ),
         ),
@@ -552,16 +626,16 @@ class _DockColumn extends StatelessWidget {
 class ViewerTopBar extends StatelessWidget {
   const ViewerTopBar({
     super.key,
-    required this.exitLabel,
-    required this.onExit,
     required this.centre,
+    this.exitLabel,
+    this.onExit,
     this.onDelete,
     this.exitKey,
     this.deleteKey,
   });
 
-  final String exitLabel;
-  final VoidCallback onExit;
+  final String? exitLabel;
+  final VoidCallback? onExit;
   final Widget centre;
   final VoidCallback? onDelete;
   final Key? exitKey;
@@ -569,25 +643,52 @@ class ViewerTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String? exitLabel = this.exitLabel;
+    final VoidCallback? onExit = this.onExit;
     final VoidCallback? onDelete = this.onDelete;
+    final bool sidebar = _isSidebar(context);
+    final double statusBar = sidebar ? 0 : MediaQuery.paddingOf(context).top;
     return Align(
       alignment: Alignment.topCenter,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           _topBarSide,
-          _topBarTop,
+          statusBar + _topBarTop,
           _topBarSide,
           0,
         ),
-        child: SizedBox(
-          height: _tapTarget,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: _tapTarget),
           child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
+              final Widget? delete = onDelete == null
+                  ? null
+                  : sidebar
+                  ? _HoverDelete(key: deleteKey, onPressed: onDelete)
+                  : ViewerDangerDelete(key: deleteKey, onPressed: onDelete);
+              if (exitLabel == null || onExit == null) {
+                return Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        heightFactor: 1,
+                        child: centre,
+                      ),
+                    ),
+                    if (delete != null) ...<Widget>[
+                      const SizedBox(width: _topBarGap),
+                      delete,
+                    ],
+                  ],
+                );
+              }
               return Row(
                 children: <Widget>[
                   Expanded(
                     child: Align(
                       alignment: Alignment.centerLeft,
+                      heightFactor: 1,
                       child: _ExitPill(
                         key: exitKey,
                         label: exitLabel,
@@ -604,14 +705,47 @@ class ViewerTopBar extends StatelessWidget {
                   Expanded(
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: onDelete == null
-                          ? null
-                          : _HoverDelete(key: deleteKey, onPressed: onDelete),
+                      heightFactor: 1,
+                      child: delete,
                     ),
                   ),
                 ],
               );
             },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ViewerDangerDelete extends StatelessWidget {
+  const ViewerDangerDelete({super.key, required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    const StickerButtonVariant variant = StickerButtonVariant.danger;
+    const StickerGround ground = StickerGround.media;
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: Palette.mediaScrim,
+        borderRadius: _deletePlateRadius,
+      ),
+      child: Padding(
+        padding: _deletePlatePadding,
+        child: StickerButton(
+          label: logViewerDeleteLabel,
+          onPressed: onPressed,
+          variant: variant,
+          ground: ground,
+          focusSurface: FocusRingSurface.dark,
+          padTapTarget: true,
+          icon: IconStickerGlyphIcon(
+            glyph: IconStickerGlyph.trash,
+            color: variant.inkOn(ground, context.colors),
+            size: _deleteGlyphSize,
           ),
         ),
       ),
@@ -658,20 +792,27 @@ class _ExitPill extends StatelessWidget {
             borderRadius: _exitPillRadius,
             child: GlassSurface(
               tone: GlassTone.media,
+              tint: Palette.mediaScrim,
               borderRadius: _exitPillRadius,
               padding: _exitPillPadding,
-              child: SizedBox(
-                height: _exitPillHeight,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: _exitPillHeight),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     glyph,
                     const SizedBox(width: _exitGap),
-                    Text(
-                      label,
-                      maxLines: 1,
-                      style: context.textStyles.labelSans.copyWith(
-                        color: Palette.mediaInk,
+                    Flexible(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: _exitPillLabelPadding,
+                        ),
+                        child: Text(
+                          label,
+                          style: context.textStyles.labelSans.copyWith(
+                            color: Palette.mediaInk,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -737,6 +878,7 @@ class ViewerCapsule extends StatelessWidget {
     final double? maxWidth = this.maxWidth;
     final Widget capsule = GlassSurface(
       tone: GlassTone.media,
+      tint: Palette.mediaScrim,
       borderRadius: _capsuleRadius,
       padding: _capsulePadding,
       child: Row(mainAxisSize: MainAxisSize.min, children: children),

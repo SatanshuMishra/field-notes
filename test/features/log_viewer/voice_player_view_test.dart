@@ -336,7 +336,11 @@ void main() {
       final Rect quietRect = tester.getRect(find.byType(ViewerQuietLine));
       expect(quietRect.top, greaterThanOrEqualTo(_statusBar));
       expect(quietRect.bottom, lessThan(wave.top));
-      expect(quietRect.center.dx, closeTo(192, 0.5));
+      expect(quietRect.left, greaterThanOrEqualTo(0));
+      expect(
+        quietRect.right,
+        lessThan(tester.getRect(find.byKey(logActionsDeleteKey)).left),
+      );
 
       expect(_playCircle(), findsOneWidget);
       expect(tester.getSize(_playCircle()), const Size(68, 68));
@@ -345,13 +349,19 @@ void main() {
       final ViewerDock dock = tester.widget<ViewerDock>(
         find.byType(ViewerDock),
       );
-      expect(dock.slots, hasLength(5));
+      expect(dock.slots, hasLength(4));
+      expect(
+        find.descendant(
+          of: find.byType(ViewerDock),
+          matching: find.byKey(logActionsDeleteKey),
+        ),
+        findsNothing,
+      );
       for (final String label in <String>[
         'Close',
         'Earlier',
         'Play',
         'Later',
-        'Delete',
       ]) {
         expect(
           find.descendant(
@@ -362,13 +372,12 @@ void main() {
         );
       }
 
-      const double column = (384 - 32) / 5;
+      const double column = (384 - 32) / 4;
       final List<Finder> controls = <Finder>[
         find.byKey(logViewerBackKey),
         find.byKey(logViewerEarlierKey),
         find.byType(ViewerPrimaryButton),
         find.byKey(logViewerLaterKey),
-        find.byKey(logActionsDeleteKey),
       ];
       for (int index = 0; index < controls.length; index++) {
         final Rect control = tester.getRect(controls[index]);
@@ -766,7 +775,7 @@ void main() {
       );
       await _settle(tester);
       final List<BackdropKey?> dock = _backdropKeysIn(tester, ViewerDock);
-      expect(dock, hasLength(4));
+      expect(dock, hasLength(3));
       expect(dock.first, isNotNull);
       expect(dock.toSet(), hasLength(1));
 

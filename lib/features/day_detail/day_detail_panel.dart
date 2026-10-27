@@ -885,15 +885,18 @@ class _SheetEntryActions extends StatelessWidget {
           key: daySheetDeleteKeyFor(entryId),
           glyph: IconStickerGlyph.trash,
           label: logActionsDeleteLabel,
-          fill: colors.dangerSurface,
-          edge: colors.dangerInk,
-          glyphColor: colors.dangerInk,
+          fill: colors.panelTop,
+          edge: _dangerInk(colors),
+          glyphColor: _dangerInk(colors),
           onPressed: onDelete,
         ),
       ],
     );
   }
 }
+
+Color _dangerInk(FieldNotesColors colors) =>
+    StickerButtonVariant.danger.inkOn(StickerGround.page, colors);
 
 class _SheetEntryAction extends StatelessWidget {
   const _SheetEntryAction({

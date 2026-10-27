@@ -2,16 +2,4 @@ missing-role | u1-update-notes-new | Dismiss | <root> # Flutter's own control
 missing-role | u1-update-notes-new@2x | Dismiss | <root> # Flutter's own control
 missing-role | u2-update-notes-installed | Dismiss | <root> # Flutter's own control
 missing-role | u2-update-notes-installed@2x | Dismiss | <root> # Flutter's own control
-small-target | u3-update-greeting | Settings | <root> # open: tap target under the platform minimum
-small-target | u3-update-greeting@2x | Settings | <root> # open: tap target under the platform minimum
-text-contrast | u1-update-notes-new | open installed notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u1-update-notes-new | open new notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u1-update-notes-new@2x | open new notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u2-update-notes-installed | open installed notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u2-update-notes-installed | open new notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u2-update-notes-installed@2x | Close | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u2-update-notes-installed@2x | open installed notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u2-update-notes-installed@2x | open new notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline@2x | Check for updates | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-truncated-text | u3-update-greeting@2x | 0 days | <root> # open: truncated-text
-truncated-text | u3-update-greeting@2x | How are you feeling? | <root> # open: text is cut short at 2x text
+text-contrast | u2-update-notes-installed@2x | Close | <root> # measured: 10.32:1 by token arithmetic

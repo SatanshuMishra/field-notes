@@ -31,6 +31,9 @@ const double _downloadRingSize = 44;
 const double _downloadRingStroke = 3;
 const double _downloadLabelGap = 10;
 const double _bytesPerMegabyte = 1024 * 1024;
+const EdgeInsets _downloadPanelPadding = EdgeInsets.fromLTRB(16, 14, 16, 12);
+const EdgeInsets _downloadPanelMargin = EdgeInsets.all(12);
+const String videoDownloadedLabel = 'Video downloaded, ready to play';
 
 String _megabytes(int bytes) => (bytes / _bytesPerMegabyte).toStringAsFixed(1);
 
@@ -60,6 +63,7 @@ final class VideoControlsState {
     required this.position,
     required this.total,
     required this.busy,
+    this.download,
     required this.onToggle,
     required this.onSeek,
     required this.onScrubUpdate,
@@ -73,6 +77,7 @@ final class VideoControlsState {
   final Duration position;
   final Duration? total;
   final bool busy;
+  final double? download;
   final VoidCallback? onToggle;
   final ValueChanged<Duration>? onSeek;
   final ValueChanged<Duration>? onScrubUpdate;
@@ -88,6 +93,7 @@ final class VideoControlsState {
       other.position == position &&
       other.total == total &&
       other.busy == busy &&
+      other.download == download &&
       other.onToggle == onToggle &&
       other.onSeek == onSeek &&
       other.onScrubUpdate == onScrubUpdate &&
@@ -102,6 +108,7 @@ final class VideoControlsState {
     position,
     total,
     busy,
+    download,
     onToggle,
     onSeek,
     onScrubUpdate,
@@ -177,6 +184,7 @@ class _VideoBodyState extends State<VideoBody> {
   final MediaArrivalWatch _arrivals = MediaArrivalWatch();
   StreamSubscription<MediaDownloadProgress>? _downloadSub;
   MediaDownloadProgress? _download;
+  bool _downloaded = false;
   EntryVideoPlayer? _player;
   StreamSubscription<VideoPlaybackState>? _stateSub;
   StreamSubscription<Duration>? _positionSub;
@@ -237,6 +245,7 @@ class _VideoBodyState extends State<VideoBody> {
     unawaited(_downloadSub?.cancel());
     _downloadSub = null;
     _download = null;
+    _downloaded = false;
     final MediaResolver resolver = widget.resolver;
     final String? mediaId = widget.entry.mediaId;
     if (resolver is! LiveMedia || mediaId == null || mediaId.isEmpty) {
@@ -253,7 +262,10 @@ class _VideoBodyState extends State<VideoBody> {
     }
     final int? total = progress.total;
     final bool finished = total != null && progress.received >= total;
-    setState(() => _download = finished ? null : progress);
+    setState(() {
+      _downloaded = _downloaded || (finished && _download != null);
+      _download = finished ? null : progress;
+    });
   }
 
   void _onMediaArrived() {
@@ -299,7 +311,10 @@ class _VideoBodyState extends State<VideoBody> {
     }
     _arrivals.cancel();
     if (_download != null) {
-      setState(() => _download = null);
+      setState(() {
+        _download = null;
+        _downloaded = true;
+      });
     }
     _mediaFile = media.file;
     await _attemptLoad(rights);
@@ -816,9 +831,18 @@ class _VideoBodyState extends State<VideoBody> {
     return defaultVideoAspectRatio;
   }
 
+  double? get _downloadShare {
+    final MediaDownloadProgress? download = _download;
+    if (download == null || _isRenderingVideo) {
+      return null;
+    }
+    return videoDownloadShare(download) ?? 0;
+  }
+
   VideoControlsState get _controlsState {
-    final bool ready = _ready;
-    final bool canStart = _canClaimSlot;
+    final double? download = _downloadShare;
+    final bool ready = _ready && download == null;
+    final bool canStart = _canClaimSlot && download == null;
     return VideoControlsState(
       ready: ready,
       canStart: canStart,
@@ -827,6 +851,7 @@ class _VideoBodyState extends State<VideoBody> {
       position: _shownPosition,
       total: _total,
       busy: _claimDenied,
+      download: download,
       onToggle: ready || canStart ? _onTransportTap : null,
       onSeek: ready ? _seek : null,
       onScrubUpdate: ready ? _onScrubUpdate : null,
@@ -926,11 +951,10 @@ class _VideoBodyState extends State<VideoBody> {
           borderRadius: BorderRadius.zero,
           fit: BoxFit.contain,
         ),
-      if (_download case final MediaDownloadProgress download
-          when !_isRenderingVideo)
-        _VideoDownloadOverlay(
-          progress: download,
-          label: videoDownloadLabel(download, widget.entry.durationMs),
+      if (!_isRenderingVideo && (_download != null || _downloaded))
+        _VideoDownloadStatus(
+          progress: _download,
+          durationMs: widget.entry.durationMs,
         ),
       if (_claimDenied)
         const Positioned(
@@ -943,61 +967,114 @@ class _VideoBodyState extends State<VideoBody> {
   }
 }
 
-class _VideoDownloadOverlay extends StatelessWidget {
-  const _VideoDownloadOverlay({required this.progress, required this.label});
-
-  final MediaDownloadProgress progress;
-  final String label;
-
-  double? get _fraction {
-    final int? total = progress.total;
-    if (total == null || total <= 0) {
-      return null;
-    }
-    return (progress.received / total).clamp(0.0, 1.0);
+double? videoDownloadShare(MediaDownloadProgress progress) {
+  final int? total = progress.total;
+  if (total == null || total <= 0) {
+    return null;
   }
+  return (progress.received / total).clamp(0.0, 1.0);
+}
+
+class _VideoDownloadStatus extends StatelessWidget {
+  const _VideoDownloadStatus({
+    required this.progress,
+    required this.durationMs,
+  });
+
+  final MediaDownloadProgress? progress;
+  final int? durationMs;
 
   @override
   Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    final double? fraction = _fraction;
+    final MediaDownloadProgress? download = progress;
+    final double? share = download == null
+        ? null
+        : videoDownloadShare(download);
     return Semantics(
       container: true,
-      label: label,
-      value: fraction == null ? null : '${(fraction * 100).round()}%',
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            SizedBox.square(
-              dimension: _downloadRingSize,
-              child: CustomPaint(
-                painter: _DownloadRingPainter(
-                  fraction: fraction ?? 0,
-                  track: colors.ink20,
-                  arc: colors.accentInk,
-                ),
+      liveRegion: true,
+      label: download == null
+          ? videoDownloadedLabel
+          : videoDownloadLabel(download, durationMs),
+      value: share == null ? null : '${(share * 100).round()}%',
+      child: download == null
+          ? const SizedBox.expand()
+          : ExcludeSemantics(
+              child: _VideoDownloadOverlay(
+                fraction: share ?? 0,
+                label: videoDownloadLabel(download, durationMs),
               ),
             ),
-            const SizedBox(height: _downloadLabelGap),
-            ExcludeSemantics(
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                style: context.textStyles.captionSans.copyWith(
-                  color: colors.ink,
+    );
+  }
+}
+
+class _VideoDownloadOverlay extends StatelessWidget {
+  const _VideoDownloadOverlay({required this.fraction, required this.label});
+
+  final double fraction;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: _downloadPanelMargin,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: Palette.mediaVeil,
+            borderRadius: Shapes.cardBorderRadius,
+          ),
+          child: Padding(
+            padding: _downloadPanelPadding,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                VideoDownloadRing(fraction: fraction),
+                const SizedBox(height: _downloadLabelGap),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: context.textStyles.captionSans.copyWith(
+                    color: Palette.mediaInk,
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _DownloadRingPainter extends CustomPainter {
-  const _DownloadRingPainter({
+class VideoDownloadRing extends StatelessWidget {
+  const VideoDownloadRing({
+    super.key,
+    required this.fraction,
+    this.size = _downloadRingSize,
+  });
+
+  final double fraction;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: size,
+      child: CustomPaint(
+        painter: VideoDownloadRingPainter(
+          fraction: fraction,
+          track: Palette.mediaTrack,
+          arc: Palette.mediaInk,
+        ),
+      ),
+    );
+  }
+}
+
+class VideoDownloadRingPainter extends CustomPainter {
+  const VideoDownloadRingPainter({
     required this.fraction,
     required this.track,
     required this.arc,
@@ -1030,7 +1107,7 @@ class _DownloadRingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_DownloadRingPainter oldDelegate) =>
+  bool shouldRepaint(VideoDownloadRingPainter oldDelegate) =>
       oldDelegate.fraction != fraction ||
       oldDelegate.track != track ||
       oldDelegate.arc != arc;

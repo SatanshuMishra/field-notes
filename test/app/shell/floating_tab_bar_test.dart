@@ -187,7 +187,7 @@ void main() {
 
     await tester.tap(_tab(ShellDestination.garden));
     await tester.pump();
-    final Color scenePill = GlassTone.scene.pillFor(Brightness.light);
+    const Color scenePill = phoneBottomBarScenePill;
     for (final ShellDestination d in ShellDestination.primary) {
       expect(
         _paintsPill(tester, d, scenePill),
@@ -235,7 +235,7 @@ void main() {
     final EdgeInsets inset = MediaQuery.paddingOf(
       tester.element(find.byType(TodayScreen)),
     );
-    expect(inset.top, _statusBar + 44);
+    expect(inset.top, _statusBar + 48);
     expect(inset.bottom, _gestureBar + 80);
     expect(_surface.height - inset.bottom, lessThanOrEqualTo(bar.top));
   });

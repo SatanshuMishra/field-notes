@@ -184,7 +184,7 @@ void main() {
     expect(note, findsOneWidget);
     final TextStyle noteStyle = tester.widget<Text>(note).style!;
     expect(noteStyle.fontSize, 10.5);
-    expect(noteStyle.color!.a, closeTo(0.72, 0.01));
+    expect(noteStyle.color!.a, 1);
     expect(
       tester.getTopLeft(note).dy,
       greaterThan(tester.getTopLeft(find.text(clock)).dy),

@@ -1,19 +1,9 @@
-flutter-text-contrast | d6-task-toast | Task ticked | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d6-task-toast | Undo | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d6-task-toast@2x | Undo | <root> # open: fails Flutter's text contrast guideline
-focus-visible | d1-viewer-todos | Delete entry | Friday, September 18 / Morning note # open: focus indicator below 3:1
-focus-visible | d1-viewer-todos | Edit note | Friday, September 18 / Morning note # open: focus indicator below 3:1
-focus-visible | d15-viewer-middle-entry | Delete entry | Friday, September 18 / Morning note / 2 of 3 # open: focus indicator below 3:1
-focus-visible | d15-viewer-middle-entry | Edit note | Friday, September 18 / Morning note / 2 of 3 # open: focus indicator below 3:1
-focus-visible | d2-viewer-photo | Delete entry | Friday, September 18 / Morning note # open: focus indicator below 3:1
-focus-visible | d2-viewer-photo | Edit note | Friday, September 18 / Morning note # open: focus indicator below 3:1
-focus-visible | d5-reader-menu | <unlabelled> | <root> # open: focus indicator below 3:1
+flutter-text-contrast | d16-day-past-mood | 9:30 AM · morning · note | <root> # measured: 7.42:1 by token arithmetic
+flutter-text-contrast | d7-day-with-entries | 2:30 PM · afternoon · note | <root> # measured: 7.42:1 by token arithmetic
+flutter-text-contrast | d7-day-with-entries | 9:30 AM · morning · note | <root> # measured: 7.42:1 by token arithmetic
+focus-visible | d5-reader-menu | <unlabelled> | <root> # Flutter's own control
 focus-visible | d5-reader-menu | Copy | <root> # Flutter's own control
-focus-visible | d5-reader-menu | Delete entry | Friday, September 18 / Morning note # open: focus indicator below 3:1
-focus-visible | d5-reader-menu | Edit note | Friday, September 18 / Morning note # open: focus indicator below 3:1
 focus-visible | d5-reader-menu | Select all | <root> # Flutter's own control
-focus-visible | d6-task-toast | Delete entry | Friday, September 18 / Morning note # open: focus indicator below 3:1
-focus-visible | d6-task-toast | Edit note | Friday, September 18 / Morning note # open: focus indicator below 3:1
 missing-role | d11-mood-picker | Dismiss mood picker | <root> # Flutter's own control
 missing-role | d11-mood-picker@2x | Dismiss mood picker | <root> # Flutter's own control
 missing-role | d13-change-mood-dialog | Dismiss | <root> # Flutter's own control
@@ -26,21 +16,8 @@ missing-role | d7-day-with-entries | Dismiss day detail | <root> # Flutter's own
 missing-role | d7-day-with-entries@2x | Dismiss day detail | <root> # Flutter's own control
 missing-role | d8-day-empty | Dismiss day detail | <root> # Flutter's own control
 missing-role | d8-day-empty@2x | Dismiss day detail | <root> # Flutter's own control
-overlapping-text | d5-reader-menu@2x | Copy + Select all | <root> # open: text overlaps other text at 2x text
-small-target | d1-viewer-todos | call the ferry office | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
-small-target | d1-viewer-todos | pack the tide tables | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
+overlapping-text | d5-reader-menu@2x | Copy + Select all | <root> # Flutter's own control
 small-target | d5-reader-menu | Copy | <root> # Flutter's own control
 small-target | d5-reader-menu | Select all | <root> # Flutter's own control
-small-target | d5-reader-menu@2x | <unlabelled> | <root> # open: tap target under the platform minimum
+small-target | d5-reader-menu@2x | <unlabelled> | <root> # Flutter's own control
 small-target | d5-reader-menu@2x | Copy | <root> # Flutter's own control
-small-target | d6-task-toast | call the ferry office | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
-small-target | d6-task-toast | pack the tide tables | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
-text-contrast | d6-task-toast | Undo | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-truncated-text | d12-mood-set@2x | Feeling Calm | <root> # open: text is cut short at 2x text
-truncated-text | d12-mood-set@2x | Lavender · today's bloom | <root> # open: text is cut short at 2x text
-truncated-text | d15-viewer-middle-entry@2x | 10:00 AM · note | Later log # open: text is cut short at 2x text
-truncated-text | d15-viewer-middle-entry@2x | 8:00 AM · note | Earlier log # open: text is cut short at 2x text
-truncated-text | d16-day-past-mood@2x | Thursday, September 17 | <root> # open: text is cut short at 2x text
-truncated-text | d7-day-with-entries@2x | Thursday, September 17 | <root> # open: text is cut short at 2x text
-truncated-text | d8-day-empty@2x | Thursday, September 17 | <root> # open: text is cut short at 2x text
-truncated-text | d9-mood-prompt-today@2x | How are you feeling? | <root> # open: text is cut short at 2x text

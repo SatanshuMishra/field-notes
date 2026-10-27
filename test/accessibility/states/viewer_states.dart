@@ -51,7 +51,8 @@ final DateTime _now = DateTime(2026, 9, 18, 9, 30);
 const String _today = '2026-09-18';
 const String _pastDay = '2026-09-17';
 
-const String _launchLabel = 'open';
+const Key _launchKey = ValueKey<String>('a11y-launch');
+const double _launchExtent = 48;
 const String _firstTodo = 'call the ferry office';
 const String _secondTodo = 'pack the tide tables';
 const String _todoNote = '- [ ] $_firstTodo\n- [ ] $_secondTodo';
@@ -125,14 +126,14 @@ class _Launcher extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => open(context),
-        child: const Text(_launchLabel),
+        child: const SizedBox.square(key: _launchKey, dimension: _launchExtent),
       ),
     );
   }
 }
 
 Future<void> _launch(WidgetTester tester) async {
-  await tester.tap(find.text(_launchLabel));
+  await tester.tap(find.byKey(_launchKey));
   await tester.pumpAndSettle();
 }
 
@@ -211,6 +212,22 @@ Future<void> openA11yViewer(
   variant,
   entries: <Entry>[entry],
   entryId: entry.id,
+  resolver: resolver,
+  videoPlayer: videoPlayer,
+);
+
+Future<void> openA11yViewerAmong(
+  WidgetTester tester,
+  A11yVariant variant, {
+  required List<Entry> entries,
+  required String entryId,
+  required MediaResolver resolver,
+  EntryVideoPlayerFactory? videoPlayer,
+}) => _openViewerAmong(
+  tester,
+  variant,
+  entries: entries,
+  entryId: entryId,
   resolver: resolver,
   videoPlayer: videoPlayer,
 );

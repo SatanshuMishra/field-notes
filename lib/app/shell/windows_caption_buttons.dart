@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import 'package:field_notes/app/shell/window_chrome.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 const String windowsMinimizeLabel = 'Minimize';
@@ -268,6 +269,7 @@ final class _CaptionPalette {
     required this.glyph,
     required this.hover,
     required this.pressed,
+    required this.ringSurface,
   });
 
   factory _CaptionPalette.of(BuildContext context, {required bool overDark}) {
@@ -281,12 +283,14 @@ final class _CaptionPalette {
       pressed: dark
           ? _white.withValues(alpha: _darkPressedAlpha)
           : _black.withValues(alpha: _lightPressedAlpha),
+      ringSurface: overDark ? FocusRingSurface.dark : FocusRingSurface.light,
     );
   }
 
   final Color glyph;
   final Color hover;
   final Color pressed;
+  final FocusRingSurface ringSurface;
 }
 
 class _CaptionButton extends StatefulWidget {
@@ -355,12 +359,16 @@ class _CaptionButtonState extends State<_CaptionButton> {
 
   @override
   Widget build(BuildContext context) {
-    return ExcludeFocus(
-      child: Semantics(
-        container: true,
-        button: true,
-        label: widget.label,
+    return Semantics(
+      container: true,
+      button: true,
+      label: widget.label,
+      child: FocusRing(
+        onPressed: () => unawaited(widget.onTap()),
+        surface: widget.palette.ringSurface,
+        placement: FocusRingPlacement.edge,
         child: MouseRegion(
+          cursor: SystemMouseCursors.basic,
           onEnter: (PointerEnterEvent _) => _hover(true),
           onExit: (PointerExitEvent _) => _hover(false),
           child: GestureDetector(

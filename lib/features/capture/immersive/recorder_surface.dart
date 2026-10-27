@@ -231,7 +231,10 @@ class _Stage extends StatelessWidget {
           _bottomBarBandInset,
           0,
         ),
-        child: SizedBox(height: _bandHeight, child: row),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: _bandHeight),
+          child: row,
+        ),
       );
     }
     return Column(
@@ -242,8 +245,8 @@ class _Stage extends StatelessWidget {
           key: recorderTopBandKey,
           height: shellTitleBarHeight,
         ),
-        SizedBox(
-          height: _bandHeight,
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: _bandHeight),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: _sidebarBandInset),
             child: row,
@@ -303,7 +306,6 @@ class _Stage extends StatelessWidget {
               SizedBox(width: _leaveGap),
               Text(
                 recorderLeaveLabel,
-                maxLines: 1,
                 style: TextStyle(
                   fontFamily: TypographyTokens.sans,
                   fontSize: _sidebarChromeSize,
@@ -346,8 +348,7 @@ class _Stage extends StatelessWidget {
           Flexible(
             child: Text(
               line,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: TypographyTokens.sans,
                 fontSize: sidebar ? _sidebarChromeSize : _bottomBarChromeSize,

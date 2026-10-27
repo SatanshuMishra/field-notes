@@ -54,6 +54,8 @@ abstract interface class NoteActionHost {
   void dismiss();
 
   bool focusPhotoToolbar();
+
+  bool focusTableToolbar();
 }
 
 final class _CutToLineEndIntent extends Intent {
@@ -267,6 +269,9 @@ class NoteActions {
     ),
     NoteLeaveEditorIntent: _NoteAction<NoteLeaveEditorIntent>(
       onInvoke: (NoteLeaveEditorIntent intent) =>
+          (intent.forward &&
+              caretInTable(host.state) &&
+              host.focusTableToolbar()) ||
           _moveFocus(forward: intent.forward),
     ),
     NoteCommandIntent: _NoteAction<NoteCommandIntent>(
@@ -723,13 +728,12 @@ class NoteActions {
       goal: kept,
       caretX: (int position, TextAffinity affinity) =>
           layout.caretRect(position, affinity).left,
-      target:
-          (
-            int position,
-            TextAffinity affinity,
-            double goalX,
-            VerticalMove direction,
-          ) => layout.verticalTarget(position, affinity, goalX, direction),
+      target: (
+        int position,
+        TextAffinity affinity,
+        double goalX,
+        VerticalMove direction,
+      ) => layout.verticalTarget(position, affinity, goalX, direction),
     );
     _finishRun(step.goal, step.position, selection, intent.collapseSelection);
   }

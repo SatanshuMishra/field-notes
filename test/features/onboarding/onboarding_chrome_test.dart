@@ -163,22 +163,23 @@ void main() {
         expect(pill.center.dx, moreOrLessEquals(_phone.width / 2));
         expect(pill.center.dy, moreOrLessEquals(_statusBar + 4 + 20));
         expect(pill.top, greaterThanOrEqualTo(_statusBar));
-        expect(pill.height, 32);
+        expect(pill.height, 48);
         expect(_glassIn(_progress), findsOneWidget);
+        expect(tester.getSize(_glassIn(_progress)).height, 32);
         for (final OnboardingChapter chapter in OnboardingChapter.values) {
           expect(
             tester.getSize(_mark(chapter.progressName)),
-            const Size(22, 32),
+            const Size.square(48),
             reason: chapter.name,
           );
         }
 
         expect(
           tester.getRect(find.byKey(appearanceToggleKey)),
-          const Rect.fromLTWH(8, _statusBar + 2, 44, 44),
+          const Rect.fromLTWH(6, _statusBar, 48, 48),
         );
         expect(_glassIn(_toggle), findsOneWidget);
-        expect(tester.getSize(_glassIn(_toggle)), const Size.square(44));
+        expect(tester.getSize(_glassIn(_toggle)), const Size.square(48));
         expect(_hitTestable(tester, find.byKey(appearanceToggleKey)), isTrue);
 
         expect(
@@ -198,8 +199,8 @@ void main() {
 
         final Rect skip = tester.getRect(_skip);
         expect(skip.right, _phone.width - 8);
-        expect(skip.top, _statusBar + 4);
-        expect(skip.height, 44);
+        expect(skip.top, _statusBar + 2);
+        expect(skip.height, 48);
         expect(
           find.descendant(of: _skip, matching: find.text('Skip')),
           findsOneWidget,

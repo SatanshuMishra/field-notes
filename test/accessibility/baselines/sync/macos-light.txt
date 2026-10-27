@@ -1,6 +1,5 @@
-focus-visible | s2-sync-join | Hold your other device up to this Mac's camera. / or / 0 of 8 | <root> # open: focus indicator below 3:1
-focus-visible | s7-sync-error-unreachable | Invite code | <root> # open: focus indicator below 3:1
-focus-visible | s7-sync-error-unreachable | Server address | <root> # open: focus indicator below 3:1
+focus-visible | s7-sync-error-unreachable | Invite code | <root> # measured: 10.32:1 by token arithmetic
+focus-visible | s7-sync-error-unreachable | Server address | <root> # measured: 10.32:1 by token arithmetic
 keyboard | s1-sync-start | Dismiss | <root> # Flutter's own control
 keyboard | s2-sync-join | Dismiss | <root> # Flutter's own control
 keyboard | s3-sync-restore | Dismiss | <root> # Flutter's own control

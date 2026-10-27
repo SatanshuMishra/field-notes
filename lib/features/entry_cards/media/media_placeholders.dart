@@ -43,11 +43,26 @@ class CorruptMediaPlaceholder extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: context.textStyles.captionSans.copyWith(
-                color: colors.dangerInk,
+            Semantics(
+              container: true,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.dangerSurface,
+                  borderRadius: Shapes.buttonBorderRadius,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: context.textStyles.captionSans.copyWith(
+                      color: colors.dangerInk,
+                    ),
+                  ),
+                ),
               ),
             ),
             if (retry != null) _MediaRetryButton(onTap: retry),
@@ -72,24 +87,29 @@ class _MediaRetryButton extends StatelessWidget {
       borderRadius: Shapes.buttonBorderRadius,
       placement: FocusRingPlacement.edge,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => SizedBox(
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
         key: retryMediaKey,
-        height: _retryTarget,
+        constraints: const BoxConstraints(minHeight: _retryTarget),
         child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
           child: HoverFill(
             hovered: hovered,
             borderRadius: Shapes.buttonBorderRadius,
             child: Container(
-              height: _retryChipHeight,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              constraints: const BoxConstraints(minHeight: _retryChipHeight),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: colors.cardBright,
                 border: context.shadows.outline,
                 borderRadius: Shapes.buttonBorderRadius,
               ),
               child: Center(
+                widthFactor: 1,
+                heightFactor: 1,
                 child: Text(
                   retryMediaLabel,
+                  textAlign: TextAlign.center,
                   style: context.textStyles.captionSans,
                 ),
               ),

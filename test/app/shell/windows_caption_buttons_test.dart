@@ -191,8 +191,8 @@ void main() {
           ),
         ),
       );
-      expect(focus.canRequestFocus, isFalse);
-      expect(focus.descendantsAreFocusable, isFalse);
+      expect(focus.canRequestFocus, isTrue);
+      expect(focus.skipTraversal, isFalse);
     }
     expect(find.byType(Tooltip), findsNothing);
 

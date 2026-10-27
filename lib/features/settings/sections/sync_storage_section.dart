@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/data/sync/devices/device_service.dart';
 import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/data/sync/erase/device_unlink_service.dart';
@@ -273,25 +274,29 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
             SettingsFieldRow(
               label: addDeviceTitle,
               description: addDeviceCaption,
-              control: SettingsActionButton(
-                label: showCodeLabel,
-                onPressed: () => showAddDeviceSheet(context),
+              control: MinTarget(
+                child: SettingsActionButton(
+                  label: showCodeLabel,
+                  onPressed: () => showAddDeviceSheet(context),
+                ),
               ),
             ),
             Focus(
               focusNode: _manageDevicesFocus,
               canRequestFocus: false,
               skipTraversal: true,
-              child: SettingsFieldRow(
-                label: manageDevicesLabel,
-                description: devices == null
-                    ? devicesFallbackCaption
-                    : deviceCountLabel(devices.length),
-                control: ChevronGlyph(
-                  pointsBack: false,
-                  color: context.colors.muted,
+              child: MinTarget(
+                child: SettingsFieldRow(
+                  label: manageDevicesLabel,
+                  description: devices == null
+                      ? devicesFallbackCaption
+                      : deviceCountLabel(devices.length),
+                  control: ChevronGlyph(
+                    pointsBack: false,
+                    color: context.colors.muted,
+                  ),
+                  onPressed: _openDevices,
                 ),
-                onPressed: _openDevices,
               ),
             ),
           ],
@@ -411,17 +416,21 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
     child: const SizedBox.square(dimension: _statusDotSize),
   );
 
-  Widget _syncNowButton() => SettingsActionButton(
-    label: syncNowLabel,
-    onPressed: () =>
-        _engineAction(() => ref.read(syncEngineProvider).syncNow()),
+  Widget _syncNowButton() => MinTarget(
+    child: SettingsActionButton(
+      label: syncNowLabel,
+      onPressed: () =>
+          _engineAction(() => ref.read(syncEngineProvider).syncNow()),
+    ),
   );
 
-  Widget _changeButton() => SettingsActionButton(
-    label: changeLabel,
-    onPressed: () => showSyncFlow<void>(
-      context,
-      builder: (BuildContext flowContext) => const ChangeServerAddressFlow(),
+  Widget _changeButton() => MinTarget(
+    child: SettingsActionButton(
+      label: changeLabel,
+      onPressed: () => showSyncFlow<void>(
+        context,
+        builder: (BuildContext flowContext) => const ChangeServerAddressFlow(),
+      ),
     ),
   );
 

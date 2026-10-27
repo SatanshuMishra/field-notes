@@ -9,6 +9,8 @@ import 'package:flutter/widgets.dart';
 
 import 'search_day_view.dart';
 
+const int _previewLines = 3;
+
 class SearchDayTile extends StatelessWidget {
   const SearchDayTile({super.key, required this.view, required this.onTap});
 
@@ -51,17 +53,12 @@ class SearchDayTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Text(
-                      title,
-                      style: textStyles.dateSerif,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    Text(title, style: textStyles.dateSerif),
                     const SizedBox(height: 4),
                     Text(
                       previewText,
                       style: textStyles.bodySans,
-                      maxLines: 1,
+                      maxLines: _previewLines,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],

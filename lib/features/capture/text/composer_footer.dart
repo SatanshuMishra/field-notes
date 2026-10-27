@@ -80,6 +80,7 @@ const double _cameraStroke = 2;
 const double _plusGap = 7;
 const double _hintsGap = 12;
 const double _busyOpacity = 0.5;
+const String _hintJoin = '\u00A0';
 
 class ComposerFooter extends StatefulWidget {
   const ComposerFooter({
@@ -168,12 +169,15 @@ class _ComposerFooterState extends State<ComposerFooter> {
   Widget build(BuildContext context) {
     if (widget.compact) {
       return TextFieldTapRegion(
-        child: SizedBox(height: formatBarHeight, child: _addButton(context)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: formatBarHeight),
+          child: _addButton(context),
+        ),
       );
     }
     return TextFieldTapRegion(
-      child: SizedBox(
-        height: composerFooterHeight,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: composerFooterHeight),
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
             final bool hints =
@@ -207,9 +211,12 @@ class _ComposerFooterState extends State<ComposerFooter> {
       borderRadius: Shapes.buttonBorderRadius,
       placement: FocusRingPlacement.edge,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => SizedBox(
-        height: widget.compact ? formatBarHeight : composerFooterHeight,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: widget.compact ? formatBarHeight : composerFooterHeight,
+        ),
         child: Center(
+          heightFactor: 1,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: Palette.coral,
@@ -266,9 +273,8 @@ class _ComposerFooterState extends State<ComposerFooter> {
             for (final (String marker, String word)
                 in composerMarkdownHints) ...<InlineSpan>[
               TextSpan(
-                text: marker,
+                text: '${marker.trimRight()}$_hintJoin',
                 style: textStyles.caption10Sans.copyWith(
-                  color: context.colors.ink40,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -278,8 +284,6 @@ class _ComposerFooterState extends State<ComposerFooter> {
         ),
         key: composerHintsKey,
         textAlign: TextAlign.end,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
         style: textStyles.caption10Sans,
       ),
     );

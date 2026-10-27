@@ -550,7 +550,7 @@ void main() {
     final TextStyle caption = _styleOf(tester, meadowLoadingMessage);
     expect(caption.fontSize, 12);
     expect(caption.fontFamily, TypographyTokens.sans);
-    expect(caption.color, FieldNotesColors.light.muted);
+    expect(caption.color, meadowTextInk);
 
     await growMeadow(tester, state);
     expect(find.text(meadowLoadingMessage), findsNothing);

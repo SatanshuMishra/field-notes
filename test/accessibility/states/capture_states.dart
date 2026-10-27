@@ -5,6 +5,8 @@ import 'package:field_notes/design/feedback/feedback.dart' show DialogHost;
 import 'package:field_notes/design/widgets/widgets.dart'
     show PhoneSheet, StickerCard;
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/audio/cannot_hear_notice.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/chooser/capture_chooser.dart';
 import 'package:field_notes/features/capture/chooser/capture_chooser_sheet.dart';
 import 'package:field_notes/features/capture/chooser/capture_routes_provider.dart';
@@ -71,6 +73,8 @@ const double _keyboardInset = 300;
 
 const String _today = '2026-09-18';
 const String _launcherLabel = 'open';
+const Key _launcherKey = ValueKey<String>('capture-launcher');
+const double _launcherSize = 48;
 const String _noteText = 'A quiet morning by the harbour.';
 const String _crashDraft = 'left by a crash';
 const String _selectionNote = 'The harbour was quiet.';
@@ -114,9 +118,14 @@ class _Launcher extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
+      key: _launcherKey,
       behavior: HitTestBehavior.opaque,
       onTap: () async => open(context, ref),
-      child: const Text(_launcherLabel),
+      child: Semantics(
+        button: true,
+        label: _launcherLabel,
+        child: const SizedBox.square(dimension: _launcherSize),
+      ),
     );
   }
 }
@@ -160,7 +169,7 @@ Override _photoResolver() => notesMediaResolverProvider.overrideWith(
 );
 
 Future<void> _launch(WidgetTester tester) async {
-  await tester.tap(find.text(_launcherLabel));
+  await tester.tap(find.byKey(_launcherKey));
   await tester.pumpAndSettle();
 }
 
@@ -360,13 +369,19 @@ void _requireVideoPhase(WidgetTester tester, VideoRecorderPhase phase) {
   }
 }
 
-Future<void> _openVoice(WidgetTester tester, A11yVariant variant) async {
+Future<void> _openVoice(
+  WidgetTester tester,
+  A11yVariant variant, {
+  MicrophoneHearing hearing = MicrophoneHearing.hearing,
+}) async {
   _useSurface(tester, variant);
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
         todayClockProvider.overrideWithValue(_clock),
-        voiceRecorderProvider.overrideWith((Ref ref) => FakeVoiceRecorder()),
+        voiceRecorderProvider.overrideWith(
+          (Ref ref) => FakeVoiceRecorder()..hearingNow = hearing,
+        ),
         captureServiceProvider.overrideWith((Ref ref) => FakeCaptureService()),
         reflectionPromptsEnabledProvider.overrideWithValue(false),
       ],
@@ -379,7 +394,7 @@ Future<void> _openVoice(WidgetTester tester, A11yVariant variant) async {
       ),
     ),
   );
-  await tester.tap(find.text(_launcherLabel));
+  await tester.tap(find.byKey(_launcherKey));
   await tester.pump();
   await tester.pump(_recorderOpen);
 }
@@ -425,7 +440,11 @@ Future<void> _pumpDiscardRecording(
   _requireVoicePhase(tester, VoiceRecorderPhase.paused);
 }
 
-Future<void> _openVideo(WidgetTester tester, A11yVariant variant) async {
+Future<void> _openVideo(
+  WidgetTester tester,
+  A11yVariant variant, {
+  bool cameras = true,
+}) async {
   _useSurface(tester, variant);
   await tester.pumpWidget(
     ProviderScope(
@@ -433,7 +452,11 @@ Future<void> _openVideo(WidgetTester tester, A11yVariant variant) async {
         todayClockProvider.overrideWithValue(_clock),
         videoRecorderProvider.overrideWith(
           (Ref ref) => FakeVideoRecorder(
-            devices: variant.desktop ? fakeVideoDevices : _phoneCameras,
+            devices: switch ((cameras, variant.desktop)) {
+              (false, _) => const <VideoCaptureDevice>[],
+              (true, true) => fakeVideoDevices,
+              (true, false) => _phoneCameras,
+            },
             supportsPause: true,
           ),
         ),
@@ -449,7 +472,7 @@ Future<void> _openVideo(WidgetTester tester, A11yVariant variant) async {
       ),
     ),
   );
-  await tester.tap(find.text(_launcherLabel));
+  await tester.tap(find.byKey(_launcherKey));
   await tester.pump();
   await tester.pump(_recorderOpen);
 }
@@ -466,6 +489,24 @@ Future<void> _pumpVideoIdle(WidgetTester tester, A11yVariant variant) async {
   await _openVideo(tester, variant);
   await tester.pump(_recorderSettle);
   _requireVideoPhase(tester, VideoRecorderPhase.idle);
+}
+
+Future<void> _pumpVideoNoCamera(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _openVideo(tester, variant, cameras: false);
+  await tester.pump(_recorderSettle);
+  _requireVideoPhase(tester, VideoRecorderPhase.denied);
+}
+
+Future<void> _pumpVoiceCannotHear(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _openVoice(tester, variant, hearing: MicrophoneHearing.cannotHear);
+  await tester.pump(_recorderSettle);
+  _requireVoicePhase(tester, VoiceRecorderPhase.idle);
 }
 
 Future<void> _pumpVideoRecording(
@@ -686,5 +727,15 @@ final List<A11yState> captureStates = <A11yState>[
     id: 'c19-photo-removed-toast',
     pump: _pumpPhotoRemoved,
     proof: <A11yProof>[A11yProof(find.text(photoRemovedUndoLabel))],
+  ),
+  A11yState(
+    id: 'c20-video-no-camera',
+    pump: _pumpVideoNoCamera,
+    proof: <A11yProof>[A11yProof(find.byKey(videoTryAgainKey))],
+  ),
+  A11yState(
+    id: 'c21-voice-cannot-hear',
+    pump: _pumpVoiceCannotHear,
+    proof: <A11yProof>[A11yProof(find.byKey(cannotHearNoticeKey))],
   ),
 ];

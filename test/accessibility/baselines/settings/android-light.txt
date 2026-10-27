@@ -1,95 +1,35 @@
-focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Input volume # open: focus indicator below 3:1
-focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Output volume # open: focus indicator below 3:1
-focus-visible | b12-select-dropdown-microphone | <unlabelled> | Input volume # open: focus indicator below 3:1
-focus-visible | b12-select-dropdown-microphone | <unlabelled> | Output volume # open: focus indicator below 3:1
-focus-visible | b13-select-dropdown-speaker | <unlabelled> | Input volume # open: focus indicator below 3:1
-focus-visible | b13-select-dropdown-speaker | <unlabelled> | Output volume # open: focus indicator below 3:1
 missing-role | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
 missing-role | b14-sync-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
 missing-role | b4-select-open | Dismiss | <root> # Flutter's own control
 missing-role | b4-select-open@2x | Dismiss | <root> # Flutter's own control
 missing-role | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
 missing-role | b5-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
-small-target | b11-select-dropdown-input-profile | Input device | Voice # open: tap target under the platform minimum
-small-target | b11-select-dropdown-input-profile | Output device | Voice # open: tap target under the platform minimum
-small-target | b11-select-dropdown-input-profile@2x | Input device | Voice # open: tap target under the platform minimum
-small-target | b11-select-dropdown-input-profile@2x | Output device | Voice # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone | Built-in Microphone | <root> # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone | Headset Microphone | <root> # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone | Input device | Voice # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone | Output device | Voice # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone | System default | <root> # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone@2x | Input device | Voice # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone@2x | Output device | Voice # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker | Built-in Speakers | <root> # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker | Headphones | <root> # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker | Input device | Voice # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker | Output device | Voice # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker | System output | <root> # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker@2x | Input device | Voice # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker@2x | Output device | Voice # open: tap target under the platform minimum
-text-contrast | b10-settings-about-phone@2x | Check for updates | About # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b11-select-dropdown-input-profile | 100% | Voice # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b11-select-dropdown-input-profile | 100% | Voice #2 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b11-select-dropdown-input-profile | Clears background noise like fans, traffic and typing fro... | Voice Isolation / Clears background noise like fans, traffic and typing from your voice. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b11-select-dropdown-input-profile | Input level | Voice # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b11-select-dropdown-input-profile | System default | Input device # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b11-select-dropdown-input-profile | System output | Output device # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b11-select-dropdown-input-profile | Your microphone as it is, with no processing. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b12-select-dropdown-microphone | 100% | Voice # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b12-select-dropdown-microphone | 100% | Voice #2 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b12-select-dropdown-microphone | Input level | Voice # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b12-select-dropdown-microphone | System default | Input device # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b12-select-dropdown-microphone | System output | Output device # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b13-select-dropdown-speaker | 100% | Voice # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b13-select-dropdown-speaker | 100% | Voice #2 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b13-select-dropdown-speaker | Input level | Voice # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b13-select-dropdown-speaker | System default | Input device # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b13-select-dropdown-speaker | System output | Output device # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog | Erase every entry, photo, and mood on this device. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog | Remove photo files no entry or draft still refers to. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog | Save a zip of every entry and photo. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b14-sync-delete-all-dialog@2x | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open | A map of where everything lives. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open | Applies across the app. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open | Dark | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open | Large | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open | Light, dark, or match your device. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open | Performance | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open | Small | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open | Stops the Meadow's motion while Field Notes is open but a... | Pause the Meadow in the background / Stops the Meadow's motion while Field Notes is open but another window or app is in front. Saves battery. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open | System | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open | Underlines misspelled words as you write. Checked on this... | Spell check / Underlines misspelled words as you write. Checked on this device only. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open | Used by the calendar and this-week garden. | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open | settings | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open@2x | Dark | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open@2x | Large | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open@2x | Small | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open@2x | System | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b4-select-open@2x | settings | Journal # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b5-delete-all-dialog | Erase every entry, photo, and mood on this device. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b5-delete-all-dialog | Remove photo files no entry or draft still refers to. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b5-delete-all-dialog | Save a zip of every entry and photo. | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b5-delete-all-dialog | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b5-delete-all-dialog | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | b5-delete-all-dialog@2x | settings | Data # open: text contrast below 4.5:1, or 3:1 for large text
-truncated-text | b11-select-dropdown-input-profile@2x | Input device | Voice # open: text is cut short at 2x text
-truncated-text | b11-select-dropdown-input-profile@2x | Input volume | Voice # open: text is cut short at 2x text
-truncated-text | b11-select-dropdown-input-profile@2x | Output device | Voice # open: text is cut short at 2x text
-truncated-text | b11-select-dropdown-input-profile@2x | Output volume | Voice # open: text is cut short at 2x text
-truncated-text | b11-select-dropdown-input-profile@2x | System default | Input device # open: text is cut short at 2x text
-truncated-text | b11-select-dropdown-input-profile@2x | System output | Output device # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | Input device | Voice # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | Input volume | Voice # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | Output device | Voice # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | Output volume | Voice # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | System default | Input device # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | System output | Output device # open: text is cut short at 2x text
-truncated-text | b13-select-dropdown-speaker@2x | Input device | Voice # open: text is cut short at 2x text
-truncated-text | b13-select-dropdown-speaker@2x | Input volume | Voice # open: text is cut short at 2x text
-truncated-text | b13-select-dropdown-speaker@2x | Output device | Voice # open: text is cut short at 2x text
-truncated-text | b13-select-dropdown-speaker@2x | Output volume | Voice # open: text is cut short at 2x text
-truncated-text | b13-select-dropdown-speaker@2x | System default | Input device # open: text is cut short at 2x text
-truncated-text | b13-select-dropdown-speaker@2x | System output | Output device # open: text is cut short at 2x text
+text-contrast | b14-sync-delete-all-dialog | Erase every entry, photo, and mood on this device. | Data # measured: 6.32:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Remove photo files no entry or draft still refers to. | Data # measured: 6.32:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Save a zip of every entry and photo. | Data # measured: 6.32:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # measured: 6.32:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | settings | Data # measured: 4.50:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | settings | Data # measured: 4.50:1 by token arithmetic
+text-contrast | b4-select-open | A map of where everything lives. | Journal # measured: 6.32:1 by token arithmetic
+text-contrast | b4-select-open | Applies across the app. | Journal # measured: 6.32:1 by token arithmetic
+text-contrast | b4-select-open | Dark | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open | Large | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open | Light, dark, or match your device. | Journal # measured: 6.32:1 by token arithmetic
+text-contrast | b4-select-open | Performance | Journal # measured: 6.33:1 by token arithmetic
+text-contrast | b4-select-open | Small | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open | Stops the Meadow's motion while Field Notes is open but a... | Pause the Meadow in the background / Stops the Meadow's motion while Field Notes is open but another window or app is in front. Saves battery. # measured: 6.32:1 by token arithmetic
+text-contrast | b4-select-open | System | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open | Underlines misspelled words as you write. Checked on this... | Spell check / Underlines misspelled words as you write. Checked on this device only. # measured: 6.32:1 by token arithmetic
+text-contrast | b4-select-open | Used by the calendar and this-week garden. | Journal # measured: 6.32:1 by token arithmetic
+text-contrast | b4-select-open | settings | Journal # measured: 4.50:1 by token arithmetic
+text-contrast | b4-select-open@2x | Dark | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open@2x | Large | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open@2x | Small | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open@2x | System | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open@2x | settings | Journal # measured: 4.50:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Erase every entry, photo, and mood on this device. | Data # measured: 6.32:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Remove photo files no entry or draft still refers to. | Data # measured: 6.32:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Save a zip of every entry and photo. | Data # measured: 6.32:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # measured: 6.32:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | settings | Data # measured: 4.50:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | settings | Data # measured: 4.50:1 by token arithmetic

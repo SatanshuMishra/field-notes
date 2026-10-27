@@ -1,9 +1,6 @@
 import 'search_day_view.dart';
 
-List<SearchDayView> filterSearchDays(
-  List<SearchDayView> views,
-  String query,
-) {
+List<SearchDayView> filterSearchDays(List<SearchDayView> views, String query) {
   final String needle = query.trim().toLowerCase();
   if (needle.isEmpty) {
     return views;

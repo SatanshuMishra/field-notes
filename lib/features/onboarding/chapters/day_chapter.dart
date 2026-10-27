@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/format/text_extent.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -24,7 +26,7 @@ const Key dayCardKey = gardenStakeKey;
 Key dayMoodKey(Mood mood) => ValueKey<String>('day-mood-${mood.id}');
 
 const double _tileBorder = 2;
-const int _phoneColumns = 5;
+const double _tileInset = 4;
 
 const Duration _headingDelay = Duration(milliseconds: 600);
 const Duration _headingRise = Duration(milliseconds: 600);
@@ -51,6 +53,7 @@ class _DayMetrics {
     required this.tileWidth,
     required this.tileHeight,
     required this.tileGap,
+    required this.columns,
     required this.tileRadius,
     required this.flower,
     required this.labelGap,
@@ -72,6 +75,7 @@ class _DayMetrics {
     tileWidth: 76,
     tileHeight: 88,
     tileGap: 8,
+    columns: 10,
     tileRadius: 16,
     flower: 40,
     labelGap: 6,
@@ -93,6 +97,7 @@ class _DayMetrics {
     tileWidth: null,
     tileHeight: 72,
     tileGap: 7,
+    columns: 5,
     tileRadius: 14,
     flower: 34,
     labelGap: 4,
@@ -118,6 +123,7 @@ class _DayMetrics {
   final double? tileWidth;
   final double tileHeight;
   final double tileGap;
+  final int columns;
   final double tileRadius;
   final double flower;
   final double labelGap;
@@ -162,8 +168,8 @@ class DayChapter extends ConsumerWidget {
           ),
         ),
         Positioned(
-          left: metrics.tilesSide,
-          right: metrics.tilesSide,
+          left: 0,
+          right: 0,
           bottom: gesture + metrics.tilesBottom,
           child: OnboardingSwipeLayer(
             child: _Rise(
@@ -265,52 +271,111 @@ class _MoodTiles extends StatelessWidget {
     onTap: () => onChoose(mood),
   );
 
+  double _widestLabel(BuildContext context) {
+    final TextStyle style = DefaultTextStyle.of(context).style
+        .merge(_labelStyle(metrics, context.colors.ink));
+    return moodOrder.fold(
+      0.0,
+      (double widest, Mood mood) =>
+          math.max(widest, singleLineWidth(context, mood.label, style)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final double? width = metrics.tileWidth;
-    if (width != null) {
-      return Center(
-        child: Row(
+    final double needed =
+        _widestLabel(context).ceilToDouble() + 2 * (_tileBorder + _tileInset);
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints area) {
+        final _TileGrid grid = _TileGrid.fit(
+          metrics: metrics,
+          room: area.maxWidth - 2 * metrics.tilesSide,
+          needed: needed,
+        );
+        final List<List<Mood>> rows = <List<Mood>>[
+          for (int start = 0; start < moodOrder.length; start += grid.columns)
+            moodOrder.skip(start).take(grid.columns).toList(),
+        ];
+        final Widget tiles = Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: metrics.centred
+              ? CrossAxisAlignment.center
+              : CrossAxisAlignment.start,
           children: <Widget>[
-            for (final (int index, Mood mood) in moodOrder.indexed) ...<Widget>[
-              if (index > 0) SizedBox(width: metrics.tileGap),
-              SizedBox(width: width, child: _tile(mood)),
+            for (final (int row, List<Mood> moods) in rows.indexed) ...<Widget>[
+              if (row > 0) SizedBox(height: metrics.tileGap),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  for (final (int column, Mood mood)
+                      in moods.indexed) ...<Widget>[
+                    if (column > 0) SizedBox(width: metrics.tileGap),
+                    SizedBox(width: grid.tileWidth, child: _tile(mood)),
+                  ],
+                ],
+              ),
             ],
           ],
-        ),
-      );
-    }
-    final List<List<Mood>> rows = <List<Mood>>[
-      for (int start = 0; start < moodOrder.length; start += _phoneColumns)
-        moodOrder.skip(start).take(_phoneColumns).toList(),
-    ];
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        for (final (int row, List<Mood> moods) in rows.indexed) ...<Widget>[
-          if (row > 0) SizedBox(height: metrics.tileGap),
-          Row(
-            children: <Widget>[
-              for (
-                int column = 0;
-                column < _phoneColumns;
-                column++
-              ) ...<Widget>[
-                if (column > 0) SizedBox(width: metrics.tileGap),
-                Expanded(
-                  child: column < moods.length
-                      ? _tile(moods[column])
-                      : const SizedBox.shrink(),
+        );
+        final EdgeInsets side = EdgeInsets.symmetric(
+          horizontal: metrics.tilesSide,
+        );
+        return grid.scrolls
+            ? NoSwipe(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: side,
+                  child: tiles,
                 ),
-              ],
-            ],
-          ),
-        ],
-      ],
+              )
+            : Padding(padding: side, child: tiles);
+      },
     );
   }
 }
+
+@immutable
+class _TileGrid {
+  const _TileGrid({
+    required this.columns,
+    required this.tileWidth,
+    required this.scrolls,
+  });
+
+  factory _TileGrid.fit({
+    required _DayMetrics metrics,
+    required double room,
+    required double needed,
+  }) {
+    double spanOf(int columns, double width) =>
+        columns * width + (columns - 1) * metrics.tileGap;
+    final double? fixed = metrics.tileWidth;
+    if (fixed == null) {
+      final int columns = metrics.columns;
+      final double share = (room - (columns - 1) * metrics.tileGap) / columns;
+      return share >= needed
+          ? _TileGrid(columns: columns, tileWidth: share, scrolls: false)
+          : _TileGrid(columns: columns, tileWidth: needed, scrolls: true);
+    }
+    final double width = math.max(fixed, needed);
+    int columns = metrics.columns;
+    while (columns > 1 && spanOf(columns, width) > room) {
+      columns--;
+    }
+    return _TileGrid(columns: columns, tileWidth: width, scrolls: false);
+  }
+
+  final int columns;
+  final double tileWidth;
+  final bool scrolls;
+}
+
+TextStyle _labelStyle(_DayMetrics metrics, Color color) => TextStyle(
+  fontFamily: TypographyTokens.sans,
+  fontSize: metrics.labelSize,
+  fontWeight: FontWeight.w600,
+  color: color,
+);
 
 class _MoodTile extends StatelessWidget {
   const _MoodTile({
@@ -333,6 +398,8 @@ class _MoodTile extends StatelessWidget {
       duration: MediaQuery.disableAnimationsOf(context)
           ? Duration.zero
           : _tileShift,
+      constraints: BoxConstraints(minHeight: metrics.tileHeight),
+      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: selected ? colors.cardLight : colors.cardWarm,
         border: Border.all(
@@ -350,9 +417,9 @@ class _MoodTile extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: _tileInset),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             FlowerBloom.forMood(mood, size: metrics.flower),
             SizedBox(height: metrics.labelGap),
@@ -360,12 +427,9 @@ class _MoodTile extends StatelessWidget {
               mood.label,
               maxLines: 1,
               softWrap: false,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: TypographyTokens.sans,
-                fontSize: metrics.labelSize,
-                fontWeight: FontWeight.w600,
-                color: selected ? colors.accentInk : colors.ink,
+              style: _labelStyle(
+                metrics,
+                selected ? colors.accentInk : colors.ink,
               ),
             ),
           ],
@@ -378,11 +442,10 @@ class _MoodTile extends StatelessWidget {
       selected: selected,
       onPressed: onTap,
       borderRadius: radius,
+      surface: FocusRingSurface.dark,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => SizedBox(
-        height: metrics.tileHeight,
-        child: HoverFill(hovered: hovered, borderRadius: radius, child: face),
-      ),
+      builder: (BuildContext context, bool hovered) =>
+          HoverFill(hovered: hovered, borderRadius: radius, child: face),
     );
   }
 }

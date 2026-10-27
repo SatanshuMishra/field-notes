@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show FutureProviderFamily;
 
-import 'package:field_notes/app/shell/bottom_bar_shell.dart'
-    show phoneGestureBarInset;
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
@@ -26,7 +24,6 @@ import 'package:field_notes/features/log_viewer/log_viewer.dart'
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show
         logViewerBackKey,
-        logViewerDeleteLabel,
         logViewerEarlierKey,
         logViewerEarlierLabel,
         logViewerLaterKey,
@@ -43,13 +40,9 @@ const String _pauseLabel = 'Pause';
 const double _dockGlyphSize = 18;
 const double _stepGlyphSize = 15;
 
-const double _phoneQuietTop = 16;
-const double _phoneQuietSide = 18;
 const double _phonePrimary = 68;
 const double _phoneScrubberHeight = 44;
 const double _phoneScrubberReach = (scrubberHeight - _phoneScrubberHeight) / 2;
-const double _phoneScrubberSide = 16;
-const double _phoneScrubberLift = 116;
 const BorderRadius _phoneScrubberRadius = BorderRadius.all(
   Radius.circular(_phoneScrubberHeight / 2),
 );
@@ -243,6 +236,7 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
                   playing: state.isPlaying,
                   diameter: _embeddedPrimary,
                   onPressed: state.onToggle,
+                  download: state.download,
                 ),
                 const SizedBox(width: _timeGap),
                 _time(context, state.position),
@@ -287,31 +281,31 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
   }
 
   Widget _phoneControls(BuildContext context, VideoControlsState state) {
-    final MediaQueryData media = MediaQuery.of(context);
-    final double statusBar = media.padding.top;
-    final double gestureBar = phoneGestureBarInset(media);
+    final LogViewerScene scene = widget.scene;
     return Stack(
       children: <Widget>[
         const Positioned.fill(child: ViewerOverlayShade(top: true)),
         const Positioned.fill(child: ViewerOverlayShade(top: false)),
-        Positioned(
-          top: statusBar + _phoneQuietTop,
-          left: _phoneQuietSide,
-          right: _phoneQuietSide,
-          child: Center(child: _quietLine(context)),
-        ),
-        Positioned(
-          left: _phoneScrubberSide,
-          right: _phoneScrubberSide,
-          bottom: gestureBar + _phoneScrubberLift - _phoneScrubberReach,
-          height: scrubberHeight,
-          child: _PhoneScrubberBar(
-            elapsed: _time(context, state.position),
-            scrubber: NoSwipe(child: _scrubber(state)),
-            total: _time(context, state.total),
+        Positioned.fill(
+          child: ViewerTopBar(
+            centre: _quietLine(context),
+            onDelete: scene.onDelete,
+            deleteKey: logActionsDeleteKey,
           ),
         ),
-        Positioned.fill(child: ViewerDock(slots: _phoneSlots(state))),
+        Positioned.fill(
+          child: ViewerDock(
+            slots: _phoneSlots(state),
+            above: SizedBox(
+              height: scrubberHeight,
+              child: _PhoneScrubberBar(
+                elapsed: _time(context, state.position),
+                scrubber: NoSwipe(child: _scrubber(state)),
+                total: _time(context, state.total),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -354,6 +348,7 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
           playing: playing,
           diameter: _phonePrimary,
           onPressed: state.onToggle,
+          download: state.download,
         ),
       ),
       if (onLater == null)
@@ -372,20 +367,6 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
             onPressed: onLater,
           ),
         ),
-      ViewerDockSlot(
-        label: logViewerDeleteLabel,
-        control: ViewerGlassCircle(
-          grouped: true,
-          key: logActionsDeleteKey,
-          label: logViewerDeleteLabel,
-          glyph: const IconStickerGlyphIcon(
-            glyph: IconStickerGlyph.trash,
-            color: Palette.mediaInk,
-            size: _dockGlyphSize,
-          ),
-          onPressed: scene.onDelete,
-        ),
-      ),
     ];
   }
 
@@ -455,6 +436,7 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
           playing: state.isPlaying,
           diameter: _macPrimary,
           onPressed: state.onToggle,
+          download: state.download,
         ),
         const SizedBox(width: _macCapsuleGap),
         _macStep(
@@ -513,7 +495,9 @@ class _PhoneScrubberBar extends StatelessWidget {
           bottom: _phoneScrubberReach,
           child: GlassSurface(
             key: videoScrubberBarKey,
+            grouped: true,
             tone: GlassTone.media,
+            tint: Palette.mediaScrim,
             borderRadius: _phoneScrubberRadius,
             child: SizedBox.expand(),
           ),

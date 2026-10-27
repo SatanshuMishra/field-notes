@@ -480,7 +480,7 @@ void main() {
     expect(rect.height, 44);
     expect(rect.left, 16);
     expect(rect.right, 384 - 16);
-    expect(rect.bottom, 832 - _gestureBar - 116);
+    expect(rect.bottom, 832 - _gestureBar - 126);
     expect(
       tester.getRect(find.byType(ViewerPrimaryButton)).top,
       greaterThan(rect.bottom),
@@ -488,7 +488,7 @@ void main() {
     expect(find.byType(ViewerDock), findsOneWidget);
     expect(
       tester.widget<ViewerDock>(find.byType(ViewerDock)).slots,
-      hasLength(5),
+      hasLength(4),
     );
 
     final Rect slider = tester.getRect(find.byKey(_scrubBar));

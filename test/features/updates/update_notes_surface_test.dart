@@ -322,7 +322,7 @@ void main() {
         findsNWidgets(2),
       );
       final Finder close = find.byKey(updateNotesCloseKey);
-      expect(tester.getSize(close), const Size(36, 36));
+      expect(tester.getSize(close), const Size(40, 40));
       expect(
         find.byWidgetPredicate(
           (Widget widget) =>

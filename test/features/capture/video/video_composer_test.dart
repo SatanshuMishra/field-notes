@@ -214,7 +214,7 @@ void main() {
     expect(fakeVideoPreview(), findsNothing);
     expect(result, 'unset');
 
-    await tester.tap(find.byKey(videoShutterKey));
+    await tester.tap(find.byKey(videoTryAgainKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 

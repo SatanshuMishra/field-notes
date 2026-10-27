@@ -1,41 +1,21 @@
-focus-visible | d4-viewer-video | Friday, September 18 · 9:30 AM / 0:00 / 0:04 | Play or pause video # open: focus indicator below 3:1
-focus-visible | d4-viewer-video | Play | Friday, September 18 · 9:30 AM / 0:00 / 0:04 # open: focus indicator below 3:1
-focus-visible | d5-reader-menu-sidebar | Copy | <root> # open: focus-visible
-focus-visible | d5-reader-menu-sidebar | Select all | <root> # open: focus-visible
-keyboard | d7-day-with-entries-sidebar | 2:30 PM · afternoon · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: keyboard
-small-target | d1-viewer-todos-sidebar | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d1-viewer-todos-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: small-target
-small-target | d5-reader-menu-sidebar | Copy | <root> # open: small-target
-small-target | d5-reader-menu-sidebar | Select all | <root> # open: small-target
-small-target | d5-reader-menu-sidebar@2x | Copy | <root> # open: small-target
-small-target | d5-reader-menu-sidebar@2x | Select all | <root> # open: small-target
-small-target | d6-task-toast-sidebar | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d6-task-toast-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: small-target
-text-contrast | d11-mood-picker-sidebar | tap to plant today's bloom | <root> # open: text-contrast
-text-contrast | d13-change-mood-dialog-sidebar | Change | Feeling Calm / Lavender · today's bloom # open: text-contrast
-text-contrast | d13-change-mood-dialog-sidebar | Feeling Calm | <root> # open: text-contrast
-text-contrast | d13-change-mood-dialog-sidebar | Lavender · today's bloom | <root> # open: text-contrast
-text-contrast | d13-change-mood-dialog-sidebar@2x | Change | Feeling Calm / Lavender · today's bloom # open: text-contrast
-text-contrast | d13-change-mood-dialog-sidebar@2x | Feeling Calm | <root> # open: text-contrast
-text-contrast | d13-change-mood-dialog-sidebar@2x | Lavender · today's bloom | <root> # open: text-contrast
-text-contrast | d14-delete-entry-dialog-sidebar | 9:30 AM | Friday, September 18 / Morning note # open: text-contrast
-text-contrast | d14-delete-entry-dialog-sidebar | Close | Friday, September 18 / Morning note # open: text-contrast
-text-contrast | d14-delete-entry-dialog-sidebar | Friday, September 18 | <root> # open: text-contrast
-text-contrast | d14-delete-entry-dialog-sidebar | Morning note | <root> # open: text-contrast
-text-contrast | d14-delete-entry-dialog-sidebar@2x | 9:30 AM | Friday, September 18 / Morning note # open: text-contrast
-text-contrast | d4-viewer-video | 0:00 | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d4-viewer-video | 0:04 | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d4-viewer-video | Friday, September 18 · 9:30 AM | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d4-viewer-video@2x | 0:00 | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d4-viewer-video@2x | 0:04 | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d4-viewer-video@2x | Friday, September 18 · 9:30 AM | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d5-reader-menu-sidebar@2x | Copy | <root> # open: text-contrast
-truncated-text | d1-viewer-todos-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
-truncated-text | d14-delete-entry-dialog-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
-truncated-text | d15-viewer-middle-entry-sidebar@2x | Close | Friday, September 18 / Morning note / 2 of 3 # open: truncated-text
-truncated-text | d2-viewer-photo-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
-truncated-text | d3-viewer-voice@2x | Close | 0:00 / 1:05 / Friday, September 18 · 9:30 AM # open: truncated-text
-truncated-text | d4-viewer-video@2x | Close | Friday, September 18 · 9:30 AM / 0:00 / 0:04 # open: truncated-text
-truncated-text | d5-reader-menu-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
-truncated-text | d5-reader-menu-sidebar@2x | Select all | <root> # open: truncated-text
-truncated-text | d6-task-toast-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
+focus-visible | d5-reader-menu-sidebar | Copy | <root> # Flutter's own control
+focus-visible | d5-reader-menu-sidebar | Select all | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar | Copy | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar | Select all | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar@2x | Copy | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar@2x | Select all | <root> # Flutter's own control
+text-contrast | d11-mood-picker-sidebar | tap to plant today's bloom | <root> # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar | Change | Feeling Calm / Lavender · today's bloom # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar | Feeling Calm | <root> # measured: 8.58:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar | Lavender · today's bloom | <root> # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar@2x | Change | Feeling Calm / Lavender · today's bloom # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar@2x | Feeling Calm | <root> # measured: 8.58:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar@2x | Lavender · today's bloom | <root> # measured: 5.76:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | 9:30 AM | Friday, September 18 / Morning note # measured: 6.53:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | Close | Friday, September 18 / Morning note # measured: 9.41:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | Friday, September 18 | <root> # measured: 6.53:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | Morning note | <root> # measured: 9.73:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar@2x | 9:30 AM | Friday, September 18 / Morning note # measured: 6.53:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar@2x | Close | Friday, September 18 / Morning note # measured: 9.41:1 by token arithmetic
+text-contrast | d5-reader-menu-sidebar@2x | Copy | <root> # Flutter's own control
+truncated-text | d5-reader-menu-sidebar@2x | Select all | <root> # Flutter's own control

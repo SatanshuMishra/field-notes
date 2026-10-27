@@ -38,17 +38,19 @@ class DayDetailEntriesBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final int? count = entryCount;
-    return Row(
+    return OverflowBar(
+      alignment: MainAxisAlignment.spaceBetween,
+      spacing: _rowGap,
+      overflowSpacing: _rowGap,
+      overflowAlignment: OverflowBarAlignment.start,
       children: <Widget>[
-        Expanded(
-          child: count == null
-              ? const SizedBox.shrink()
-              : Text(
-                  dayDetailEntryCountLabel(count),
-                  style: context.textStyles.stampAccent,
-                ),
-        ),
-        const SizedBox(width: _rowGap),
+        if (count == null)
+          const SizedBox.shrink()
+        else
+          Text(
+            dayDetailEntryCountLabel(count),
+            style: context.textStyles.stampAccent,
+          ),
         _addNoteButton(context),
       ],
     );
@@ -93,12 +95,12 @@ class DayDetailEntriesBar extends StatelessWidget {
                     child: CustomPaint(painter: _PlusPainter()),
                   ),
                   const SizedBox(width: _plusGap),
-                  Text(
-                    addNoteLabel,
-                    maxLines: 1,
-                    softWrap: false,
-                    style: context.textStyles.captureLabelSans.copyWith(
-                      color: Palette.onAccent,
+                  Flexible(
+                    child: Text(
+                      addNoteLabel,
+                      style: context.textStyles.captureLabelSans.copyWith(
+                        color: Palette.onAccent,
+                      ),
                     ),
                   ),
                 ],

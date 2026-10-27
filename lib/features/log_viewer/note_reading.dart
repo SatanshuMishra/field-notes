@@ -222,8 +222,7 @@ class _StepControl extends StatelessWidget {
     );
     final Widget text = Text(
       caption,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+      textAlign: pointsBack ? TextAlign.start : TextAlign.end,
       style: context.textStyles.captureLabelSans.copyWith(color: colors.ink),
     );
     return Pressable(

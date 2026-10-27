@@ -209,7 +209,7 @@ Future<void> _drainToast(WidgetTester tester) async {
 
 void main() {
   testWidgets(
-    'a phone log opens as a sheet with back, edit and delete in its footer',
+    'a phone log opens as a sheet with back and edit in its footer and delete in its header',
     (WidgetTester tester) async {
       _usePhone(tester);
       await _openLog(tester);
@@ -223,7 +223,7 @@ void main() {
       expect(find.byKey(logViewerPanelKey), findsOneWidget);
       final Text eyebrow = tester.widget<Text>(_inSheet(find.text(_dayTitle)));
       expect(eyebrow.style!.fontSize, 13);
-      expect(eyebrow.maxLines, 1);
+      expect(eyebrow.maxLines, isNull);
       final Text heading = tester.widget<Text>(
         _inSheet(find.text('Morning note')),
       );
@@ -246,22 +246,31 @@ void main() {
       final Rect edit = tester.getRect(
         _inFooter(find.byKey(logActionsEditKey)),
       );
+      expect(_inFooter(find.byKey(logActionsDeleteKey)), findsNothing);
       final Rect delete = tester.getRect(
-        _inFooter(find.byKey(logActionsDeleteKey)),
+        _inSheet(find.byKey(logActionsDeleteKey)),
+      );
+      final Rect headingRect = tester.getRect(
+        _inSheet(find.text('Morning note')),
       );
       expect(back.height, 48);
-      expect(edit.size, const Size(48, 48));
-      expect(delete.size, const Size(48, 48));
+      expect(edit.height, 48);
+      expect(delete.width, greaterThanOrEqualTo(48));
+      expect(delete.height, greaterThanOrEqualTo(48));
       expect(back.left, phoneSheetFooterPadding.left);
       expect(edit.left, back.right + phoneSheetActionGap);
-      expect(delete.left, edit.right + phoneSheetActionGap);
-      expect(delete.right, _phone.width - phoneSheetFooterPadding.right);
-      for (final Key key in <Key>[logActionsEditKey, logActionsDeleteKey]) {
-        final BoxDecoration face =
-            tester.widget<Container>(_faceOf(find.byKey(key))).decoration!
-                as BoxDecoration;
-        expect(face.color!.toARGB32(), 0xFF2A241D, reason: '$key');
-      }
+      expect(edit.right, _phone.width - phoneSheetFooterPadding.right);
+      expect(delete.left, greaterThan(headingRect.right));
+      expect(
+        delete.bottom,
+        lessThan(tester.getRect(find.byKey(phoneSheetFooterKey)).top),
+      );
+      final BoxDecoration editFace =
+          tester
+                  .widget<Container>(_faceOf(find.byKey(logActionsEditKey)))
+                  .decoration!
+              as BoxDecoration;
+      expect(editFace.color!.toARGB32(), Palette.coral.toARGB32());
 
       final Rect footer = tester.getRect(find.byKey(phoneSheetFooterKey));
       for (final Key key in <Key>[logViewerEarlierKey, logViewerLaterKey]) {
@@ -295,11 +304,18 @@ void main() {
     expect(find.byKey(logActionsEditKey), findsNothing);
     expect(
       find.descendant(of: dock, matching: find.byKey(logActionsDeleteKey)),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(ViewerTopBar),
+        matching: find.byKey(logActionsDeleteKey),
+      ),
       findsOneWidget,
     );
     expect(
       tester.getRect(find.byKey(logActionsDeleteKey)).bottom,
-      lessThan(_phone.height - _gestureBar),
+      lessThan(tester.getRect(find.byKey(logViewerBackKey)).top),
     );
   });
 
@@ -351,7 +367,7 @@ void main() {
     _usePhone(tester);
     final _Session session = await _openLog(tester);
 
-    await tester.tap(_inFooter(find.byKey(logActionsDeleteKey)));
+    await tester.tap(_inSheet(find.byKey(logActionsDeleteKey)));
     await tester.pumpAndSettle();
 
     expect(find.text('Delete this entry?'), findsOneWidget);

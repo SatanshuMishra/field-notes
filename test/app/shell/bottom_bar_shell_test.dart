@@ -503,7 +503,9 @@ void main() {
             find.descendant(of: _bar, matching: find.byType(GlassSurface)),
           );
           expect(glass.tone, tone, reason: selected.name);
-          final Color pill = tone.pillFor(brightness);
+          final Color pill = selected == ShellDestination.garden
+              ? phoneBottomBarScenePill
+              : tone.pillFor(brightness);
           for (final ShellDestination d in ShellDestination.primary) {
             final Iterable<BoxDecoration> fills = tester
                 .widgetList<DecoratedBox>(

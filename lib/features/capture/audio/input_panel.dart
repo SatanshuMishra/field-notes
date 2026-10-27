@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:field_notes/design/focus/keyboard_focus_builder.dart';
 import 'package:field_notes/data/media/audio_output.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass_surface.dart';
@@ -47,7 +48,7 @@ const Key inputProfileMenuKey = ValueKey<String>('input-profile-menu');
 const Key outputDeviceMenuKey = ValueKey<String>('output-device-menu');
 const Key voiceSettingsRowKey = ValueKey<String>('voice-settings-row');
 
-const double _rowHeight = 44;
+const double _rowHeight = kMinInteractiveDimension;
 const double _panelRadius = 18;
 const EdgeInsets _panelPadding = EdgeInsets.symmetric(
   horizontal: 10,
@@ -65,6 +66,8 @@ const double _meterGap = 6;
 const EdgeInsets _meterPadding = EdgeInsets.fromLTRB(6, 4, 6, 10);
 const double _anchorGap = 8;
 const double _screenMargin = 16;
+
+final Color _mediaMutedInk = Palette.mediaInk.withValues(alpha: _mutedAlpha);
 
 final Set<LogicalKeyboardKey> _panelActivationKeys = <LogicalKeyboardKey>{
   LogicalKeyboardKey.space,
@@ -323,15 +326,21 @@ class InputPanel extends ConsumerWidget {
                         androidVideo: androidVideo,
                         heldDuringTake: takeLevels != null,
                         ink: Palette.mediaInk,
+                        mutedInk: _mediaMutedInk,
                         tone: GlassTone.media,
                         tapRegionGroupId: tapRegionGroupId,
                       ),
                       InputProfileRow(
                         ink: Palette.mediaInk,
+                        mutedInk: _mediaMutedInk,
                         tone: GlassTone.media,
                         tapRegionGroupId: tapRegionGroupId,
                       ),
-                      const InputVolumeRow(ink: Palette.mediaInk),
+                      InputVolumeRow(
+                        ink: Palette.mediaInk,
+                        mutedInk: _mediaMutedInk,
+                        surface: FocusRingSurface.dark,
+                      ),
                     ],
                   ),
                 ),
@@ -339,12 +348,14 @@ class InputPanel extends ConsumerWidget {
                   padding: _meterPadding,
                   child: InputLevelRow(
                     ink: Palette.mediaInk,
+                    mutedInk: _mediaMutedInk,
                     takeLevels: takeLevels,
                   ),
                 ),
                 if (desktop)
                   OutputDeviceRow(
                     ink: Palette.mediaInk,
+                    mutedInk: _mediaMutedInk,
                     tone: GlassTone.media,
                     tapRegionGroupId: tapRegionGroupId,
                   ),
@@ -352,6 +363,7 @@ class InputPanel extends ConsumerWidget {
                   key: voiceSettingsRowKey,
                   title: voiceSettingsLabel,
                   ink: Palette.mediaInk,
+                  mutedInk: _mediaMutedInk,
                   surface: FocusRingSurface.dark,
                   trailing: const _Glyph(Icons.chevron_right),
                   onTap: onVoiceSettings,
@@ -385,9 +397,10 @@ class _HeldDuringTake extends StatelessWidget {
 }
 
 class InputLevelRow extends ConsumerWidget {
-  const InputLevelRow({super.key, this.ink, this.takeLevels});
+  const InputLevelRow({super.key, this.ink, this.mutedInk, this.takeLevels});
 
   final Color? ink;
+  final Color? mutedInk;
   final Stream<double>? takeLevels;
 
   @override
@@ -404,7 +417,7 @@ class InputLevelRow extends ConsumerWidget {
           child: Text(
             inputLevelLabel,
             style: context.textStyles.captionSans.copyWith(
-              color: ink.withValues(alpha: _mutedAlpha),
+              color: mutedInk ?? context.colors.muted,
             ),
           ),
         ),
@@ -426,6 +439,7 @@ class InputDeviceRow extends ConsumerStatefulWidget {
     super.key,
     this.androidVideo = false,
     this.ink,
+    this.mutedInk,
     this.tone = GlassTone.paper,
     this.tapRegionGroupId,
     this.heldDuringTake = false,
@@ -433,6 +447,7 @@ class InputDeviceRow extends ConsumerStatefulWidget {
 
   final bool androidVideo;
   final Color? ink;
+  final Color? mutedInk;
   final GlassTone tone;
   final Object? tapRegionGroupId;
   final bool heldDuringTake;
@@ -479,12 +494,14 @@ class _InputDeviceRowState extends ConsumerState<InputDeviceRow> {
   @override
   Widget build(BuildContext context) {
     final Color ink = widget.ink ?? context.colors.ink;
+    final Color mutedInk = widget.mutedInk ?? context.colors.muted;
     if (widget.androidVideo) {
       return _PanelRow(
         key: inputDeviceRowKey,
         title: inputDeviceTitle,
         value: chosenByAndroidLabel,
         ink: ink,
+        mutedInk: mutedInk,
       );
     }
     final String? storedId = _settingsOf(ref).audioInputId;
@@ -501,6 +518,7 @@ class _InputDeviceRowState extends ConsumerState<InputDeviceRow> {
             ref.watch(selectedAudioInputProvider).value?.label ??
             (storedId == null ? systemDefaultInputLabel : ''),
         ink: ink,
+        mutedInk: mutedInk,
       );
     }
     final String label =
@@ -528,6 +546,7 @@ class _InputDeviceRowState extends ConsumerState<InputDeviceRow> {
             title: inputDeviceTitle,
             value: label,
             ink: ink,
+            mutedInk: mutedInk,
             surface: _surfaceOn(widget.tone),
             trailing: _dropdownGlyph(open),
             expanded: open,
@@ -541,6 +560,7 @@ class InputProfileRow extends ConsumerWidget {
   const InputProfileRow({
     super.key,
     this.ink,
+    this.mutedInk,
     this.tone = GlassTone.paper,
     this.tapRegionGroupId,
     this.describe,
@@ -549,6 +569,7 @@ class InputProfileRow extends ConsumerWidget {
   });
 
   final Color? ink;
+  final Color? mutedInk;
   final GlassTone tone;
   final Object? tapRegionGroupId;
   final String Function(InputProfile profile)? describe;
@@ -597,6 +618,7 @@ class InputProfileRow extends ConsumerWidget {
               title: inputProfileTitle,
               value: current.label,
               ink: ink,
+              mutedInk: mutedInk ?? context.colors.muted,
               surface: _surfaceOn(tone),
               trailing: _dropdownGlyph(open),
               expanded: open,
@@ -620,11 +642,13 @@ class OutputDeviceRow extends ConsumerWidget {
   const OutputDeviceRow({
     super.key,
     this.ink,
+    this.mutedInk,
     this.tone = GlassTone.paper,
     this.tapRegionGroupId,
   });
 
   final Color? ink;
+  final Color? mutedInk;
   final GlassTone tone;
   final Object? tapRegionGroupId;
 
@@ -668,6 +692,7 @@ class OutputDeviceRow extends ConsumerWidget {
             title: outputDeviceTitle,
             value: label,
             ink: ink,
+            mutedInk: mutedInk ?? context.colors.muted,
             surface: _surfaceOn(tone),
             trailing: _dropdownGlyph(open),
             expanded: open,
@@ -678,9 +703,16 @@ class OutputDeviceRow extends ConsumerWidget {
 }
 
 class InputVolumeRow extends StatelessWidget {
-  const InputVolumeRow({super.key, this.ink});
+  const InputVolumeRow({
+    super.key,
+    this.ink,
+    this.mutedInk,
+    this.surface = FocusRingSurface.light,
+  });
 
   final Color? ink;
+  final Color? mutedInk;
+  final FocusRingSurface surface;
 
   @override
   Widget build(BuildContext context) {
@@ -689,6 +721,8 @@ class InputVolumeRow extends StatelessWidget {
       title: inputVolumeTitle,
       maximum: inputVolumeMaximum,
       ink: ink,
+      mutedInk: mutedInk,
+      surface: surface,
       read: (AppSettings settings) => settings.inputVolume,
       write: (SettingsRepository repository, int volume) =>
           repository.setInputVolume(volume),
@@ -697,9 +731,16 @@ class InputVolumeRow extends StatelessWidget {
 }
 
 class OutputVolumeRow extends StatelessWidget {
-  const OutputVolumeRow({super.key, this.ink});
+  const OutputVolumeRow({
+    super.key,
+    this.ink,
+    this.mutedInk,
+    this.surface = FocusRingSurface.light,
+  });
 
   final Color? ink;
+  final Color? mutedInk;
+  final FocusRingSurface surface;
 
   @override
   Widget build(BuildContext context) {
@@ -708,6 +749,8 @@ class OutputVolumeRow extends StatelessWidget {
       title: outputVolumeTitle,
       maximum: outputVolumeMaximum,
       ink: ink,
+      mutedInk: mutedInk,
+      surface: surface,
       read: (AppSettings settings) => settings.outputVolume,
       write: (SettingsRepository repository, int volume) =>
           repository.setOutputVolume(volume),
@@ -722,22 +765,33 @@ class _VolumeRow extends ConsumerStatefulWidget {
     required this.maximum,
     required this.read,
     required this.write,
+    required this.surface,
     this.ink,
+    this.mutedInk,
   });
 
   final String title;
   final int maximum;
   final int Function(AppSettings settings) read;
   final Future<void> Function(SettingsRepository repository, int volume) write;
+  final FocusRingSurface surface;
   final Color? ink;
+  final Color? mutedInk;
 
   @override
   ConsumerState<_VolumeRow> createState() => _VolumeRowState();
 }
 
 class _VolumeRowState extends ConsumerState<_VolumeRow> {
+  late final FocusNode _sliderFocus = FocusNode(debugLabel: widget.title);
   double? _dragging;
   int? _released;
+
+  @override
+  void dispose() {
+    _sliderFocus.dispose();
+    super.dispose();
+  }
 
   void _start(double value) {
     setState(() {
@@ -788,6 +842,8 @@ class _VolumeRowState extends ConsumerState<_VolumeRow> {
       }
     });
     final Color ink = widget.ink ?? context.colors.ink;
+    final Color mutedInk = widget.mutedInk ?? context.colors.muted;
+    final FocusRingSurface surface = widget.surface;
     final double maximum = widget.maximum.toDouble();
     final double value = (_dragging ?? widget.read(_settingsOf(ref)).toDouble())
         .clamp(0, maximum)
@@ -798,7 +854,12 @@ class _VolumeRowState extends ConsumerState<_VolumeRow> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         ExcludeSemantics(
-          child: _PanelRow(title: widget.title, value: shown, ink: ink),
+          child: _PanelRow(
+            title: widget.title,
+            value: shown,
+            ink: ink,
+            mutedInk: mutedInk,
+          ),
         ),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
@@ -810,16 +871,33 @@ class _VolumeRowState extends ConsumerState<_VolumeRow> {
             inactiveTickMarkColor: Colors.transparent,
             showValueIndicator: ShowValueIndicator.never,
           ),
-          child: Semantics(
-            label: widget.title,
-            child: Slider(
-              value: value,
-              max: maximum,
-              divisions: widget.maximum,
-              semanticFormatterCallback: (double value) => '${value.round()}%',
-              onChangeStart: _start,
-              onChanged: (double next) => setState(() => _dragging = next),
-              onChangeEnd: _release,
+          child: KeyboardFocusBuilder(
+            focusNode: _sliderFocus,
+            builder: (BuildContext context, bool shown) => DecoratedBox(
+              position: DecorationPosition.foreground,
+              decoration: BoxDecoration(
+                border: shown
+                    ? Border.all(
+                        color: surface.colorIn(context.colors),
+                        width: surface.width,
+                      )
+                    : null,
+                borderRadius: Shapes.buttonBorderRadius,
+              ),
+              child: Semantics(
+                label: widget.title,
+                child: Slider(
+                  focusNode: _sliderFocus,
+                  value: value,
+                  max: maximum,
+                  divisions: widget.maximum,
+                  semanticFormatterCallback: (double value) =>
+                      '${value.round()}%',
+                  onChangeStart: _start,
+                  onChanged: (double next) => setState(() => _dragging = next),
+                  onChangeEnd: _release,
+                ),
+              ),
             ),
           ),
         ),
@@ -833,6 +911,7 @@ class _PanelRow extends StatelessWidget {
     super.key,
     required this.title,
     required this.ink,
+    required this.mutedInk,
     this.value,
     this.trailing,
     this.expanded,
@@ -842,6 +921,7 @@ class _PanelRow extends StatelessWidget {
 
   final String title;
   final Color ink;
+  final Color mutedInk;
   final FocusRingSurface surface;
   final String? value;
   final Widget? trailing;
@@ -861,8 +941,6 @@ class _PanelRow extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: context.textStyles.bodySans.copyWith(color: ink),
               ),
             ),
@@ -870,11 +948,9 @@ class _PanelRow extends StatelessWidget {
               Flexible(
                 child: Text(
                   shown,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.end,
                   style: context.textStyles.captionSans.copyWith(
-                    color: ink.withValues(alpha: _mutedAlpha),
+                    color: mutedInk,
                   ),
                 ),
               ),

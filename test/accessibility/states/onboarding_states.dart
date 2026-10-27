@@ -55,6 +55,7 @@ const int _meadowFrames = 6000;
 const Duration _meadowWait = Duration(milliseconds: 2);
 const Duration _yearMidPlay = Duration(seconds: 4);
 const Duration _yearToEnd = Duration(seconds: 12);
+const Duration _sceneSettles = Duration(milliseconds: 1500);
 
 const double _swipe = 120;
 const double _swipeSpeed = 800;
@@ -323,6 +324,9 @@ Future<void> _pumpScreen(
     screen.setUp(controller);
   }
   await _settle(tester);
+  if (screen.year == _Year.untouched) {
+    await tester.pump(_sceneSettles);
+  }
   if (layout == ShellLayout.bottomBar) {
     await screen.phoneAct(tester, screen.chapter);
   }

@@ -31,6 +31,37 @@ void main() {
     expect(find.text('q=rain'), findsOneWidget);
   });
 
+  testWidgets(
+    'the desktop search field stays one line and grows with 2x text',
+    (WidgetTester tester) async {
+      Future<double> editableHeightAt(double scale) async {
+        await tester.pumpWidget(
+          MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: searchHarness(_probe()),
+          ),
+        );
+        return tester.getSize(find.byType(EditableText)).height;
+      }
+
+      final double single = await editableHeightAt(1);
+      final double doubled = await editableHeightAt(2);
+      await tester.enterText(find.byType(TextField), 'rain\nsnow');
+      await tester.pump();
+
+      final EditableText editable = tester.widget(find.byType(EditableText));
+      expect(editable.maxLines, 1);
+      expect(editable.keyboardType, isNot(TextInputType.multiline));
+      expect(find.text('q=rainsnow'), findsOneWidget);
+      expect(doubled, greaterThanOrEqualTo(single * 2 - 1));
+      expect(
+        tester.getSize(find.byType(TextField)).height,
+        greaterThan(doubled),
+      );
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
+
   testWidgets('clear button resets the query', (WidgetTester tester) async {
     await tester.pumpWidget(searchHarness(_probe()));
 

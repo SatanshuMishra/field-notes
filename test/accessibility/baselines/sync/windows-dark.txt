@@ -1,3 +1,2 @@
-focus-visible | s2-sync-join | Join my journal / 0 of 8 | <root> # open: focus indicator below 3:1
-focus-visible | s7-sync-error-unreachable | Invite code | <root> # open: focus indicator below 3:1
-focus-visible | s7-sync-error-unreachable | Server address | <root> # open: focus indicator below 3:1
+focus-visible | s7-sync-error-unreachable | Invite code | <root> # measured: 13.37:1 by token arithmetic
+focus-visible | s7-sync-error-unreachable | Server address | <root> # measured: 13.37:1 by token arithmetic

@@ -66,7 +66,7 @@ String _dump(String nodes) => '$_head$nodes$_tail';
 
 Future<ProcessResult> _rules(List<String> arguments) => Process.run(
   'dart',
-  <String>['run', 'tool/a11y/android_dump_rules.dart', ...arguments],
+  <String>['tool/a11y/android_dump_rules.dart', ...arguments],
 );
 
 void main() {

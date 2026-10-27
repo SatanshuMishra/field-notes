@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
@@ -12,6 +12,13 @@ const String calendarBrowseHint = '← → to browse · T for this week';
 
 const double calendarHeaderTrailingReach =
     calendarMinTapTarget - calendarChevronButtonSize;
+
+const double calendarHeaderWindowsChevronSize = 40;
+
+double calendarHeaderChevronSize(TargetPlatform platform) =>
+    platform == TargetPlatform.windows
+    ? calendarHeaderWindowsChevronSize
+    : calendarChevronButtonSize;
 
 const double _hintGap = 16;
 const double _actionGap = 8;
@@ -88,8 +95,11 @@ class CalendarHeader extends StatelessWidget {
         final TextStyle titleStyle = context.textStyles.displaySerif;
         final TextScaler scaler = MediaQuery.textScalerOf(context);
         final TextDirection direction = Directionality.of(context);
+        final double chevronSize = calendarHeaderChevronSize(
+          Theme.of(context).platform,
+        );
         final double actionsWidth =
-            calendarChevronButtonSize * 2 +
+            chevronSize * 2 +
             _chevronGap +
             calendarHeaderTrailingReach +
             (showThisWeek ? _actionGap + _thisWeekWidth(scaler, direction) : 0);
@@ -162,6 +172,7 @@ class CalendarHeader extends StatelessWidget {
               direction: ChevronDirection.previous,
               semanticLabel: 'Previous month',
               onPressed: onPreviousMonth,
+              size: chevronSize,
               reach: const EdgeInsets.fromLTRB(
                 _actionGap,
                 _chevronRise,
@@ -174,6 +185,7 @@ class CalendarHeader extends StatelessWidget {
               direction: ChevronDirection.next,
               semanticLabel: 'Next month',
               onPressed: onNextMonth,
+              size: chevronSize,
               reach: const EdgeInsets.only(
                 top: _chevronRise,
                 right: calendarHeaderTrailingReach,
@@ -245,12 +257,7 @@ class _TitleButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Flexible(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.textStyles.displaySerif,
-              ),
+              child: Text(title, style: context.textStyles.displaySerif),
             ),
             const SizedBox(width: _titleCaretGap),
             const CalendarChevronGlyph(
@@ -276,40 +283,48 @@ class _ThisWeekButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CalendarTapSlot(
-      alignment: Alignment.bottomCenter,
-      child: Pressable(
-        label: 'This week',
-        onPressed: onPressed,
-        borderRadius: _thisWeekRadius,
-        surface: FocusRingSurface.light,
-        paintsHover: false,
-        builder: (BuildContext context, bool hovered) => DecoratedBox(
-          decoration: BoxDecoration(
-            color: Palette.coral,
-            border: context.shadows.outline,
-            borderRadius: _thisWeekRadius,
-            boxShadow: context.shadows.control,
-          ),
-          child: HoverFill(
-            hovered: hovered,
-            surface: FocusRingSurface.dark,
-            borderRadius: _thisWeekRadius,
-            position: DecorationPosition.background,
-            child: Padding(
-              padding: _thisWeekPadding,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  SizedBox.square(
-                    dimension: _thisWeekArrowSize,
-                    child: CustomPaint(
-                      painter: _ArrowPainter(pointsBack: pointsBack),
-                    ),
+    return Pressable(
+      label: 'This week',
+      onPressed: onPressed,
+      borderRadius: _thisWeekRadius,
+      surface: FocusRingSurface.light,
+      paintsHover: false,
+      ringsFace: true,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: calendarMinTapTarget),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          widthFactor: 1,
+          heightFactor: 1,
+          child: FocusRingFace(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Palette.coral,
+                border: context.shadows.outline,
+                borderRadius: _thisWeekRadius,
+                boxShadow: context.shadows.control,
+              ),
+              child: HoverFill(
+                hovered: hovered,
+                surface: FocusRingSurface.dark,
+                borderRadius: _thisWeekRadius,
+                position: DecorationPosition.background,
+                child: Padding(
+                  padding: _thisWeekPadding,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      SizedBox.square(
+                        dimension: _thisWeekArrowSize,
+                        child: CustomPaint(
+                          painter: _ArrowPainter(pointsBack: pointsBack),
+                        ),
+                      ),
+                      const SizedBox(width: _thisWeekArrowGap),
+                      const Text('This week', style: _thisWeekStyle),
+                    ],
                   ),
-                  const SizedBox(width: _thisWeekArrowGap),
-                  const Text('This week', style: _thisWeekStyle),
-                ],
+                ),
               ),
             ),
           ),
