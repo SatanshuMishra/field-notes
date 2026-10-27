@@ -368,6 +368,7 @@ class _CaptionButtonState extends State<_CaptionButton> {
         surface: widget.palette.ringSurface,
         placement: FocusRingPlacement.edge,
         child: MouseRegion(
+          cursor: SystemMouseCursors.basic,
           onEnter: (PointerEnterEvent _) => _hover(true),
           onExit: (PointerExitEvent _) => _hover(false),
           child: GestureDetector(
