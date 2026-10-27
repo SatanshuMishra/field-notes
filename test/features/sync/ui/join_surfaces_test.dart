@@ -512,6 +512,28 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('the phone camera headline stays clear of the frame at 2x text', (
+    WidgetTester tester,
+  ) async {
+    _usePhoneCamera();
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await _openJoin(
+      tester,
+      platform: TargetPlatform.android,
+      join: _FakeJoin(),
+    );
+
+    final Rect message = tester.getRect(
+      find.text('Point the camera at the code on your other device.'),
+    );
+    final Rect frame = tester.getRect(find.byKey(joinScanFrameKey));
+    expect(frame.top, greaterThan(message.bottom));
+    expect(frame.width, closeTo(_bracketSide, 0.01));
+    final Rect cancel = tester.getRect(find.text(syncCancelLabel));
+    expect(frame.bottom, lessThan(cancel.top));
+  });
+
   testWidgets('the camera page asks for light status bar icons', (
     WidgetTester tester,
   ) async {

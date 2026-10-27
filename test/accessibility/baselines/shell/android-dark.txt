@@ -1,9 +1,2 @@
-focus-visible | a6-garden-empty | Full screen | <root> # open: focus indicator below 3:1
-focus-visible | a7-garden-blooms | Full screen | <root> # open: focus indicator below 3:1
-focus-visible | a8-garden-phone | Full screen | <root> # open: focus indicator below 3:1
 missing-role | a5-calendar-picker | Dismiss month picker | <root> # Flutter's own control
 missing-role | a5-calendar-picker@2x | Dismiss month picker | <root> # Flutter's own control
-text-contrast | a6-garden-empty | Your meadow is waiting. Every day you journal plants a bl... | Your meadow is waiting. Every day you journal plants a bloom here. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | a8-garden-phone | Your meadow is waiting. Every day you journal plants a bl... | Your meadow is waiting. Every day you journal plants a bloom here. # open: text contrast below 4.5:1, or 3:1 for large text
-truncated-text | a1-today-empty@2x | 0 days | <root> # open: truncated-text
-truncated-text | a8-garden-phone@2x | 0 days | <root> # open: truncated-text

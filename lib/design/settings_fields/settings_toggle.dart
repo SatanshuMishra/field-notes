@@ -6,20 +6,11 @@ import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
+import 'settings_min_target.dart';
 
 const String settingsToggleFallbackLabel = 'Switch';
 
 const Duration _knobTravel = Duration(milliseconds: 150);
-
-const double _androidMinTarget = 48;
-const double _macosMinTarget = 28;
-const double _windowsMinTarget = 40;
-
-double _minTargetOn(TargetPlatform platform) => switch (platform) {
-  TargetPlatform.macOS => _macosMinTarget,
-  TargetPlatform.windows => _windowsMinTarget,
-  _ => _androidMinTarget,
-};
 
 class _ToggleMetrics {
   const _ToggleMetrics({
@@ -77,7 +68,7 @@ class SettingsToggle extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     final Border outline = context.shadows.outline;
     final TargetPlatform platform = Theme.of(context).platform;
-    final double minTarget = _minTargetOn(platform);
+    final double minTarget = settingsMinTargetOn(platform);
     final _ToggleMetrics metrics = switch (resolveShellLayout(platform)) {
       ShellLayout.sidebar => _ToggleMetrics.sidebar,
       ShellLayout.bottomBar => _ToggleMetrics.phone,

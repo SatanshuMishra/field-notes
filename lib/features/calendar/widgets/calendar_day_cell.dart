@@ -23,6 +23,7 @@ class CalendarDayCell extends StatelessWidget {
     this.day,
     this.isToday = false,
     this.isFuture = false,
+    this.inCurrentWeek = false,
     this.hasEntries = false,
     this.onTap,
     this.tapReach = EdgeInsets.zero,
@@ -32,6 +33,7 @@ class CalendarDayCell extends StatelessWidget {
   final Day? day;
   final bool isToday;
   final bool isFuture;
+  final bool inCurrentWeek;
   final bool hasEntries;
   final VoidCallback? onTap;
   final EdgeInsets tapReach;
@@ -65,11 +67,13 @@ class CalendarDayCell extends StatelessWidget {
                     dayOfMonth: cell.dayOfMonth,
                     day: day,
                     isToday: isToday,
+                    inCurrentWeek: inCurrentWeek,
                     metrics: metrics,
                     hovered: hovered,
                   )
                 : _NumberOnly(
                     dayOfMonth: cell.dayOfMonth,
+                    inCurrentWeek: inCurrentWeek,
                     metrics: metrics,
                     hovered: hovered,
                   );
@@ -137,6 +141,7 @@ class _InMonthFace extends StatelessWidget {
     required this.dayOfMonth,
     required this.day,
     required this.isToday,
+    required this.inCurrentWeek,
     required this.metrics,
     required this.hovered,
   });
@@ -144,6 +149,7 @@ class _InMonthFace extends StatelessWidget {
   final int dayOfMonth;
   final Day? day;
   final bool isToday;
+  final bool inCurrentWeek;
   final _CellMetrics metrics;
   final bool hovered;
 
@@ -165,7 +171,11 @@ class _InMonthFace extends StatelessWidget {
             const _ActivityDot(key: calendarActivityDotKey),
           _DayNumber(
             dayOfMonth: dayOfMonth,
-            color: isToday ? colors.accentInk : colors.mutedDeep,
+            color: isToday
+                ? colors.accentInk
+                : inCurrentWeek
+                ? colors.ink
+                : colors.mutedDeep,
             metrics: metrics,
           ),
         ],
@@ -216,11 +226,13 @@ class _InMonthFace extends StatelessWidget {
 class _NumberOnly extends StatelessWidget {
   const _NumberOnly({
     required this.dayOfMonth,
+    required this.inCurrentWeek,
     required this.metrics,
     required this.hovered,
   });
 
   final int dayOfMonth;
+  final bool inCurrentWeek;
   final _CellMetrics metrics;
   final bool hovered;
 
@@ -235,7 +247,9 @@ class _NumberOnly extends StatelessWidget {
         children: <Widget>[
           _DayNumber(
             dayOfMonth: dayOfMonth,
-            color: context.colors.mutedDeep,
+            color: inCurrentWeek
+                ? context.colors.ink
+                : context.colors.mutedDeep,
             metrics: metrics,
           ),
         ],

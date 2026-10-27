@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -71,27 +74,49 @@ class _SearchFieldState extends ConsumerState<SearchField> {
       borderRadius: BorderRadius.circular(Shapes.radiusSm),
       borderSide: BorderSide(color: colors.line, width: Shapes.outlineWidth),
     );
+    final OutlineInputBorder focusedBorder = border.copyWith(
+      borderSide: BorderSide(
+        color: FocusRingSurface.light.colorIn(colors),
+        width: FocusRingSurface.light.width,
+      ),
+    );
+    final TextPainter line = TextPainter(
+      text: TextSpan(text: _name, style: bodySans),
+      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: Directionality.of(context),
+      maxLines: 1,
+    )..layout();
+    final double height = math.max(
+      _standardMinHeight,
+      line.height + 2 * _standardTextInset,
+    );
+    line.dispose();
     final Widget field = Semantics(
       label: _name,
-      child: TextField(
-        controller: _controller,
-        style: bodySans,
-        onChanged: _onChanged,
-        decoration: InputDecoration(
-          hint: _hint(context, bodySans),
-          prefixIcon: Icon(Icons.search, color: colors.mutedDeep),
-          suffixIcon: query.isEmpty
-              ? null
-              : const SizedBox.square(dimension: kMinInteractiveDimension),
-          filled: true,
-          fillColor: colors.cardBright,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
+      child: SizedBox(
+        height: height,
+        child: TextField(
+          controller: _controller,
+          style: bodySans,
+          onChanged: _onChanged,
+          expands: true,
+          maxLines: null,
+          textAlignVertical: TextAlignVertical.center,
+          decoration: InputDecoration(
+            hint: _hint(context, bodySans),
+            prefixIcon: Icon(Icons.search, color: colors.mutedDeep),
+            suffixIcon: query.isEmpty
+                ? null
+                : const SizedBox.square(dimension: kMinInteractiveDimension),
+            filled: true,
+            fillColor: colors.cardBright,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: _standardTextIndent,
+            ),
+            border: border,
+            enabledBorder: border,
+            focusedBorder: focusedBorder,
           ),
-          border: border,
-          enabledBorder: border,
-          focusedBorder: border,
         ),
       ),
     );
@@ -166,6 +191,12 @@ class _SearchFieldState extends ConsumerState<SearchField> {
 }
 
 const double _phoneHeight = 52;
+
+const double _standardMinHeight = 44;
+
+const double _standardTextInset = 12;
+
+const double _standardTextIndent = 14;
 
 const double _phoneClearExtent = 44;
 

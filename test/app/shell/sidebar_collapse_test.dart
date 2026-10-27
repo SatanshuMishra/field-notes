@@ -158,7 +158,7 @@ void _expectCollapsed(WidgetTester tester) {
     isSemantics(label: _expandLabel, isButton: true, hasTapAction: true),
   );
   final Rect toggle = tester.getRect(find.byKey(_toggle));
-  expect(toggle.size, const Size.square(26));
+  expect(toggle.size, const Size.square(28));
   expect(toggle.center.dx, moreOrLessEquals(68, epsilon: 0.01));
   final Rect settings = tester.getRect(find.byKey(_settingsButton));
   final Rect sound = tester.getRect(find.byKey(_soundButton));
@@ -185,11 +185,11 @@ void main() {
 
       _expectOpen(tester);
       final Rect openToggle = tester.getRect(find.byKey(_toggle));
-      expect(openToggle.size, const Size.square(26));
-      expect(openToggle.right, 176 - 10);
+      expect(openToggle.size, const Size.square(28));
+      expect(openToggle.center.dx, 176 - 10 - 13);
       expect(
-        openToggle.top - tester.getRect(find.byKey(_rail)).top,
-        moreOrLessEquals(22, epsilon: 0.01),
+        openToggle.center.dy - tester.getRect(find.byKey(_rail)).top,
+        moreOrLessEquals(22 + 13, epsilon: 0.01),
       );
 
       await tester.tap(find.byKey(_toggle));

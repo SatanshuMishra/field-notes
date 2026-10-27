@@ -3,7 +3,7 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const String captureOpenErrorMessage =
@@ -14,6 +14,15 @@ const String todayCaptureTitle = 'capture a moment';
 const double _titleGap = 10;
 const double _rowGap = 8;
 const double _iconSize = 17;
+const double _androidMinTarget = 48;
+const double _macosMinTarget = 28;
+const double _windowsMinTarget = 40;
+
+double _minTargetOn(TargetPlatform platform) => switch (platform) {
+  TargetPlatform.macOS => _macosMinTarget,
+  TargetPlatform.windows => _windowsMinTarget,
+  _ => _androidMinTarget,
+};
 
 CaptureGlyph _captureGlyphFor(EntryType type) {
   switch (type) {
@@ -81,7 +90,7 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
 
   Widget _captureRow(CaptureOption option, CaptureRoute route) {
     final StickerButtonVariant variant = _captureVariantFor(option.type);
-    return StickerButton(
+    final Widget button = StickerButton(
       label: option.label,
       variant: variant,
       icon: CaptureIcon(
@@ -92,6 +101,12 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
       labelStyle: context.textStyles.captureLabelSans,
       onPressed: () => _openRoute(route),
     );
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: _minTargetOn(Theme.of(context).platform),
+      ),
+      child: button,
+    );
   }
 
   @override
@@ -99,10 +114,10 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
     final CaptureRouteRegistry registry = ref.watch(captureRoutesProvider);
     final List<(CaptureOption, CaptureRoute)> orderedRoutes =
         <(CaptureOption, CaptureRoute)>[
-      for (final CaptureOption option in captureOptions)
-        if (registry.routeFor(option.type) case final CaptureRoute route)
-          (option, route),
-    ];
+          for (final CaptureOption option in captureOptions)
+            if (registry.routeFor(option.type) case final CaptureRoute route)
+              (option, route),
+        ];
     final String? error = _error;
     final FieldNotesTextStyles textStyles = context.textStyles;
 

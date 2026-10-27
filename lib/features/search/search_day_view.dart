@@ -40,10 +40,7 @@ class SearchDayView {
   final List<SearchEntryText> entryTexts;
   final String? matchedEntryId;
 
-  SearchDayView matching({
-    required String entryId,
-    required String preview,
-  }) {
+  SearchDayView matching({required String entryId, required String preview}) {
     return SearchDayView(
       date: date,
       mood: mood,
@@ -70,14 +67,14 @@ class SearchDayView {
 
   @override
   int get hashCode => Object.hash(
-        date,
-        mood,
-        entryCount,
-        preview,
-        searchText,
-        Object.hashAll(entryTexts),
-        matchedEntryId,
-      );
+    date,
+    mood,
+    entryCount,
+    preview,
+    searchText,
+    Object.hashAll(entryTexts),
+    matchedEntryId,
+  );
 
   @override
   String toString() =>
@@ -93,9 +90,9 @@ List<SearchDayView> buildSearchDayViews(List<Day> days, List<Entry> entries) {
 
   final List<SearchDayView> views = <SearchDayView>[];
   for (final Day day in days) {
-    final List<Entry> dayEntries =
-        List<Entry>.of(byDayId[day.id] ?? const <Entry>[])
-          ..sort((Entry a, Entry b) => a.createdAt.compareTo(b.createdAt));
+    final List<Entry> dayEntries = List<Entry>.of(
+      byDayId[day.id] ?? const <Entry>[],
+    )..sort((Entry a, Entry b) => a.createdAt.compareTo(b.createdAt));
     final List<SearchEntryText> entryTexts = _entryTextsFor(dayEntries);
     views.add(
       SearchDayView(
@@ -149,8 +146,10 @@ List<SearchEntryText> _entryTextsFor(List<Entry> entries) {
 }
 
 String? _firstProjectedLine(String text) {
-  for (final String line
-      in plainTextOf(text, tables: tablesEnabled).split('\n')) {
+  for (final String line in plainTextOf(
+    text,
+    tables: tablesEnabled,
+  ).split('\n')) {
     final String trimmed = line.trim();
     if (trimmed.isNotEmpty) {
       return trimmed;

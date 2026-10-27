@@ -253,7 +253,9 @@ void main() {
       expect(b.left, closeTo(a.left, _tolerance), reason: part);
       expect(b.top, closeTo(a.top, _tolerance), reason: part);
       expect(b.width, closeTo(a.width, _tolerance), reason: part);
-      if (part != 'column' && part != 'rule') {
+      if (part == 'content') {
+        expect(b.height, greaterThanOrEqualTo(a.height), reason: part);
+      } else if (part != 'column' && part != 'rule') {
         expect(b.height, closeTo(a.height, _tolerance), reason: part);
       }
     }

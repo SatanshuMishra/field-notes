@@ -13,7 +13,5 @@ Stream<List<Entry>> searchAllEntries(Ref ref) {
   final query = db.select(db.entries)
     ..where((t) => t.deletedAt.isNull())
     ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]);
-  return query.watch().map(
-        (rows) => rows.map(toDomainEntry).toList(),
-      );
+  return query.watch().map((rows) => rows.map(toDomainEntry).toList());
 }

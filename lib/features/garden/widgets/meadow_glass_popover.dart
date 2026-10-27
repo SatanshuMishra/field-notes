@@ -7,7 +7,7 @@ import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
-import 'package:field_notes/design/tokens/typography.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 
 const Color meadowCream = Color.fromRGBO(251, 243, 228, 1);
 const Color meadowKickerInk = Color.fromRGBO(246, 201, 184, 1);
@@ -27,6 +27,11 @@ const double meadowPopoverLift = 56;
 const double meadowPopoverMaxShare = 0.62;
 const double meadowPhoneControlHeight = 48;
 const double meadowPhoneDockRadius = 14;
+const Color meadowFocusHalo = Palette.mediaBlack;
+const double meadowFocusHaloWidth = 2;
+const ValueKey<String> meadowFocusHaloKey = ValueKey<String>(
+  'meadow-focus-halo',
+);
 const String meadowPopoverDismissLabel = 'Close';
 const ValueKey<String> meadowPopoverScrimKey = ValueKey<String>(
   'meadow-popover-scrim',
@@ -149,7 +154,7 @@ class MeadowChromeBlock extends StatelessWidget {
   }
 }
 
-class MeadowGlassButton extends StatelessWidget {
+class MeadowGlassButton extends StatefulWidget {
   const MeadowGlassButton({
     super.key,
     required this.label,
@@ -174,49 +179,119 @@ class MeadowGlassButton extends StatelessWidget {
   final bool grouped;
 
   @override
+  State<MeadowGlassButton> createState() => _MeadowGlassButtonState();
+}
+
+class _MeadowGlassButtonState extends State<MeadowGlassButton> {
+  final FocusNode _focus = FocusNode(debugLabel: 'meadow glass button');
+  bool _haloShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_syncHalo);
+    FocusManager.instance.addHighlightModeListener(_onHighlightMode);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_onHighlightMode);
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _onHighlightMode(FocusHighlightMode mode) => _syncHalo();
+
+  void _syncHalo() {
+    final bool shown =
+        _focus.hasFocus &&
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    if (mounted && shown != _haloShown) {
+      setState(() => _haloShown = shown);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     const BorderRadius radius = BorderRadius.all(
       Radius.circular(meadowPhoneDockRadius),
     );
+    final double? width = widget.width;
     final Widget glass = GlassSurface(
       tone: GlassTone.scene,
       borderRadius: radius,
-      padding: padding,
-      grouped: grouped,
-      castsShadow: !grouped,
-      child: Center(widthFactor: width == null ? 1 : null, child: child),
+      padding: widget.padding,
+      grouped: widget.grouped,
+      castsShadow: !widget.grouped,
+      child: Center(widthFactor: width == null ? 1 : null, child: widget.child),
     );
     return Pressable(
-      label: label,
-      onPressed: onPressed,
-      tooltip: tooltip,
-      selected: selected,
-      value: value,
+      label: widget.label,
+      onPressed: widget.onPressed,
+      tooltip: widget.tooltip,
+      selected: widget.selected,
+      value: widget.value,
+      focusNode: _focus,
       surface: FocusRingSurface.dark,
       borderRadius: radius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => SizedBox(
-        width: width,
-        height: meadowPhoneControlHeight,
-        child: HoverFill(
-          surface: FocusRingSurface.dark,
-          hovered: hovered,
-          borderRadius: radius,
-          child: grouped
-              ? _MeadowDockGlass(
-                  shadow: GlassShadowPainter(
-                    shadows: GlassTone.scene
-                        .colorsFor(Theme.of(context).brightness)
-                        .shadows,
-                    borderRadius: radius,
-                  ),
-                  child: glass,
-                )
-              : glass,
-        ),
+      builder: (BuildContext context, bool hovered) => Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          SizedBox(
+            width: width,
+            height: meadowPhoneControlHeight,
+            child: HoverFill(
+              surface: FocusRingSurface.dark,
+              hovered: hovered,
+              borderRadius: radius,
+              child: widget.grouped
+                  ? _MeadowDockGlass(
+                      shadow: GlassShadowPainter(
+                        shadows: GlassTone.scene
+                            .colorsFor(Theme.of(context).brightness)
+                            .shadows,
+                        borderRadius: radius,
+                      ),
+                      child: glass,
+                    )
+                  : glass,
+            ),
+          ),
+          if (_haloShown)
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  key: meadowFocusHaloKey,
+                  painter: _MeadowFocusHaloPainter(borderRadius: radius),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
+}
+
+class _MeadowFocusHaloPainter extends CustomPainter {
+  const _MeadowFocusHaloPainter({required this.borderRadius});
+
+  final BorderRadius borderRadius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Border.all(color: meadowFocusHalo, width: meadowFocusHaloWidth).paint(
+      canvas,
+      (Offset.zero & size).inflate(meadowFocusHaloWidth),
+      borderRadius:
+          borderRadius +
+          const BorderRadius.all(Radius.circular(meadowFocusHaloWidth)),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_MeadowFocusHaloPainter oldDelegate) =>
+      oldDelegate.borderRadius != borderRadius;
 }
 
 class MeadowDockShadows extends SingleChildRenderObjectWidget {

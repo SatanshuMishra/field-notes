@@ -9,7 +9,6 @@ import 'package:field_notes/features/garden/model/meadow_focus.dart';
 import 'package:field_notes/features/garden/model/meadow_time_of_day.dart';
 import 'package:field_notes/features/garden/model/meadow_view_state.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
-import 'package:field_notes/features/garden/scene/meadow_palette.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:field_notes/features/garden/scene/meadow_view.dart';
 import 'package:field_notes/features/garden/scene/meadow_world.dart';
@@ -36,6 +35,10 @@ const double meadowPhoneOverlayLift = 60;
 
 const Alignment _waitingAlignment = Alignment(0, 0.29);
 const EdgeInsets _waitingPadding = EdgeInsets.symmetric(horizontal: 24);
+const EdgeInsets _waitingScrimPadding = EdgeInsets.symmetric(
+  horizontal: 14,
+  vertical: 8,
+);
 
 bool meadowIsCompact(BuildContext context) =>
     resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar;
@@ -481,15 +484,7 @@ class _MeadowPageState extends State<MeadowPage> {
       pausesWhenInactive: widget.pausesWhenInactive,
       onDragged: compact ? null : _dragStarted,
       onDragEnd: compact ? null : _dragEnded,
-      readyOverlay: empty
-          ? _WaitingMessage(
-              colour: MeadowPalette.from(
-                sky: sky,
-                morning: morning,
-                heavyShare: year.heavyShare,
-              ).captionColour,
-            )
-          : null,
+      readyOverlay: empty ? const _WaitingMessage() : null,
     );
     final MeadowChrome chrome = MeadowChrome(
       year: year,
@@ -665,9 +660,7 @@ class MeadowScrim extends StatelessWidget {
 }
 
 class _WaitingMessage extends StatelessWidget {
-  const _WaitingMessage({required this.colour});
-
-  final Color colour;
+  const _WaitingMessage();
 
   @override
   Widget build(BuildContext context) {
@@ -676,10 +669,21 @@ class _WaitingMessage extends StatelessWidget {
       child: Padding(
         padding: _waitingPadding,
         child: IgnorePointer(
-          child: Text(
-            meadowWaitingMessage,
-            textAlign: TextAlign.center,
-            style: context.textStyles.bodySerif.copyWith(color: colour),
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              color: meadowTextScrim,
+              borderRadius: meadowTextScrimRadius,
+            ),
+            child: Padding(
+              padding: _waitingScrimPadding,
+              child: Text(
+                meadowWaitingMessage,
+                textAlign: TextAlign.center,
+                style: context.textStyles.bodySerif.copyWith(
+                  color: meadowTextInk,
+                ),
+              ),
+            ),
           ),
         ),
       ),

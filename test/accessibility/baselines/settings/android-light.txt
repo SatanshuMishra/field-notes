@@ -1,50 +1,9 @@
-focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Input volume # open: volume slider shows no focus change of 3:1 (capture/audio/input_panel.dart)
-focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Output volume # open: volume slider shows no focus change of 3:1 (capture/audio/input_panel.dart)
-focus-visible | b12-select-dropdown-microphone | <unlabelled> | Input volume # open: volume slider shows no focus change of 3:1 (capture/audio/input_panel.dart)
-focus-visible | b12-select-dropdown-microphone | <unlabelled> | Output volume # open: volume slider shows no focus change of 3:1 (capture/audio/input_panel.dart)
-focus-visible | b13-select-dropdown-speaker | <unlabelled> | Input volume # open: volume slider shows no focus change of 3:1 (capture/audio/input_panel.dart)
-focus-visible | b13-select-dropdown-speaker | <unlabelled> | Output volume # open: volume slider shows no focus change of 3:1 (capture/audio/input_panel.dart)
 missing-role | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
 missing-role | b14-sync-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
 missing-role | b4-select-open | Dismiss | <root> # Flutter's own control
 missing-role | b4-select-open@2x | Dismiss | <root> # Flutter's own control
 missing-role | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
 missing-role | b5-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
-small-target | b11-select-dropdown-input-profile | Input device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b11-select-dropdown-input-profile | Output device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b11-select-dropdown-input-profile@2x | Input device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b11-select-dropdown-input-profile@2x | Output device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b12-select-dropdown-microphone | Built-in Microphone | <root> # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b12-select-dropdown-microphone | Headset Microphone | <root> # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b12-select-dropdown-microphone | Input device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b12-select-dropdown-microphone | Output device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b12-select-dropdown-microphone | System default | <root> # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b12-select-dropdown-microphone@2x | Input device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b12-select-dropdown-microphone@2x | Output device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b13-select-dropdown-speaker | Built-in Speakers | <root> # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b13-select-dropdown-speaker | Headphones | <root> # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b13-select-dropdown-speaker | Input device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b13-select-dropdown-speaker | Output device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b13-select-dropdown-speaker | System output | <root> # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b13-select-dropdown-speaker@2x | Input device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-small-target | b13-select-dropdown-speaker@2x | Output device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
-text-contrast | b11-select-dropdown-input-profile | 100% | Voice # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b11-select-dropdown-input-profile | 100% | Voice #2 # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b11-select-dropdown-input-profile | Clears background noise like fans, traffic and typing fro... | Voice Isolation / Clears background noise like fans, traffic and typing from your voice. # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b11-select-dropdown-input-profile | Input level | Voice # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b11-select-dropdown-input-profile | System default | Input device # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b11-select-dropdown-input-profile | System output | Output device # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b11-select-dropdown-input-profile | Your microphone as it is, with no processing. | <root> # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b12-select-dropdown-microphone | 100% | Voice # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b12-select-dropdown-microphone | 100% | Voice #2 # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b12-select-dropdown-microphone | Input level | Voice # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b12-select-dropdown-microphone | System default | Input device # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b12-select-dropdown-microphone | System output | Output device # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b13-select-dropdown-speaker | 100% | Voice # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b13-select-dropdown-speaker | 100% | Voice #2 # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b13-select-dropdown-speaker | Input level | Voice # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b13-select-dropdown-speaker | System default | Input device # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
-text-contrast | b13-select-dropdown-speaker | System output | Output device # open: Voice values drawn in ink at 0.68 alpha read 3.3 to 4.1:1 (capture/audio/input_panel.dart)
 text-contrast | b14-sync-delete-all-dialog | Erase every entry, photo, and mood on this device. | Data # measured: 6.32:1 by token arithmetic
 text-contrast | b14-sync-delete-all-dialog | Remove photo files no entry or draft still refers to. | Data # measured: 6.32:1 by token arithmetic
 text-contrast | b14-sync-delete-all-dialog | Save a zip of every entry and photo. | Data # measured: 6.32:1 by token arithmetic
@@ -74,21 +33,3 @@ text-contrast | b5-delete-all-dialog | Save a zip of every entry and photo. | Da
 text-contrast | b5-delete-all-dialog | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # measured: 6.32:1 by token arithmetic
 text-contrast | b5-delete-all-dialog | settings | Data # measured: 4.50:1 by token arithmetic
 text-contrast | b5-delete-all-dialog@2x | settings | Data # measured: 4.50:1 by token arithmetic
-truncated-text | b11-select-dropdown-input-profile@2x | Input device | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b11-select-dropdown-input-profile@2x | Input volume | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b11-select-dropdown-input-profile@2x | Output device | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b11-select-dropdown-input-profile@2x | Output volume | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b11-select-dropdown-input-profile@2x | System default | Input device # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b11-select-dropdown-input-profile@2x | System output | Output device # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b12-select-dropdown-microphone@2x | Input device | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b12-select-dropdown-microphone@2x | Input volume | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b12-select-dropdown-microphone@2x | Output device | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b12-select-dropdown-microphone@2x | Output volume | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b12-select-dropdown-microphone@2x | System default | Input device # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b12-select-dropdown-microphone@2x | System output | Output device # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b13-select-dropdown-speaker@2x | Input device | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b13-select-dropdown-speaker@2x | Input volume | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b13-select-dropdown-speaker@2x | Output device | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b13-select-dropdown-speaker@2x | Output volume | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b13-select-dropdown-speaker@2x | System default | Input device # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
-truncated-text | b13-select-dropdown-speaker@2x | System output | Output device # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
