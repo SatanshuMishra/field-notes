@@ -386,7 +386,13 @@ void main() {
           for (final String label in _labels) {
             final Finder text = find.text(label);
             expect(text, findsOneWidget);
-            expect(tester.getRect(text).bottom, moreOrLessEquals(dockBottom));
+            final Finder scrim = find.ancestor(
+              of: text,
+              matching: find.byType(ViewerLabelScrim),
+            );
+            expect(scrim, findsOneWidget);
+            expect(tester.getRect(scrim).bottom, moreOrLessEquals(dockBottom));
+            expect(tester.getRect(text).bottom, lessThan(dockBottom));
             expect(
               tester.widget<Text>(text).style?.color?.toARGB32(),
               Palette.mediaInk.toARGB32(),

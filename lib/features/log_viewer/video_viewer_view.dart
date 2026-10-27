@@ -495,6 +495,7 @@ class _PhoneScrubberBar extends StatelessWidget {
           bottom: _phoneScrubberReach,
           child: GlassSurface(
             key: videoScrubberBarKey,
+            grouped: true,
             tone: GlassTone.media,
             tint: Palette.mediaScrim,
             borderRadius: _phoneScrubberRadius,

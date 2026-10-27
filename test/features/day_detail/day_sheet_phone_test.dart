@@ -183,8 +183,8 @@ void main() {
       expect(_inSheet(find.text('a day in the garden')), findsOneWidget);
       final Text title = tester.widget<Text>(_inSheet(find.text(_dayTitle)));
       expect(title.style!.fontSize, 22);
-      expect(title.maxLines, 1);
-      expect(title.overflow, TextOverflow.ellipsis);
+      expect(title.maxLines, isNull);
+      expect(title.overflow, isNull);
       expect(find.byKey(dayDetailBackKey), findsNothing);
       expect(_inSheet(find.text(dayDetailMoodPrompt)), findsOneWidget);
       expect(_inSheet(find.text('2 logs that day')), findsOneWidget);

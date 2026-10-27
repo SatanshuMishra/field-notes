@@ -60,7 +60,7 @@ void main() {
   });
 
   testWidgets(
-    'the sheet header has no back button and keeps a long title on one line',
+    'the sheet header has no back button and wraps a long title in full',
     (WidgetTester tester) async {
       await tester.pumpWidget(
         dayDetailHarness(
@@ -75,9 +75,19 @@ void main() {
       expect(find.byKey(dayDetailBackKey), findsNothing);
       final Finder title = find.text('Wednesday, July 15');
       expect(tester.widget<Text>(title).style!.fontSize, 22);
+      final RenderParagraph paragraph = tester.renderObject<RenderParagraph>(
+        title,
+      );
+      expect(paragraph.didExceedMaxLines, isFalse);
       expect(
-        tester.renderObject<RenderParagraph>(title).didExceedMaxLines,
-        isTrue,
+        paragraph
+            .getBoxesForSelection(
+              const TextSelection(baseOffset: 0, extentOffset: 18),
+            )
+            .map((TextBox box) => box.top)
+            .toSet()
+            .length,
+        greaterThan(1),
       );
       expect(tester.getSize(title).width, lessThanOrEqualTo(160 - 2 * 18));
     },

@@ -557,19 +557,16 @@ class _ViewerDockState extends State<ViewerDock> {
   Widget build(BuildContext context) {
     final double gestureBar = phoneGestureBarInset(MediaQuery.of(context));
     final Widget? above = widget.above;
-    final Widget row = BackdropGroup(
-      backdropKey: _glassGroup,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: <Widget>[
-          for (final ViewerDockSlot? slot in widget.slots)
-            Expanded(
-              child: slot == null
-                  ? const SizedBox.shrink()
-                  : _DockColumn(key: slot.key, slot: slot),
-            ),
-        ],
-      ),
+    final Widget row = Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: <Widget>[
+        for (final ViewerDockSlot? slot in widget.slots)
+          Expanded(
+            child: slot == null
+                ? const SizedBox.shrink()
+                : _DockColumn(key: slot.key, slot: slot),
+          ),
+      ],
     );
     return Align(
       alignment: Alignment.bottomCenter,
@@ -580,16 +577,19 @@ class _ViewerDockState extends State<ViewerDock> {
           _dockSideInset,
           gestureBar + viewerDockLift,
         ),
-        child: above == null
-            ? row
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  above,
-                  const SizedBox(height: _dockAboveGap),
-                  row,
-                ],
-              ),
+        child: BackdropGroup(
+          backdropKey: _glassGroup,
+          child: above == null
+              ? row
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    above,
+                    const SizedBox(height: _dockAboveGap),
+                    row,
+                  ],
+                ),
+        ),
       ),
     );
   }
