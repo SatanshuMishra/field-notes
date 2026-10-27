@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../design/focus/focus_ring.dart';
+import '../../../design/focus/keyboard_focus_builder.dart';
 import '../../../design/interaction/pressable.dart';
 import '../../../design/motion/motion.dart';
 import '../../../design/tokens/tokens.dart';
@@ -63,7 +64,6 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   bool _focusWithin = false;
   bool _accessibleNavigation = false;
   bool _visibleAtPointerDown = true;
-  bool _surfaceRinged = false;
   final FocusNode _surfaceFocus = FocusNode(
     debugLabel: 'video surface',
     skipTraversal: true,
@@ -75,8 +75,6 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   @override
   void initState() {
     super.initState();
-    _surfaceFocus.addListener(_syncSurfaceRing);
-    FocusManager.instance.addHighlightModeListener(_onHighlightMode);
   }
 
   @override
@@ -102,10 +100,7 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   void dispose() {
     _hideTimer?.cancel();
     _hideTimer = null;
-    FocusManager.instance.removeHighlightModeListener(_onHighlightMode);
-    _surfaceFocus
-      ..removeListener(_syncSurfaceRing)
-      ..dispose();
+    _surfaceFocus.dispose();
     super.dispose();
   }
 
@@ -170,18 +165,6 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   void _onPointerHover(PointerHoverEvent event) => _registerActivity();
 
   void _onPointerExit(PointerExitEvent event) => _registerActivity();
-
-  void _onHighlightMode(FocusHighlightMode mode) => _syncSurfaceRing();
-
-  void _syncSurfaceRing() {
-    final bool ringed =
-        _surfaceFocus.hasPrimaryFocus &&
-        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
-    if (!mounted || ringed == _surfaceRinged) {
-      return;
-    }
-    setState(() => _surfaceRinged = ringed);
-  }
 
   void _onFocusWithin(bool hasFocus) {
     if (!mounted || hasFocus == _focusWithin) {
@@ -255,10 +238,16 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
                   ),
                 ),
               ),
-              if (_surfaceRinged)
-                const Positioned.fill(
-                  child: IgnorePointer(child: _SurfaceFocusRing()),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: KeyboardFocusBuilder(
+                    focusNode: _surfaceFocus,
+                    builder: (BuildContext context, bool ringed) => ringed
+                        ? const _SurfaceFocusRing()
+                        : const SizedBox.shrink(),
+                  ),
                 ),
+              ),
             ],
           ),
         ),

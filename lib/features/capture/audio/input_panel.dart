@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:field_notes/design/focus/keyboard_focus_builder.dart';
 import 'package:field_notes/data/media/audio_output.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass_surface.dart';
@@ -782,34 +783,14 @@ class _VolumeRow extends ConsumerStatefulWidget {
 }
 
 class _VolumeRowState extends ConsumerState<_VolumeRow> {
-  late final FocusNode _sliderFocus = FocusNode(debugLabel: widget.title)
-    ..addListener(_refreshRing);
+  late final FocusNode _sliderFocus = FocusNode(debugLabel: widget.title);
   double? _dragging;
   int? _released;
-  bool _ringShown = false;
-
-  @override
-  void initState() {
-    super.initState();
-    FocusManager.instance.addHighlightModeListener(_onHighlightMode);
-  }
 
   @override
   void dispose() {
-    FocusManager.instance.removeHighlightModeListener(_onHighlightMode);
     _sliderFocus.dispose();
     super.dispose();
-  }
-
-  void _onHighlightMode(FocusHighlightMode mode) => _refreshRing();
-
-  void _refreshRing() {
-    final bool shown =
-        _sliderFocus.hasFocus &&
-        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
-    if (mounted && shown != _ringShown) {
-      setState(() => _ringShown = shown);
-    }
   }
 
   void _start(double value) {
@@ -890,29 +871,32 @@ class _VolumeRowState extends ConsumerState<_VolumeRow> {
             inactiveTickMarkColor: Colors.transparent,
             showValueIndicator: ShowValueIndicator.never,
           ),
-          child: DecoratedBox(
-            position: DecorationPosition.foreground,
-            decoration: BoxDecoration(
-              border: _ringShown
-                  ? Border.all(
-                      color: surface.colorIn(context.colors),
-                      width: surface.width,
-                    )
-                  : null,
-              borderRadius: Shapes.buttonBorderRadius,
-            ),
-            child: Semantics(
-              label: widget.title,
-              child: Slider(
-                focusNode: _sliderFocus,
-                value: value,
-                max: maximum,
-                divisions: widget.maximum,
-                semanticFormatterCallback: (double value) =>
-                    '${value.round()}%',
-                onChangeStart: _start,
-                onChanged: (double next) => setState(() => _dragging = next),
-                onChangeEnd: _release,
+          child: KeyboardFocusBuilder(
+            focusNode: _sliderFocus,
+            builder: (BuildContext context, bool shown) => DecoratedBox(
+              position: DecorationPosition.foreground,
+              decoration: BoxDecoration(
+                border: shown
+                    ? Border.all(
+                        color: surface.colorIn(context.colors),
+                        width: surface.width,
+                      )
+                    : null,
+                borderRadius: Shapes.buttonBorderRadius,
+              ),
+              child: Semantics(
+                label: widget.title,
+                child: Slider(
+                  focusNode: _sliderFocus,
+                  value: value,
+                  max: maximum,
+                  divisions: widget.maximum,
+                  semanticFormatterCallback: (double value) =>
+                      '${value.round()}%',
+                  onChangeStart: _start,
+                  onChanged: (double next) => setState(() => _dragging = next),
+                  onChangeEnd: _release,
+                ),
               ),
             ),
           ),

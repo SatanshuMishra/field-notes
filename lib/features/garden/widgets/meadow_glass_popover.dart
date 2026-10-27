@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import 'package:field_notes/design/focus/keyboard_focus_builder.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
@@ -184,31 +185,11 @@ class MeadowGlassButton extends StatefulWidget {
 
 class _MeadowGlassButtonState extends State<MeadowGlassButton> {
   final FocusNode _focus = FocusNode(debugLabel: 'meadow glass button');
-  bool _haloShown = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(_syncHalo);
-    FocusManager.instance.addHighlightModeListener(_onHighlightMode);
-  }
 
   @override
   void dispose() {
-    FocusManager.instance.removeHighlightModeListener(_onHighlightMode);
     _focus.dispose();
     super.dispose();
-  }
-
-  void _onHighlightMode(FocusHighlightMode mode) => _syncHalo();
-
-  void _syncHalo() {
-    final bool shown =
-        _focus.hasFocus &&
-        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
-    if (mounted && shown != _haloShown) {
-      setState(() => _haloShown = shown);
-    }
   }
 
   @override
@@ -258,15 +239,19 @@ class _MeadowGlassButtonState extends State<MeadowGlassButton> {
                   : glass,
             ),
           ),
-          if (_haloShown)
-            const Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  key: meadowFocusHaloKey,
-                  painter: _MeadowFocusHaloPainter(borderRadius: radius),
-                ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: KeyboardFocusBuilder(
+                focusNode: _focus,
+                builder: (BuildContext context, bool shown) => shown
+                    ? const CustomPaint(
+                        key: meadowFocusHaloKey,
+                        painter: _MeadowFocusHaloPainter(borderRadius: radius),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ),
+          ),
         ],
       ),
     );
