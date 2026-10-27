@@ -6,7 +6,8 @@ enum RecorderPrimaryVerb {
   start('start'),
   pause('pause'),
   resume('resume'),
-  keep('keep');
+  keep('keep'),
+  retry('try again');
 
   const RecorderPrimaryVerb(this.word);
 
