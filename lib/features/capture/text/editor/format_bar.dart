@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart' show DragStartBehavior;
@@ -271,18 +272,38 @@ class _FormatButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool enabled = onTap != null;
-    return Pressable(
-      label: label,
-      onPressed: onTap,
-      borderRadius: _focusRadius,
-      placement: FocusRingPlacement.edge,
-      child: SizedBox.square(
-        dimension: _buttonExtent,
-        child: Center(
-          child: Opacity(opacity: enabled ? 1 : _disabledOpacity, child: icon),
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      includeSemantics: false,
+      onFocusChange: (bool focused) => _revealWhen(focused, context),
+      child: Pressable(
+        label: label,
+        onPressed: onTap,
+        borderRadius: _focusRadius,
+        placement: FocusRingPlacement.edge,
+        child: SizedBox.square(
+          dimension: _buttonExtent,
+          child: Center(
+            child: Opacity(
+              opacity: enabled ? 1 : _disabledOpacity,
+              child: icon,
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  void _revealWhen(bool focused, BuildContext context) {
+    if (focused) {
+      unawaited(
+        Scrollable.ensureVisible(
+          context,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+        ),
+      );
+    }
   }
 }
 
