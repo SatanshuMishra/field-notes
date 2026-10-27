@@ -23,8 +23,5 @@ small-target | d5-reader-menu@2x | <unlabelled> | <root> # Flutter's own control
 small-target | d5-reader-menu@2x | Copy | <root> # Flutter's own control
 small-target | d6-task-toast | call the ferry office | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
 small-target | d6-task-toast | pack the tide tables | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
-truncated-text | d12-mood-set@2x | Feeling Calm | <root> # open: text is cut short at 2x text
-truncated-text | d12-mood-set@2x | Lavender · today's bloom | <root> # open: text is cut short at 2x text
 truncated-text | d15-viewer-middle-entry@2x | 10:00 AM · note | Later log # open: text is cut short at 2x text
 truncated-text | d15-viewer-middle-entry@2x | 8:00 AM · note | Earlier log # open: text is cut short at 2x text
-truncated-text | d9-mood-prompt-today@2x | How are you feeling? | <root> # open: text is cut short at 2x text
