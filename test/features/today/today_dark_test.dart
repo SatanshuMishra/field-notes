@@ -17,7 +17,7 @@ import '../../support/theme_harness.dart';
 const Color _panelTop = Color(0xFF1C1919);
 const Color _panelBottom = Color(0xFF181515);
 const Color _titleBar = Color(0xFF221E1E);
-const Color _windowTitle = Color(0xFF837675);
+const Color _windowTitle = Color(0xFF8F8382);
 const Color _coral = Color(0xFFB8566A);
 const Color _line = Color(0xFF968888);
 const Color _shadow = Color(0xFF060505);

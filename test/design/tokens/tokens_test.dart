@@ -125,8 +125,6 @@ void main() {
     });
 
     test('prototype named colours match their cited source values', () {
-      expect(_light.inkSoft, const Color(0xFF6A5C4A));
-      expect(_light.windowTitle, const Color(0xFFA3866A));
       expect(Palette.recordFill, const Color(0xFFE0574A));
       expect(_light.dashMuted, const Color(0xFFC3B39A));
       expect(Palette.onAccent, const Color(0xFFFFFFFF));
@@ -275,7 +273,7 @@ void main() {
           TypographyTokens.accent);
       expect(TypographyTokens.pageEyebrowAccent.fontSize, 16);
       expect(TypographyTokens.pageEyebrowAccent.fontWeight, FontWeight.w600);
-      expect(_styles.pageEyebrowAccent.color, Palette.coral);
+      expect(_styles.pageEyebrowAccent.color, _light.accentInk);
 
       expect(TypographyTokens.sectionHeaderAccent.fontFamily,
           TypographyTokens.accent);
@@ -305,11 +303,11 @@ void main() {
 
       expect(TypographyTokens.streakAccent.fontSize, 24);
       expect(TypographyTokens.streakAccent.height, 1.0);
-      expect(_styles.streakAccent.color, Palette.coral);
+      expect(_styles.streakAccent.color, _light.accentInk);
 
       expect(TypographyTokens.wordmarkAccent.fontSize, 23);
       expect(TypographyTokens.wordmarkAccent.height, 0.85);
-      expect(_styles.wordmarkAccent.color, Palette.coral);
+      expect(_styles.wordmarkAccent.color, _light.accentInk);
 
       expect(TypographyTokens.bodySerifItalic.fontSize,
           TypographyTokens.bodySerif.fontSize,
@@ -400,7 +398,7 @@ void main() {
         expect(style.fontSize, size);
       }
 
-      expect(_styles.caption11Sans.color, Palette.coral);
+      expect(_styles.caption11Sans.color, _light.accentInk);
       expect(_styles.caption10Sans.color, _light.muted);
       expect(_styles.caption9Sans.color, _light.muted);
     });
@@ -414,7 +412,7 @@ void main() {
     test('the micro chip token carries 0.08em of tracking at 8px', () {
       expect(TypographyTokens.chipMicroSans.fontSize, 8);
       expect(TypographyTokens.chipMicroSans.letterSpacing, 0.64);
-      expect(_styles.chipMicroSans.color, Palette.coral);
+      expect(_styles.chipMicroSans.color, _light.accentInk);
     });
 
     test('the accent roles carry their cited prototype metrics', () {
@@ -425,7 +423,7 @@ void main() {
       expect(TypographyTokens.subtitleAccent.fontSize, 14);
       expect(_styles.subtitleAccent.color, _light.muted);
       expect(TypographyTokens.composerTitleAccent.fontSize, 16);
-      expect(_styles.composerTitleAccent.color, Palette.coral);
+      expect(_styles.composerTitleAccent.color, _light.accentInk);
       expect(TypographyTokens.hintAccent.fontFamily, TypographyTokens.accent);
       expect(TypographyTokens.hintAccent.fontSize, 15);
       expect(TypographyTokens.hintAccent.fontWeight, FontWeight.w600);

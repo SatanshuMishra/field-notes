@@ -114,7 +114,11 @@ void main() {
         final Border border = _buttonDecoration(tester).border! as Border;
         expect(
           border.top.color,
-          FieldNotesColors.light.line,
+          switch (variant) {
+            StickerButtonVariant.primary ||
+            StickerButtonVariant.secondary => FieldNotesColors.light.line,
+            StickerButtonVariant.danger => FieldNotesColors.light.dangerInk,
+          },
           reason: '$variant border colour',
         );
         expect(
@@ -162,17 +166,17 @@ void main() {
       );
     });
 
-    testWidgets('fills the danger variant red on the control shadow',
+    testWidgets('draws the danger variant in danger ink with no fill',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         stickerHarness(_button(StickerButtonVariant.danger)),
       );
 
       final BoxDecoration deco = _buttonDecoration(tester);
-      expect(deco.boxShadow, FieldNotesShadows(FieldNotesColors.light).control);
-      expect(deco.color, Palette.danger);
+      expect(deco.boxShadow, isNull);
+      expect(deco.color, isNull);
       expect(deco.borderRadius, Shapes.buttonBorderRadius);
-      expect(_labelColour(tester, 'Go'), Palette.onAccent);
+      expect(_labelColour(tester, 'Go'), FieldNotesColors.light.dangerInk);
       expect(
         _buttonPadding(tester),
         const EdgeInsets.symmetric(horizontal: 16, vertical: 9),

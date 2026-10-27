@@ -76,7 +76,7 @@ void main() {
         expect(style.fontWeight, isTitle ? FontWeight.w500 : FontWeight.w600);
         expect(
           style.color!.toARGB32(),
-          Color(isTitle ? 0xFF4A3B2E : 0xFFB8566A).toARGB32(),
+          Color(isTitle ? 0xFF4A3B2E : 0xFF903B4C).toARGB32(),
         );
       }
     },

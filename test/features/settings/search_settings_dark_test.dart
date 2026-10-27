@@ -27,7 +27,7 @@ const Color _cardWarm = Color(0xFF272222);
 const Color _cardBright = Color(0xFF1F1B1B);
 const Color _muted = Color(0xFF9F9191);
 const Color _mutedDeep = Color(0xFFB9A9A9);
-const Color _placeholder = Color(0xFF6A605F);
+const Color _placeholder = Color(0xFF99908F);
 
 const SearchDayView _view = SearchDayView(
   date: '2026-07-15',
