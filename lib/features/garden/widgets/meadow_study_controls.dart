@@ -345,13 +345,11 @@ class _SliderRow extends StatelessWidget {
     return Row(
       children: <Widget>[
         SizedBox(
-          width: compact ? 84 : 96,
+          width: MediaQuery.textScalerOf(context)
+              .scale(compact ? _phoneLabelWidth : _deskLabelWidth),
           child: ExcludeSemantics(
             child: Text(
               label,
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.ellipsis,
               style: meadowSans(compact ? 11 : 12, opacity: 0.85),
             ),
           ),
@@ -377,6 +375,8 @@ class _SliderRow extends StatelessWidget {
 }
 
 const double _replayPadding = 12;
+const double _phoneLabelWidth = 84;
+const double _deskLabelWidth = 96;
 const String _replayShortLabel = 'Replay';
 
 String _shortReplay(String label) =>

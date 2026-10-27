@@ -15,6 +15,25 @@ const double meadowPhoneTitleDrop = 12;
 const double meadowPhoneScrimDepth = 150;
 const double meadowPhoneDockGap = 8;
 const String meadowTimeHeading = 'time of day';
+const double meadowPhoneReplayRoom = 96;
+
+const EdgeInsets _backPadding = EdgeInsets.fromLTRB(10, 0, 13, 0);
+const EdgeInsets _yearPadding = EdgeInsets.symmetric(horizontal: 13);
+const double _backChevronSize = 14;
+const double _caretSize = 12;
+const double _glyphGap = 6;
+
+double _textWidth(BuildContext context, String text, TextStyle style) {
+  final TextPainter painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  final double width = painter.width;
+  painter.dispose();
+  return width;
+}
 
 class MeadowPhonePage extends StatelessWidget {
   const MeadowPhonePage({super.key, required this.chrome, this.study});
@@ -90,25 +109,59 @@ class MeadowPhonePage extends StatelessWidget {
     );
   }
 
+  bool _backLabelFits(BuildContext context, double room) {
+    final double back =
+        _backPadding.horizontal +
+        _backChevronSize +
+        _glyphGap +
+        _textWidth(context, meadowBackCompactLabel, meadowSans(13));
+    final double year =
+        _yearPadding.horizontal +
+        _textWidth(context, '${chrome.year.year}', meadowSans(14)) +
+        _glyphGap +
+        _caretSize;
+    final double fixed =
+        back +
+        year +
+        meadowPhoneControlHeight * 2 +
+        meadowPhoneDockGap * 4 +
+        meadowPhoneReplayRoom;
+    return fixed <= room;
+  }
+
   Widget _dock(MeadowStudyParts? parts) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) => _dockRow(
+        parts,
+        backLabelled:
+            parts == null || _backLabelFits(context, constraints.maxWidth),
+      ),
+    );
+  }
+
+  Widget _dockRow(MeadowStudyParts? parts, {required bool backLabelled}) {
     final bool study = parts != null;
     void toggle(MeadowPopover popover) => chrome.onPopover(
       chrome.popover == popover ? MeadowPopover.none : popover,
     );
     final Color ink = meadowCream;
     final List<Widget> buttons = <Widget>[
-      if (study)
+      if (study && backLabelled)
         MeadowGlassButton(
           key: meadowThisYearButtonKey,
           grouped: true,
           label: meadowBackCompactLabel,
           onPressed: chrome.onBack,
-          padding: const EdgeInsets.fromLTRB(10, 0, 13, 0),
+          padding: _backPadding,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              MeadowGlyph(path: meadowBackChevron, size: 14, stroke: 2.4),
-              const SizedBox(width: 6),
+              MeadowGlyph(
+                path: meadowBackChevron,
+                size: _backChevronSize,
+                stroke: 2.4,
+              ),
+              const SizedBox(width: _glyphGap),
               Text(
                 meadowBackCompactLabel,
                 maxLines: 1,
@@ -118,6 +171,20 @@ class MeadowPhonePage extends StatelessWidget {
             ],
           ),
         ),
+      if (study && !backLabelled)
+        MeadowGlassButton(
+          key: meadowThisYearButtonKey,
+          grouped: true,
+          label: meadowBackCompactLabel,
+          tooltip: meadowBackCompactLabel,
+          width: meadowPhoneControlHeight,
+          onPressed: chrome.onBack,
+          child: MeadowGlyph(
+            path: meadowBackChevron,
+            size: _backChevronSize,
+            stroke: 2.4,
+          ),
+        ),
       MeadowGlassButton(
         key: meadowYearPickerButtonKey,
         grouped: true,
@@ -125,7 +192,7 @@ class MeadowPhonePage extends StatelessWidget {
         value: '${chrome.year.year}',
         selected: chrome.popover == MeadowPopover.year,
         onPressed: () => toggle(MeadowPopover.year),
-        padding: const EdgeInsets.symmetric(horizontal: 13),
+        padding: _yearPadding,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -135,10 +202,10 @@ class MeadowPhonePage extends StatelessWidget {
               softWrap: false,
               style: meadowSans(14),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: _glyphGap),
             MeadowGlyph(
               path: meadowCaretDown,
-              size: 12,
+              size: _caretSize,
               color: ink,
               stroke: 2.4,
             ),

@@ -12,6 +12,8 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
+import 'package:field_notes/design/tokens/palette.dart';
+import 'package:field_notes/design/tokens/shapes.dart';
 import 'package:field_notes/design/tokens/theme_context.dart';
 import 'package:field_notes/design/tokens/typography.dart';
 import 'package:field_notes/features/garden/model/garden_motion.dart';
@@ -37,6 +39,15 @@ import 'package:field_notes/features/garden/scene/meadow_world.dart';
 import 'package:field_notes/features/garden/sky/sky_scene.dart';
 
 const String meadowLoadingMessage = 'Growing your meadow…';
+const Color meadowTextScrim = Color.fromRGBO(28, 22, 16, 0.72);
+const Color meadowTextInk = Palette.mediaInk;
+const BorderRadius meadowTextScrimRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusMd),
+);
+const EdgeInsets _loadingPadding = EdgeInsets.symmetric(
+  horizontal: 14,
+  vertical: 8,
+);
 const String meadowStageHint = 'Drag to look around · tap a flower';
 const String meadowFlowerTapLabel = "Show a flower's day";
 
@@ -1142,10 +1153,21 @@ class MeadowStageState extends State<MeadowStage>
     final _SceneImages? scene = _scene;
     if (scene == null) {
       return Center(
-        child: Text(
-          meadowLoadingMessage,
-          textAlign: TextAlign.center,
-          style: context.textStyles.captionSans,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: meadowTextScrim,
+            borderRadius: meadowTextScrimRadius,
+          ),
+          child: Padding(
+            padding: _loadingPadding,
+            child: Text(
+              meadowLoadingMessage,
+              textAlign: TextAlign.center,
+              style: context.textStyles.captionSans.copyWith(
+                color: meadowTextInk,
+              ),
+            ),
+          ),
         ),
       );
     }

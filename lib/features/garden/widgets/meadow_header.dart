@@ -3,6 +3,8 @@ import 'package:field_notes/design/format/plural.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/typography.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
+import 'package:field_notes/features/garden/scene/meadow_stage.dart'
+    show meadowTextScrim, meadowTextScrimRadius;
 import 'package:field_notes/features/garden/scene/meadow_view.dart';
 import 'package:field_notes/features/garden/widgets/garden_header.dart';
 import 'package:field_notes/features/garden/widgets/meadow_glass_popover.dart';
@@ -36,6 +38,10 @@ const Color _kickerShadow = Color.fromRGBO(0, 0, 0, 0.4);
 const Color _titleShadow = Color.fromRGBO(0, 0, 0, 0.45);
 const Color _summaryShadow = Color.fromRGBO(0, 0, 0, 0.5);
 const BorderRadius _linkRadius = BorderRadius.all(Radius.circular(6));
+const EdgeInsets meadowHeaderScrimReach = EdgeInsets.fromLTRB(12, 8, 14, 10);
+const ValueKey<String> meadowHeaderScrimKey = ValueKey<String>(
+  'meadow-header-scrim',
+);
 
 final Path meadowBackChevron = Path()
   ..moveTo(15, 5)
@@ -169,41 +175,84 @@ class MeadowHeader extends StatelessWidget {
       sprouts: sprouts,
       weather: weather,
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        if (!compact && study && back != null) ...<Widget>[
-          MeadowBackLink(onPressed: back),
-          const SizedBox(height: 6),
-        ],
-        IgnorePointer(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              MeadowTitle(compact: compact, study: study, year: year),
-              SizedBox(height: compact ? 4 : 6),
-              Text(
-                summary,
-                maxLines: compact ? 2 : null,
-                overflow: compact ? TextOverflow.ellipsis : null,
-                style:
-                    meadowSans(
-                      compact ? 11.5 : 12.5,
-                      opacity: compact ? 0.9 : 0.88,
-                      weight: FontWeight.w500,
-                    ).copyWith(
-                      height: 1.4,
-                      shadows: const <Shadow>[
-                        Shadow(color: _summaryShadow, blurRadius: 8),
-                      ],
-                    ),
-              ),
-            ],
+    return MeadowTextScrim(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (!compact && study && back != null) ...<Widget>[
+            MeadowBackLink(onPressed: back),
+            const SizedBox(height: 6),
+          ],
+          IgnorePointer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                MeadowTitle(compact: compact, study: study, year: year),
+                SizedBox(height: compact ? 4 : 6),
+                Text(
+                  summary,
+                  maxLines: compact ? 2 : null,
+                  overflow: compact ? TextOverflow.ellipsis : null,
+                  style:
+                      meadowSans(
+                        compact ? 11.5 : 12.5,
+                        opacity: compact ? 0.9 : 0.88,
+                        weight: FontWeight.w500,
+                      ).copyWith(
+                        height: 1.4,
+                        shadows: const <Shadow>[
+                          Shadow(color: _summaryShadow, blurRadius: 8),
+                        ],
+                      ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+}
+
+class MeadowTextScrim extends StatelessWidget {
+  const MeadowTextScrim({
+    super.key,
+    required this.child,
+    this.reach = meadowHeaderScrimReach,
+  });
+
+  final Widget child;
+  final EdgeInsets reach;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: AlignmentDirectional.topStart,
+      widthFactor: 1,
+      heightFactor: 1,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          Positioned(
+            left: -reach.left,
+            top: -reach.top,
+            right: -reach.right,
+            bottom: -reach.bottom,
+            child: const IgnorePointer(
+              child: DecoratedBox(
+                key: meadowHeaderScrimKey,
+                decoration: BoxDecoration(
+                  color: meadowTextScrim,
+                  borderRadius: meadowTextScrimRadius,
+                ),
+              ),
+            ),
+          ),
+          child,
+        ],
+      ),
     );
   }
 }

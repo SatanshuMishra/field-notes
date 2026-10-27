@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/features/streak/streak.dart';
 
@@ -15,8 +16,9 @@ import 'shell_destination.dart';
 import 'sidebar_shell.dart';
 import 'system_bars.dart';
 
-const double phoneHeaderBarHeight = 44;
-const double phoneHeaderGearExtent = 44;
+const double phoneHeaderBarHeight = 48;
+const double phoneHeaderGearExtent = 48;
+const double phoneHeaderGearFace = 44;
 const double phoneBottomBarZone = 80;
 const double phoneHeaderScrolledOffset = 4;
 
@@ -301,22 +303,38 @@ class _BottomBarShellState extends State<BottomBarShell> {
   }
 
   Widget _gear(Color ink) {
+    final FocusRingSurface surface = _overScene
+        ? FocusRingSurface.dark
+        : FocusRingSurface.light;
     return Pressable(
       key: const ValueKey<String>('gear-button'),
       label: settingsSemanticLabel(badged: widget.settingsBadge),
       onPressed: () => widget.onSelect(ShellDestination.settings),
       borderRadius: _gearRadius,
-      surface: _overScene ? FocusRingSurface.dark : FocusRingSurface.light,
-      placement: FocusRingPlacement.edge,
-      child: SizedBox.square(
+      surface: surface,
+      paintsHover: false,
+      ringsFace: true,
+      builder: (BuildContext context, bool hovered) => SizedBox.square(
         dimension: phoneHeaderGearExtent,
         child: Center(
-          child: SettingsBadged(
-            badged: widget.settingsBadge,
-            child: Icon(
-              Icons.settings_outlined,
-              size: _gearIconSize,
-              color: ink,
+          child: FocusRingFace(
+            child: HoverFill(
+              hovered: hovered,
+              surface: surface,
+              borderRadius: _gearRadius,
+              child: SizedBox.square(
+                dimension: phoneHeaderGearFace,
+                child: Center(
+                  child: SettingsBadged(
+                    badged: widget.settingsBadge,
+                    child: Icon(
+                      Icons.settings_outlined,
+                      size: _gearIconSize,
+                      color: ink,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
