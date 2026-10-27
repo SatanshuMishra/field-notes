@@ -49,6 +49,7 @@ const double photoToolbarGap = 10;
 const double photoToolbarPadding = 5;
 const double photoToolbarTarget = 28;
 const double photoToolbarTouchTarget = 48;
+const double photoToolbarWindowsTarget = 40;
 const double photoToolbarControlPadding = 7;
 const double photoToolbarControlGap = 2;
 const double photoToolbarGroupGap = 5;
@@ -84,10 +85,11 @@ String photoToolbarSizeLabel(MdPhotoSize size) => '${size.label} size';
 
 String photoToolbarSideLabel(MdPhotoSide side) => '${side.label} side';
 
-double photoToolbarTargetFor(TargetPlatform platform) =>
-    platform == TargetPlatform.android
-    ? photoToolbarTouchTarget
-    : photoToolbarTarget;
+double photoToolbarTargetFor(TargetPlatform platform) => switch (platform) {
+  TargetPlatform.macOS => photoToolbarTarget,
+  TargetPlatform.windows => photoToolbarWindowsTarget,
+  _ => photoToolbarTouchTarget,
+};
 
 double photoToolbarWidthFor({
   required TextScaler scaler,
@@ -278,6 +280,7 @@ class PhotoToolbarLayer extends StatelessWidget {
                     width: captionField.width,
                     height: captionField.height,
                     reach: captionReach,
+                    focusNode: request.captionFocusNode,
                     onCommit: (String caption) {
                       _runOnPhoto(
                         request,

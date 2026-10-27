@@ -54,6 +54,15 @@ Future<void> _pump(
   await tester.pump();
 }
 
+double _orbOpacity(WidgetTester tester) => tester
+    .widget<AnimatedOpacity>(
+      find.descendant(
+        of: find.byKey(voiceRecordButtonKey),
+        matching: find.byType(AnimatedOpacity),
+      ),
+    )
+    .opacity;
+
 void main() {
   testWidgets(
     "the voice recorder does not start and shows the can't-hear-you notice",
@@ -84,10 +93,16 @@ void main() {
         findsOneWidget,
       );
       expect(find.bySemanticsLabel(cannotHearNoticeLabel), findsOneWidget);
+      expect(
+        tester.getSemantics(find.byKey(voiceRecordButtonKey)),
+        isSemantics(hasEnabledState: true, isEnabled: false),
+      );
+      expect(_orbOpacity(tester), voiceSavingOrbOpacity);
 
       hearing.value = MicrophoneHearing.hearing;
       await tester.pump();
       expect(find.byKey(cannotHearNoticeKey), findsNothing);
+      expect(_orbOpacity(tester), 1);
       await tester.tap(find.byKey(voiceRecordButtonKey));
       await tester.pump();
       expect(calls.starts, 1);

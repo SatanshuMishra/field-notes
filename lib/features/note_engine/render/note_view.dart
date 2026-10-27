@@ -547,6 +547,7 @@ class _NoteViewState extends State<NoteView> {
         media: media,
         resolver: resolver,
         selected: selected,
+        focused: selected && widget.focused,
         captionHidden: selected && widget.selectedCaptionHidden,
         onActivate: delegate == null
             ? null

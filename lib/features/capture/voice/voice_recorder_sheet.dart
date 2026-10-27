@@ -194,7 +194,7 @@ class VoiceRecorderSheet extends StatelessWidget {
   }
 
   VoidCallback? get _orbTap => switch (_orbVerb) {
-    RecorderPrimaryVerb.start => onStart,
+    RecorderPrimaryVerb.start || RecorderPrimaryVerb.retry => onStart,
     RecorderPrimaryVerb.pause => onPause,
     RecorderPrimaryVerb.resume => onResume,
     RecorderPrimaryVerb.keep => onStop,

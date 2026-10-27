@@ -49,7 +49,8 @@ const Key tableToolbarFadeEndKey = ValueKey<String>('table-toolbar-fade-end');
 const double tableToolbarGap = 10;
 
 const double _barPadding = 5;
-const double _desktopTarget = 28;
+const double _macosTarget = 28;
+const double _windowsTarget = 40;
 const double _androidTarget = 48;
 const double _controlPadding = 7;
 const double _controlGap = 2;
@@ -187,6 +188,7 @@ class TableToolbar extends StatelessWidget {
     this.onDismiss,
     this.tapRegionGroupId = EditableText,
     this.enabled = tablesEnabled,
+    this.focusNode,
   });
 
   final EditorState state;
@@ -194,6 +196,7 @@ class TableToolbar extends StatelessWidget {
   final VoidCallback? onDismiss;
   final Object? tapRegionGroupId;
   final bool enabled;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -202,9 +205,11 @@ class TableToolbar extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final MdCellAlignment? alignment = _alignmentAt(state, table);
-    final double target = defaultTargetPlatform == TargetPlatform.android
-        ? _androidTarget
-        : _desktopTarget;
+    final double target = switch (defaultTargetPlatform) {
+      TargetPlatform.macOS => _macosTarget,
+      TargetPlatform.windows => _windowsTarget,
+      _ => _androidTarget,
+    };
     final List<Widget> children = <Widget>[
       for (int g = 0; g < _groups.length; g++) ...<Widget>[
         if (g > 0) const _TableToolbarRule(),
@@ -216,30 +221,35 @@ class TableToolbar extends StatelessWidget {
     ];
     final Widget bar = FocusTraversalGroup(
       policy: WidgetOrderTraversalPolicy(),
-      child: Semantics(
-        container: true,
-        explicitChildNodes: true,
-        child: DecoratedBox(
-          key: tableToolbarKey,
-          decoration: const BoxDecoration(
-            color: Palette.toolbarInk,
-            borderRadius: _barRadius,
-            boxShadow: Shadows.toastLift,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(_barPadding),
-            child: ScrollConfiguration(
-              behavior: ScrollConfiguration.of(context)
-                  .copyWith(scrollbars: false),
-              child: ToolbarScrollFade(
-                color: Palette.toolbarInk,
-                startKey: tableToolbarFadeStartKey,
-                endKey: tableToolbarFadeEndKey,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: children,
+      child: Focus(
+        focusNode: focusNode,
+        skipTraversal: true,
+        includeSemantics: false,
+        child: Semantics(
+          container: true,
+          explicitChildNodes: true,
+          child: DecoratedBox(
+            key: tableToolbarKey,
+            decoration: const BoxDecoration(
+              color: Palette.toolbarInk,
+              borderRadius: _barRadius,
+              boxShadow: Shadows.toastLift,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(_barPadding),
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context)
+                    .copyWith(scrollbars: false),
+                child: ToolbarScrollFade(
+                  color: Palette.toolbarInk,
+                  startKey: tableToolbarFadeStartKey,
+                  endKey: tableToolbarFadeEndKey,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: children,
+                    ),
                   ),
                 ),
               ),
