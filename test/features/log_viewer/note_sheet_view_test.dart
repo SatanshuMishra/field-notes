@@ -8,17 +8,13 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart'
-    show
-        NoteBody,
-        logActionsDeleteKey,
-        logActionsDeleteLabel,
-        logActionsEditKey,
-        logActionsEditLabel;
+    show NoteBody, logActionsDeleteKey, logActionsEditKey, logActionsEditLabel;
 import 'package:field_notes/features/log_viewer/log_viewer.dart'
     show LogViewerExit;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show
         logViewerBackKey,
+        logViewerDeleteLabel,
         logViewerEarlierKey,
         logViewerEarlierLabel,
         logViewerLaterKey,
@@ -342,25 +338,27 @@ void main() {
       findsOneWidget,
     );
     expect(back.height, 48);
-    expect(edit.size, const Size(48, 48));
-    expect(delete.size, const Size(48, 48));
-    expect(back.width, greaterThan(edit.width + delete.width));
+    expect(edit.height, 48);
+    expect(delete.width, greaterThanOrEqualTo(48));
+    expect(delete.height, greaterThanOrEqualTo(48));
     expect(edit.left, greaterThan(back.right));
-    expect(delete.left, greaterThan(edit.right));
-    for (final Rect action in <Rect>[back, edit, delete]) {
+    for (final Rect action in <Rect>[back, edit]) {
       expect(footer.contains(action.center), isTrue, reason: '$action');
     }
-    for (final Key key in <Key>[logActionsEditKey, logActionsDeleteKey]) {
-      final BoxDecoration face =
-          tester.widget<Container>(_faceOf(key)).decoration! as BoxDecoration;
-      expect(
-        face.color!.toARGB32(),
-        Palette.toolbarInk.toARGB32(),
-        reason: '$key',
-      );
-    }
+    expect(delete.top, lessThan(headingRect.bottom));
+    expect(delete.bottom, lessThan(metaRect.top));
+    expect(delete.left, greaterThan(headingRect.right));
+    expect(footer.contains(delete.center), isFalse);
+    final BoxDecoration editFace =
+        tester.widget<Container>(_faceOf(logActionsEditKey)).decoration!
+            as BoxDecoration;
+    expect(editFace.color!.toARGB32(), Palette.coral.toARGB32());
+    expect(
+      tester.widget<StickerButton>(find.byKey(logActionsDeleteKey)).variant,
+      StickerButtonVariant.danger,
+    );
     expect(find.bySemanticsLabel(logActionsEditLabel), findsOneWidget);
-    expect(find.bySemanticsLabel(logActionsDeleteLabel), findsOneWidget);
+    expect(find.bySemanticsLabel(logViewerDeleteLabel), findsOneWidget);
 
     await tester.tap(find.byKey(logViewerEarlierKey));
     await tester.tap(find.byKey(logViewerLaterKey));
@@ -438,46 +436,52 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets(
-    'the dark Edit and Delete squares keep their edge on dark paper',
-    (WidgetTester tester) async {
-      _usePhone(tester);
-      await _openSheet(
-        tester,
-        _scene(
-          <String>[],
-          entry: _entry(id: 'morning', hour: 8, text: 'Watered the roses.'),
-        ),
-        name: 'dark',
-        brightness: Brightness.dark,
-      );
+  testWidgets('the dark Edit and Delete keep their edge on dark paper', (
+    WidgetTester tester,
+  ) async {
+    _usePhone(tester);
+    await _openSheet(
+      tester,
+      _scene(
+        <String>[],
+        entry: _entry(id: 'morning', hour: 8, text: 'Watered the roses.'),
+      ),
+      name: 'dark',
+      brightness: Brightness.dark,
+    );
 
-      expect(
-        tester.widget<PhoneSheet>(find.byType(PhoneSheet)).color!.toARGB32(),
-        FieldNotesColors.dark.composerPaper.toARGB32(),
-      );
-      for (final Key key in <Key>[logActionsEditKey, logActionsDeleteKey]) {
-        final BoxDecoration face =
-            tester.widget<Container>(_faceOf(key)).decoration! as BoxDecoration;
-        expect(
-          face.color!.toARGB32(),
-          Palette.toolbarInk.toARGB32(),
-          reason: '$key',
-        );
-        final List<BoxShadow> edge = face.boxShadow ?? const <BoxShadow>[];
-        expect(edge, hasLength(Shadows.toastLift.length), reason: '$key');
-        for (int i = 0; i < edge.length; i++) {
-          final BoxShadow expected = Shadows.toastLift[i];
-          expect(
-            edge[i].color.toARGB32(),
-            expected.color.toARGB32(),
-            reason: '$key',
-          );
-          expect(edge[i].offset, expected.offset, reason: '$key');
-          expect(edge[i].blurRadius, expected.blurRadius, reason: '$key');
-          expect(edge[i].spreadRadius, expected.spreadRadius, reason: '$key');
-        }
-      }
-    },
-  );
+    expect(
+      tester.widget<PhoneSheet>(find.byType(PhoneSheet)).color!.toARGB32(),
+      FieldNotesColors.dark.composerPaper.toARGB32(),
+    );
+    final BoxDecoration editFace =
+        tester.widget<Container>(_faceOf(logActionsEditKey)).decoration!
+            as BoxDecoration;
+    expect(editFace.color!.toARGB32(), Palette.coral.toARGB32());
+    expect(editFace.border, isNotNull);
+    final BoxDecoration deleteFace =
+        tester
+                .widget<DecoratedBox>(
+                  find.descendant(
+                    of: find.byKey(logActionsDeleteKey),
+                    matching: find.byWidgetPredicate(
+                      (Widget widget) =>
+                          widget is DecoratedBox &&
+                          widget.decoration is BoxDecoration &&
+                          (widget.decoration as BoxDecoration).border != null,
+                    ),
+                  ),
+                )
+                .decoration
+            as BoxDecoration;
+    final Color dangerInk = StickerButtonVariant.danger.inkOn(
+      StickerGround.page,
+      FieldNotesColors.dark,
+    );
+    expect(deleteFace.color, isNull);
+    expect(
+      (deleteFace.border! as Border).top.color.toARGB32(),
+      dangerInk.toARGB32(),
+    );
+  });
 }
