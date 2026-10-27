@@ -42,7 +42,7 @@ const List<Key> _blocks = <Key>[
 const List<Color> _blockFills = <Color>[
   Color(0xFFB8566A),
   Color(0xFF2F2A25),
-  Color(0xFF6D876D),
+  Color(0xFF4C5B4C),
 ];
 
 const List<Key> _mediaKeys = <Key>[
