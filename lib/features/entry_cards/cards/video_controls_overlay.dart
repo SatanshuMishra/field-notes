@@ -7,12 +7,16 @@ import 'package:flutter/widgets.dart';
 import '../../../design/focus/focus_ring.dart';
 import '../../../design/interaction/pressable.dart';
 import '../../../design/motion/motion.dart';
+import '../../../design/tokens/tokens.dart';
 import '../../../domain/platform/desktop_platform.dart';
 
 const Duration kVideoControlsHideDelay = Duration(milliseconds: 2600);
 
 const String videoSurfacePointerLabel = 'Play or pause video';
 const String videoSurfaceTouchLabel = 'Show or hide video controls';
+
+const double _surfaceRingHairline = 1;
+const double _surfaceRingWidth = 2;
 
 enum VideoControlModel { pointer, touch }
 
@@ -59,6 +63,7 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   bool _focusWithin = false;
   bool _accessibleNavigation = false;
   bool _visibleAtPointerDown = true;
+  bool _surfaceRinged = false;
   final FocusNode _surfaceFocus = FocusNode(
     debugLabel: 'video surface',
     skipTraversal: true,
@@ -66,6 +71,13 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   final Map<Type, Action<Intent>> _surfaceKeepsKeys = <Type, Action<Intent>>{
     ActivateIntent: DoNothingAction(consumesKey: false),
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _surfaceFocus.addListener(_syncSurfaceRing);
+    FocusManager.instance.addHighlightModeListener(_onHighlightMode);
+  }
 
   @override
   void didChangeDependencies() {
@@ -90,7 +102,10 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   void dispose() {
     _hideTimer?.cancel();
     _hideTimer = null;
-    _surfaceFocus.dispose();
+    FocusManager.instance.removeHighlightModeListener(_onHighlightMode);
+    _surfaceFocus
+      ..removeListener(_syncSurfaceRing)
+      ..dispose();
     super.dispose();
   }
 
@@ -156,6 +171,18 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
 
   void _onPointerExit(PointerExitEvent event) => _registerActivity();
 
+  void _onHighlightMode(FocusHighlightMode mode) => _syncSurfaceRing();
+
+  void _syncSurfaceRing() {
+    final bool ringed =
+        _surfaceFocus.hasPrimaryFocus &&
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    if (!mounted || ringed == _surfaceRinged) {
+      return;
+    }
+    setState(() => _surfaceRinged = ringed);
+  }
+
   void _onFocusWithin(bool hasFocus) {
     if (!mounted || hasFocus == _focusWithin) {
       return;
@@ -202,21 +229,74 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
               : videoSurfaceTouchLabel,
           onPressed: _surfaceTapActs ? _onSurfaceTap : null,
           surface: FocusRingSurface.dark,
+          placement: FocusRingPlacement.edge,
+          ringsFace: true,
           paintsHover: false,
           excludeSemantics: false,
           focusNode: _surfaceFocus,
           behavior: HitTestBehavior.translucent,
-          builder: (BuildContext context, bool hovered) => Actions(
-            actions: _surfaceKeepsKeys,
-            child: Focus(
-              canRequestFocus: false,
-              skipTraversal: true,
-              onFocusChange: _onFocusWithin,
-              child: AnimatedOpacity(
-                opacity: visible ? 1 : 0,
-                duration: still ? Duration.zero : Motion.fade,
-                curve: Motion.fadeCurve,
-                child: IgnorePointer(ignoring: !visible, child: widget.child),
+          builder: (BuildContext context, bool hovered) => Stack(
+            fit: StackFit.passthrough,
+            children: <Widget>[
+              Actions(
+                actions: _surfaceKeepsKeys,
+                child: Focus(
+                  canRequestFocus: false,
+                  skipTraversal: true,
+                  onFocusChange: _onFocusWithin,
+                  child: AnimatedOpacity(
+                    opacity: visible ? 1 : 0,
+                    duration: still ? Duration.zero : Motion.fade,
+                    curve: Motion.fadeCurve,
+                    child: IgnorePointer(
+                      ignoring: !visible,
+                      child: widget.child,
+                    ),
+                  ),
+                ),
+              ),
+              if (_surfaceRinged)
+                const Positioned.fill(
+                  child: IgnorePointer(child: _SurfaceFocusRing()),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SurfaceFocusRing extends StatelessWidget {
+  const _SurfaceFocusRing();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      key: focusRingKey,
+      decoration: BoxDecoration(
+        border: Border.fromBorderSide(
+          BorderSide(color: Palette.mediaBlack, width: _surfaceRingHairline),
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(_surfaceRingHairline),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.fromBorderSide(
+              BorderSide(color: Palette.mediaInk, width: _surfaceRingWidth),
+            ),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(_surfaceRingWidth),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border.fromBorderSide(
+                  BorderSide(
+                    color: Palette.mediaBlack,
+                    width: _surfaceRingHairline,
+                  ),
+                ),
               ),
             ),
           ),

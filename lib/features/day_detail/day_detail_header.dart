@@ -62,6 +62,7 @@ class DayDetailSheetHeader extends StatelessWidget {
             right: _sheetHeaderPadding.right - _backReach,
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
                 child: Column(
@@ -70,17 +71,12 @@ class DayDetailSheetHeader extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       dayDetailKickerFor(date, today: today),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: textStyles.stampAccent.copyWith(
                         color: colors.accentInk,
                       ),
                     ),
                     Text(
                       heading.title,
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
                       style: textStyles.headlineSerif.copyWith(
                         fontSize: _sheetTitleSize,
                         height: _sheetTitleLineHeight,

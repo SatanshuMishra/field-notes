@@ -252,7 +252,7 @@ class _ExitPill extends StatelessWidget {
             hovered: hovered,
             borderRadius: _exitPillBorderRadius,
             child: Container(
-              height: _exitPillHeight,
+              constraints: const BoxConstraints(minHeight: _exitPillHeight),
               padding: const EdgeInsets.only(
                 left: _exitPillStartPadding,
                 right: _exitPillEndPadding,
@@ -272,10 +272,12 @@ class _ExitPill extends StatelessWidget {
                     size: _exitGlyphSize,
                   ),
                   const SizedBox(width: _exitGlyphGap),
-                  Text(
-                    label,
-                    style: context.textStyles.captureLabelSans.copyWith(
-                      color: colors.ink,
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: context.textStyles.captureLabelSans.copyWith(
+                        color: colors.ink,
+                      ),
                     ),
                   ),
                 ],
