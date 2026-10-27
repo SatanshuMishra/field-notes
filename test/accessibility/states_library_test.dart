@@ -1,5 +1,6 @@
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -73,6 +74,51 @@ final Set<int> _darkSheetColours = <int>{
   FieldNotesColors.dark.panelTop.toARGB32(),
   FieldNotesColors.dark.composerPaper.toARGB32(),
 };
+
+final RegExp _areaNumber = RegExp(r'^[a-z]+\d+-');
+final RegExp _layoutWord = RegExp(r'-(sidebar|bottom-bar|phone)$');
+
+String _surfaceOf(String id) =>
+    id.replaceFirst(_areaNumber, '').replaceFirst(_layoutWord, '');
+
+const Set<TargetPlatform> _desktopPlatforms = <TargetPlatform>{
+  TargetPlatform.macOS,
+  TargetPlatform.windows,
+};
+
+Map<String, List<A11yState>> get _statesByArea => <String, List<A11yState>>{
+  'shell': shellStates,
+  'settings': settingsStates,
+  'capture': captureStates,
+  'viewer': viewerStates,
+  'immersive': immersiveStates,
+  'onboarding': onboardingStates,
+  'media': mediaStates,
+  'sync': syncStates,
+  'updates': updatesStates,
+};
+
+List<String> _surfacesMissingDesktop() {
+  final Map<String, List<A11yState>> surfaces = <String, List<A11yState>>{};
+  for (final MapEntry<String, List<A11yState>> area in _statesByArea.entries) {
+    for (final A11yState state in area.value) {
+      surfaces
+          .putIfAbsent(
+            '${area.key} ${_surfaceOf(state.id)}',
+            () => <A11yState>[],
+          )
+          .add(state);
+    }
+  }
+  return <String>[
+    for (final MapEntry<String, List<A11yState>> surface in surfaces.entries)
+      if (!<TargetPlatform>{
+        for (final A11yState state in surface.value) ...state.platforms,
+      }.containsAll(_desktopPlatforms))
+        '${surface.key} '
+            '(${surface.value.map((A11yState state) => state.id).join(', ')})',
+  ];
+}
 
 List<A11yState> get _everyState => <A11yState>[
   ...shellStates,
@@ -206,6 +252,20 @@ void main() {
       'u4-update-error-offline',
     ]);
   });
+
+  test(
+    "every state's surface runs on macos and windows with the sidebar layout",
+    () {
+      final List<String> missing = _surfacesMissingDesktop();
+      expect(
+        missing,
+        isEmpty,
+        reason:
+            'these surfaces never run on macos and windows:\n'
+            '${missing.join('\n')}',
+      );
+    },
+  );
 
   test('the state library holds every named main-path surface', () {
     final List<String> ids = _ids(_everyState);
