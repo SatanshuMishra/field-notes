@@ -1,4 +1,3 @@
-import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/data/updates/bundled_changelog.dart';
 import 'package:field_notes/data/updates/changelog_parser.dart';
 import 'package:field_notes/data/updates/update_record_store.dart';
@@ -6,8 +5,8 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/domain/updates/updates.dart';
 import 'package:field_notes/features/settings/sections/about_section.dart';
-import 'package:field_notes/features/streak/streak.dart';
-import 'package:field_notes/features/today/today_providers.dart';
+import 'package:field_notes/features/updates/ui/update_greeting.dart'
+    as greeting;
 import 'package:field_notes/features/updates/ui/update_notes_surface.dart';
 import 'package:field_notes/features/updates/update_controller.dart';
 import 'package:field_notes/features/updates/update_providers.dart';
@@ -20,15 +19,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../app/support/app_shell_harness.dart' show shellOverrides;
 import '../../features/settings/support/fake_settings_repository.dart';
 import '../../support/update_overrides.dart';
 import '../support/a11y_state.dart';
 
 const String _installedVersion = '1.4.2';
 const String _newVersion = '2.4.0';
-const String _openNew = 'open new notes';
-const String _openInstalled = 'open installed notes';
 final DateTime _checkedAt = DateTime(2026, 10, 10, 9);
 
 final ReleaseInfo _release = ReleaseInfo(
@@ -165,44 +161,45 @@ Widget _app(
   ),
 );
 
-class _NotesLauncher extends ConsumerWidget {
-  const _NotesLauncher();
+class _NotesOpener extends ConsumerStatefulWidget {
+  const _NotesOpener({required this.newVersion});
+
+  final bool newVersion;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      backgroundColor: context.colors.page,
-      body: Column(
-        children: <Widget>[
-          TextButton(
-            onPressed: () => showUpdateNotes(context, ref, newVersion: true),
-            child: const Text(_openNew),
-          ),
-          TextButton(
-            onPressed: () => showUpdateNotes(context, ref, newVersion: false),
-            child: const Text(_openInstalled),
-          ),
-        ],
-      ),
+  ConsumerState<_NotesOpener> createState() => _NotesOpenerState();
+}
+
+class _NotesOpenerState extends ConsumerState<_NotesOpener> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (Duration _) =>
+          showUpdateNotes(context, ref, newVersion: widget.newVersion),
     );
   }
+
+  @override
+  Widget build(BuildContext context) =>
+      Scaffold(backgroundColor: context.colors.page);
 }
 
 Future<void> _pumpNotes(
   WidgetTester tester,
-  A11yVariant variant,
-  String which,
-) async {
+  A11yVariant variant, {
+  required bool newVersion,
+}) async {
   variant.useWindow(tester);
   await tester.pumpWidget(
-    _app(variant, overrides: _notesOverrides(), home: const _NotesLauncher()),
+    _app(
+      variant,
+      overrides: _notesOverrides(),
+      home: _NotesOpener(newVersion: newVersion),
+    ),
   );
   await tester.pumpAndSettle();
-  await tester.tap(find.text(which));
-  await tester.pumpAndSettle();
 }
-
-DateTime _greetingClock() => DateTime(2026, 10, 26, 18);
 
 Future<void> _pumpGreeting(WidgetTester tester, A11yVariant variant) async {
   variant.useWindow(tester);
@@ -210,18 +207,15 @@ Future<void> _pumpGreeting(WidgetTester tester, A11yVariant variant) async {
     _app(
       variant,
       overrides: <Override>[
-        ...shellOverrides(),
-        todayClockProvider.overrideWithValue(_greetingClock),
-        streakClockProvider.overrideWithValue(_greetingClock),
-        appSettingsProvider.overrideWith(
-          (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
-        ),
-        installedAppProvider.overrideWith(
-          (Ref ref) async => const InstalledApp(version: _newVersion),
-        ),
+        ..._installedOverrides(),
         updateGreetingProvider.overrideWith(_PendingGreeting.new),
       ],
-      home: const AppShell(),
+      home: Builder(
+        builder: (BuildContext context) => Scaffold(
+          backgroundColor: context.colors.page,
+          body: const greeting.UpdateGreeting(),
+        ),
+      ),
     ),
   );
   await tester.pump();
@@ -262,7 +256,7 @@ final List<A11yState> updatesStates = <A11yState>[
   A11yState(
     id: 'u1-update-notes-new',
     pump: (WidgetTester tester, A11yVariant variant) =>
-        _pumpNotes(tester, variant, _openNew),
+        _pumpNotes(tester, variant, newVersion: true),
     proof: <A11yProof>[
       A11yProof(_notesSurface),
       A11yProof(find.byKey(updateNotesActionKey)),
@@ -272,7 +266,7 @@ final List<A11yState> updatesStates = <A11yState>[
   A11yState(
     id: 'u2-update-notes-installed',
     pump: (WidgetTester tester, A11yVariant variant) =>
-        _pumpNotes(tester, variant, _openInstalled),
+        _pumpNotes(tester, variant, newVersion: false),
     proof: <A11yProof>[
       A11yProof(_notesSurface),
       A11yProof(find.text('Each settings section opens as its own page.')),
@@ -282,7 +276,7 @@ final List<A11yState> updatesStates = <A11yState>[
     id: 'u3-update-greeting',
     pump: _pumpGreeting,
     proof: <A11yProof>[
-      A11yProof(find.byType(AppShell)),
+      A11yProof(find.byType(greeting.UpdateGreeting)),
       A11yProof(find.text(updatedGreeting(_newVersion))),
     ],
   ),

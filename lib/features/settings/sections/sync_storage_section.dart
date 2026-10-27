@@ -50,6 +50,9 @@ const String restoreCaptionPhone = 'Use your 12 words.';
 const double _actionRowMinHeight = 48;
 const double _actionChevronSize = 20;
 const double _statusDotSize = 8;
+const double _androidMinTarget = 48;
+const double _macosMinTarget = 28;
+const double _windowsMinTarget = 40;
 
 const String syncNowLabel = 'Sync now';
 const String pauseSyncLabel = 'Pause sync';
@@ -273,25 +276,29 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
             SettingsFieldRow(
               label: addDeviceTitle,
               description: addDeviceCaption,
-              control: SettingsActionButton(
-                label: showCodeLabel,
-                onPressed: () => showAddDeviceSheet(context),
+              control: _MinimumTarget(
+                child: SettingsActionButton(
+                  label: showCodeLabel,
+                  onPressed: () => showAddDeviceSheet(context),
+                ),
               ),
             ),
             Focus(
               focusNode: _manageDevicesFocus,
               canRequestFocus: false,
               skipTraversal: true,
-              child: SettingsFieldRow(
-                label: manageDevicesLabel,
-                description: devices == null
-                    ? devicesFallbackCaption
-                    : deviceCountLabel(devices.length),
-                control: ChevronGlyph(
-                  pointsBack: false,
-                  color: context.colors.muted,
+              child: _MinimumTarget(
+                child: SettingsFieldRow(
+                  label: manageDevicesLabel,
+                  description: devices == null
+                      ? devicesFallbackCaption
+                      : deviceCountLabel(devices.length),
+                  control: ChevronGlyph(
+                    pointsBack: false,
+                    color: context.colors.muted,
+                  ),
+                  onPressed: _openDevices,
                 ),
-                onPressed: _openDevices,
               ),
             ),
           ],
@@ -411,17 +418,21 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
     child: const SizedBox.square(dimension: _statusDotSize),
   );
 
-  Widget _syncNowButton() => SettingsActionButton(
-    label: syncNowLabel,
-    onPressed: () =>
-        _engineAction(() => ref.read(syncEngineProvider).syncNow()),
+  Widget _syncNowButton() => _MinimumTarget(
+    child: SettingsActionButton(
+      label: syncNowLabel,
+      onPressed: () =>
+          _engineAction(() => ref.read(syncEngineProvider).syncNow()),
+    ),
   );
 
-  Widget _changeButton() => SettingsActionButton(
-    label: changeLabel,
-    onPressed: () => showSyncFlow<void>(
-      context,
-      builder: (BuildContext flowContext) => const ChangeServerAddressFlow(),
+  Widget _changeButton() => _MinimumTarget(
+    child: SettingsActionButton(
+      label: changeLabel,
+      onPressed: () => showSyncFlow<void>(
+        context,
+        builder: (BuildContext flowContext) => const ChangeServerAddressFlow(),
+      ),
     ),
   );
 
@@ -666,6 +677,25 @@ class _ChangeServerAddressFlowState
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MinimumTarget extends StatelessWidget {
+  const _MinimumTarget({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final double target = switch (Theme.of(context).platform) {
+      TargetPlatform.macOS => _macosMinTarget,
+      TargetPlatform.windows => _windowsMinTarget,
+      _ => _androidMinTarget,
+    };
+    return ConstrainedBox(
+      constraints: BoxConstraints(minWidth: target, minHeight: target),
+      child: child,
     );
   }
 }

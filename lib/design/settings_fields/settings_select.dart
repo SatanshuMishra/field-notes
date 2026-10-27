@@ -35,7 +35,8 @@ const EdgeInsets _sidebarFieldPadding = EdgeInsets.symmetric(
 );
 const double _sidebarChevronSize = 14;
 const double _sidebarChevronGap = 7;
-const double _sidebarMinTapTarget = 24;
+const double _macosMinTapTarget = 28;
+const double _windowsMinTapTarget = 40;
 
 class SettingsSelectOption<T> {
   const SettingsSelectOption({required this.value, required this.label});
@@ -110,9 +111,11 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
     final BorderRadius radius = sheet
         ? Shapes.buttonBorderRadius
         : _sidebarFieldRadius;
-    final double minTapTarget = sheet
-        ? kMinInteractiveDimension
-        : _sidebarMinTapTarget;
+    final double minTapTarget = switch (Theme.of(context).platform) {
+      TargetPlatform.macOS => _macosMinTapTarget,
+      TargetPlatform.windows => _windowsMinTapTarget,
+      _ => kMinInteractiveDimension,
+    };
     final String? semanticLabel = widget.semanticLabel;
     Widget trigger(VoidCallback open) => Pressable(
       includeFocusSemantics: false,

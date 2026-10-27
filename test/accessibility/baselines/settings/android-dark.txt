@@ -1,51 +1,50 @@
-flutter-text-contrast | b10-settings-about-phone | author | About # open: fails Flutter's text contrast guideline
-flutter-text-contrast | b10-settings-about-phone@2x | author | About # open: fails Flutter's text contrast guideline
-focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Input volume # open: focus indicator below 3:1
-focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Output volume # open: focus indicator below 3:1
-focus-visible | b12-select-dropdown-microphone | <unlabelled> | Input volume # open: focus indicator below 3:1
-focus-visible | b12-select-dropdown-microphone | <unlabelled> | Output volume # open: focus indicator below 3:1
-focus-visible | b13-select-dropdown-speaker | <unlabelled> | Input volume # open: focus indicator below 3:1
-focus-visible | b13-select-dropdown-speaker | <unlabelled> | Output volume # open: focus indicator below 3:1
+flutter-text-contrast | b10-settings-about-phone | author | About # measured: 9.25:1 by token arithmetic
+flutter-text-contrast | b10-settings-about-phone@2x | author | About # measured: 9.25:1 by token arithmetic
+focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Input volume # open: volume slider shows no focus change of 3:1 (capture/audio/input_panel.dart)
+focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Output volume # open: volume slider shows no focus change of 3:1 (capture/audio/input_panel.dart)
+focus-visible | b12-select-dropdown-microphone | <unlabelled> | Input volume # open: volume slider shows no focus change of 3:1 (capture/audio/input_panel.dart)
+focus-visible | b12-select-dropdown-microphone | <unlabelled> | Output volume # open: volume slider shows no focus change of 3:1 (capture/audio/input_panel.dart)
+focus-visible | b13-select-dropdown-speaker | <unlabelled> | Input volume # open: volume slider shows no focus change of 3:1 (capture/audio/input_panel.dart)
+focus-visible | b13-select-dropdown-speaker | <unlabelled> | Output volume # open: volume slider shows no focus change of 3:1 (capture/audio/input_panel.dart)
 missing-role | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
 missing-role | b14-sync-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
 missing-role | b4-select-open | Dismiss | <root> # Flutter's own control
 missing-role | b4-select-open@2x | Dismiss | <root> # Flutter's own control
 missing-role | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
 missing-role | b5-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
-small-target | b11-select-dropdown-input-profile | Input device | Voice # open: tap target under the platform minimum
-small-target | b11-select-dropdown-input-profile | Output device | Voice # open: tap target under the platform minimum
-small-target | b11-select-dropdown-input-profile@2x | Input device | Voice # open: tap target under the platform minimum
-small-target | b11-select-dropdown-input-profile@2x | Output device | Voice # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone | Built-in Microphone | <root> # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone | Headset Microphone | <root> # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone | Input device | Voice # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone | Output device | Voice # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone | System default | <root> # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone@2x | Input device | Voice # open: tap target under the platform minimum
-small-target | b12-select-dropdown-microphone@2x | Output device | Voice # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker | Built-in Speakers | <root> # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker | Headphones | <root> # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker | Input device | Voice # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker | Output device | Voice # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker | System output | <root> # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker@2x | Input device | Voice # open: tap target under the platform minimum
-small-target | b13-select-dropdown-speaker@2x | Output device | Voice # open: tap target under the platform minimum
-text-contrast | b10-settings-about-phone@2x | Check for updates | About # open: text contrast below 4.5:1, or 3:1 for large text
-truncated-text | b11-select-dropdown-input-profile@2x | Input device | Voice # open: text is cut short at 2x text
-truncated-text | b11-select-dropdown-input-profile@2x | Input volume | Voice # open: text is cut short at 2x text
-truncated-text | b11-select-dropdown-input-profile@2x | Output device | Voice # open: text is cut short at 2x text
-truncated-text | b11-select-dropdown-input-profile@2x | Output volume | Voice # open: text is cut short at 2x text
-truncated-text | b11-select-dropdown-input-profile@2x | System default | Input device # open: text is cut short at 2x text
-truncated-text | b11-select-dropdown-input-profile@2x | System output | Output device # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | Input device | Voice # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | Input volume | Voice # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | Output device | Voice # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | Output volume | Voice # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | System default | Input device # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | System output | Output device # open: text is cut short at 2x text
-truncated-text | b13-select-dropdown-speaker@2x | Input device | Voice # open: text is cut short at 2x text
-truncated-text | b13-select-dropdown-speaker@2x | Input volume | Voice # open: text is cut short at 2x text
-truncated-text | b13-select-dropdown-speaker@2x | Output device | Voice # open: text is cut short at 2x text
-truncated-text | b13-select-dropdown-speaker@2x | Output volume | Voice # open: text is cut short at 2x text
-truncated-text | b13-select-dropdown-speaker@2x | System default | Input device # open: text is cut short at 2x text
-truncated-text | b13-select-dropdown-speaker@2x | System output | Output device # open: text is cut short at 2x text
+small-target | b11-select-dropdown-input-profile | Input device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b11-select-dropdown-input-profile | Output device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b11-select-dropdown-input-profile@2x | Input device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b11-select-dropdown-input-profile@2x | Output device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b12-select-dropdown-microphone | Built-in Microphone | <root> # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b12-select-dropdown-microphone | Headset Microphone | <root> # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b12-select-dropdown-microphone | Input device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b12-select-dropdown-microphone | Output device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b12-select-dropdown-microphone | System default | <root> # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b12-select-dropdown-microphone@2x | Input device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b12-select-dropdown-microphone@2x | Output device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b13-select-dropdown-speaker | Built-in Speakers | <root> # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b13-select-dropdown-speaker | Headphones | <root> # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b13-select-dropdown-speaker | Input device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b13-select-dropdown-speaker | Output device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b13-select-dropdown-speaker | System output | <root> # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b13-select-dropdown-speaker@2x | Input device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+small-target | b13-select-dropdown-speaker@2x | Output device | Voice # open: Voice rows and device menu items are 44 tall, under Android 48 (capture/audio/input_panel.dart)
+truncated-text | b11-select-dropdown-input-profile@2x | Input device | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b11-select-dropdown-input-profile@2x | Input volume | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b11-select-dropdown-input-profile@2x | Output device | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b11-select-dropdown-input-profile@2x | Output volume | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b11-select-dropdown-input-profile@2x | System default | Input device # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b11-select-dropdown-input-profile@2x | System output | Output device # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b12-select-dropdown-microphone@2x | Input device | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b12-select-dropdown-microphone@2x | Input volume | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b12-select-dropdown-microphone@2x | Output device | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b12-select-dropdown-microphone@2x | Output volume | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b12-select-dropdown-microphone@2x | System default | Input device # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b12-select-dropdown-microphone@2x | System output | Output device # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b13-select-dropdown-speaker@2x | Input device | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b13-select-dropdown-speaker@2x | Input volume | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b13-select-dropdown-speaker@2x | Output device | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b13-select-dropdown-speaker@2x | Output volume | Voice # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b13-select-dropdown-speaker@2x | System default | Input device # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
+truncated-text | b13-select-dropdown-speaker@2x | System output | Output device # open: Voice rows cut text short at 2x (capture/audio/input_panel.dart)
