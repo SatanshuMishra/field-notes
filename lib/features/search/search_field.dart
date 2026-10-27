@@ -80,29 +80,26 @@ class _SearchFieldState extends ConsumerState<SearchField> {
     );
     final Widget field = Semantics(
       label: _name,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: _standardMinHeight),
-        child: TextField(
-          controller: _controller,
-          style: bodySans,
-          onChanged: _onChanged,
-          textAlignVertical: TextAlignVertical.center,
-          decoration: InputDecoration(
-            hint: _hint(context, bodySans),
-            prefixIcon: Icon(Icons.search, color: colors.mutedDeep),
-            suffixIcon: query.isEmpty
-                ? null
-                : const SizedBox.square(dimension: kMinInteractiveDimension),
-            filled: true,
-            fillColor: colors.cardBright,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: _standardTextIndent,
-              vertical: _standardTextInset,
-            ),
-            border: border,
-            enabledBorder: border,
-            focusedBorder: focusedBorder,
+      child: TextField(
+        controller: _controller,
+        style: bodySans,
+        onChanged: _onChanged,
+        textAlignVertical: TextAlignVertical.center,
+        decoration: InputDecoration(
+          hint: _hint(context, bodySans),
+          prefixIcon: Icon(Icons.search, color: colors.mutedDeep),
+          suffixIcon: query.isEmpty
+              ? null
+              : const SizedBox.square(dimension: kMinInteractiveDimension),
+          filled: true,
+          fillColor: colors.cardBright,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: _standardTextIndent,
+            vertical: _standardTextInset,
           ),
+          border: border,
+          enabledBorder: border,
+          focusedBorder: focusedBorder,
         ),
       ),
     );
@@ -177,8 +174,6 @@ class _SearchFieldState extends ConsumerState<SearchField> {
 }
 
 const double _phoneHeight = 52;
-
-const double _standardMinHeight = 44;
 
 const double _standardTextInset = 12;
 

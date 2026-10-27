@@ -32,7 +32,7 @@ const BorderRadius _actionRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusXs),
 );
 const Duration _popDuration = Duration(milliseconds: 140);
-double _minTargetOn(TargetPlatform platform) =>
+double _pointerMinTargetOn(TargetPlatform platform) =>
     platform == TargetPlatform.macOS || platform == TargetPlatform.windows
     ? minTargetOn(platform)
     : 0;
@@ -78,7 +78,7 @@ class CalendarMonthPicker extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     final double arrowSize = math.max(
       _yearArrowSize,
-      _minTargetOn(Theme.of(context).platform),
+      _pointerMinTargetOn(Theme.of(context).platform),
     );
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: 1),
@@ -239,7 +239,7 @@ class _MonthTile extends StatelessWidget {
       position: DecorationPosition.background,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          minHeight: _minTargetOn(Theme.of(context).platform),
+          minHeight: _pointerMinTargetOn(Theme.of(context).platform),
         ),
         child: Center(
           heightFactor: 1,
@@ -298,7 +298,7 @@ class _PickerAction extends StatelessWidget {
         borderRadius: _actionRadius,
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            minHeight: _minTargetOn(Theme.of(context).platform),
+            minHeight: _pointerMinTargetOn(Theme.of(context).platform),
           ),
           child: Center(
             widthFactor: 1,

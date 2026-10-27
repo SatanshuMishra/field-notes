@@ -34,12 +34,18 @@ void main() {
   testWidgets(
     'the desktop search field stays one line and grows with 2x text',
     (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MediaQuery(
-          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
-          child: searchHarness(_probe()),
-        ),
-      );
+      Future<double> editableHeightAt(double scale) async {
+        await tester.pumpWidget(
+          MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: searchHarness(_probe()),
+          ),
+        );
+        return tester.getSize(find.byType(EditableText)).height;
+      }
+
+      final double single = await editableHeightAt(1);
+      final double doubled = await editableHeightAt(2);
       await tester.enterText(find.byType(TextField), 'rain\nsnow');
       await tester.pump();
 
@@ -47,9 +53,10 @@ void main() {
       expect(editable.maxLines, 1);
       expect(editable.keyboardType, isNot(TextInputType.multiline));
       expect(find.text('q=rainsnow'), findsOneWidget);
+      expect(doubled, greaterThanOrEqualTo(single * 2 - 1));
       expect(
         tester.getSize(find.byType(TextField)).height,
-        greaterThanOrEqualTo(tester.getSize(find.byType(EditableText)).height),
+        greaterThan(doubled),
       );
     },
     variant: TargetPlatformVariant.only(TargetPlatform.macOS),

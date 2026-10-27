@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
@@ -48,8 +49,6 @@ import 'photo_caption_field.dart';
 const double photoToolbarGap = 10;
 const double photoToolbarPadding = 5;
 const double photoToolbarTarget = 28;
-const double photoToolbarTouchTarget = 48;
-const double photoToolbarWindowsTarget = 40;
 const double photoToolbarControlPadding = 7;
 const double photoToolbarControlGap = 2;
 const double photoToolbarGroupGap = 5;
@@ -84,12 +83,6 @@ Key photoToolbarSideKey(MdPhotoSide side) =>
 String photoToolbarSizeLabel(MdPhotoSize size) => '${size.label} size';
 
 String photoToolbarSideLabel(MdPhotoSide side) => '${side.label} side';
-
-double photoToolbarTargetFor(TargetPlatform platform) => switch (platform) {
-  TargetPlatform.macOS => photoToolbarTarget,
-  TargetPlatform.windows => photoToolbarWindowsTarget,
-  _ => photoToolbarTouchTarget,
-};
 
 double photoToolbarWidthFor({
   required TextScaler scaler,
@@ -437,7 +430,7 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
       return const SizedBox.shrink();
     }
     final TextScaler scaler = MediaQuery.textScalerOf(context);
-    final double target = photoToolbarTargetFor(defaultTargetPlatform);
+    final double target = minTargetOn(defaultTargetPlatform);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final bool placement = !request.phoneColumn;
@@ -693,7 +686,7 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
     if (photo == null || button == null || overlay == null || !button.hasSize) {
       return const SizedBox.shrink();
     }
-    final double target = photoToolbarTargetFor(defaultTargetPlatform);
+    final double target = minTargetOn(defaultTargetPlatform);
     final Rect anchor = MatrixUtils.transformRect(
       button.getTransformTo(overlay),
       Offset.zero & button.size,
