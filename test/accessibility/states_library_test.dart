@@ -12,6 +12,7 @@ import 'states/shell_states.dart';
 import 'states/sync_states.dart';
 import 'states/updates_states.dart';
 import 'states/viewer_states.dart';
+import 'support/a11y_rules.dart';
 import 'support/a11y_state.dart';
 
 List<String> _ids(List<A11yState> states) => <String>[
@@ -336,4 +337,25 @@ void main() {
       isEmpty,
     );
   });
+
+  testWidgets(
+    "a status change a state's own action makes is a live-region finding",
+    (WidgetTester tester) async {
+      final A11yStateResult result = await runA11yState(
+        tester,
+        onboardingStates.singleWhere(
+          (A11yState state) => state.id == 'o11-moment-saved-sidebar',
+        ),
+        variant: const A11yVariant(platform: TargetPlatform.macOS),
+        checks: A11yChecks.full,
+      );
+      expect(switch (result) {
+        A11yLoaded(:final List<A11yFinding> findings) => <String>[
+          for (final A11yFinding finding in findings)
+            if (finding.rule == 'live-region') finding.label,
+        ],
+        A11yNotLoaded(:final String message) => throw TestFailure(message),
+      }, contains('saved to today ✓'));
+    },
+  );
 }

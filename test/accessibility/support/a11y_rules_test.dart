@@ -424,7 +424,7 @@ class _StatusSwapState extends State<_StatusSwap> {
   void initState() {
     super.initState();
     _saving = Timer(
-      const Duration(milliseconds: 250),
+      const Duration(milliseconds: 100),
       () => setState(() => _saved = true),
     );
   }
