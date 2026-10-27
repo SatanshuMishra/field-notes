@@ -175,10 +175,10 @@ void main() {
 
         expect(
           tester.getRect(find.byKey(appearanceToggleKey)),
-          const Rect.fromLTWH(8, _statusBar + 2, 44, 44),
+          const Rect.fromLTWH(6, _statusBar, 48, 48),
         );
         expect(_glassIn(_toggle), findsOneWidget);
-        expect(tester.getSize(_glassIn(_toggle)), const Size.square(44));
+        expect(tester.getSize(_glassIn(_toggle)), const Size.square(48));
         expect(_hitTestable(tester, find.byKey(appearanceToggleKey)), isTrue);
 
         expect(
