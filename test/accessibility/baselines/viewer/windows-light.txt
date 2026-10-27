@@ -29,6 +29,8 @@ keyboard | d1-viewer-todos-sidebar | pack the tide tables | Friday, September 18
 keyboard | d6-task-toast-sidebar | call the ferry office | Friday, September 18 / Morning note # open: keyboard
 keyboard | d6-task-toast-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: keyboard
 keyboard | d7-day-with-entries-sidebar | 2:30 PM · afternoon · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: keyboard
+live-region | d6-task-toast-sidebar | Task ticked | <root> # open: live-region
+live-region | d6-task-toast-sidebar@2x | Task ticked | <root> # open: live-region
 small-target | d1-viewer-todos-sidebar | call the ferry office | Friday, September 18 / Morning note # open: small-target
 small-target | d1-viewer-todos-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: small-target
 small-target | d1-viewer-todos-sidebar@2x | call the ferry office | Friday, September 18 / Morning note # open: small-target

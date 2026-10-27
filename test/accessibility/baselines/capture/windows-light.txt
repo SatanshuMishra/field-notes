@@ -39,11 +39,15 @@ keyboard | c8-table-toolbar | Save | Today · 9:30 AM / New note / # title   - l
 keyboard | c8-table-toolbar | Table | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: Tab never reaches it
 keyboard | c8-table-toolbar | Task list | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: Tab never reaches it
 keyboard | c8-table-toolbar | Undo | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: Tab never reaches it
+live-region | c13-voice-recording | 0:00 | <root> # open: live-region
 live-region | c13-voice-recording | space pause · ctrl+enter keep · esc leave | <root> # open: live-region
+live-region | c13-voice-recording@2x | 0:00 | <root> # open: live-region
 live-region | c13-voice-recording@2x | space pause · ctrl+enter keep · esc leave | <root> # open: live-region
 live-region | c14-voice-paused | space resume · ctrl+enter keep · esc leave | <root> # open: live-region
 live-region | c14-voice-paused@2x | space resume · ctrl+enter keep · esc leave | <root> # open: live-region
+live-region | c16-video-recording | 0:00 | space pause · ctrl+enter keep · esc leave # open: live-region
 live-region | c16-video-recording | space pause · ctrl+enter keep · esc leave | <root> # open: live-region
+live-region | c16-video-recording@2x | 0:00 | space pause · ctrl+enter keep · esc leave # open: live-region
 live-region | c16-video-recording@2x | space pause · ctrl+enter keep · esc leave | <root> # open: live-region
 live-region | c17-video-paused | space resume · ctrl+enter keep · esc leave | <root> # open: live-region
 live-region | c17-video-paused@2x | space resume · ctrl+enter keep · esc leave | <root> # open: live-region

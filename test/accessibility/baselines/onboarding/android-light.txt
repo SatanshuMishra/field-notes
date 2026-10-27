@@ -45,7 +45,9 @@ focus-visible | o8-day-calm-bottom-bar | Loved | a day / Every feeling grows its
 focus-visible | o8-day-calm-bottom-bar | Sad | a day / Every feeling grows its own flower. / There are ten. Pick the one that fits today. # open: focus indicator below 3:1
 focus-visible | o8-day-calm-bottom-bar | Tired | a day / Every feeling grows its own flower. / There are ten. Pick the one that fits today. # open: focus indicator below 3:1
 focus-visible | o8-day-calm-bottom-bar | Warm | a day / Every feeling grows its own flower. / There are ten. Pick the one that fits today. # open: focus indicator below 3:1
+live-region | o12-moment-saved-bottom-bar | Some days are easier said. | <root> # open: live-region
 live-region | o12-moment-saved-bottom-bar | swipe to continue | <root> # open: live-region
+live-region | o12-moment-saved-bottom-bar@2x | Some days are easier said. | <root> # open: live-region
 live-region | o12-moment-saved-bottom-bar@2x | swipe to continue | <root> # open: live-region
 live-region | o14-moment-failed-bottom-bar | swipe to continue | <root> # open: live-region
 live-region | o14-moment-failed-bottom-bar@2x | swipe to continue | <root> # open: live-region
@@ -56,17 +58,31 @@ live-region | o18-month-full-bottom-bar@2x | 10 flowers | <root> # open: live-re
 live-region | o18-month-full-bottom-bar@2x | by the end of Jul | a month / Give it a few weeks. / July / 10 flowers # open: live-region
 live-region | o18-month-full-bottom-bar@2x | swipe to continue | <root> # open: live-region
 live-region | o20-year-playing-bottom-bar | 195 of 365 days | <root> # open: status change is not announced
+live-region | o20-year-playing-bottom-bar | Drag to look around | <root> # open: live-region
 live-region | o20-year-playing-bottom-bar | July | <root> # open: status change is not announced
 live-region | o20-year-playing-bottom-bar@2x | 195 of 365 days | <root> # open: status change is not announced
+live-region | o20-year-playing-bottom-bar@2x | Drag to look around | <root> # open: live-region
 live-region | o20-year-playing-bottom-bar@2x | July | <root> # open: status change is not announced
 live-region | o22-year-finished-bottom-bar | 365 of 365 days | <root> # open: live-region
 live-region | o22-year-finished-bottom-bar | A whole year | <root> # open: live-region
+live-region | o22-year-finished-bottom-bar | Drag to look around | <root> # open: live-region
+live-region | o22-year-finished-bottom-bar | every flower is a day · drag the meadow to look around | <root> # open: live-region
 live-region | o22-year-finished-bottom-bar | swipe to continue | <root> # open: live-region
 live-region | o22-year-finished-bottom-bar@2x | 365 of 365 days | <root> # open: live-region
 live-region | o22-year-finished-bottom-bar@2x | A whole year | <root> # open: live-region
+live-region | o22-year-finished-bottom-bar@2x | Drag to look around | <root> # open: live-region
+live-region | o22-year-finished-bottom-bar@2x | every flower is a day · drag the meadow to look around | <root> # open: live-region
 live-region | o22-year-finished-bottom-bar@2x | swipe to continue | <root> # open: live-region
+live-region | o28-reminder-off-bottom-bar | No nudges. Your meadow waits quietly. | and you / When should we check in? / — # open: live-region
+live-region | o28-reminder-off-bottom-bar | off | and you / When should we check in? / — # open: live-region
 live-region | o28-reminder-off-bottom-bar | — | <root> # open: live-region
+live-region | o28-reminder-off-bottom-bar@2x | No nudges. Your meadow waits quietly. | and you / When should we check in? / — # open: live-region
+live-region | o28-reminder-off-bottom-bar@2x | off | and you / When should we check in? / — # open: live-region
 live-region | o28-reminder-off-bottom-bar@2x | — | <root> # open: live-region
+live-region | o36-reminder-notifications-off-bottom-bar | You can still go on. Reminders stay off until notificatio... | You can still go on. Reminders stay off until notifications are on. # open: live-region
+live-region | o36-reminder-notifications-off-bottom-bar@2x | You can still go on. Reminders stay off until notificatio... | You can still go on. Reminders stay off until notifications are on. # open: live-region
+live-region | o4-opening-grown-bottom-bar | swipe to continue | <root> # open: live-region
+live-region | o4-opening-grown-bottom-bar@2x | swipe to continue | <root> # open: live-region
 live-region | o8-day-calm-bottom-bar | lavender | <root> # open: live-region
 live-region | o8-day-calm-bottom-bar@2x | lavender | <root> # open: live-region
 overflow | o32-map-end-bottom-bar@2x | swipe to start journaling | <root> # open: layout overflows

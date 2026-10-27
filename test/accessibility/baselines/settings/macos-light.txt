@@ -155,6 +155,10 @@ keyboard | b4-select-open | Monday | <root> # open: Tab never reaches it
 keyboard | b4-select-open | Saturday | <root> # open: Tab never reaches it
 keyboard | b4-select-open | Sunday | <root> # open: Tab never reaches it
 keyboard | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
+live-region | b15-settings-data-error | Export failed. Nothing was written. | <root> # open: live-region
+live-region | b15-settings-data-error@2x | Export failed. Nothing was written. | <root> # open: live-region
+live-region | b3-settings-notice | Deleted 3 days and 5 entries. | <root> # open: live-region
+live-region | b3-settings-notice@2x | Deleted 3 days and 5 entries. | <root> # open: live-region
 missing-role | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
 missing-role | b14-sync-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
 missing-role | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control

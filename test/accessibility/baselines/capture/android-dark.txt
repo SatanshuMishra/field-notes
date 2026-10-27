@@ -12,6 +12,10 @@ focus-visible | c9-selection-menu | Cut | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Note | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus indicator below 3:1
 focus-visible | c9-selection-menu | Paste | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Select all | <root> # Flutter's own control
+live-region | c13-voice-recording | 0:00 | <root> # open: live-region
+live-region | c13-voice-recording@2x | 0:00 | <root> # open: live-region
+live-region | c16-video-recording | 0:00 | <root> # open: live-region
+live-region | c16-video-recording@2x | 0:00 | <root> # open: live-region
 missing-role | c1-chooser | Dismiss capture chooser | <root> # Flutter's own control
 missing-role | c1-chooser@2x | Dismiss capture chooser | <root> # Flutter's own control
 missing-role | c10-discard-dialog | Dismiss | <root> # Flutter's own control

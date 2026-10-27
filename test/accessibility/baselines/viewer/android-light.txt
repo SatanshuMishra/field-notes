@@ -47,6 +47,8 @@ focus-visible | d5-reader-menu | Edit note | Friday, September 18 / Morning note
 focus-visible | d5-reader-menu | Select all | <root> # Flutter's own control
 focus-visible | d6-task-toast | Delete entry | Friday, September 18 / Morning note # open: focus indicator below 3:1
 focus-visible | d6-task-toast | Edit note | Friday, September 18 / Morning note # open: focus indicator below 3:1
+live-region | d6-task-toast | Task ticked | <root> # open: live-region
+live-region | d6-task-toast@2x | Task ticked | <root> # open: live-region
 missing-role | d11-mood-picker | Dismiss mood picker | <root> # Flutter's own control
 missing-role | d11-mood-picker@2x | Dismiss mood picker | <root> # Flutter's own control
 missing-role | d13-change-mood-dialog | Dismiss | <root> # Flutter's own control

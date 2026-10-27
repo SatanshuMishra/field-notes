@@ -35,6 +35,8 @@ keyboard | d6-task-toast-sidebar | pack the tide tables | Friday, September 18 /
 keyboard | d7-day-with-entries-sidebar | 2:30 PM · afternoon · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: keyboard
 keyboard | d7-day-with-entries-sidebar | Dismiss day detail | <root> # open: keyboard
 keyboard | d8-day-empty-sidebar | Dismiss day detail | <root> # open: keyboard
+live-region | d6-task-toast-sidebar | Task ticked | <root> # open: live-region
+live-region | d6-task-toast-sidebar@2x | Task ticked | <root> # open: live-region
 missing-role | d11-mood-picker-sidebar | Dismiss mood picker | <root> # open: missing-role
 missing-role | d11-mood-picker-sidebar@2x | Dismiss mood picker | <root> # open: missing-role
 missing-role | d13-change-mood-dialog-sidebar | Dismiss | <root> # open: missing-role

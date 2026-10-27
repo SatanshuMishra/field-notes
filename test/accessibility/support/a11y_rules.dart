@@ -989,6 +989,11 @@ bool _disabled(RenderObject object) => switch (_ownerNode(object)) {
   null => false,
 };
 
+bool _inTappable(RenderObject object) => switch (_ownerNode(object)) {
+  final SemanticsNode node => _selfAndAncestors(node).any(_tappableNode),
+  null => false,
+};
+
 bool _inLiveRegion(RenderObject object) => switch (_ownerNode(object)) {
   final SemanticsNode node => _selfAndAncestors(
     node,
@@ -1174,7 +1179,8 @@ List<A11yFinding> _liveRegionFindings(
 ) => <A11yFinding>[
   for (final _Painted text in painted)
     if (watch.changedText(text.paragraph) case final String latest)
-      if (!_inLiveRegion(text.paragraph))
+      if (!_inLiveRegion(text.paragraph) &&
+          !(watch.appeared(text.paragraph) && _inTappable(text.paragraph)))
         _renderFinding(
           _liveRegion,
           state,
@@ -1444,8 +1450,18 @@ final class A11yWatch {
   List<RenderObject> get overflows =>
       List<RenderObject>.unmodifiable(_overflows);
 
+  Set<RenderParagraph> _presentAtStart = <RenderParagraph>{};
+  Set<String> _shownAtStart = <String>{};
+
+  bool appeared(RenderParagraph paragraph) => switch (_texts[paragraph]) {
+    [final String only] =>
+      !_presentAtStart.contains(paragraph) && !_shownAtStart.contains(only),
+    _ => false,
+  };
+
   String? changedText(RenderParagraph paragraph) => switch (_texts[paragraph]) {
     final List<String> texts when texts.length > 1 => texts.last,
+    [final String only] when appeared(paragraph) => only,
     _ => null,
   };
 
@@ -1483,6 +1499,8 @@ final class A11yWatch {
   void watchTextFromHere() {
     _texts.clear();
     _record();
+    _presentAtStart = _texts.keys.toSet();
+    _shownAtStart = <String>{for (final List<String> t in _texts.values) ...t};
   }
 
   void stop() {

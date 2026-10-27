@@ -410,10 +410,11 @@ Future<void> _pumpReaderMenu(WidgetTester tester, A11yVariant variant) async {
   await _longPressText(tester, _plainNote.indexOf('harbour') + 2);
 }
 
-Future<void> _pumpTaskToast(WidgetTester tester, A11yVariant variant) async {
-  await _openViewer(tester, variant, entry: _note(_todoNote));
-  await _tickTask(tester, 2);
-}
+Future<void> _pumpTaskToast(WidgetTester tester, A11yVariant variant) =>
+    _openViewer(tester, variant, entry: _note(_todoNote));
+
+Future<void> _tickSecondTask(WidgetTester tester, A11yVariant variant) =>
+    _tickTask(tester, 2);
 
 Future<void> _pumpDayWithEntries(WidgetTester tester, A11yVariant variant) =>
     _openDay(tester, variant, <Entry>[
@@ -591,6 +592,7 @@ final List<A11yState> viewerStates = <A11yState>[
     desktopId: 'd6-task-toast-sidebar',
     phone: A11yLayoutHalf(
       pump: _pumpTaskToast,
+      act: _tickSecondTask,
       proof: <A11yProof>[
         A11yProof(_logSheet),
         A11yProof(find.text('Task ticked')),
@@ -598,6 +600,7 @@ final List<A11yState> viewerStates = <A11yState>[
     ),
     desktop: A11yLayoutHalf(
       pump: _pumpTaskToast,
+      act: _tickSecondTask,
       proof: <A11yProof>[
         A11yProof(_notePanel),
         A11yProof(find.text('Task ticked')),

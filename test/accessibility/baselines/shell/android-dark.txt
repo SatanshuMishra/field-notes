@@ -9,6 +9,8 @@ flutter-text-contrast | a8-garden-phone@2x | Today | <root> # open: fails Flutte
 focus-visible | a6-garden-empty | Full screen | <root> # open: focus indicator below 3:1
 focus-visible | a7-garden-blooms | Full screen | <root> # open: focus indicator below 3:1
 focus-visible | a8-garden-phone | Full screen | <root> # open: focus indicator below 3:1
+live-region | a10-search-no-match | No days match "zzz". | <root> # open: live-region
+live-region | a10-search-no-match@2x | No days match "zzz". | <root> # open: live-region
 live-region | a9-search-results | 1 entry | <root> # open: live-region
 live-region | a9-search-results | The peonies opened by the fence | <root> # open: live-region
 live-region | a9-search-results@2x | 1 entry | <root> # open: live-region

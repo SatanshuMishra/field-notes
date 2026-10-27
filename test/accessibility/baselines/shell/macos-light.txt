@@ -36,6 +36,12 @@ keyboard | a3-card-actions | 9:30 AM · morning / VIDEO / A video from the morni
 keyboard | a3-card-actions | 9:30 AM · morning / VOICE / 0:00 / 0:42 | <root> # open: Tab never reaches it
 keyboard | a3-card-actions | Play | 9:30 AM · morning / VOICE / 0:00 / 0:42 # open: Tab never reaches it
 keyboard | a5-calendar-picker-sidebar | Dismiss month picker | <root> # open: keyboard
+live-region | a10-search-no-match-sidebar | No days match "zzz". | <root> # open: live-region
+live-region | a10-search-no-match-sidebar@2x | No days match "zzz". | <root> # open: live-region
+live-region | a15-today-empty-sidebar | No memory from this day in past years yet. | <root> # open: live-region
+live-region | a15-today-empty-sidebar | on this day | <root> # open: live-region
+live-region | a15-today-empty-sidebar@2x | No memory from this day in past years yet. | <root> # open: live-region
+live-region | a15-today-empty-sidebar@2x | on this day | <root> # open: live-region
 live-region | a9-search-results-sidebar | 1 entry | <root> # open: live-region
 live-region | a9-search-results-sidebar | The peonies opened by the fence | <root> # open: live-region
 live-region | a9-search-results-sidebar@2x | 1 entry | <root> # open: live-region
