@@ -12,7 +12,7 @@ import 'support/a11y_state.dart';
 
 const String _phoneSuffix = '-bottom-bar';
 const double _phoneBack = 48;
-const double _phoneToggle = 44;
+const double _phoneToggle = 48;
 const double _phoneSkip = 44;
 const double _macBack = 46;
 const double _macBackReach = 44;
