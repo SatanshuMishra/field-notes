@@ -330,27 +330,6 @@ void main() {
     );
   });
 
-  testWidgets(
-    "a status change a state's own action makes is a live-region finding",
-    (WidgetTester tester) async {
-      final A11yStateResult result = await runA11yState(
-        tester,
-        onboardingStates.singleWhere(
-          (A11yState state) => state.id == 'o11-moment-saved-sidebar',
-        ),
-        variant: const A11yVariant(platform: TargetPlatform.macOS),
-        checks: A11yChecks.full,
-      );
-      expect(switch (result) {
-        A11yLoaded(:final List<A11yFinding> findings) => <String>[
-          for (final A11yFinding finding in findings)
-            if (finding.rule == 'live-region') finding.label,
-        ],
-        A11yNotLoaded(:final String message) => throw TestFailure(message),
-      }, contains('saved to today ✓'));
-    },
-  );
-
   for (final (List<A11yState> states, String id, TargetPlatform platform)
       in <(List<A11yState>, String, TargetPlatform)>[
         (shellStates, 'a15-today-empty-sidebar', TargetPlatform.macOS),

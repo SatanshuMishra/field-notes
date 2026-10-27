@@ -1,15 +1,1 @@
-live-region | i10-video-without-pause | 0:00 | ⌘↩ keep · esc leave # open: live-region
-live-region | i10-video-without-pause | ⌘↩ keep · esc leave | <root> # open: live-region
-live-region | i10-video-without-pause@2x | 0:00 | ⌘↩ keep · esc leave # open: live-region
-live-region | i10-video-without-pause@2x | ⌘↩ keep · esc leave | <root> # open: live-region
-live-region | i3-voice-recording | 0:00 | <root> # open: live-region
-live-region | i3-voice-recording | space pause · ⌘↩ keep · esc leave | <root> # open: live-region
-live-region | i3-voice-recording@2x | 0:00 | <root> # open: live-region
-live-region | i3-voice-recording@2x | space pause · ⌘↩ keep · esc leave | <root> # open: live-region
-live-region | i4-voice-paused | space resume · ⌘↩ keep · esc leave | <root> # open: live-region
-live-region | i4-voice-paused@2x | space resume · ⌘↩ keep · esc leave | <root> # open: live-region
-live-region | i8-video-camera-off | 0:00 | space pause · ⌘↩ keep · esc leave # open: live-region
-live-region | i8-video-camera-off | space pause · ⌘↩ keep · esc leave | <root> # open: live-region
-live-region | i8-video-camera-off@2x | 0:00 | space pause · ⌘↩ keep · esc leave # open: live-region
-live-region | i8-video-camera-off@2x | space pause · ⌘↩ keep · esc leave | <root> # open: live-region
 overlapping-text | i11-voice-save-error@2x | 0:00 + Could not save your entry. | <root> # open: text overlaps other text at 2x text

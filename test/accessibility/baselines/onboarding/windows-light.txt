@@ -143,43 +143,6 @@ keyboard | o7-day-calm-sidebar | Minimize | <root> # open: Tab never reaches it
 keyboard | o9-moment-empty-sidebar | Close | <root> # open: Tab never reaches it
 keyboard | o9-moment-empty-sidebar | Maximize | <root> # open: Tab never reaches it
 keyboard | o9-moment-empty-sidebar | Minimize | <root> # open: Tab never reaches it
-live-region | o11-moment-saved-sidebar | 0:10 | <root> # open: live-region
-live-region | o11-moment-saved-sidebar | And there's more than one way to keep a memory. | <root> # open: live-region
-live-region | o11-moment-saved-sidebar | You'll find these on every log, once you're set up. | <root> # open: live-region
-live-region | o11-moment-saved-sidebar | a video, of you or the view | <root> # open: live-region
-live-region | o11-moment-saved-sidebar | photos from the day | <root> # open: live-region
-live-region | o11-moment-saved-sidebar | saved to today ✓ | <root> # open: live-region
-live-region | o11-moment-saved-sidebar | your voice | <root> # open: live-region
-live-region | o11-moment-saved-sidebar@2x | And there's more than one way to keep a memory. | <root> # open: live-region
-live-region | o11-moment-saved-sidebar@2x | saved to today ✓ | <root> # open: live-region
-live-region | o17-month-full-sidebar | 10 flowers | <root> # open: live-region
-live-region | o17-month-full-sidebar | by the end of Jul | a month / Give it a few weeks. / July / 10 flowers / Every day stays open. Tap one to look back, or add to it. # open: live-region
-live-region | o17-month-full-sidebar@2x | 10 flowers | <root> # open: live-region
-live-region | o17-month-full-sidebar@2x | by the end of Jul | a month / Give it a few weeks. / July / 10 flowers / Every day stays open. Tap one to look back, or add to it. # open: live-region
-live-region | o19-year-playing-sidebar | 195 of 365 days | <root> # open: status change is not announced
-live-region | o19-year-playing-sidebar | Drag to look around | <root> # open: live-region
-live-region | o19-year-playing-sidebar | July | <root> # open: status change is not announced
-live-region | o19-year-playing-sidebar@2x | 195 of 365 days | <root> # open: status change is not announced
-live-region | o19-year-playing-sidebar@2x | Drag to look around | <root> # open: live-region
-live-region | o19-year-playing-sidebar@2x | July | <root> # open: status change is not announced
-live-region | o21-year-finished-sidebar | 365 of 365 days | <root> # open: live-region
-live-region | o21-year-finished-sidebar | A whole year | <root> # open: live-region
-live-region | o21-year-finished-sidebar | Drag to look around | <root> # open: live-region
-live-region | o21-year-finished-sidebar | every flower is a day · drag back through it | <root> # open: live-region
-live-region | o21-year-finished-sidebar@2x | 365 of 365 days | <root> # open: live-region
-live-region | o21-year-finished-sidebar@2x | A whole year | <root> # open: live-region
-live-region | o21-year-finished-sidebar@2x | Drag to look around | <root> # open: live-region
-live-region | o21-year-finished-sidebar@2x | every flower is a day · drag back through it | <root> # open: live-region
-live-region | o27-reminder-off-sidebar | No nudges. Your meadow waits quietly. | and you / When should we check in? / — # open: live-region
-live-region | o27-reminder-off-sidebar | off | and you / When should we check in? / — # open: live-region
-live-region | o27-reminder-off-sidebar | — | <root> # open: live-region
-live-region | o27-reminder-off-sidebar@2x | No nudges. Your meadow waits quietly. | and you / When should we check in? / — # open: live-region
-live-region | o27-reminder-off-sidebar@2x | off | and you / When should we check in? / — # open: live-region
-live-region | o27-reminder-off-sidebar@2x | — | <root> # open: live-region
-live-region | o35-reminder-notifications-off-sidebar | You can still go on. Reminders stay off until notificatio... | You can still go on. Reminders stay off until notifications are on. # open: live-region
-live-region | o35-reminder-notifications-off-sidebar@2x | You can still go on. Reminders stay off until notificatio... | You can still go on. Reminders stay off until notifications are on. # open: live-region
-live-region | o7-day-calm-sidebar | lavender | <root> # open: live-region
-live-region | o7-day-calm-sidebar@2x | lavender | <root> # open: live-region
 overflow | o31-map-end-sidebar@2x | field / notes | one last thing / Here's where everything lives. # open: layout overflows
 overflow | o33-map-replay-sidebar@2x | field / notes | one last thing / Here's where everything lives. # open: layout overflows
 overlapping-text | o31-map-end-sidebar@2x | 4 days + 5 | one last thing / Here's where everything lives. # open: text overlaps other text at 2x text

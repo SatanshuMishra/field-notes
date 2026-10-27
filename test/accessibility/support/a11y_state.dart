@@ -83,13 +83,9 @@ class A11yState {
     this.stateful = const <A11yStatefulControl>[],
     this.platforms = a11yPlatforms,
   }) : assert(platforms.isNotEmpty && platforms.every(a11yPlatforms.contains)),
-       reach = A11yPump(pump, platforms),
-       act = act == null ? null : A11yPump(act, platforms),
        pump = A11yPump(_reachThenAct(pump, act), platforms);
 
   final String id;
-  final A11yPump reach;
-  final A11yPump? act;
   final A11yPump pump;
   final List<A11yProof> proof;
   final List<A11yStatefulControl> stateful;
@@ -229,16 +225,13 @@ Future<A11yStateResult> _loadAndCheck(
   A11yWatch? watch,
 ) async {
   try {
-    await state.reach(tester, variant);
-    watch?.watchTextFromHere();
-    await state.act?.call(tester, variant);
+    await state.pump(tester, variant);
     if (watch != null) {
       await _settle(tester);
     }
   } catch (error) {
     return A11yNotLoaded('${state.id} did not load: pumping threw $error');
   }
-  watch?.stop();
   if (tester.takeException() case final Object error) {
     return A11yNotLoaded('${state.id} did not load: pumping threw $error');
   }

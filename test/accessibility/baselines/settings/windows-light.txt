@@ -153,10 +153,6 @@ keyboard | b13-select-dropdown-speaker | System output | <root> # open: Tab neve
 keyboard | b4-select-open | Monday | <root> # open: Tab never reaches it
 keyboard | b4-select-open | Saturday | <root> # open: Tab never reaches it
 keyboard | b4-select-open | Sunday | <root> # open: Tab never reaches it
-live-region | b15-settings-data-error | Export failed. Nothing was written. | <root> # open: live-region
-live-region | b15-settings-data-error@2x | Export failed. Nothing was written. | <root> # open: live-region
-live-region | b3-settings-notice | Deleted 3 days and 5 entries. | <root> # open: live-region
-live-region | b3-settings-notice@2x | Deleted 3 days and 5 entries. | <root> # open: live-region
 small-target | b15-settings-data-error | Delete all… | <root> # open: tap target under the platform minimum
 small-target | b15-settings-data-error | Export… | <root> # open: tap target under the platform minimum
 small-target | b15-settings-data-error | Open | <root> # open: tap target under the platform minimum

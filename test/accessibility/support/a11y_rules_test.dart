@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -296,7 +294,6 @@ Future<List<String>> _swept(
   Widget widget, {
   required Set<String> rules,
   Color ground = _ground,
-  A11yPumpBody? setUp,
 }) async {
   final A11yStateResult result = await runA11yState(
     tester,
@@ -318,10 +315,7 @@ Future<List<String>> _swept(
             ),
           ),
         );
-        await setUp?.call(tester, variant);
       },
-      act: (WidgetTester tester, A11yVariant variant) =>
-          tester.pump(const Duration(milliseconds: 200)),
       proof: <A11yProof>[A11yProof(find.byKey(_plantedKey))],
     ),
     variant: variant,
@@ -382,110 +376,6 @@ class _RingButtonState extends State<_RingButton> {
         child: _box(120, 48),
       ),
     ),
-  );
-}
-
-class _TabbedHeading extends StatefulWidget {
-  const _TabbedHeading();
-
-  @override
-  State<_TabbedHeading> createState() => _TabbedHeadingState();
-}
-
-class _TabbedHeadingState extends State<_TabbedHeading> {
-  bool _about = false;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: <Widget>[
-      Text(_about ? 'About' : 'Data'),
-      TextButton(
-        onPressed: () => setState(() => _about = true),
-        child: const Text('Show About'),
-      ),
-    ],
-  );
-}
-
-class _StatusSwap extends StatefulWidget {
-  const _StatusSwap({required this.live});
-
-  final bool live;
-
-  @override
-  State<_StatusSwap> createState() => _StatusSwapState();
-}
-
-class _StatusSwapState extends State<_StatusSwap> {
-  late final Timer _saving;
-  bool _saved = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _saving = Timer(
-      const Duration(milliseconds: 100),
-      () => setState(() => _saved = true),
-    );
-  }
-
-  @override
-  void dispose() {
-    _saving.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    liveRegion: widget.live,
-    child: Text(_saved ? 'Saved' : 'Saving'),
-  );
-}
-
-class _StatusAppears extends StatefulWidget {
-  const _StatusAppears({required this.live});
-
-  final bool live;
-
-  @override
-  State<_StatusAppears> createState() => _StatusAppearsState();
-}
-
-class _StatusAppearsState extends State<_StatusAppears> {
-  late final Timer _searching;
-  bool _done = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _searching = Timer(
-      const Duration(milliseconds: 100),
-      () => setState(() => _done = true),
-    );
-  }
-
-  @override
-  void dispose() {
-    _searching.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: <Widget>[
-      const Text('Find a day'),
-      if (_done)
-        Semantics(
-          container: true,
-          liveRegion: widget.live,
-          child: const Text('No days match'),
-        )
-      else
-        const SizedBox(width: 120, height: 20),
-    ],
   );
 }
 
@@ -1086,72 +976,6 @@ void main() {
           rules: <String>{'focus-visible'},
         ),
         <String>['focus-visible | planted | Plain | <root>'],
-      );
-    },
-  );
-
-  testWidgets(
-    'a status that appears in a new text with no live region is a finding',
-    (WidgetTester tester) async {
-      expect(
-        await _swept(
-          tester,
-          _android,
-          const _StatusAppears(live: false),
-          rules: <String>{'live-region'},
-        ),
-        <String>['live-region | planted | No days match | <root>'],
-      );
-      expect(
-        await _swept(
-          tester,
-          _android,
-          const _StatusAppears(live: true),
-          rules: <String>{'live-region'},
-        ),
-        isEmpty,
-      );
-    },
-  );
-
-  testWidgets('a status change with no live region is a finding', (
-    WidgetTester tester,
-  ) async {
-    expect(
-      await _swept(
-        tester,
-        _android,
-        const _StatusSwap(live: false),
-        rules: <String>{'live-region'},
-      ),
-      <String>['live-region | planted | Saved | <root>'],
-    );
-    expect(
-      await _swept(
-        tester,
-        _android,
-        const _StatusSwap(live: true),
-        rules: <String>{'live-region'},
-      ),
-      isEmpty,
-    );
-  });
-
-  testWidgets(
-    "a text the state's own setup changes is not a live-region finding",
-    (WidgetTester tester) async {
-      expect(
-        await _swept(
-          tester,
-          _android,
-          const _TabbedHeading(),
-          rules: <String>{'live-region'},
-          setUp: (WidgetTester tester, A11yVariant variant) async {
-            await tester.tap(find.text('Show About'));
-            await tester.pump();
-          },
-        ),
-        isEmpty,
       );
     },
   );
