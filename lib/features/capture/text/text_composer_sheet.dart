@@ -77,6 +77,7 @@ const double _pageHorizontalPadding = 38;
 const double _pageEndGap = 12;
 const double _scrollbarThickness = 9;
 const double _errorGap = 8;
+const double _editorRingOutset = 2;
 const double _chipVerticalPadding = 10;
 const double _composerChromeHeight = 104;
 const int _minimumWritingLines = 4;
@@ -602,6 +603,13 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Widget _page({required double bottomInset}) {
+    return _EditorFocusOutline(
+      focusNode: _focusNode,
+      child: _editorView(bottomInset: bottomInset),
+    );
+  }
+
+  Widget _editorView({required double bottomInset}) {
     return noteEditorFor(
       NoteEditorConfig(
         controller: _controller,
@@ -614,6 +622,89 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         spellCheckEnabled: widget.spellCheckEnabled,
         photoMediaImporter: widget.photoMediaImporter,
       ),
+    );
+  }
+}
+
+class _EditorFocusOutline extends StatefulWidget {
+  const _EditorFocusOutline({required this.focusNode, required this.child});
+
+  final FocusNode focusNode;
+  final Widget child;
+
+  @override
+  State<_EditorFocusOutline> createState() => _EditorFocusOutlineState();
+}
+
+class _EditorFocusOutlineState extends State<_EditorFocusOutline> {
+  bool _shown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.focusNode.addListener(_update);
+    FocusManager.instance.addHighlightModeListener(_onHighlightMode);
+    _shown = _shouldShow();
+  }
+
+  @override
+  void didUpdateWidget(_EditorFocusOutline oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.focusNode, widget.focusNode)) {
+      oldWidget.focusNode.removeListener(_update);
+      widget.focusNode.addListener(_update);
+      _update();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.focusNode.removeListener(_update);
+    FocusManager.instance.removeHighlightModeListener(_onHighlightMode);
+    super.dispose();
+  }
+
+  bool _shouldShow() =>
+      widget.focusNode.hasFocus &&
+      FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+
+  void _onHighlightMode(FocusHighlightMode _) => _update();
+
+  void _update() {
+    final bool shown = _shouldShow();
+    if (shown != _shown && mounted) {
+      setState(() => _shown = shown);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const FocusRingSurface surface = FocusRingSurface.light;
+    return Stack(
+      fit: StackFit.passthrough,
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        widget.child,
+        if (_shown)
+          Positioned.fill(
+            left: -_editorRingOutset,
+            top: -_editorRingOutset,
+            right: -_editorRingOutset,
+            bottom: -_editorRingOutset,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                key: focusRingKey,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: surface.colorIn(context.colors),
+                    width: surface.width,
+                  ),
+                  borderRadius: Shapes.buttonBorderRadius,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

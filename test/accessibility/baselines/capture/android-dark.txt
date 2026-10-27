@@ -3,13 +3,9 @@ focus-visible | c4-more-formats | Bold | Today · 9:30 AM / New note / # title 
 focus-visible | c4-more-formats | Bullet list | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
 focus-visible | c4-more-formats | Heading | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
 focus-visible | c4-more-formats | Italic | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
-focus-visible | c6-photo-selected | Note | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
-focus-visible | c7-photo-caption | Note | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
-focus-visible | c8-table-toolbar | Note | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
 focus-visible | c9-selection-menu | <unlabelled> | <root> # open: focus indicator below 3:1
 focus-visible | c9-selection-menu | Copy | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Cut | <root> # Flutter's own control
-focus-visible | c9-selection-menu | Note | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
 focus-visible | c9-selection-menu | Paste | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Select all | <root> # Flutter's own control
 missing-role | c1-chooser | Dismiss capture chooser | <root> # Flutter's own control
@@ -25,4 +21,3 @@ small-target | c9-selection-menu | Select all | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | <unlabelled> | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Copy | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Cut | <root> # Flutter's own control
-truncated-text | c7-photo-caption@2x | Caption | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: truncated-text

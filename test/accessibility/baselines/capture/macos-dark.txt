@@ -1,37 +1,6 @@
 flutter-text-contrast | c11-draft-chip | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # open: flutter-text-contrast
-focus-visible | c6-photo-selected | Note | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
-focus-visible | c7-photo-caption | Note | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
-focus-visible | c8-table-toolbar | Note | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
-focus-visible | c9-selection-menu | Note | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: focus-visible
 keyboard | c1-chooser-sidebar | Dismiss capture chooser | <root> # Flutter's own control
 keyboard | c10-discard-dialog-sidebar | Dismiss | <root> # Flutter's own control
-keyboard | c6-photo-selected | Photo | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c7-photo-caption | Caption | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c7-photo-caption | Photo | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Add memory | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Align centre | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Align left | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Align right | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Bold | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Bullet list | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Cancel | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Column left | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Column right | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Delete column | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Delete row | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Delete table | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Heading | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Italic | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Link | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | More formats | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Numbered list | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Quote | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Row above | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Row below | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Save | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Table | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Task list | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
-keyboard | c8-table-toolbar | Undo | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: keyboard
 missing-role | c1-chooser-sidebar | Dismiss capture chooser | <root> # Flutter's own control
 missing-role | c1-chooser-sidebar@2x | Dismiss capture chooser | <root> # Flutter's own control
 missing-role | c10-discard-dialog-sidebar | Dismiss | <root> # Flutter's own control
@@ -40,5 +9,4 @@ small-target | c9-selection-menu | Copy | <root> # Flutter's own control
 small-target | c9-selection-menu | Cut | <root> # Flutter's own control
 small-target | c9-selection-menu | Paste | <root> # Flutter's own control
 small-target | c9-selection-menu | Select All | <root> # Flutter's own control
-truncated-text | c7-photo-caption@2x | Caption | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: truncated-text
 truncated-text | c9-selection-menu@2x | Select All | <root> # Flutter's own control
