@@ -15,7 +15,6 @@ const double meadowPhoneTitleDrop = 12;
 const double meadowPhoneScrimDepth = 150;
 const double meadowPhoneDockGap = 8;
 const String meadowTimeHeading = 'time of day';
-const double meadowPhoneReplayRoom = 96;
 
 const EdgeInsets _backPadding = EdgeInsets.fromLTRB(10, 0, 13, 0);
 const EdgeInsets _yearPadding = EdgeInsets.symmetric(horizontal: 13);
@@ -125,7 +124,8 @@ class MeadowPhonePage extends StatelessWidget {
         year +
         meadowPhoneControlHeight * 2 +
         meadowPhoneDockGap * 4 +
-        meadowPhoneReplayRoom;
+        _textWidth(context, meadowReplayShortLabel, meadowSans(13)) +
+        meadowReplayPadding;
     return fixed <= room;
   }
 
