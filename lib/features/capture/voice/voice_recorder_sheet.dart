@@ -276,12 +276,13 @@ class VoiceRecorderSheet extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        RecorderStatusLine(
-          phase: phase.stage,
-          elapsed: elapsed,
-          savingText: savingText,
-          inline: false,
-        ),
+        if (!_cannotHear)
+          RecorderStatusLine(
+            phase: phase.stage,
+            elapsed: elapsed,
+            savingText: savingText,
+            inline: false,
+          ),
         SoundLostWarning(
           key: soundLostWarningKey,
           hearing: hearing,
