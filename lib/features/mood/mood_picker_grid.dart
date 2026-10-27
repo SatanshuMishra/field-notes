@@ -1,13 +1,16 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
+import 'package:field_notes/design/format/text_extent.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 
-const int _columns = 4;
+const int _mostColumns = 4;
 
 const double _tileBorderWidth = 2;
 const double _tilePaddingHorizontal = 6;
@@ -53,28 +56,63 @@ class MoodPickerGrid extends StatelessWidget {
 
   double get _runSpacing => runSpacing ?? (_isSheet ? _sheetGap : _panelGap);
 
+  double get _tilePadding =>
+      _isSheet ? _sheetTilePaddingHorizontal : _tilePaddingHorizontal;
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        for (
-          int start = 0;
-          start < moodOrder.length;
-          start += _columns
-        ) ...<Widget>[
-          if (start > 0) SizedBox(height: _runSpacing),
-          _buildRow(start),
-        ],
-      ],
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final int columns = _columnsFor(context, constraints.maxWidth);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            for (
+              int start = 0;
+              start < moodOrder.length;
+              start += columns
+            ) ...<Widget>[
+              if (start > 0) SizedBox(height: _runSpacing),
+              _buildRow(start, columns),
+            ],
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildRow(int start) {
+  int _columnsFor(BuildContext context, double maxWidth) {
+    final double widestWord = moodOrder
+        .expand(
+          (Mood mood) => <double>[
+            widestWordWidth(
+              context,
+              mood.label,
+              _moodLabelStyle(context, layout),
+            ),
+            if (!_isSheet)
+              widestWordWidth(
+                context,
+                mood.flower.label,
+                context.textStyles.caption9Sans,
+              ),
+          ],
+        )
+        .fold<double>(0, math.max);
+    for (int columns = _mostColumns; columns > 1; columns--) {
+      final double cell = (maxWidth - (columns - 1) * _spacing) / columns;
+      if (cell - 2 * _tilePadding >= widestWord) {
+        return columns;
+      }
+    }
+    return 1;
+  }
+
+  Widget _buildRow(int start, int columns) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        for (int column = 0; column < _columns; column++) ...<Widget>[
+        for (int column = 0; column < columns; column++) ...<Widget>[
           if (column > 0) SizedBox(width: _spacing),
           Expanded(child: _buildCell(start + column)),
         ],
@@ -96,6 +134,14 @@ class MoodPickerGrid extends StatelessWidget {
     );
   }
 }
+
+TextStyle _moodLabelStyle(BuildContext context, ShellLayout layout) =>
+    layout == ShellLayout.bottomBar
+    ? context.textStyles.caption9Sans.copyWith(
+        fontWeight: FontWeight.w600,
+        color: context.colors.ink,
+      )
+    : context.textStyles.caption11Sans.copyWith(color: context.colors.ink);
 
 class _MoodTile extends StatelessWidget {
   const _MoodTile({
@@ -152,12 +198,7 @@ class _MoodTile extends StatelessWidget {
                 SizedBox(height: isSheet ? _sheetTileLabelGap : _tileLabelGap),
                 Text(
                   mood.label,
-                  style: isSheet
-                      ? textStyles.caption9Sans.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: colors.ink,
-                        )
-                      : textStyles.caption11Sans.copyWith(color: colors.ink),
+                  style: _moodLabelStyle(context, layout),
                   textAlign: TextAlign.center,
                 ),
                 if (!isSheet)

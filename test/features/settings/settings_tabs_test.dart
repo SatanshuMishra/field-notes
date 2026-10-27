@@ -382,7 +382,7 @@ void main() {
   );
 
   testWidgets(
-    'sidebar settings keeps the list 190 wide beside a dashed rule while the content column scrolls',
+    'sidebar settings keeps the list at least 190 wide beside a dashed rule while the content column scrolls',
     (WidgetTester tester) async {
       await _onPlatform(TargetPlatform.macOS, () async {
         await _pumpSettings(
@@ -406,7 +406,7 @@ void main() {
           divider.color!.toARGB32(),
           FieldNotesColors.light.ink22.toARGB32(),
         );
-        expect(tester.getSize(rail).width, 190);
+        expect(tester.getSize(rail).width, greaterThanOrEqualTo(190));
         expect(
           tester.getRect(rule).left,
           greaterThan(tester.getRect(rail).right),
@@ -431,7 +431,7 @@ void main() {
         expect(scrollable.position.pixels, offset);
         expect(tester.getTopLeft(content).dy, contentTop - offset);
         expect(tester.getTopLeft(rail).dy, railTop);
-        expect(tester.getSize(rail).width, 190);
+        expect(tester.getSize(rail).width, greaterThanOrEqualTo(190));
         expect(tester.getSize(content).width, moreOrLessEquals(680));
       });
     },

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/format/text_extent.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
@@ -183,24 +184,8 @@ class SettingsFieldRow extends StatelessWidget {
                 room);
   }
 
-  double _widestWord(BuildContext context, TextStyle style, String text) {
-    final TextStyle resolved = DefaultTextStyle.of(context).style.merge(style);
-    double widest = 0;
-    for (final String word in text.split(RegExp(r'\s+'))) {
-      if (word.isEmpty) {
-        continue;
-      }
-      final TextPainter painter = TextPainter(
-        text: TextSpan(text: word, style: resolved),
-        textScaler: MediaQuery.textScalerOf(context),
-        textDirection: Directionality.of(context),
-        maxLines: 1,
-      )..layout();
-      widest = math.max(widest, painter.width);
-      painter.dispose();
-    }
-    return widest;
-  }
+  double _widestWord(BuildContext context, TextStyle style, String text) =>
+      widestWordWidth(context, text, style);
 
   Widget _labelLine(BuildContext context, TextStyle style) {
     final Widget text = Text(label, style: style);

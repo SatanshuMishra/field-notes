@@ -283,7 +283,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           key: settingsSidebarColumnKey,
           padding: _sidebarColumnPadding,
           child: SizedBox(
-            width: settingsTabRailWidth,
+            width: settingsTabRailWidthFor(context),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[

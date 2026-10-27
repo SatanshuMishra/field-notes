@@ -34,3 +34,13 @@ TextPainter _painterFor(
   textScaler: MediaQuery.textScalerOf(context),
   maxLines: maxLines,
 );
+
+double widestWordWidth(BuildContext context, String text, TextStyle style) {
+  final TextStyle resolved = DefaultTextStyle.of(context).style.merge(style);
+  return text
+      .split(RegExp(r'\s+'))
+      .where((String word) => word.isNotEmpty)
+      .map((String word) => singleLineWidth(context, word, resolved))
+      .fold<double>(0, math.max)
+      .ceilToDouble();
+}
