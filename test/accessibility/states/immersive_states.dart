@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:camera/camera.dart' show CameraDescription, CameraLensDirection;
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
+import 'package:field_notes/features/capture/core/journal_capture_service.dart'
+    show entryWriteMessage;
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart'
     show cameraDeviceLabels;
@@ -29,9 +31,7 @@ import '../support/a11y_state.dart';
 
 const String _today = '2026-09-28';
 const String _launcherLabel = 'open';
-const CaptureException _heldSaveFailure = CaptureException(
-  'Could not save your entry.',
-);
+const CaptureException _heldSaveFailure = CaptureException(entryWriteMessage);
 
 const Duration _step = Duration(milliseconds: 50);
 const Duration _panelOpen = Duration(milliseconds: 300);

@@ -18,18 +18,15 @@ missing-role | c1-chooser | Dismiss capture chooser | <root> # Flutter's own con
 missing-role | c1-chooser@2x | Dismiss capture chooser | <root> # Flutter's own control
 missing-role | c10-discard-dialog | Dismiss | <root> # Flutter's own control
 missing-role | c10-discard-dialog@2x | Dismiss | <root> # Flutter's own control
-overlapping-text | c9-selection-menu@2x | Copy + Paste | <root> # open: text overlaps other text at 2x text
-overlapping-text | c9-selection-menu@2x | Cut + Paste | <root> # open: text overlaps other text at 2x text
+overlapping-text | c9-selection-menu@2x | Copy + Paste | <root> # Flutter's own control
+overlapping-text | c9-selection-menu@2x | Cut + Paste | <root> # Flutter's own control
 small-target | c9-selection-menu | Copy | <root> # Flutter's own control
 small-target | c9-selection-menu | Cut | <root> # Flutter's own control
 small-target | c9-selection-menu | Paste | <root> # Flutter's own control
 small-target | c9-selection-menu | Select all | <root> # Flutter's own control
-small-target | c9-selection-menu@2x | <unlabelled> | <root> # open: tap target under the platform minimum
+small-target | c9-selection-menu@2x | <unlabelled> | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Copy | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Cut | <root> # Flutter's own control
-text-contrast | c1-chooser | open | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c1-chooser | put the day into words | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | c1-chooser@2x | put the day into words | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c10-discard-dialog | Today · 9:30 AM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c10-discard-dialog@2x | Cancel | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c11-draft-chip | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
@@ -72,15 +69,6 @@ truncated-text | c11-draft-chip@2x | # title   - list   1. steps   > quote | <ro
 truncated-text | c11-draft-chip@2x | Add memory | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # open: truncated-text
 truncated-text | c11-draft-chip@2x | New note | <root> # open: text is cut short at 2x text
 truncated-text | c11-draft-chip@2x | Today · 9:30 AM | <root> # open: text is cut short at 2x text
-truncated-text | c12-voice-idle@2x | Only you will hear this | <root> # open: text is cut short at 2x text
-truncated-text | c13-voice-recording@2x | 0:00 | <root> # open: truncated-text
-truncated-text | c13-voice-recording@2x | Keep this | <root> # open: text is cut short at 2x text
-truncated-text | c13-voice-recording@2x | Only you will hear this | <root> # open: text is cut short at 2x text
-truncated-text | c14-voice-paused@2x | 0:00 | <root> # open: truncated-text
-truncated-text | c14-voice-paused@2x | Keep this | <root> # open: text is cut short at 2x text
-truncated-text | c14-voice-paused@2x | Only you will hear this | <root> # open: text is cut short at 2x text
-truncated-text | c18-discard-recording@2x | 0:00 | <root> # open: truncated-text
-truncated-text | c18-discard-recording@2x | Only you will hear this | <root> # open: text is cut short at 2x text
 truncated-text | c19-photo-removed-toast@2x | # title   - list   1. steps   > quote | <root> # open: text is cut short at 2x text
 truncated-text | c19-photo-removed-toast@2x | Add memory | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: truncated-text
 truncated-text | c19-photo-removed-toast@2x | New note | <root> # open: text is cut short at 2x text

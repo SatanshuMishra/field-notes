@@ -71,6 +71,8 @@ const double _keyboardInset = 300;
 
 const String _today = '2026-09-18';
 const String _launcherLabel = 'open';
+const Key _launcherKey = ValueKey<String>('capture-launcher');
+const double _launcherSize = 48;
 const String _noteText = 'A quiet morning by the harbour.';
 const String _crashDraft = 'left by a crash';
 const String _selectionNote = 'The harbour was quiet.';
@@ -114,9 +116,14 @@ class _Launcher extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
+      key: _launcherKey,
       behavior: HitTestBehavior.opaque,
       onTap: () async => open(context, ref),
-      child: const Text(_launcherLabel),
+      child: Semantics(
+        button: true,
+        label: _launcherLabel,
+        child: const SizedBox.square(dimension: _launcherSize),
+      ),
     );
   }
 }
@@ -160,7 +167,7 @@ Override _photoResolver() => notesMediaResolverProvider.overrideWith(
 );
 
 Future<void> _launch(WidgetTester tester) async {
-  await tester.tap(find.text(_launcherLabel));
+  await tester.tap(find.byKey(_launcherKey));
   await tester.pumpAndSettle();
 }
 
@@ -379,7 +386,7 @@ Future<void> _openVoice(WidgetTester tester, A11yVariant variant) async {
       ),
     ),
   );
-  await tester.tap(find.text(_launcherLabel));
+  await tester.tap(find.byKey(_launcherKey));
   await tester.pump();
   await tester.pump(_recorderOpen);
 }
@@ -449,7 +456,7 @@ Future<void> _openVideo(WidgetTester tester, A11yVariant variant) async {
       ),
     ),
   );
-  await tester.tap(find.text(_launcherLabel));
+  await tester.tap(find.byKey(_launcherKey));
   await tester.pump();
   await tester.pump(_recorderOpen);
 }

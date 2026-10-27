@@ -37,6 +37,7 @@ const Key voiceKeepGoingKey = ValueKey<String>('voice-keep-going');
 const Key voiceErrorKey = ValueKey<String>('voice-error');
 const Key voiceKeyHintKey = ValueKey<String>('voice-key-hint');
 const Key voiceCometsKey = ValueKey<String>('voice-comets');
+const Key voiceSavingSpinnerKey = ValueKey<String>('voice-saving-spinner');
 
 const String voiceSidebarPrivacyLine = 'Private · only you will hear this';
 const String voiceBottomBarPrivacyLine = 'Only you will hear this';
@@ -95,6 +96,8 @@ const double _sidebarActionSize = 14;
 const double _bottomBarLetGoSize = 13;
 const double _keepSize = 14;
 const double _keepGlyph = 15;
+const double _savingSpinnerSize = 20;
+const double _savingSpinnerStroke = 2;
 const double _sidebarKeepGap = 9;
 const double _bottomBarKeepGap = 8;
 const double _bottomBarKeepMaxWidth = 170;
@@ -320,6 +323,7 @@ class VoiceRecorderSheet extends StatelessWidget {
         sidebar: sidebar,
         onLetGo: _saving ? null : onDiscard,
         onKeep: _saving ? null : onStop,
+        saving: _saving,
       );
     } else {
       content = null;
@@ -343,9 +347,6 @@ class _KeyHint extends StatelessWidget {
       child: Text(
         text,
         key: voiceKeyHintKey,
-        maxLines: 1,
-        softWrap: false,
-        overflow: TextOverflow.fade,
         textAlign: TextAlign.right,
         style: const TextStyle(
           fontFamily: TypographyTokens.sans,
@@ -440,8 +441,7 @@ class _Orb extends StatelessWidget {
     VoiceRecorderPhase.idle || VoiceRecorderPhase.saving => voiceStartLabel,
   };
 
-  double get _opacity =>
-      phase == VoiceRecorderPhase.saving ? voiceSavingOrbOpacity : 1;
+  double get _opacity => onTap == null ? voiceSavingOrbOpacity : 1;
 
   @override
   Widget build(BuildContext context) {
@@ -524,11 +524,13 @@ class _TakeActions extends StatelessWidget {
     required this.sidebar,
     required this.onLetGo,
     required this.onKeep,
+    required this.saving,
   });
 
   final bool sidebar;
   final VoidCallback? onLetGo;
   final VoidCallback? onKeep;
+  final bool saving;
 
   @override
   Widget build(BuildContext context) {
@@ -557,6 +559,7 @@ class _TakeActions extends StatelessWidget {
       padding: sidebar ? _sidebarKeepPadding : _bottomBarKeepPadding,
       height: height,
       expand: !sidebar,
+      busy: saving,
     );
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -594,6 +597,7 @@ class _ActionButton extends StatelessWidget {
     this.glyph,
     this.glyphGap = 0,
     this.expand = false,
+    this.busy = false,
   });
 
   final String label;
@@ -608,6 +612,7 @@ class _ActionButton extends StatelessWidget {
   final IconStickerGlyph? glyph;
   final double glyphGap;
   final bool expand;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
@@ -617,14 +622,23 @@ class _ActionButton extends StatelessWidget {
     final IconStickerGlyph? glyph = this.glyph;
     final Widget text = Text(
       label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
       style: TextStyle(
         fontFamily: TypographyTokens.sans,
         fontSize: fontSize,
         fontWeight: fontWeight,
         color: ink,
       ),
+    );
+    final Widget content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        if (glyph != null) ...<Widget>[
+          IconStickerGlyphIcon(glyph: glyph, color: ink, size: _keepGlyph),
+          SizedBox(width: glyphGap),
+        ],
+        if (expand) Flexible(child: text) else text,
+      ],
     );
     Widget face(BuildContext context, bool hovered) => FocusRingFace(
       borderRadius: _actionRadius,
@@ -651,27 +665,14 @@ class _ActionButton extends StatelessWidget {
                     ),
                   ],
           ),
-          child: SizedBox(
-            height: height,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: height ?? 0),
             child: Padding(
               padding: padding,
               child: Center(
                 widthFactor: expand ? null : 1,
-                heightFactor: height == null ? 1 : null,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    if (glyph != null) ...<Widget>[
-                      IconStickerGlyphIcon(
-                        glyph: glyph,
-                        color: ink,
-                        size: _keepGlyph,
-                      ),
-                      SizedBox(width: glyphGap),
-                    ],
-                    if (expand) Flexible(child: text) else text,
-                  ],
-                ),
+                heightFactor: 1,
+                child: busy ? _savingFace(content) : content,
               ),
             ),
           ),
@@ -696,11 +697,34 @@ class _ActionButton extends StatelessWidget {
           widthFactor: expand ? null : 1,
           heightFactor: 1,
           child: Opacity(
-            opacity: enabled ? 1 : _disabledActionOpacity,
+            opacity: enabled || busy ? 1 : _disabledActionOpacity,
             child: face(context, hovered),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _savingFace(Widget content) {
+    return Stack(
+      alignment: Alignment.center,
+      children: <Widget>[
+        Visibility(
+          visible: false,
+          maintainSize: true,
+          maintainAnimation: true,
+          maintainState: true,
+          child: content,
+        ),
+        SizedBox.square(
+          key: voiceSavingSpinnerKey,
+          dimension: _savingSpinnerSize,
+          child: CircularProgressIndicator(
+            color: ink,
+            strokeWidth: _savingSpinnerStroke,
+          ),
+        ),
+      ],
     );
   }
 }

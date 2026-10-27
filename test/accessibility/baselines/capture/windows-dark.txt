@@ -92,8 +92,6 @@ small-target | c9-selection-menu@2x | Copy | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Cut | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Paste | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Select all | <root> # Flutter's own control
-text-contrast | c1-chooser-sidebar | put the day into words | <root> # open: text-contrast
-text-contrast | c1-chooser-sidebar@2x | put the day into words | <root> # open: text-contrast
 text-contrast | c10-discard-dialog-sidebar | # title   - list   1. steps   > quote | <root> # open: text-contrast
 text-contrast | c11-draft-chip | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c19-photo-removed-toast | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
@@ -111,15 +109,6 @@ truncated-text | c10-discard-dialog-sidebar@2x | Add memory | Today · 9:30 AM /
 truncated-text | c10-discard-dialog-sidebar@2x | Cancel | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: truncated-text
 truncated-text | c11-draft-chip@2x | Add memory | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # open: truncated-text
 truncated-text | c11-draft-chip@2x | Cancel | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # open: truncated-text
-truncated-text | c12-voice-idle@2x | Leave | <root> # open: truncated-text
-truncated-text | c13-voice-recording@2x | 0:00 | <root> # open: truncated-text
-truncated-text | c13-voice-recording@2x | Leave | <root> # open: truncated-text
-truncated-text | c13-voice-recording@2x | space pause · ctrl+enter keep · esc leave | <root> # open: text is cut short at 2x text
-truncated-text | c14-voice-paused@2x | 0:00 | <root> # open: truncated-text
-truncated-text | c14-voice-paused@2x | Leave | <root> # open: truncated-text
-truncated-text | c14-voice-paused@2x | space resume · ctrl+enter keep · esc leave | <root> # open: text is cut short at 2x text
-truncated-text | c18-discard-recording@2x | 0:00 | <root> # open: truncated-text
-truncated-text | c18-discard-recording@2x | Leave | <root> # open: truncated-text
 truncated-text | c19-photo-removed-toast@2x | Add memory | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: truncated-text
 truncated-text | c19-photo-removed-toast@2x | Cancel | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: truncated-text
 truncated-text | c2-composer-new-sidebar@2x | Add memory | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: truncated-text
