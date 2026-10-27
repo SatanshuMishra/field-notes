@@ -469,59 +469,58 @@ const List<String> _macOSSelectors = <String>[
 ];
 
 void main() {
-  testWidgets(
-    'text intents pass through to the input method',
-    (WidgetTester tester) async {
-      final _Harness harness = await _pump(
-        tester,
-        'alpha beta\ngamma',
-        selection: const NoteSelection.collapsed(3),
-      );
-      for (final LogicalKeyboardKey key in <LogicalKeyboardKey>[
-        LogicalKeyboardKey.arrowLeft,
-        LogicalKeyboardKey.arrowRight,
-        LogicalKeyboardKey.arrowUp,
-        LogicalKeyboardKey.arrowDown,
-        LogicalKeyboardKey.backspace,
-        LogicalKeyboardKey.delete,
-        LogicalKeyboardKey.tab,
-        LogicalKeyboardKey.home,
-        LogicalKeyboardKey.end,
-        LogicalKeyboardKey.pageUp,
-        LogicalKeyboardKey.pageDown,
-        LogicalKeyboardKey.space,
-        LogicalKeyboardKey.enter,
-      ]) {
-        expect(await tester.sendKeyEvent(key), isFalse, reason: '$key');
-      }
-      expect(harness.host.recordedNothing, isTrue);
-      expect(harness.saves, 0);
-      expect(harness.cancels, 0);
-      final Action<Intent>? doNothing = Actions.maybeFind<Intent>(
-        harness.editorContext,
-        intent: const DoNothingAndStopPropagationTextIntent(),
-      );
-      expect(doNothing, isA<DoNothingAction>());
-      expect(
-        doNothing!.consumesKey(const DoNothingAndStopPropagationTextIntent()),
-        isFalse,
-      );
+  testWidgets('text intents pass through to the input method', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = await _pump(
+      tester,
+      'alpha beta\ngamma',
+      selection: const NoteSelection.collapsed(3),
+    );
+    for (final LogicalKeyboardKey key in <LogicalKeyboardKey>[
+      LogicalKeyboardKey.arrowLeft,
+      LogicalKeyboardKey.arrowRight,
+      LogicalKeyboardKey.arrowUp,
+      LogicalKeyboardKey.arrowDown,
+      LogicalKeyboardKey.backspace,
+      LogicalKeyboardKey.delete,
+      LogicalKeyboardKey.tab,
+      LogicalKeyboardKey.home,
+      LogicalKeyboardKey.end,
+      LogicalKeyboardKey.pageUp,
+      LogicalKeyboardKey.pageDown,
+      LogicalKeyboardKey.space,
+      LogicalKeyboardKey.enter,
+    ]) {
+      expect(await tester.sendKeyEvent(key), isFalse, reason: '$key');
+    }
+    expect(harness.host.recordedNothing, isTrue);
+    expect(harness.saves, 0);
+    expect(harness.cancels, 0);
+    final Action<Intent>? doNothing = Actions.maybeFind<Intent>(
+      harness.editorContext,
+      intent: const DoNothingAndStopPropagationTextIntent(),
+    );
+    expect(doNothing, isA<DoNothingAction>());
+    expect(
+      doNothing!.consumesKey(const DoNothingAndStopPropagationTextIntent()),
+      isFalse,
+    );
 
-      harness.host.registry.commands[NoteCommandId.lineBreak] =
-          (EditorState state) => _marker(state, 0);
-      harness.host.compose(const MdRange(0, 5));
-      expect(await tester.sendKeyEvent(LogicalKeyboardKey.escape), isFalse);
-      expect(harness.cancels, 0);
-      expect(
-        await _chord(tester, <LogicalKeyboardKey>[
-          LogicalKeyboardKey.shiftLeft,
-        ], LogicalKeyboardKey.enter),
-        isFalse,
-      );
-      expect(harness.host.applied, isEmpty);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
-  );
+    harness.host.registry.commands[NoteCommandId.lineBreak] = (
+      EditorState state,
+    ) => _marker(state, 0);
+    harness.host.compose(const MdRange(0, 5));
+    expect(await tester.sendKeyEvent(LogicalKeyboardKey.escape), isFalse);
+    expect(harness.cancels, 0);
+    expect(
+      await _chord(tester, <LogicalKeyboardKey>[
+        LogicalKeyboardKey.shiftLeft,
+      ], LogicalKeyboardKey.enter),
+      isFalse,
+    );
+    expect(harness.host.applied, isEmpty);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets(
     'the editor never consumes command enter or numpad enter',
@@ -753,8 +752,9 @@ void main() {
       );
       for (int i = 0; i < NoteCommandId.shortcutIds.length; i++) {
         final int marker = i + 1;
-        harness.host.registry.commands[NoteCommandId.shortcutIds[i]] =
-            (EditorState state) => _marker(state, marker);
+        harness.host.registry.commands[NoteCommandId.shortcutIds[i]] = (
+          EditorState state,
+        ) => _marker(state, marker);
       }
       final List<(bool, LogicalKeyboardKey)> keys =
           <(bool, LogicalKeyboardKey)>[
@@ -798,21 +798,17 @@ void main() {
     }),
   );
 
-  testWidgets(
-    'control y redoes on android',
-    (WidgetTester tester) async {
-      final _Harness harness = await _pump(tester, 'hello');
-      await _chord(tester, <LogicalKeyboardKey>[
-        LogicalKeyboardKey.controlLeft,
-      ], LogicalKeyboardKey.keyY);
-      expect(harness.host.redos, 1);
-      expect(
-        noteShortcuts(TargetPlatform.macOS).values,
-        isNot(contains(isA<RedoTextIntent>())),
-      );
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.android),
-  );
+  testWidgets('control y redoes on android', (WidgetTester tester) async {
+    final _Harness harness = await _pump(tester, 'hello');
+    await _chord(tester, <LogicalKeyboardKey>[
+      LogicalKeyboardKey.controlLeft,
+    ], LogicalKeyboardKey.keyY);
+    expect(harness.host.redos, 1);
+    expect(
+      noteShortcuts(TargetPlatform.macOS).values,
+      isNot(contains(isA<RedoTextIntent>())),
+    );
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets('shift enter applies the line break command', (
     WidgetTester tester,
@@ -838,66 +834,80 @@ void main() {
     expect(harness.host.applied, hasLength(2));
   });
 
-  testWidgets(
-    'tab indents, enters the photo toolbar, or moves focus',
-    (WidgetTester tester) async {
-      final _Harness harness = await _pump(
-        tester,
-        '- a\n- b',
-        selection: const NoteSelection.collapsed(7),
-      );
-      harness.host.registry.commands[NoteCommandId.indent] =
-          (EditorState state) => Transaction(
-            changes: ChangeSet.single(state.source.length, 4, 4, '  '),
-            selection: const NoteSelection.collapsed(9),
-            event: TransactionEvent.list,
-          );
-      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      expect(harness.host.state.source, '- a\n  - b');
-      expect(harness.editorNode.hasPrimaryFocus, isTrue);
-      harness.host.registry.commands.remove(NoteCommandId.indent);
+  testWidgets('tab indents, enters the photo toolbar, or moves focus', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = await _pump(
+      tester,
+      '- a\n- b',
+      selection: const NoteSelection.collapsed(7),
+    );
+    harness.host.registry.commands[NoteCommandId.indent] =
+        (EditorState state) => Transaction(
+          changes: ChangeSet.single(state.source.length, 4, 4, '  '),
+          selection: const NoteSelection.collapsed(9),
+          event: TransactionEvent.list,
+        );
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    expect(harness.host.state.source, '- a\n  - b');
+    expect(harness.editorNode.hasPrimaryFocus, isTrue);
+    harness.host.registry.commands.remove(NoteCommandId.indent);
 
-      harness.host.reset(_photoNote, const NoteSelection(anchor: 2, head: 26));
-      harness.host.toolbarTakesFocus = true;
-      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      expect(harness.host.toolbarRequests, 1);
-      expect(harness.editorNode.hasPrimaryFocus, isTrue);
+    harness.host.reset(_photoNote, const NoteSelection(anchor: 2, head: 26));
+    harness.host.toolbarTakesFocus = true;
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    expect(harness.host.toolbarRequests, 1);
+    expect(harness.editorNode.hasPrimaryFocus, isTrue);
 
-      harness.host.toolbarTakesFocus = false;
-      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      await tester.pump();
-      expect(harness.host.toolbarRequests, 2);
-      expect(harness.siblingNode.hasPrimaryFocus, isTrue);
+    harness.host.toolbarTakesFocus = false;
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(harness.host.toolbarRequests, 2);
+    expect(harness.siblingNode.hasPrimaryFocus, isTrue);
 
-      harness.editorNode.requestFocus();
-      await tester.pump();
-      harness.host.reset('plain', const NoteSelection.collapsed(2));
-      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      await tester.pump();
-      expect(harness.host.toolbarRequests, 2);
-      expect(harness.siblingNode.hasPrimaryFocus, isTrue);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.android),
-  );
+    harness.editorNode.requestFocus();
+    await tester.pump();
+    harness.host.reset('plain', const NoteSelection.collapsed(2));
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(harness.host.toolbarRequests, 2);
+    expect(harness.siblingNode.hasPrimaryFocus, isTrue);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets(
-    'tab in a table cell enters the table toolbar and shift tab leaves',
+    'tab in a table cell moves cells and control tab enters the table toolbar',
     (WidgetTester tester) async {
       const String table = '| a | b |\n| --- | --- |\n| c | d |';
       final NoteSelection inCell = NoteSelection.collapsed(table.indexOf('c'));
+      final NoteSelection nextCell = NoteSelection.collapsed(
+        table.indexOf('d'),
+      );
       final _Harness harness = await _pump(tester, table, selection: inCell);
       harness.host.tableToolbarTakesFocus = true;
+      harness.host.registry.commands[NoteCommandId.indent] =
+          (EditorState state) => Transaction(
+            changes: ChangeSet.empty(state.source.length),
+            selection: nextCell,
+            event: TransactionEvent.list,
+          );
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      expect(harness.host.tableToolbarRequests, 0);
+      expect(harness.host.state.selection, nextCell);
+      expect(harness.editorNode.hasPrimaryFocus, isTrue);
+
+      harness.host.reset(table, inCell);
+      await _chord(tester, <LogicalKeyboardKey>[
+        LogicalKeyboardKey.controlLeft,
+      ], LogicalKeyboardKey.tab);
       expect(harness.host.tableToolbarRequests, 1);
       expect(harness.host.state.selection, inCell);
-      expect(harness.host.applied, isEmpty);
 
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await _chord(tester, <LogicalKeyboardKey>[
+        LogicalKeyboardKey.controlLeft,
+        LogicalKeyboardKey.shiftLeft,
+      ], LogicalKeyboardKey.tab);
       await tester.pump();
       expect(harness.host.tableToolbarRequests, 1);
-      expect(harness.host.applied, isEmpty);
       expect(harness.editorNode.hasPrimaryFocus, isFalse);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),

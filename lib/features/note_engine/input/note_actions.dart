@@ -269,6 +269,9 @@ class NoteActions {
     ),
     NoteLeaveEditorIntent: _NoteAction<NoteLeaveEditorIntent>(
       onInvoke: (NoteLeaveEditorIntent intent) =>
+          (intent.forward &&
+              caretInTable(host.state) &&
+              host.focusTableToolbar()) ||
           _moveFocus(forward: intent.forward),
     ),
     NoteCommandIntent: _NoteAction<NoteCommandIntent>(
@@ -725,13 +728,12 @@ class NoteActions {
       goal: kept,
       caretX: (int position, TextAffinity affinity) =>
           layout.caretRect(position, affinity).left,
-      target:
-          (
-            int position,
-            TextAffinity affinity,
-            double goalX,
-            VerticalMove direction,
-          ) => layout.verticalTarget(position, affinity, goalX, direction),
+      target: (
+        int position,
+        TextAffinity affinity,
+        double goalX,
+        VerticalMove direction,
+      ) => layout.verticalTarget(position, affinity, goalX, direction),
     );
     _finishRun(step.goal, step.position, selection, intent.collapseSelection);
   }
@@ -927,10 +929,6 @@ class NoteActions {
 
   Object? _focusStep({required bool forward}) {
     final EditorState state = host.state;
-    if (caretInTable(state)) {
-      return (forward && host.focusTableToolbar()) ||
-          _moveFocus(forward: forward);
-    }
     final Transaction? command = host.commands
         .commandFor(forward ? NoteCommandId.indent : NoteCommandId.outdent)
         ?.call(state);

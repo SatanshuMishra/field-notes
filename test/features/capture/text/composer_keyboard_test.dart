@@ -162,17 +162,14 @@ Future<void> _tabOn(WidgetTester tester) async {
 }
 
 void main() {
-  group(
-    'every tappable composer, recorder and media control is reachable by Tab with a visible ring',
-    () {
-      for (final String id in _stateIds) {
-        testWidgets(id, (WidgetTester tester) async {
-          await _pumpState(tester, id);
-          await expectEveryTapTargetReachableByTab(tester);
-        });
-      }
-    },
-  );
+  group('every tappable composer, recorder and media control is reachable by Tab with a visible ring', () {
+    for (final String id in _stateIds) {
+      testWidgets(id, (WidgetTester tester) async {
+        await _pumpState(tester, id);
+        await expectEveryTapTargetReachableByTab(tester);
+      });
+    }
+  });
 
   group('a focus ring moves nothing painted', () {
     for (final String id in _stateIds) {
@@ -218,8 +215,8 @@ void main() {
         final TextSelection cell = NoteEditorDriver(tester).selection;
         await _focusEditor(tester, editor);
         await _press(tester, LogicalKeyboardKey.tab);
-        expect(_primaryFocusIn(find.byType(TableToolbar)), findsOneWidget);
-        expect(NoteEditorDriver(tester).selection, cell);
+        expect(editor.hasPrimaryFocus, isTrue);
+        expect(NoteEditorDriver(tester).selection, isNot(cell));
 
         await NoteEditorDriver(tester).setSelection(cell);
         await _expectLeavesBothWays(
