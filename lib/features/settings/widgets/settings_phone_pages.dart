@@ -210,12 +210,7 @@ class _SectionRow extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: _summaryGap),
-                  Text(
-                    summary,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.textStyles.captionSans,
-                  ),
+                  Text(summary, style: context.textStyles.captionSans),
                 ],
               ),
             ),
@@ -332,8 +327,6 @@ class _UpdateBanner extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: context.textStyles.labelSans.copyWith(
                         fontSize: _bannerTitleSize,
                         fontWeight: FontWeight.w600,
@@ -343,8 +336,6 @@ class _UpdateBanner extends StatelessWidget {
                     const SizedBox(height: _summaryGap),
                     Text(
                       bannerSubtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: context.textStyles.captionSans.copyWith(
                         color: colors.muted,
                       ),
