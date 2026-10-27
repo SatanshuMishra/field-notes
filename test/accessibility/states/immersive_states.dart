@@ -215,9 +215,6 @@ Future<void> _pumpVoiceQuestion(
   _requireVoicePhase(tester, VoiceRecorderPhase.idle);
 }
 
-Future<void> _reachVoice(WidgetTester tester, A11yVariant variant) =>
-    _openVoice(tester, variant);
-
 Future<void> _breatheVoice(WidgetTester tester, A11yVariant variant) async {
   await _tap(tester, voiceRecordButtonKey);
   _requireVoicePhase(tester, VoiceRecorderPhase.breathing);
@@ -348,7 +345,7 @@ final List<A11yState> immersiveStates = <A11yState>[
   ),
   ..._inBothLayouts(
     id: 'i2-voice-breathing',
-    pump: _reachVoice,
+    pump: _openVoice,
     act: _breatheVoice,
     proof: <A11yProof>[
       A11yProof(find.text(stageCountdownWords)),
@@ -357,7 +354,7 @@ final List<A11yState> immersiveStates = <A11yState>[
   ),
   ..._inBothLayouts(
     id: 'i3-voice-recording',
-    pump: _reachVoice,
+    pump: _openVoice,
     act: _recordVoice,
     proof: <A11yProof>[
       A11yProof(find.text(stageRecordingStatus)),

@@ -296,6 +296,10 @@ void _placeOn(WidgetTester tester, ShellLayout layout, Size surface) {
   addTearDown(tester.view.reset);
 }
 
+OnboardingController _controllerOf(WidgetTester tester) =>
+    ProviderScope.containerOf(tester.element(find.byType(AppShell)))
+        .read(onboardingControllerProvider.notifier);
+
 Future<void> _pumpScreen(
   WidgetTester tester,
   A11yVariant variant,
@@ -311,9 +315,7 @@ Future<void> _pumpScreen(
     ),
   );
   await _settle(tester);
-  final OnboardingController controller = ProviderScope.containerOf(
-    tester.element(find.byType(AppShell)),
-  ).read(onboardingControllerProvider.notifier);
+  final OnboardingController controller = _controllerOf(tester);
   if (screen.replay) {
     controller.showMap();
   } else {
@@ -328,10 +330,7 @@ Future<void> _actOnScreen(
   _Screen screen,
 ) async {
   if (!screen.replay) {
-    screen.setUp(
-      ProviderScope.containerOf(tester.element(find.byType(AppShell)))
-          .read(onboardingControllerProvider.notifier),
-    );
+    screen.setUp(_controllerOf(tester));
   }
   await _settle(tester);
   if (layout == ShellLayout.bottomBar) {
