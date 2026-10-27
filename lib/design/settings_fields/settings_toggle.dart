@@ -6,7 +6,8 @@ import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
-import 'settings_min_target.dart';
+
+import 'package:field_notes/design/interaction/min_target.dart';
 
 const String settingsToggleFallbackLabel = 'Switch';
 
@@ -68,7 +69,7 @@ class SettingsToggle extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     final Border outline = context.shadows.outline;
     final TargetPlatform platform = Theme.of(context).platform;
-    final double minTarget = settingsMinTargetOn(platform);
+    final double minTarget = minTargetOn(platform);
     final _ToggleMetrics metrics = switch (resolveShellLayout(platform)) {
       ShellLayout.sidebar => _ToggleMetrics.sidebar,
       ShellLayout.bottomBar => _ToggleMetrics.phone,

@@ -8,7 +8,8 @@ import 'package:flutter/material.dart';
 import '../tokens/tokens.dart';
 import '../widgets/icon_sticker_button.dart';
 import '../widgets/phone_sheet.dart';
-import 'settings_min_target.dart';
+
+import 'package:field_notes/design/interaction/min_target.dart';
 
 const double settingsSelectSheetRowHeight = 48;
 
@@ -110,7 +111,7 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
     final BorderRadius radius = sheet
         ? Shapes.buttonBorderRadius
         : _sidebarFieldRadius;
-    final double minTapTarget = settingsMinTargetOn(Theme.of(context).platform);
+    final double minTapTarget = minTargetOn(Theme.of(context).platform);
     final String? semanticLabel = widget.semanticLabel;
     Widget trigger(VoidCallback open) => Pressable(
       includeFocusSemantics: false,

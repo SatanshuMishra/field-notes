@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
 import '../widgets/sticker_button.dart';
-import 'settings_min_target.dart';
+
+import 'package:field_notes/design/interaction/min_target.dart';
 
 const BorderRadius _pillRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusPill),
@@ -134,7 +135,7 @@ class _ActionPill extends StatelessWidget {
           opacity: enabled ? 1.0 : 0.5,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: settingsMinTargetOn(Theme.of(context).platform),
+              minHeight: minTargetOn(Theme.of(context).platform),
             ),
             child: Center(
               widthFactor: 1,

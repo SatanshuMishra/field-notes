@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
@@ -31,14 +32,10 @@ const BorderRadius _actionRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusXs),
 );
 const Duration _popDuration = Duration(milliseconds: 140);
-const double _macosMinTarget = 28;
-const double _windowsMinTarget = 40;
-
-double _minTargetOn(TargetPlatform platform) => switch (platform) {
-  TargetPlatform.macOS => _macosMinTarget,
-  TargetPlatform.windows => _windowsMinTarget,
-  _ => 0,
-};
+double _minTargetOn(TargetPlatform platform) =>
+    platform == TargetPlatform.macOS || platform == TargetPlatform.windows
+    ? minTargetOn(platform)
+    : 0;
 
 const TextStyle _yearStyle = TextStyle(
   fontFamily: TypographyTokens.serif,

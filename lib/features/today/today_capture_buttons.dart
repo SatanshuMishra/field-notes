@@ -1,3 +1,4 @@
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -14,15 +15,6 @@ const String todayCaptureTitle = 'capture a moment';
 const double _titleGap = 10;
 const double _rowGap = 8;
 const double _iconSize = 17;
-const double _androidMinTarget = 48;
-const double _macosMinTarget = 28;
-const double _windowsMinTarget = 40;
-
-double _minTargetOn(TargetPlatform platform) => switch (platform) {
-  TargetPlatform.macOS => _macosMinTarget,
-  TargetPlatform.windows => _windowsMinTarget,
-  _ => _androidMinTarget,
-};
 
 CaptureGlyph _captureGlyphFor(EntryType type) {
   switch (type) {
@@ -103,7 +95,7 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
     );
     return ConstrainedBox(
       constraints: BoxConstraints(
-        minHeight: _minTargetOn(Theme.of(context).platform),
+        minHeight: minTargetOn(Theme.of(context).platform),
       ),
       child: button,
     );

@@ -1,3 +1,4 @@
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/data/links/link_opener.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
@@ -115,9 +116,6 @@ const double _phoneAuthorNameSize = 15;
 const double _phoneDescriptionHeight = 1.5;
 const double _phoneButtonGap = 8;
 const double _phoneButtonLabelPadding = 8;
-const double _androidMinTarget = 48;
-const double _macosMinTarget = 28;
-const double _windowsMinTarget = 40;
 const double _phoneButtonRadius = 14;
 const double _phoneButtonLabelSize = 14;
 const double _phoneUpdateLabelSize = 15;
@@ -349,7 +347,7 @@ class AboutSection extends ConsumerWidget {
     required _AboutActions actions,
   }) {
     final Widget control = switch (status) {
-      UpdateIdle() || UpdateCurrent() || UpdateCheckFailed() => _DesktopTarget(
+      UpdateIdle() || UpdateCurrent() || UpdateCheckFailed() => MinTarget(
         child: SettingsActionButton(
           label: checkForUpdatesLabel,
           onPressed: actions.check,
@@ -360,7 +358,7 @@ class AboutSection extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Flexible(
-            child: _DesktopTarget(
+            child: MinTarget(
               child: SettingsActionButton(
                 label: readChangelogLabel,
                 onPressed: actions.openNew,
@@ -369,7 +367,7 @@ class AboutSection extends ConsumerWidget {
           ),
           const SizedBox(width: _desktopPillGap),
           Flexible(
-            child: _DesktopTarget(
+            child: MinTarget(
               child: SettingsActionButton(
                 label: updateNowLabel,
                 tone: SettingsActionTone.primary,
@@ -425,7 +423,7 @@ class AboutSection extends ConsumerWidget {
                   description: version == null
                       ? null
                       : releaseNotesDescription(version),
-                  control: _DesktopTarget(
+                  control: MinTarget(
                     child: SettingsActionButton(
                       label: readNotesLabel,
                       onPressed: actions.openInstalled,
@@ -444,7 +442,7 @@ class AboutSection extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
                       Flexible(
-                        child: _DesktopTarget(
+                        child: MinTarget(
                           child: SettingsActionButton(
                             label: aboutWebsiteLabel,
                             onPressed: () => _open(aboutWebsiteLink),
@@ -453,7 +451,7 @@ class AboutSection extends ConsumerWidget {
                       ),
                       const SizedBox(width: _desktopPillGap),
                       Flexible(
-                        child: _DesktopTarget(
+                        child: MinTarget(
                           child: SettingsActionButton(
                             label: aboutGitHubLabel,
                             onPressed: () => _open(aboutGitHubLink),
@@ -1112,25 +1110,6 @@ class _PhoneLinkButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _DesktopTarget extends StatelessWidget {
-  const _DesktopTarget({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final double target = switch (Theme.of(context).platform) {
-      TargetPlatform.macOS => _macosMinTarget,
-      TargetPlatform.windows => _windowsMinTarget,
-      _ => _androidMinTarget,
-    };
-    return ConstrainedBox(
-      constraints: BoxConstraints(minWidth: target, minHeight: target),
-      child: child,
     );
   }
 }

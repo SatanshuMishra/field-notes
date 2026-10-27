@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../tokens/tokens.dart';
-import 'settings_min_target.dart';
+
+import 'package:field_notes/design/interaction/min_target.dart';
 
 const BorderRadius _sidebarFrameRadius = BorderRadius.all(Radius.circular(9));
 const BorderRadius _sidebarSegmentRadius = BorderRadius.all(Radius.circular(7));
@@ -45,7 +46,7 @@ class SettingsSegmented<T> extends StatelessWidget {
     return Opacity(
       opacity: enabled ? 1.0 : 0.5,
       child: _SegmentBand(
-        minHeight: settingsMinTargetOn(Theme.of(context).platform),
+        minHeight: minTargetOn(Theme.of(context).platform),
         child: FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerRight,

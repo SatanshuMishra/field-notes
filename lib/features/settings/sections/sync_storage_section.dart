@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/data/sync/devices/device_service.dart';
 import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/data/sync/erase/device_unlink_service.dart';
@@ -50,9 +51,6 @@ const String restoreCaptionPhone = 'Use your 12 words.';
 const double _actionRowMinHeight = 48;
 const double _actionChevronSize = 20;
 const double _statusDotSize = 8;
-const double _androidMinTarget = 48;
-const double _macosMinTarget = 28;
-const double _windowsMinTarget = 40;
 
 const String syncNowLabel = 'Sync now';
 const String pauseSyncLabel = 'Pause sync';
@@ -276,7 +274,7 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
             SettingsFieldRow(
               label: addDeviceTitle,
               description: addDeviceCaption,
-              control: _MinimumTarget(
+              control: MinTarget(
                 child: SettingsActionButton(
                   label: showCodeLabel,
                   onPressed: () => showAddDeviceSheet(context),
@@ -287,7 +285,7 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
               focusNode: _manageDevicesFocus,
               canRequestFocus: false,
               skipTraversal: true,
-              child: _MinimumTarget(
+              child: MinTarget(
                 child: SettingsFieldRow(
                   label: manageDevicesLabel,
                   description: devices == null
@@ -418,7 +416,7 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
     child: const SizedBox.square(dimension: _statusDotSize),
   );
 
-  Widget _syncNowButton() => _MinimumTarget(
+  Widget _syncNowButton() => MinTarget(
     child: SettingsActionButton(
       label: syncNowLabel,
       onPressed: () =>
@@ -426,7 +424,7 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
     ),
   );
 
-  Widget _changeButton() => _MinimumTarget(
+  Widget _changeButton() => MinTarget(
     child: SettingsActionButton(
       label: changeLabel,
       onPressed: () => showSyncFlow<void>(
@@ -677,25 +675,6 @@ class _ChangeServerAddressFlowState
           ),
         ],
       ),
-    );
-  }
-}
-
-class _MinimumTarget extends StatelessWidget {
-  const _MinimumTarget({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final double target = switch (Theme.of(context).platform) {
-      TargetPlatform.macOS => _macosMinTarget,
-      TargetPlatform.windows => _windowsMinTarget,
-      _ => _androidMinTarget,
-    };
-    return ConstrainedBox(
-      constraints: BoxConstraints(minWidth: target, minHeight: target),
-      child: child,
     );
   }
 }
