@@ -1,37 +1,11 @@
-flutter-text-contrast | d1-viewer-todos-sidebar | 9:30 AM | Friday, September 18 / Morning note # open: flutter-text-contrast
-flutter-text-contrast | d1-viewer-todos-sidebar@2x | 9:30 AM | Friday, September 18 / Morning note # open: flutter-text-contrast
-flutter-text-contrast | d11-mood-picker-sidebar | choose today's bloom | <root> # open: flutter-text-contrast
-flutter-text-contrast | d11-mood-picker-sidebar@2x | choose today's bloom | <root> # open: flutter-text-contrast
-flutter-text-contrast | d12-mood-set | Change | Feeling Calm / Lavender · today's bloom # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d12-mood-set@2x | Change | Feeling Calm / Lavender · today's bloom # open: fails Flutter's text contrast guideline
-flutter-text-contrast | d14-delete-entry-dialog-sidebar | This log will be removed from today. This can’t be undone. | <root> # open: flutter-text-contrast
-flutter-text-contrast | d14-delete-entry-dialog-sidebar@2x | This log will be removed from today. This can’t be undone. | <root> # open: flutter-text-contrast
-flutter-text-contrast | d15-viewer-middle-entry-sidebar | 9:00 AM | Friday, September 18 / Morning note / 2 of 3 # open: flutter-text-contrast
-flutter-text-contrast | d15-viewer-middle-entry-sidebar@2x | 9:00 AM | Friday, September 18 / Morning note / 2 of 3 # open: flutter-text-contrast
-flutter-text-contrast | d16-day-past-mood-sidebar | 9:30 AM · morning · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: flutter-text-contrast
-flutter-text-contrast | d2-viewer-photo-sidebar | 9:30 AM · 1 photo | Friday, September 18 / Morning note # open: flutter-text-contrast
-flutter-text-contrast | d2-viewer-photo-sidebar@2x | 9:30 AM · 1 photo | Friday, September 18 / Morning note # open: flutter-text-contrast
-flutter-text-contrast | d5-reader-menu-sidebar | 9:30 AM | Friday, September 18 / Morning note # open: flutter-text-contrast
-flutter-text-contrast | d5-reader-menu-sidebar@2x | 9:30 AM | Friday, September 18 / Morning note # open: flutter-text-contrast
-flutter-text-contrast | d6-task-toast-sidebar | 9:30 AM | Friday, September 18 / Morning note # open: flutter-text-contrast
-flutter-text-contrast | d6-task-toast-sidebar@2x | 9:30 AM | Friday, September 18 / Morning note # open: flutter-text-contrast
-flutter-text-contrast | d7-day-with-entries-sidebar | 2 logs that day | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: flutter-text-contrast
-flutter-text-contrast | d7-day-with-entries-sidebar | 2:30 PM · afternoon · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: flutter-text-contrast
-flutter-text-contrast | d7-day-with-entries-sidebar | 9:30 AM · morning · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: flutter-text-contrast
-flutter-text-contrast | d7-day-with-entries-sidebar@2x | 2 logs that day | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: flutter-text-contrast
-flutter-text-contrast | d7-day-with-entries-sidebar@2x | 9:30 AM · morning · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: flutter-text-contrast
 focus-visible | d4-viewer-video | Friday, September 18 · 9:30 AM / 0:00 / 0:04 | Play or pause video # open: focus indicator below 3:1
 focus-visible | d4-viewer-video | Play | Friday, September 18 · 9:30 AM / 0:00 / 0:04 # open: focus indicator below 3:1
 focus-visible | d5-reader-menu-sidebar | Copy | <root> # open: focus-visible
 focus-visible | d5-reader-menu-sidebar | Select All | <root> # open: focus-visible
-keyboard | d1-viewer-todos-sidebar | call the ferry office | Friday, September 18 / Morning note # open: keyboard
-keyboard | d1-viewer-todos-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: keyboard
 keyboard | d11-mood-picker-sidebar | Dismiss mood picker | <root> # open: keyboard
 keyboard | d13-change-mood-dialog-sidebar | Dismiss | <root> # open: keyboard
 keyboard | d14-delete-entry-dialog-sidebar | Dismiss | <root> # open: keyboard
 keyboard | d16-day-past-mood-sidebar | Dismiss day detail | <root> # open: keyboard
-keyboard | d6-task-toast-sidebar | call the ferry office | Friday, September 18 / Morning note # open: keyboard
-keyboard | d6-task-toast-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: keyboard
 keyboard | d7-day-with-entries-sidebar | 2:30 PM · afternoon · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: keyboard
 keyboard | d7-day-with-entries-sidebar | Dismiss day detail | <root> # open: keyboard
 keyboard | d8-day-empty-sidebar | Dismiss day detail | <root> # open: keyboard
@@ -47,48 +21,9 @@ missing-role | d7-day-with-entries-sidebar | Dismiss day detail | <root> # open:
 missing-role | d7-day-with-entries-sidebar@2x | Dismiss day detail | <root> # open: missing-role
 missing-role | d8-day-empty-sidebar | Dismiss day detail | <root> # open: missing-role
 missing-role | d8-day-empty-sidebar@2x | Dismiss day detail | <root> # open: missing-role
-small-target | d1-viewer-todos-sidebar | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d1-viewer-todos-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: small-target
-small-target | d1-viewer-todos-sidebar@2x | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d1-viewer-todos-sidebar@2x | pack the tide tables | Friday, September 18 / Morning note # open: small-target
 small-target | d5-reader-menu-sidebar | Copy | <root> # open: small-target
 small-target | d5-reader-menu-sidebar | Select All | <root> # open: small-target
-small-target | d6-task-toast-sidebar | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d6-task-toast-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: small-target
-small-target | d6-task-toast-sidebar@2x | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d6-task-toast-sidebar@2x | pack the tide tables | Friday, September 18 / Morning note # open: small-target
-text-contrast | d1-viewer-todos-sidebar | 9:30 AM | Friday, September 18 / Morning note # open: text-contrast
-text-contrast | d1-viewer-todos-sidebar | Friday, September 18 | <root> # open: text-contrast
-text-contrast | d1-viewer-todos-sidebar@2x | 9:30 AM | Friday, September 18 / Morning note # open: text-contrast
-text-contrast | d10-mood-prompt-past | tap to plant this day's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d10-mood-prompt-past@2x | tap to plant this day's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d11-mood-picker-sidebar | Aster | Anxious # open: text-contrast
-text-contrast | d11-mood-picker-sidebar | Bleeding Heart | Sad # open: text-contrast
-text-contrast | d11-mood-picker-sidebar | Chrysanthemum | Grateful # open: text-contrast
-text-contrast | d11-mood-picker-sidebar | Daffodil | Hopeful # open: text-contrast
-text-contrast | d11-mood-picker-sidebar | Lavender | Calm # open: text-contrast
-text-contrast | d11-mood-picker-sidebar | Peony | Happy # open: text-contrast
-text-contrast | d11-mood-picker-sidebar | Poppy | Tired # open: text-contrast
-text-contrast | d11-mood-picker-sidebar | Red Spider Lily | Angry # open: text-contrast
-text-contrast | d11-mood-picker-sidebar | Rose | Loved # open: text-contrast
-text-contrast | d11-mood-picker-sidebar | Sunflower | Warm # open: text-contrast
-text-contrast | d11-mood-picker-sidebar | choose today's bloom | <root> # open: text-contrast
 text-contrast | d11-mood-picker-sidebar | tap to plant today's bloom | <root> # open: text-contrast
-text-contrast | d11-mood-picker-sidebar@2x | Aster | Anxious # open: text-contrast
-text-contrast | d11-mood-picker-sidebar@2x | Bleeding Heart | Sad # open: text-contrast
-text-contrast | d11-mood-picker-sidebar@2x | Chrysanthemum | Grateful # open: text-contrast
-text-contrast | d11-mood-picker-sidebar@2x | Daffodil | Hopeful # open: text-contrast
-text-contrast | d11-mood-picker-sidebar@2x | Lavender | Calm # open: text-contrast
-text-contrast | d11-mood-picker-sidebar@2x | Peony | Happy # open: text-contrast
-text-contrast | d11-mood-picker-sidebar@2x | Poppy | Tired # open: text-contrast
-text-contrast | d11-mood-picker-sidebar@2x | Red Spider Lily | Angry # open: text-contrast
-text-contrast | d11-mood-picker-sidebar@2x | Rose | Loved # open: text-contrast
-text-contrast | d11-mood-picker-sidebar@2x | Sunflower | Warm # open: text-contrast
-text-contrast | d11-mood-picker-sidebar@2x | choose today's bloom | <root> # open: text-contrast
-text-contrast | d11-mood-picker-sidebar@2x | tap to plant today's bloom | <root> # open: text-contrast
-text-contrast | d12-mood-set | Change | Feeling Calm / Lavender · today's bloom # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d12-mood-set | Lavender · today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d12-mood-set@2x | Lavender · today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | d13-change-mood-dialog-sidebar | Change | Feeling Calm / Lavender · today's bloom # open: text-contrast
 text-contrast | d13-change-mood-dialog-sidebar | Feeling Calm | <root> # open: text-contrast
 text-contrast | d13-change-mood-dialog-sidebar | Lavender · today's bloom | <root> # open: text-contrast
@@ -99,46 +34,19 @@ text-contrast | d14-delete-entry-dialog-sidebar | 9:30 AM | Friday, September 18
 text-contrast | d14-delete-entry-dialog-sidebar | Close | Friday, September 18 / Morning note # open: text-contrast
 text-contrast | d14-delete-entry-dialog-sidebar | Friday, September 18 | <root> # open: text-contrast
 text-contrast | d14-delete-entry-dialog-sidebar | Morning note | <root> # open: text-contrast
-text-contrast | d14-delete-entry-dialog-sidebar | This log will be removed from today. This can’t be undone. | <root> # open: text-contrast
 text-contrast | d14-delete-entry-dialog-sidebar@2x | 9:30 AM | Friday, September 18 / Morning note # open: text-contrast
-text-contrast | d15-viewer-middle-entry-sidebar | 2 of 3 | <root> # open: text-contrast
-text-contrast | d15-viewer-middle-entry-sidebar | 9:00 AM | Friday, September 18 / Morning note / 2 of 3 # open: text-contrast
-text-contrast | d15-viewer-middle-entry-sidebar | Friday, September 18 | <root> # open: text-contrast
-text-contrast | d15-viewer-middle-entry-sidebar@2x | 9:00 AM | Friday, September 18 / Morning note / 2 of 3 # open: text-contrast
-text-contrast | d16-day-past-mood-sidebar | 1 log that day | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: text-contrast
-text-contrast | d16-day-past-mood-sidebar | 9:30 AM · morning · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: text-contrast
-text-contrast | d16-day-past-mood-sidebar | Chrysanthemum · the day's bloom | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: text-contrast
-text-contrast | d16-day-past-mood-sidebar | Logs open on this side. | <root> # open: text-contrast
-text-contrast | d16-day-past-mood-sidebar | a day in the garden | <root> # open: text-contrast
-text-contrast | d16-day-past-mood-sidebar@2x | Chrysanthemum · the day's bloom | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: text-contrast
-text-contrast | d2-viewer-photo-sidebar | 9:30 AM · 1 photo | Friday, September 18 / Morning note # open: text-contrast
-text-contrast | d2-viewer-photo-sidebar | Friday, September 18 | <root> # open: text-contrast
-text-contrast | d2-viewer-photo-sidebar@2x | 9:30 AM · 1 photo | Friday, September 18 / Morning note # open: text-contrast
 text-contrast | d4-viewer-video | 0:00 | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | d4-viewer-video | 0:04 | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | d4-viewer-video | Friday, September 18 · 9:30 AM | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | d4-viewer-video@2x | 0:00 | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | d4-viewer-video@2x | 0:04 | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | d4-viewer-video@2x | Friday, September 18 · 9:30 AM | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d5-reader-menu-sidebar | 9:30 AM | Friday, September 18 / Morning note # open: text-contrast
-text-contrast | d5-reader-menu-sidebar | Friday, September 18 | <root> # open: text-contrast
-text-contrast | d5-reader-menu-sidebar@2x | 9:30 AM | Friday, September 18 / Morning note # open: text-contrast
-text-contrast | d6-task-toast-sidebar | 9:30 AM | Friday, September 18 / Morning note # open: text-contrast
-text-contrast | d6-task-toast-sidebar | Friday, September 18 | <root> # open: text-contrast
-text-contrast | d6-task-toast-sidebar@2x | 9:30 AM | Friday, September 18 / Morning note # open: text-contrast
-text-contrast | d7-day-with-entries-sidebar | 2 logs that day | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: text-contrast
-text-contrast | d7-day-with-entries-sidebar | 2:30 PM · afternoon · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: text-contrast
-text-contrast | d7-day-with-entries-sidebar | 9:30 AM · morning · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: text-contrast
-text-contrast | d7-day-with-entries-sidebar | Logs open on this side. | <root> # open: text-contrast
-text-contrast | d7-day-with-entries-sidebar | a day in the garden | <root> # open: text-contrast
-text-contrast | d7-day-with-entries-sidebar | tap to plant this day's bloom | 2 logs that day # open: text-contrast
-text-contrast | d7-day-with-entries-sidebar@2x | 9:30 AM · morning · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: text-contrast
-text-contrast | d7-day-with-entries-sidebar@2x | tap to plant this day's bloom | 2 logs that day # open: text-contrast
-text-contrast | d8-day-empty-sidebar | 0 logs that day | a day in the garden / Thursday, September 17 / Nothing logged this day yet. / Add a note to start the day's page. # open: text-contrast
-text-contrast | d8-day-empty-sidebar | Add a note to start the day's page. | <root> # open: text-contrast
-text-contrast | d8-day-empty-sidebar | a day in the garden | <root> # open: text-contrast
-text-contrast | d8-day-empty-sidebar | tap to plant this day's bloom | 0 logs that day / No entries for this day yet. # open: text-contrast
-text-contrast | d8-day-empty-sidebar@2x | tap to plant this day's bloom | 0 logs that day / No entries for this day yet. # open: text-contrast
-text-contrast | d9-mood-prompt-today | tap to plant today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | d9-mood-prompt-today@2x | tap to plant today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+truncated-text | d1-viewer-todos-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
+truncated-text | d14-delete-entry-dialog-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
+truncated-text | d15-viewer-middle-entry-sidebar@2x | Close | Friday, September 18 / Morning note / 2 of 3 # open: truncated-text
+truncated-text | d2-viewer-photo-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
+truncated-text | d3-viewer-voice@2x | Close | 0:00 / 1:05 / Friday, September 18 · 9:30 AM # open: truncated-text
+truncated-text | d4-viewer-video@2x | Close | Friday, September 18 · 9:30 AM / 0:00 / 0:04 # open: truncated-text
+truncated-text | d5-reader-menu-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
 truncated-text | d5-reader-menu-sidebar@2x | Select All | <root> # open: truncated-text
+truncated-text | d6-task-toast-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text

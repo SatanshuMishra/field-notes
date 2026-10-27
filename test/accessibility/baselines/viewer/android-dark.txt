@@ -19,16 +19,12 @@ missing-role | d8-day-empty@2x | Dismiss day detail | <root> # Flutter's own con
 overlapping-text | d5-reader-menu@2x | Copy + Select all | <root> # open: text overlaps other text at 2x text
 small-target | d1-viewer-todos | call the ferry office | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
 small-target | d1-viewer-todos | pack the tide tables | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
-small-target | d1-viewer-todos@2x | call the ferry office | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
-small-target | d1-viewer-todos@2x | pack the tide tables | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
 small-target | d5-reader-menu | Copy | <root> # Flutter's own control
 small-target | d5-reader-menu | Select all | <root> # Flutter's own control
 small-target | d5-reader-menu@2x | <unlabelled> | <root> # open: tap target under the platform minimum
 small-target | d5-reader-menu@2x | Copy | <root> # Flutter's own control
 small-target | d6-task-toast | call the ferry office | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
 small-target | d6-task-toast | pack the tide tables | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
-small-target | d6-task-toast@2x | call the ferry office | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
-small-target | d6-task-toast@2x | pack the tide tables | Friday, September 18 / Morning note # open: to-do checkbox is under the platform minimum
 truncated-text | d12-mood-set@2x | Feeling Calm | <root> # open: text is cut short at 2x text
 truncated-text | d12-mood-set@2x | Lavender · today's bloom | <root> # open: text is cut short at 2x text
 truncated-text | d15-viewer-middle-entry@2x | 10:00 AM · note | Later log # open: text is cut short at 2x text

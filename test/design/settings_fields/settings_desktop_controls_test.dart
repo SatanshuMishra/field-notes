@@ -319,14 +319,6 @@ void main() {
               Palette.onAccent,
               true,
             ),
-            (
-              _dangerKey,
-              'Delete all',
-              Palette.danger,
-              colors.line,
-              Palette.onAccent,
-              true,
-            ),
           ]) {
         final BoxDecoration pill = _decorationsOf(tester, key).first;
         final Rect pillRect = _rects(_decorations(key)).first;
@@ -370,6 +362,29 @@ void main() {
           reason: label,
         );
       }
+      expect(
+        tester
+            .widget<StickerButton>(
+              find.descendant(
+                of: find.byKey(_dangerKey),
+                matching: find.byType(StickerButton),
+              ),
+            )
+            .variant,
+        StickerButtonVariant.danger,
+      );
+      final BoxDecoration dangerFace = _decorationsOf(tester, _dangerKey).first;
+      expect(dangerFace.color, isNull);
+      expect(dangerFace.boxShadow ?? const <BoxShadow>[], isEmpty);
+      expect(_side(dangerFace).width, 1.5);
+      expect(_side(dangerFace).color.toARGB32(), colors.dangerInk.toARGB32());
+      final TextStyle dangerLabel = _styleOf(tester, 'Delete all');
+      _expectSmallSans(dangerLabel, 12, FontWeight.w600);
+      expect(dangerLabel.color!.toARGB32(), colors.dangerInk.toARGB32());
+      expect(
+        tester.getRect(find.byKey(_dangerKey)).height,
+        greaterThanOrEqualTo(24),
+      );
       await tester.tap(find.byKey(_primaryKey));
       await tester.tap(find.byKey(_dangerKey));
       expect(presses, <String>['primary', 'danger']);

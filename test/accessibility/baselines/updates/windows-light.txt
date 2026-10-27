@@ -1,43 +1,4 @@
-flutter-text-contrast | u1-update-notes-new | Field Notes saves your journal and any open draft, then restarts. It takes a few seconds. | Field Notes 2.4.0 # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u1-update-notes-new | Released October 9, 2026 | Field Notes 2.4.0 # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u1-update-notes-new | update available | Field Notes 2.4.0 # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u1-update-notes-new@2x | Field Notes saves your journal and any open draft, then restarts. It takes a few seconds. | Field Notes 2.4.0 # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u1-update-notes-new@2x | Released October 9, 2026 | Field Notes 2.4.0 # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u1-update-notes-new@2x | update available | Field Notes 2.4.0 # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u2-update-notes-installed | Released October 1, 2026 | Field Notes 1.4.2 # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u2-update-notes-installed | release notes | Field Notes 1.4.2 # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u2-update-notes-installed@2x | Released October 1, 2026 | Field Notes 1.4.2 # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u2-update-notes-installed@2x | release notes | Field Notes 1.4.2 # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting | Capture a moment — write it, speak it, or film it. | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting | Good evening | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting | Oct 25 – Oct 31 | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting | capture a moment | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting | on this day | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting | this week's garden | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting | today · 0 logs | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting@2x | Capture a moment — write it, speak it, or film it. | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting@2x | Good evening | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting@2x | Oct 25 – Oct 31 | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting@2x | capture a moment | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | u3-update-greeting@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting@2x | on this day | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting@2x | this week's garden | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u3-update-greeting@2x | today · 0 logs | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline | Check for updates | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline | GitHub | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline | Read notes | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline | Website | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline | author | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline | updates | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline | © 2026 Satanshu Mishra · Licensed under the Apache License 2.0 | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline@2x | Check for updates | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline@2x | GitHub | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline@2x | Read notes | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline@2x | Website | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline@2x | author | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline@2x | updates | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | u4-update-error-offline@2x | © 2026 Satanshu Mishra · Licensed under the Apache License 2.0 | <root> # open: fails Flutter's text contrast guideline
 overlapping-text | u3-update-greeting@2x | field / notes + Today | <root> # open: text overlaps other text at 2x text
 small-target | u1-update-notes-new | Close | Field Notes 2.4.0 # open: tap target under the platform minimum
 small-target | u1-update-notes-new@2x | Close | Field Notes 2.4.0 # open: tap target under the platform minimum
@@ -56,77 +17,29 @@ small-target | u4-update-error-offline | GitHub | <root> # open: tap target unde
 small-target | u4-update-error-offline | Read notes | <root> # open: tap target under the platform minimum
 small-target | u4-update-error-offline | Website | <root> # open: tap target under the platform minimum
 small-target | u4-update-error-offline@2x | Check automatically | <root> # open: tap target under the platform minimum
-text-contrast | u1-update-notes-new | Field Notes saves your journal and any open draft, then r... | Field Notes saves your journal and any open draft, then restarts. It takes a few seconds. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u1-update-notes-new | Fixed | Field Notes 2.4.0 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u1-update-notes-new | New | Field Notes 2.4.0 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u1-update-notes-new | Released October 9, 2026 | Field Notes 2.4.0 # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u1-update-notes-new | open installed notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u1-update-notes-new | open new notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u1-update-notes-new | update available | Field Notes 2.4.0 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u1-update-notes-new@2x | Field Notes saves your journal and any open draft, then r... | Field Notes saves your journal and any open draft, then restarts. It takes a few seconds. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u1-update-notes-new@2x | Released October 9, 2026 | Field Notes 2.4.0 # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u1-update-notes-new@2x | open installed notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u1-update-notes-new@2x | open new notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u2-update-notes-installed | Improved | Field Notes 1.4.2 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u2-update-notes-installed | Released October 1, 2026 | Field Notes 1.4.2 # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u2-update-notes-installed | open installed notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u2-update-notes-installed | open new notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u2-update-notes-installed | release notes | Field Notes 1.4.2 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u2-update-notes-installed@2x | Released October 1, 2026 | Field Notes 1.4.2 # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u2-update-notes-installed@2x | open installed notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u2-update-notes-installed@2x | open new notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting | Capture a moment — write it, speak it, or film it. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u3-update-greeting | Fri | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting | Good evening | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting | Mon | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting | Oct 25 – Oct 31 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u3-update-greeting | Sat | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u3-update-greeting | Sun | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u3-update-greeting | Thu | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u3-update-greeting | Tue | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u3-update-greeting | Wed | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting | capture a moment | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting | on this day | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting | tap to plant today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting | this week's garden | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting | today · 0 logs | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting@2x | Capture a moment — write it, speak it, or film it. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u3-update-greeting@2x | Fri | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting@2x | Mon | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting@2x | Oct 25 – Oct 31 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u3-update-greeting@2x | Sat | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u3-update-greeting@2x | Sun | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u3-update-greeting@2x | Thu | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u3-update-greeting@2x | Tue | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u3-update-greeting@2x | Wed | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | u3-update-greeting@2x | field / notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting@2x | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting@2x | on this day | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u3-update-greeting@2x | tap to plant today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline | Check for updates | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline | Couldn’t check for updates. Check your connection and try... | Couldn’t check for updates / Couldn’t check for updates. Check your connection and try again. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline | Designed and built Field Notes. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline | GitHub | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline | Once a day. Nothing installs until you choose. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline | Read notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline | Website | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline | What changed in version 1.4.2 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline | author | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline | updates | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline | © 2026 Satanshu Mishra · Licensed under the Apache Licens... | © 2026 Satanshu Mishra · Licensed under the Apache License 2.0 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline@2x | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline@2x | Check for updates | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline@2x | Couldn’t check for updates. Check your connection and try... | Couldn’t check for updates / Couldn’t check for updates. Check your connection and try again. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline@2x | Designed and built Field Notes. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline@2x | GitHub | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline@2x | Once a day. Nothing installs until you choose. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline@2x | Read notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline@2x | Website | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline@2x | What changed in version 1.4.2 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline@2x | author | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline@2x | updates | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | u4-update-error-offline@2x | © 2026 Satanshu Mishra · Licensed under the Apache Licens... | © 2026 Satanshu Mishra · Licensed under the Apache License 2.0 # open: text contrast below 4.5:1, or 3:1 for large text
 truncated-text | u3-update-greeting@2x | Calendar | <root> # open: text is cut short at 2x text
 truncated-text | u3-update-greeting@2x | Meadow | <root> # open: text is cut short at 2x text
+truncated-text | u3-update-greeting@2x | Search | <root> # open: truncated-text
+truncated-text | u3-update-greeting@2x | Today | <root> # open: truncated-text
+truncated-text | u3-update-greeting@2x | field / notes | <root> # open: truncated-text

@@ -228,34 +228,32 @@ void main() {
     },
   );
 
-  testWidgets(
-    'an idle editor with a selected photo schedules no frames',
-    (WidgetTester tester) async {
-      _pinSurface(tester);
-      final _Harness harness = _Harness();
-      await harness.pump(
-        tester,
-        _photoNote,
-        selection: const NoteSelection.collapsed(5),
-      );
-      await tester.pump();
-      await tester.pump();
-      expect(tester.binding.hasScheduledFrame, isFalse);
-      await tester.binding.delayed(const Duration(seconds: 3));
-      expect(tester.binding.hasScheduledFrame, isFalse);
+  testWidgets('an idle editor with a selected photo schedules no frames', (
+    WidgetTester tester,
+  ) async {
+    _pinSurface(tester);
+    final _Harness harness = _Harness();
+    await harness.pump(
+      tester,
+      _photoNote,
+      selection: const NoteSelection.collapsed(5),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    await tester.binding.delayed(const Duration(seconds: 3));
+    expect(tester.binding.hasScheduledFrame, isFalse);
 
-      await harness.pump(
-        tester,
-        _photoNote,
-        selection: const NoteSelection.collapsed(51),
-      );
-      await tester.pump();
-      await tester.pump();
-      await tester.binding.delayed(const Duration(milliseconds: 600));
-      expect(tester.binding.hasScheduledFrame, isTrue);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
-  );
+    await harness.pump(
+      tester,
+      _photoNote,
+      selection: const NoteSelection.collapsed(51),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.binding.delayed(const Duration(milliseconds: 600));
+    expect(tester.binding.hasScheduledFrame, isTrue);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('the composing range is underlined', (WidgetTester tester) async {
     _pinSurface(tester);
@@ -378,7 +376,8 @@ void main() {
         ((Symbol, List<dynamic>) call) => call.$1 == #drawCircle,
       );
       final int caret = log.indexWhere(
-        ((Symbol, List<dynamic>) call) => _isRectIn(call, Palette.coral),
+        ((Symbol, List<dynamic>) call) =>
+            _isRectIn(call, FieldNotesColors.light.accentInk),
       );
       expect(circle, greaterThanOrEqualTo(0));
       expect(caret, greaterThan(circle));
@@ -466,25 +465,23 @@ void main() {
       expect(tester.binding.hasScheduledFrame, isFalse);
     });
 
-    testWidgets(
-      'the Android caret is two pixels wide and blinks',
-      (WidgetTester tester) async {
-        _pinSurface(tester);
-        final _Harness harness = _Harness();
-        await harness.pump(
-          tester,
-          'The fog lifted.',
-          selection: const NoteSelection.collapsed(3),
-        );
-        expect(harness.view.caretRect!.width, 2);
-        expect(harness.view.caretBlinkVisible, isTrue);
-        await tester.pump(noteCaretBlinkHalfPeriod);
-        expect(harness.view.caretBlinkVisible, isFalse);
-        await tester.pump(noteCaretBlinkHalfPeriod);
-        expect(harness.view.caretBlinkVisible, isTrue);
-      },
-      variant: TargetPlatformVariant.only(TargetPlatform.android),
-    );
+    testWidgets('the Android caret is two pixels wide and blinks', (
+      WidgetTester tester,
+    ) async {
+      _pinSurface(tester);
+      final _Harness harness = _Harness();
+      await harness.pump(
+        tester,
+        'The fog lifted.',
+        selection: const NoteSelection.collapsed(3),
+      );
+      expect(harness.view.caretRect!.width, 2);
+      expect(harness.view.caretBlinkVisible, isTrue);
+      await tester.pump(noteCaretBlinkHalfPeriod);
+      expect(harness.view.caretBlinkVisible, isFalse);
+      await tester.pump(noteCaretBlinkHalfPeriod);
+      expect(harness.view.caretBlinkVisible, isTrue);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
     testWidgets('removing the view stops the blink', (
       WidgetTester tester,

@@ -128,17 +128,23 @@ void main() {
       tester,
       confirmDialogConfirmKey,
     );
-    expect(action.color!.toARGB32(), Palette.danger.toARGB32());
+    expect(action.color, isNull);
     expect(
       action.borderRadius,
       const BorderRadius.all(Radius.circular(14)),
     );
     expect((action.border! as Border).top.width, 1.5);
-    expect(action.boxShadow!.single.offset, const Offset(2, 2));
-    expect(action.boxShadow!.single.blurRadius, 0);
+    expect(
+      (action.border! as Border).top.color.toARGB32(),
+      FieldNotesColors.light.dangerInk.toARGB32(),
+    );
+    expect(action.boxShadow, isNull);
     final TextStyle actionStyle = tester.widget<Text>(find.text('Delete'))
         .style!;
-    expect(actionStyle.color!.toARGB32(), Palette.onAccent.toARGB32());
+    expect(
+      actionStyle.color!.toARGB32(),
+      FieldNotesColors.light.dangerInk.toARGB32(),
+    );
     expect(actionStyle.fontSize, 14);
     expect(actionStyle.fontWeight, FontWeight.w600);
 

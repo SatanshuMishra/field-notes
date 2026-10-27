@@ -928,6 +928,24 @@ void main() {
     expect(await _swept(tester, _android, crowded, rules: rules), isEmpty);
   });
 
+  testWidgets('text cut short in height at 2x text is a finding', (
+    WidgetTester tester,
+  ) async {
+    const Widget squeezed = SizedBox(
+      width: 300,
+      height: 20,
+      child: Text(
+        'Delete everywhere',
+        style: TextStyle(fontSize: 14, height: 1),
+      ),
+    );
+    const Set<String> rules = <String>{'truncated-text'};
+    expect(await _swept(tester, _androidAt2x, squeezed, rules: rules), <String>[
+      'truncated-text | planted@2x | Delete everywhere | <root>',
+    ]);
+    expect(await _swept(tester, _android, squeezed, rules: rules), isEmpty);
+  });
+
   testWidgets('overlapping text at 2x is a finding', (
     WidgetTester tester,
   ) async {

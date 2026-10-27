@@ -504,7 +504,13 @@ void main() {
           _Shape.rounded,
           radius: 14,
         ),
-        _Row('Remove', _pressable('Remove'), _dark, _Shape.rounded, radius: 14),
+        _Row(
+          'Remove',
+          _pressable('Remove'),
+          _lightRow,
+          _Shape.rounded,
+          radius: 14,
+        ),
       ]);
 
       await _pump(

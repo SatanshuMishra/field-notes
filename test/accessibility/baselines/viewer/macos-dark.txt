@@ -1,11 +1,7 @@
-keyboard | d1-viewer-todos-sidebar | call the ferry office | Friday, September 18 / Morning note # open: keyboard
-keyboard | d1-viewer-todos-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: keyboard
 keyboard | d11-mood-picker-sidebar | Dismiss mood picker | <root> # open: keyboard
 keyboard | d13-change-mood-dialog-sidebar | Dismiss | <root> # open: keyboard
 keyboard | d14-delete-entry-dialog-sidebar | Dismiss | <root> # open: keyboard
 keyboard | d16-day-past-mood-sidebar | Dismiss day detail | <root> # open: keyboard
-keyboard | d6-task-toast-sidebar | call the ferry office | Friday, September 18 / Morning note # open: keyboard
-keyboard | d6-task-toast-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: keyboard
 keyboard | d7-day-with-entries-sidebar | 2:30 PM · afternoon · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: keyboard
 keyboard | d7-day-with-entries-sidebar | Dismiss day detail | <root> # open: keyboard
 keyboard | d8-day-empty-sidebar | Dismiss day detail | <root> # open: keyboard
@@ -21,14 +17,14 @@ missing-role | d7-day-with-entries-sidebar | Dismiss day detail | <root> # open:
 missing-role | d7-day-with-entries-sidebar@2x | Dismiss day detail | <root> # open: missing-role
 missing-role | d8-day-empty-sidebar | Dismiss day detail | <root> # open: missing-role
 missing-role | d8-day-empty-sidebar@2x | Dismiss day detail | <root> # open: missing-role
-small-target | d1-viewer-todos-sidebar | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d1-viewer-todos-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: small-target
-small-target | d1-viewer-todos-sidebar@2x | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d1-viewer-todos-sidebar@2x | pack the tide tables | Friday, September 18 / Morning note # open: small-target
 small-target | d5-reader-menu-sidebar | Copy | <root> # open: small-target
 small-target | d5-reader-menu-sidebar | Select All | <root> # open: small-target
-small-target | d6-task-toast-sidebar | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d6-task-toast-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: small-target
-small-target | d6-task-toast-sidebar@2x | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d6-task-toast-sidebar@2x | pack the tide tables | Friday, September 18 / Morning note # open: small-target
+truncated-text | d1-viewer-todos-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
+truncated-text | d14-delete-entry-dialog-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
+truncated-text | d15-viewer-middle-entry-sidebar@2x | Close | Friday, September 18 / Morning note / 2 of 3 # open: truncated-text
+truncated-text | d2-viewer-photo-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
+truncated-text | d3-viewer-voice@2x | Close | 0:00 / 1:05 / Friday, September 18 · 9:30 AM # open: truncated-text
+truncated-text | d4-viewer-video@2x | Close | Friday, September 18 · 9:30 AM / 0:00 / 0:04 # open: truncated-text
+truncated-text | d5-reader-menu-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
 truncated-text | d5-reader-menu-sidebar@2x | Select All | <root> # open: truncated-text
+truncated-text | d6-task-toast-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text

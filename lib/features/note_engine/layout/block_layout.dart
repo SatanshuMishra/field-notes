@@ -7,9 +7,20 @@ import 'package:field_notes/features/note_engine/layout/note_inks.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout.dart';
 import 'package:field_notes/features/note_engine/layout/note_typography.dart';
 import 'package:field_notes/features/note_engine/projection/visible_text.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/painting.dart';
 
 const double noteColumnEm = 45;
+const double noteTouchCheckboxTarget = 48;
+const double _macCheckboxTarget = 28;
+const double _windowsCheckboxTarget = 40;
+
+double noteCheckboxTarget(TargetPlatform platform) => switch (platform) {
+  TargetPlatform.macOS => _macCheckboxTarget,
+  TargetPlatform.windows => _windowsCheckboxTarget,
+  _ => noteTouchCheckboxTarget,
+};
 
 const double _tolerance = 1e-9;
 const int _lineFeed = 0x0A;
@@ -266,7 +277,7 @@ LayoutRow _rowOf(
   final GapRole gapRole = _gapRoleOf(seed.chain, seed.block);
   final double gapBefore = previous == null
       ? 0
-      : _gapBetween(previous.kind, previous.gapRole, seed.kind, gapRole, em);
+      : _rowGap(inputs, previous, seed.kind, gapRole, visibleRange, em);
   final int continuedQuoteLevels = previous == null
       ? 0
       : _sharedQuoteLevels(_quotesOf(previousChain), _quotesOf(seed.chain));
@@ -771,11 +782,12 @@ final class _RowPlanner {
     final LayoutRow before = _rows.last;
     final MdTree tree = inputs.tree;
     return row.gapBefore ==
-            _gapBetween(
-              before.kind,
-              before.gapRole,
+            _rowGap(
+              inputs,
+              before,
               row.kind,
               row.gapRole,
+              row.visibleRange,
               em,
             ) &&
         row.continuedQuoteLevels ==
@@ -1318,6 +1330,41 @@ double _gapBetween(
         nextKind == LayoutRowKind.blankLine
     ? 0
     : touchingBlockGapEm(previousRole, nextRole) * em;
+
+double _rowGap(
+  LayoutInputs inputs,
+  LayoutRow previous,
+  LayoutRowKind kind,
+  GapRole role,
+  TextRange visibleRange,
+  double em,
+) {
+  final double gap = _gapBetween(
+    previous.kind,
+    previous.gapRole,
+    kind,
+    role,
+    em,
+  );
+  return previous.gapRole == GapRole.listItem &&
+          role == GapRole.listItem &&
+          _holdsCheckbox(inputs.visibleText, previous.visibleRange) &&
+          _holdsCheckbox(inputs.visibleText, visibleRange)
+      ? math.max(gap, _checkboxClearance(em))
+      : gap;
+}
+
+bool _holdsCheckbox(VisibleText visible, TextRange visibleRange) =>
+    visible.atomics.any(
+      (AtomicObject atomic) =>
+          atomic.kind == AtomicKind.checkbox &&
+          atomic.visibleOffset >= visibleRange.start &&
+          atomic.visibleOffset < visibleRange.end,
+    );
+
+double _checkboxClearance(double em) =>
+    noteCheckboxTarget(defaultTargetPlatform) -
+    (NoteTypography.body.height ?? 1) * em;
 
 TextRange _visibleRangeOf(
   VisibleText visible,

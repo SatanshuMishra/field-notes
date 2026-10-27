@@ -35,6 +35,7 @@ abstract final class Palette {
   static const Color mediaBlack = Color(0xFF0E0B09);
   static const Color mediaInk = Color(0xFFF3E6D1);
   static const Color mediaPlayed = Color(0xFFE3889A);
+  static const Color mediaDangerInk = Color(0xFFF5D4D0);
 
   static const Color onDark30 = Color(0x4DFFFFFF);
   static const Color onDark40 = Color(0x66FFFFFF);
