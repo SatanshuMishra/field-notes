@@ -153,6 +153,7 @@ Future<void> _openViewerAmong(
   required List<Entry> entries,
   required String entryId,
   MediaResolver? resolver,
+  EntryVideoPlayerFactory? videoPlayer,
 }) async {
   variant.useWindow(tester);
   final LruVideoSlots slots = LruVideoSlots(cap: 1);
@@ -175,7 +176,7 @@ Future<void> _openViewerAmong(
           FakeEntryAudioPlayer.new,
         ),
         todayVideoPlayerFactoryProvider.overrideWithValue(
-          FakeEntryVideoPlayer.new,
+          videoPlayer ?? FakeEntryVideoPlayer.new,
         ),
         videoSlotsProvider.overrideWithValue(slots),
         videoAspectProvider.overrideWith((Ref ref, String mediaId) => null),
@@ -196,6 +197,21 @@ Future<void> _openViewerAmong(
   );
   await _launch(tester);
 }
+
+Future<void> openA11yViewer(
+  WidgetTester tester,
+  A11yVariant variant, {
+  required Entry entry,
+  required MediaResolver resolver,
+  EntryVideoPlayerFactory? videoPlayer,
+}) => _openViewerAmong(
+  tester,
+  variant,
+  entries: <Entry>[entry],
+  entryId: entry.id,
+  resolver: resolver,
+  videoPlayer: videoPlayer,
+);
 
 RenderNoteView _reader(WidgetTester tester) => tester.renderObject(
   find.descendant(

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/phone_bottom_bar.dart';
+import 'package:field_notes/app/shell/sidebar_shell.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
@@ -25,6 +26,7 @@ import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/features/today/today_entry_feed.dart';
 import 'package:field_notes/features/today/today_mood_dock.dart';
 import 'package:field_notes/features/today/today_providers.dart';
+import 'package:field_notes/features/today/today_screen.dart';
 import 'package:field_notes/state/state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,6 +50,9 @@ const String _today = '2026-09-25';
 const String _voiceMediaId = 'voice-1';
 const String _gardenEmptyMessage =
     'Your meadow is waiting. Every day you journal plants a bloom here.';
+const String _searchEmptyMessage =
+    'No days yet. Start journaling and your days appear here.';
+const String _searchErrorMessage = 'Your days could not be loaded right now.';
 
 final DateTime _now = DateTime(2026, 9, 25, 9, 30);
 final int _nineThirty = _now.millisecondsSinceEpoch;
@@ -215,6 +220,36 @@ List<Override> _calendarOverrides() => <Override>[
   ),
 ];
 
+List<Override> _emptyCalendarOverrides() => <Override>[
+  weekStartProvider.overrideWithValue(WeekStart.sunday),
+  journaledDatesProvider.overrideWith(
+    (Ref ref) => Stream<List<String>>.value(const <String>[]),
+  ),
+  daysInMonthProvider.overrideWith(
+    (Ref ref, ({int year, int month}) args) =>
+        Stream<List<Day>>.value(const <Day>[]),
+  ),
+];
+
+final Set<Object?> _journalProviders = <Object?>{
+  journaledDatesProvider,
+  journalEntryCountsProvider,
+};
+
+List<Override> _emptyShellOverrides() => <Override>[
+  for (final Override override in _shellStateOverrides())
+    if (!_journalProviders.contains(override.origin)) override,
+  journaledDatesProvider.overrideWith(
+    (Ref ref) => Stream<List<String>>.value(const <String>[]),
+  ),
+  journalEntryCountsProvider.overrideWith(
+    (Ref ref) => Stream<Map<String, int>>.value(const <String, int>{}),
+  ),
+  allDaysProvider.overrideWith(
+    (Ref ref) => Stream<List<Day>>.value(const <Day>[]),
+  ),
+];
+
 List<Override> _gardenOverrides({
   required List<Day> days,
   required List<String> journaled,
@@ -358,6 +393,49 @@ Future<void> _pumpGarden(
     variant,
     const Scaffold(body: GardenScreen()),
     overrides: _gardenOverrides(days: days, journaled: journaled),
+  );
+  await tester.pump();
+  await tester.pump();
+}
+
+Future<void> _pumpEmptyShell(WidgetTester tester, A11yVariant variant) async {
+  await _pumpApp(
+    tester,
+    variant,
+    const AppShell(),
+    overrides: _emptyShellOverrides(),
+  );
+  await tester.pump();
+}
+
+Future<void> _pumpEmptyCalendar(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _pumpApp(
+    tester,
+    variant,
+    Scaffold(body: CalendarScreen(today: _now)),
+    overrides: _emptyCalendarOverrides(),
+  );
+  await tester.pump();
+}
+
+Future<void> _pumpSearchOf(
+  WidgetTester tester,
+  A11yVariant variant, {
+  required Stream<List<Day>> Function() days,
+}) async {
+  await _pumpApp(
+    tester,
+    variant,
+    const Scaffold(body: SearchScreen()),
+    overrides: <Override>[
+      allDaysProvider.overrideWith((Ref ref) => days()),
+      searchAllEntriesProvider.overrideWith(
+        (Ref ref) => Stream<List<Entry>>.value(const <Entry>[]),
+      ),
+    ],
   );
   await tester.pump();
   await tester.pump();
@@ -534,6 +612,69 @@ final List<A11yState> shellStates = <A11yState>[
     proof: <A11yProof>[
       A11yProof(find.byType(PhoneFlowerMonth)),
       A11yProof(find.byKey(phoneThisMonthKey)),
+    ],
+  ),
+  A11yState(
+    id: 'a12-calendar-empty',
+    pump: _pumpEmptyCalendar,
+    proof: <A11yProof>[
+      A11yProof(find.byType(CalendarScreen)),
+      A11yProof(find.text('September 2026')),
+    ],
+  ),
+  A11yState(
+    id: 'a13-search-empty',
+    pump: (WidgetTester tester, A11yVariant variant) => _pumpSearchOf(
+      tester,
+      variant,
+      days: () => Stream<List<Day>>.value(const <Day>[]),
+    ),
+    proof: <A11yProof>[
+      A11yProof(find.byType(SearchField)),
+      A11yProof(find.text(_searchEmptyMessage)),
+    ],
+  ),
+  A11yState(
+    id: 'a14-meadow-empty',
+    platforms: const <TargetPlatform>{
+      TargetPlatform.macOS,
+      TargetPlatform.windows,
+    },
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _pumpEmptyShell(tester, variant);
+      await tester.tap(find.byKey(const ValueKey<String>('rail-garden')));
+      await tester.pump();
+      await _waitForMeadow(tester);
+    },
+    proof: <A11yProof>[
+      A11yProof(find.byKey(sidebarRailKey)),
+      A11yProof(find.text(_gardenEmptyMessage)),
+    ],
+  ),
+  A11yState(
+    id: 'a15-today-empty-sidebar',
+    platforms: const <TargetPlatform>{
+      TargetPlatform.macOS,
+      TargetPlatform.windows,
+    },
+    pump: _pumpEmptyShell,
+    proof: <A11yProof>[
+      A11yProof(find.byKey(sidebarRailKey)),
+      A11yProof(find.byType(TodayScreen)),
+    ],
+  ),
+  A11yState(
+    id: 'a16-search-error',
+    pump: (WidgetTester tester, A11yVariant variant) => _pumpSearchOf(
+      tester,
+      variant,
+      days: () => Stream<List<Day>>.error(
+        const FileSystemException('journal unreadable'),
+      ),
+    ),
+    proof: <A11yProof>[
+      A11yProof(find.byType(SearchField)),
+      A11yProof(find.text(_searchErrorMessage)),
     ],
   ),
 ];

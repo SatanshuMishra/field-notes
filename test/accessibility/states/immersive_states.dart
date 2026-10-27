@@ -265,6 +265,20 @@ Future<void> _pumpVoiceSaving(WidgetTester tester, A11yVariant variant) async {
   _requireVoicePhase(tester, VoiceRecorderPhase.saving);
 }
 
+Future<void> _pumpVoiceSaveError(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _openVoice(
+    tester,
+    variant,
+    service: FakeCaptureService(failure: _heldSaveFailure),
+  );
+  await _startVoiceTake(tester);
+  await _tap(tester, voiceSavePillKey);
+  await tester.pump(_panelOpen);
+}
+
 Future<void> _pumpVideoIdle(WidgetTester tester, A11yVariant variant) async {
   await _openVideo(tester, variant);
   _requireVideoPhase(tester, VideoRecorderPhase.idle);
@@ -411,6 +425,15 @@ final List<A11yState> immersiveStates = <A11yState>[
       A11yProof(_semanticsLabelled(videoStopAndKeepLabel)),
       A11yProof(find.text(stageRecordingStatus)),
       A11yProof(find.byKey(videoSaveCircleKey)),
+    ],
+  ),
+  ..._inBothLayouts(
+    id: 'i11-voice-save-error',
+    pump: _pumpVoiceSaveError,
+    proof: <A11yProof>[
+      A11yProof(find.byKey(voiceErrorKey)),
+      A11yProof(find.text(_heldSaveFailure.message)),
+      A11yProof(find.byKey(voiceSavePillKey)),
     ],
   ),
 ];

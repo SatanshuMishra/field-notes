@@ -4,6 +4,52 @@ flutter-text-contrast | b1-settings | turn on sync | <root> # open: fails Flutte
 flutter-text-contrast | b1-settings@2x | Your journal is stored only on this Mac. Turn on sync to keep it on your other devices too. Everything is encrypted before it leaves this Mac. | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | b1-settings@2x | settings | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | b1-settings@2x | turn on sync | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b11-select-dropdown-input-profile | input profile | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b11-select-dropdown-input-profile | settings | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b11-select-dropdown-input-profile | speaker | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b11-select-dropdown-input-profile@2x | input profile | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b11-select-dropdown-input-profile@2x | settings | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b11-select-dropdown-input-profile@2x | speaker | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b12-select-dropdown-microphone | input profile | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b12-select-dropdown-microphone | microphone | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b12-select-dropdown-microphone | settings | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b12-select-dropdown-microphone | speaker | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b12-select-dropdown-microphone@2x | input profile | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b12-select-dropdown-microphone@2x | microphone | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b12-select-dropdown-microphone@2x | settings | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b12-select-dropdown-microphone@2x | speaker | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b13-select-dropdown-speaker | input profile | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b13-select-dropdown-speaker | microphone | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b13-select-dropdown-speaker | settings | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b13-select-dropdown-speaker | speaker | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b13-select-dropdown-speaker@2x | input profile | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b13-select-dropdown-speaker@2x | microphone | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b13-select-dropdown-speaker@2x | settings | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b13-select-dropdown-speaker@2x | speaker | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b15-settings-data-error | Export… | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b15-settings-data-error | Open | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b15-settings-data-error | Reclaim space | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b15-settings-data-error | erase | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b15-settings-data-error | settings | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b15-settings-data-error | your journal | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b15-settings-data-error@2x | Export… | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b15-settings-data-error@2x | Open | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b15-settings-data-error@2x | Reclaim space | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b15-settings-data-error@2x | erase | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b15-settings-data-error@2x | settings | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b15-settings-data-error@2x | your journal | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b16-settings-sync-paused | Change | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b16-settings-sync-paused | Show code | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b16-settings-sync-paused | media | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b16-settings-sync-paused | server & devices | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b16-settings-sync-paused | settings | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b16-settings-sync-paused | sync | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b16-settings-sync-paused@2x | Change | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b16-settings-sync-paused@2x | Show code | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b16-settings-sync-paused@2x | media | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b16-settings-sync-paused@2x | server & devices | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b16-settings-sync-paused@2x | settings | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b16-settings-sync-paused@2x | sync | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | b2-settings-spell-unavailable | Light | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | b2-settings-spell-unavailable | Medium | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | b2-settings-spell-unavailable | Show tour | <root> # open: fails Flutter's text contrast guideline
@@ -90,12 +136,43 @@ flutter-text-contrast | b9-settings-about@2x | author | <root> # open: fails Flu
 flutter-text-contrast | b9-settings-about@2x | settings | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | b9-settings-about@2x | updates | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | b9-settings-about@2x | © 2026 Satanshu Mishra · Licensed under the Apache License 2.0 | <root> # open: fails Flutter's text contrast guideline
+focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Input volume # open: focus indicator below 3:1
+focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Output volume # open: focus indicator below 3:1
+focus-visible | b12-select-dropdown-microphone | <unlabelled> | Input volume # open: focus indicator below 3:1
+focus-visible | b12-select-dropdown-microphone | <unlabelled> | Output volume # open: focus indicator below 3:1
+focus-visible | b13-select-dropdown-speaker | <unlabelled> | Input volume # open: focus indicator below 3:1
+focus-visible | b13-select-dropdown-speaker | <unlabelled> | Output volume # open: focus indicator below 3:1
+keyboard | b11-select-dropdown-input-profile | Studio / Your microphone as it is, with no processing. | <root> # open: Tab never reaches it
+keyboard | b11-select-dropdown-input-profile | Voice Isolation / Clears background noise like fans, traffic and typing from your voice. | <root> # open: Tab never reaches it
+keyboard | b12-select-dropdown-microphone | Built-in Microphone | <root> # open: Tab never reaches it
+keyboard | b12-select-dropdown-microphone | Headset Microphone | <root> # open: Tab never reaches it
+keyboard | b12-select-dropdown-microphone | System default | <root> # open: Tab never reaches it
+keyboard | b13-select-dropdown-speaker | Built-in Speakers | <root> # open: Tab never reaches it
+keyboard | b13-select-dropdown-speaker | Headphones | <root> # open: Tab never reaches it
+keyboard | b13-select-dropdown-speaker | System output | <root> # open: Tab never reaches it
+keyboard | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
 keyboard | b4-select-open | Monday | <root> # open: Tab never reaches it
 keyboard | b4-select-open | Saturday | <root> # open: Tab never reaches it
 keyboard | b4-select-open | Sunday | <root> # open: Tab never reaches it
 keyboard | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
 live-region | b1-settings | Sync & storage | <root> # open: status change is not announced
 live-region | b1-settings@2x | Sync & storage | <root> # open: status change is not announced
+live-region | b11-select-dropdown-input-profile | Voice | <root> # open: status change is not announced
+live-region | b11-select-dropdown-input-profile@2x | Voice | <root> # open: status change is not announced
+live-region | b12-select-dropdown-microphone | Voice | <root> # open: status change is not announced
+live-region | b12-select-dropdown-microphone@2x | Voice | <root> # open: status change is not announced
+live-region | b13-select-dropdown-speaker | Voice | <root> # open: status change is not announced
+live-region | b13-select-dropdown-speaker@2x | Voice | <root> # open: status change is not announced
+live-region | b14-sync-delete-all-dialog | Data | <root> # open: status change is not announced
+live-region | b14-sync-delete-all-dialog@2x | Data | <root> # open: status change is not announced
+live-region | b15-settings-data-error | Data | <root> # open: status change is not announced
+live-region | b15-settings-data-error@2x | Data | <root> # open: status change is not announced
+live-region | b16-settings-sync-paused | 0 devices · add or remove | Manage devices # open: status change is not announced
+live-region | b16-settings-sync-paused | Sync & storage | <root> # open: status change is not announced
+live-region | b16-settings-sync-paused | https://sync.example.com | <root> # open: status change is not announced
+live-region | b16-settings-sync-paused@2x | 0 devices · add or remove | Manage devices # open: status change is not announced
+live-region | b16-settings-sync-paused@2x | Sync & storage | <root> # open: status change is not announced
+live-region | b16-settings-sync-paused@2x | https://sync.example.com | <root> # open: status change is not announced
 live-region | b3-settings-notice | Data | <root> # open: status change is not announced
 live-region | b3-settings-notice@2x | Data | <root> # open: status change is not announced
 live-region | b5-delete-all-dialog | Data | <root> # open: status change is not announced
@@ -108,8 +185,14 @@ live-region | b9-settings-about | A journal of days · Version 1.4.2 | Field Not
 live-region | b9-settings-about | About | <root> # open: status change is not announced
 live-region | b9-settings-about@2x | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: status change is not announced
 live-region | b9-settings-about@2x | About | <root> # open: status change is not announced
+missing-role | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b14-sync-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
 missing-role | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
 missing-role | b5-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
+small-target | b16-settings-sync-paused | Keep all media on this device | <root> # open: tap target under the platform minimum
+small-target | b16-settings-sync-paused | Pause sync | <root> # open: tap target under the platform minimum
+small-target | b16-settings-sync-paused@2x | Keep all media on this device | <root> # open: tap target under the platform minimum
+small-target | b16-settings-sync-paused@2x | Pause sync | <root> # open: tap target under the platform minimum
 small-target | b2-settings-spell-unavailable | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
 small-target | b2-settings-spell-unavailable@2x | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
 small-target | b4-select-open | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
@@ -140,6 +223,138 @@ text-contrast | b1-settings@2x | You lost every device. Use your 12 words. | Res
 text-contrast | b1-settings@2x | Your journal is stored only on this Mac. Turn on sync to ... | Your journal is stored only on this Mac. Turn on sync to keep it on your other devices too. Everything is encrypted before it leaves this Mac. # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b1-settings@2x | settings | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b1-settings@2x | turn on sync | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile | 100% | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile | 100% | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile | Clears background noise like fans, traffic and typing fro... | Voice Isolation / Clears background noise like fans, traffic and typing from your voice. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile | Input level | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile | Studio | Input profile # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile | System default | Input device # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile | System output | Output device # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile | Your microphone as it is, with no processing. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile | input profile | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile | microphone | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile | settings | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile | speaker | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile@2x | Studio | Input profile # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile@2x | input profile | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile@2x | microphone | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile@2x | settings | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b11-select-dropdown-input-profile@2x | speaker | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone | 100% | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone | 100% | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone | Input level | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone | Studio | Input profile # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone | System default | Input device # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone | System output | Output device # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone | input profile | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone | microphone | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone | settings | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone | speaker | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone@2x | Studio | Input profile # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone@2x | input profile | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone@2x | microphone | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone@2x | settings | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b12-select-dropdown-microphone@2x | speaker | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker | 100% | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker | 100% | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker | Input level | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker | Studio | Input profile # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker | System default | Input device # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker | System output | Output device # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker | input profile | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker | microphone | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker | settings | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker | speaker | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker@2x | Studio | Input profile # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker@2x | input profile | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker@2x | microphone | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker@2x | settings | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b13-select-dropdown-speaker@2x | speaker | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | About | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Data | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Data | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Delete all | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Erase every entry, photo, and mood on this device. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Erases it from your server and from every device the next... | Delete journal everywhere / Erases it from your server and from every device the next time they connect. This can't be undone. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Erases the journal, keys and media here. Your other devic... | Remove from this device / Erases the journal, keys and media here. Your other devices and your server keep everything. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Export | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Export… | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Journal | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Open | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Privacy policy | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Reclaim space | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Reclaim space | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Reminders & sound | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Remove photo files no entry or draft still refers to. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Save a zip of every entry and photo. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Sync & storage | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | Voice | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | erase | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | settings | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog | your journal | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | About | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Data | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Data | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Delete all | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Erase every entry, photo, and mood on this device. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Export | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Export… | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Journal | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Open | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Privacy policy | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Reclaim space | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Reclaim space | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Reminders & sound | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Remove photo files no entry or draft still refers to. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Save a zip of every entry and photo. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Sync & storage | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | Voice | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | erase | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | settings | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b14-sync-delete-all-dialog@2x | your journal | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error | Erase every entry, photo, and mood on this device. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error | Export… | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error | Open | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error | Reclaim space | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error | Remove photo files no entry or draft still refers to. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error | Save a zip of every entry and photo. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error | erase | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error | settings | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error | your journal | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error@2x | Erase every entry, photo, and mood on this device. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error@2x | Export… | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error@2x | Open | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error@2x | Reclaim space | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error@2x | Remove photo files no entry or draft still refers to. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error@2x | Save a zip of every entry and photo. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error@2x | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error@2x | settings | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b15-settings-data-error@2x | your journal | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused | 0 devices · add or remove | Manage devices # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused | Change | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused | Download every photo, voice note and video in the backgro... | Keep all media on this device / Download every photo, voice note and video in the background. On for Macs. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused | Show a code to scan | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused | Show code | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused | Stops sending and receiving until you switch it back | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused | https://sync.example.com | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused | media | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused | server & devices | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused | settings | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused | sync | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused@2x | 0 devices · add or remove | Manage devices # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused@2x | Change | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused@2x | Download every photo, voice note and video in the backgro... | Keep all media on this device / Download every photo, voice note and video in the background. On for Macs. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused@2x | Show a code to scan | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused@2x | Show code | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused@2x | Stops sending and receiving until you switch it back | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused@2x | https://sync.example.com | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused@2x | media | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused@2x | server & devices | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused@2x | settings | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | b16-settings-sync-paused@2x | sync | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b2-settings-spell-unavailable | A map of where everything lives. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b2-settings-spell-unavailable | Applies across the app. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | b2-settings-spell-unavailable | Light, dark, or match your device. | <root> # open: text contrast below 4.5:1, or 3:1 for large text

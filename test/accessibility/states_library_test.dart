@@ -1,13 +1,106 @@
+import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'states/capture_states.dart';
+import 'states/immersive_states.dart';
+import 'states/media_states.dart';
+import 'states/onboarding_states.dart';
 import 'states/settings_states.dart';
 import 'states/shell_states.dart';
+import 'states/sync_states.dart';
+import 'states/updates_states.dart';
 import 'states/viewer_states.dart';
 import 'support/a11y_state.dart';
 
 List<String> _ids(List<A11yState> states) => <String>[
   for (final A11yState state in states) state.id,
+];
+
+const List<String> _mainPathSlugs = <String>[
+  'video-download',
+  'video-controls',
+  'photo-viewer',
+  'sync-start',
+  'sync-join',
+  'sync-restore',
+  'add-device',
+  'change-server',
+  'devices-list',
+  'update-notes',
+  'update-greeting',
+  'select-dropdown',
+  'delete-all-dialog',
+  'today-empty',
+  'calendar-empty',
+  'search-empty',
+  'search-no-match',
+  'meadow-empty',
+  'day-empty',
+  'photo-error',
+  'video-error',
+  'voice-save-error',
+  'sync-error',
+  'update-error',
+];
+
+const List<String> _sheetStateIds = <String>[
+  'd1-viewer-todos',
+  'd2-viewer-photo',
+  'd5-reader-menu',
+  'd6-task-toast',
+  'd7-day-with-entries',
+  'd8-day-empty',
+  'd14-delete-entry-dialog',
+  'd15-viewer-middle-entry',
+  'd16-day-past-mood',
+];
+
+const A11yVariant _androidDark = A11yVariant(
+  platform: TargetPlatform.android,
+  brightness: Brightness.dark,
+);
+
+final Set<int> _lightSheetColours = <int>{
+  FieldNotesColors.light.cardWarm.toARGB32(),
+  FieldNotesColors.light.panelTop.toARGB32(),
+  FieldNotesColors.light.composerPaper.toARGB32(),
+};
+
+final Set<int> _darkSheetColours = <int>{
+  FieldNotesColors.dark.cardWarm.toARGB32(),
+  FieldNotesColors.dark.panelTop.toARGB32(),
+  FieldNotesColors.dark.composerPaper.toARGB32(),
+};
+
+List<A11yState> get _everyState => <A11yState>[
+  ...shellStates,
+  ...settingsStates,
+  ...captureStates,
+  ...viewerStates,
+  ...immersiveStates,
+  ...onboardingStates,
+  ...mediaStates,
+  ...syncStates,
+  ...updatesStates,
+];
+
+List<int> _sheetColours(WidgetTester tester) => <int>[
+  for (final Element sheet in find.byType(PhoneSheet).evaluate())
+    if (tester
+            .widgetList<DecoratedBox>(
+              find.descendant(
+                of: find.byElementPredicate(
+                  (Element element) => element == sheet,
+                ),
+                matching: find.byType(DecoratedBox),
+              ),
+            )
+            .first
+            .decoration
+        case BoxDecoration(:final Color color))
+      color.toARGB32(),
 ];
 
 void main() {
@@ -24,6 +117,11 @@ void main() {
       'a9-search-results',
       'a10-search-no-match',
       'a11-calendar-next-month',
+      'a12-calendar-empty',
+      'a13-search-empty',
+      'a14-meadow-empty',
+      'a15-today-empty-sidebar',
+      'a16-search-error',
     ]);
     expect(_ids(settingsStates), <String>[
       'b1-settings',
@@ -36,6 +134,12 @@ void main() {
       'b8-settings-data',
       'b9-settings-about',
       'b10-settings-about-phone',
+      'b11-select-dropdown-input-profile',
+      'b12-select-dropdown-microphone',
+      'b13-select-dropdown-speaker',
+      'b14-sync-delete-all-dialog',
+      'b15-settings-data-error',
+      'b16-settings-sync-paused',
     ]);
     expect(_ids(captureStates), <String>[
       'c1-chooser',
@@ -76,6 +180,62 @@ void main() {
       'd15-viewer-middle-entry',
       'd16-day-past-mood',
     ]);
+    expect(_ids(mediaStates), <String>[
+      'm1-video-download-black-poster',
+      'm2-video-download-white-poster',
+      'm3-video-controls',
+      'm4-photo-viewer',
+      'm5-photo-error',
+      'm6-video-error',
+      'm7-voice-unavailable',
+    ]);
+    expect(_ids(syncStates), <String>[
+      's1-sync-start',
+      's2-sync-join',
+      's3-sync-restore',
+      's4-add-device-unreachable',
+      's5-change-server',
+      's6-devices-list',
+      's7-sync-error-unreachable',
+      's8-devices-list-sync-error',
+    ]);
+    expect(_ids(updatesStates), <String>[
+      'u1-update-notes-new',
+      'u2-update-notes-installed',
+      'u3-update-greeting',
+      'u4-update-error-offline',
+    ]);
+  });
+
+  test('the state library holds every named main-path surface', () {
+    final List<String> ids = _ids(_everyState);
+    expect(<String>[
+      for (final String slug in _mainPathSlugs)
+        if (!ids.any((String id) => id.contains(slug))) slug,
+    ], isEmpty);
+  });
+
+  testWidgets('every state renders in the app theme for its brightness', (
+    WidgetTester tester,
+  ) async {
+    final Map<String, List<int>> painted = <String, List<int>>{};
+    for (final String id in _sheetStateIds) {
+      final A11yState state = viewerStates.singleWhere(
+        (A11yState state) => state.id == id,
+      );
+      await state.pump(tester, _androidDark);
+      painted[id] = _sheetColours(tester);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(minutes: 1));
+    }
+    for (final String id in _sheetStateIds) {
+      final List<int> colours = painted[id]!;
+      expect(colours, isNotEmpty, reason: '$id shows no sheet');
+      for (final int colour in colours) {
+        expect(_darkSheetColours, contains(colour), reason: id);
+        expect(_lightSheetColours, isNot(contains(colour)), reason: id);
+      }
+    }
   });
 
   test('stateful checks are attached only where their controls are built', () {
