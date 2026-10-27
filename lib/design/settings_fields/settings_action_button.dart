@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
 import '../widgets/sticker_button.dart';
+import 'settings_min_target.dart';
 
 const BorderRadius _pillRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusPill),
@@ -16,7 +17,6 @@ const EdgeInsets _pillPadding = EdgeInsets.symmetric(
   vertical: 5 + Shapes.outlineWidth,
 );
 const double _pillFontSize = 12;
-const double _pillMinTapTarget = 24;
 
 enum SettingsActionTone { neutral, primary, danger }
 
@@ -133,7 +133,9 @@ class _ActionPill extends StatelessWidget {
         return Opacity(
           opacity: enabled ? 1.0 : 0.5,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: _pillMinTapTarget),
+            constraints: BoxConstraints(
+              minHeight: settingsMinTargetOn(Theme.of(context).platform),
+            ),
             child: Center(
               widthFactor: 1,
               heightFactor: 1,
