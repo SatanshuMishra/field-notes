@@ -156,8 +156,8 @@ class StreakPill extends ConsumerWidget {
       boxShadow: look.shadows,
     );
     return switch (form) {
-      StreakPillForm.header || StreakPillForm.headerOverScene => SizedBox(
-        height: streakPillHeaderHeight,
+      StreakPillForm.header || StreakPillForm.headerOverScene => ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: streakPillHeaderHeight),
         child: DecoratedBox(
           decoration: decoration,
           child: Padding(

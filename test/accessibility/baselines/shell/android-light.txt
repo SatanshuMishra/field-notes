@@ -1,7 +1,4 @@
 flutter-text-contrast | a11-calendar-next-month@2x | This month | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 5.08:1 by token arithmetic
-focus-visible | a6-garden-empty | Full screen | <root> # open: focus indicator below 3:1
-focus-visible | a7-garden-blooms | Full screen | <root> # open: focus indicator below 3:1
-focus-visible | a8-garden-phone | Full screen | <root> # open: focus indicator below 3:1
 missing-role | a5-calendar-picker | Dismiss month picker | <root> # Flutter's own control
 missing-role | a5-calendar-picker@2x | Dismiss month picker | <root> # Flutter's own control
 text-contrast | a3-card-actions | NOTE | <root> # open: text contrast below 4.5:1, or 3:1 for large text
@@ -55,7 +52,3 @@ text-contrast | a5-calendar-picker@2x | T | <root> # measured: 4.51:1 by token a
 text-contrast | a5-calendar-picker@2x | T | <root> #2 # measured: 4.51:1 by token arithmetic
 text-contrast | a5-calendar-picker@2x | W | <root> # measured: 4.51:1 by token arithmetic
 text-contrast | a5-calendar-picker@2x | explore | <root> # measured: 4.50:1 by token arithmetic
-text-contrast | a6-garden-empty | Your meadow is waiting. Every day you journal plants a bl... | Your meadow is waiting. Every day you journal plants a bloom here. # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | a8-garden-phone | Your meadow is waiting. Every day you journal plants a bl... | Your meadow is waiting. Every day you journal plants a bloom here. # open: text contrast below 4.5:1, or 3:1 for large text
-truncated-text | a1-today-empty@2x | 0 days | <root> # open: truncated-text
-truncated-text | a8-garden-phone@2x | 0 days | <root> # open: truncated-text

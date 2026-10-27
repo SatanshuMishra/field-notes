@@ -88,7 +88,6 @@ class GardenSkyClock extends StatelessWidget {
                   softWrap: false,
                   style: meadowSans(
                     10.5,
-                    opacity: 0.72,
                     weight: FontWeight.w400,
                   ).copyWith(height: 1.15),
                 ),
@@ -142,8 +141,8 @@ class MeadowDockPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color ink = filled ? Palette.onAccent : meadowCream;
     final MeadowPlayGlyph? glyph = this.glyph;
-    final Widget content = SizedBox(
-      height: meadowDockPillHeight,
+    final Widget content = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: meadowDockPillHeight),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 13),
         child: Row(

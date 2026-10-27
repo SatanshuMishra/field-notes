@@ -34,6 +34,7 @@ const String _playLabel = 'Play';
 
 const double _tiltOddDegrees = -0.5;
 const double _tiltEvenDegrees = 0.4;
+const double _tiltTextProbe = 1;
 const double _stampGap = 4;
 const double _metaLabelGap = 8;
 const double _shortNoteSize = 13.5;
@@ -258,7 +259,11 @@ class _CompactLogCardState extends State<CompactLogCard> {
     final FieldNotesColors colors = context.colors;
     final _DensityStyle style = _styleFor(widget.density, colors);
     final LogPreview preview = logPreviewOf(widget.entry);
-    final double tilt = style.tilts ? _tiltDegrees(widget.entry.id) : 0;
+    final bool textEnlarged =
+        MediaQuery.textScalerOf(context).scale(_tiltTextProbe) > _tiltTextProbe;
+    final double tilt = style.tilts && !textEnlarged
+        ? _tiltDegrees(widget.entry.id)
+        : 0;
     Widget lifted(bool hovered) => Transform.translate(
       offset: Offset(0, hovered && style.risesOnHover ? -_hoverRise : 0),
       child: StickerCard(
