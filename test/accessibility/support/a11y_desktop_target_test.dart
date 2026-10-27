@@ -1,4 +1,3 @@
-import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -12,9 +11,11 @@ void _noop() {}
 A11yState _plantedOn(TargetPlatform platform, String label, Size size) =>
     A11yState(
       id: 'planted',
-      pump: (WidgetTester tester) => tester.pumpWidget(
+      platforms: <TargetPlatform>{platform},
+      pump: (WidgetTester tester, A11yVariant variant) => tester.pumpWidget(
         MaterialApp(
-          theme: fieldNotesTheme(platform: platform),
+          theme: variant.theme,
+          builder: variant.scaleText,
           home: Material(
             child: Center(
               child: Semantics(
@@ -50,61 +51,80 @@ Future<List<String>> _ids(
 }
 
 void main() {
-  testWidgets(
-    'desktop targets are judged against 24 logical pixels and phone targets '
-    'against 48',
-    (WidgetTester tester) async {
-      final Matcher small = anyElement(startsWith('small-target | planted'));
-      for (final TargetPlatform platform in <TargetPlatform>[
+  final Matcher small = anyElement(startsWith('small-target | planted'));
+
+  testWidgets('macOS targets are judged against 28 by 28', (
+    WidgetTester tester,
+  ) async {
+    expect(
+      await _ids(
+        tester,
         TargetPlatform.macOS,
+        'Read notes',
+        const Size(92, 30),
+      ),
+      isNot(small),
+    );
+    expect(
+      await _ids(tester, TargetPlatform.macOS, 'Square', const Size(28, 28)),
+      isNot(small),
+    );
+    expect(
+      await _ids(tester, TargetPlatform.macOS, 'Thin', const Size(92, 27)),
+      contains('small-target | planted | Thin | <root>'),
+    );
+    expect(
+      await _ids(tester, TargetPlatform.macOS, 'Narrow', const Size(27, 40)),
+      contains('small-target | planted | Narrow | <root>'),
+    );
+  });
+
+  testWidgets('Windows targets are judged against 40 by 40', (
+    WidgetTester tester,
+  ) async {
+    expect(
+      await _ids(
+        tester,
         TargetPlatform.windows,
-      ]) {
-        expect(
-          await _ids(tester, platform, 'Read notes', const Size(92, 30)),
-          isNot(small),
-          reason: '$platform: a 92x30 pill meets the desktop minimum',
-        );
-        expect(
-          await _ids(
-            tester,
-            platform,
-            'Check automatically',
-            const Size(36, 24),
-          ),
-          isNot(small),
-          reason: '$platform: a 36x24 toggle meets the desktop minimum',
-        );
-        expect(
-          await _ids(tester, platform, 'Thin', const Size(92, 20)),
-          contains('small-target | planted | Thin | <root>'),
-          reason: '$platform: a 20 pixel tall target is under 24',
-        );
-        expect(
-          await _ids(tester, platform, 'Narrow', const Size(20, 40)),
-          contains('small-target | planted | Narrow | <root>'),
-          reason: '$platform: a 20 pixel wide target is under 24',
-        );
-      }
-      expect(
-        await _ids(
-          tester,
-          TargetPlatform.android,
-          'Read notes',
-          const Size(92, 30),
-        ),
-        contains('small-target | planted | Read notes | <root>'),
-        reason: 'the phone layout keeps the 48 pixel minimum',
-      );
-      expect(
-        await _ids(
-          tester,
-          TargetPlatform.android,
-          'Website',
-          const Size(48, 48),
-        ),
-        isNot(small),
-        reason: 'a 48x48 phone target meets the phone minimum',
-      );
-    },
-  );
+        'Read notes',
+        const Size(92, 40),
+      ),
+      isNot(small),
+    );
+    expect(
+      await _ids(
+        tester,
+        TargetPlatform.windows,
+        'Check automatically',
+        const Size(92, 30),
+      ),
+      contains('small-target | planted | Check automatically | <root>'),
+    );
+    expect(
+      await _ids(tester, TargetPlatform.windows, 'Thin', const Size(92, 39)),
+      contains('small-target | planted | Thin | <root>'),
+    );
+    expect(
+      await _ids(tester, TargetPlatform.windows, 'Narrow', const Size(39, 40)),
+      contains('small-target | planted | Narrow | <root>'),
+    );
+  });
+
+  testWidgets('Android phone targets are judged against 48 by 48', (
+    WidgetTester tester,
+  ) async {
+    expect(
+      await _ids(
+        tester,
+        TargetPlatform.android,
+        'Read notes',
+        const Size(92, 30),
+      ),
+      contains('small-target | planted | Read notes | <root>'),
+    );
+    expect(
+      await _ids(tester, TargetPlatform.android, 'Website', const Size(48, 48)),
+      isNot(small),
+    );
+  });
 }

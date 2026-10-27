@@ -1,0 +1,26 @@
+flutter-text-contrast | m1-video-download-black-poster | Video · 1:04 · downloading 3.0 of 12.0 MB | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | m2-video-download-white-poster@2x | Video · 1:04 · downloading 3.0 of 12.0 MB | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | m6-video-error | Can't play this video | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | m6-video-error | Try again | Can't play this video # open: fails Flutter's text contrast guideline
+flutter-text-contrast | m6-video-error@2x | Can't play this video | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | m6-video-error@2x | Try again | Can't play this video # open: fails Flutter's text contrast guideline
+focus-visible | m3-video-controls | Friday, September 18 · 9:30 AM / 0:21 / 1:04 | Show or hide video controls # open: focus indicator below 3:1
+focus-visible | m5-photo-error | Back to note | The harbour wall · 1 of 2 · Friday, September 18 # open: focus indicator below 3:1
+focus-visible | m5-photo-error | Next | The harbour wall · 1 of 2 · Friday, September 18 # open: focus indicator below 3:1
+text-contrast | m1-video-download-black-poster | Video · 1:04 · downloading 3.0 of 12.0 MB | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | m1-video-download-black-poster@2x | Video · 1:04 · downloading 3.0 of 12.0 MB | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | m5-photo-error | Back to note | The harbour wall · 1 of 2 · Friday, September 18 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | m5-photo-error | Next | The harbour wall · 1 of 2 · Friday, September 18 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | m5-photo-error | Photo | The harbour wall # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | m5-photo-error | The harbour wall · 1 of 2 · Friday, September 18 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | m5-photo-error@2x | Back to note | The harbour wall · 1 of 2 · Friday, September 18 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | m5-photo-error@2x | Next | The harbour wall · 1 of 2 · Friday, September 18 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | m5-photo-error@2x | Photo | The harbour wall # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | m5-photo-error@2x | The harbour wall · 1 of 2 · Friday, September 18 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | m6-video-error | Can't play this video | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | m6-video-error | Try again | Can't play this video # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | m6-video-error@2x | Can't play this video | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+truncated-text | m4-photo-viewer@2x | Back to note | The harbour wall · 1 of 2 · Friday, September 18 # open: text is cut short at 2x text
+truncated-text | m4-photo-viewer@2x | The harbour wall · 1 of 2 · Friday, September 18 | <root> # open: text is cut short at 2x text
+truncated-text | m5-photo-error@2x | Back to note | The harbour wall · 1 of 2 · Friday, September 18 # open: text is cut short at 2x text
+truncated-text | m5-photo-error@2x | The harbour wall · 1 of 2 · Friday, September 18 | <root> # open: text is cut short at 2x text

@@ -1,0 +1,48 @@
+flutter-text-contrast | b2-settings-spell-unavailable | Sunday | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b4-select-open | Sunday | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b7-settings-journal | Sunday | <root> # open: fails Flutter's text contrast guideline
+focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Input volume # open: focus indicator below 3:1
+focus-visible | b11-select-dropdown-input-profile | <unlabelled> | Output volume # open: focus indicator below 3:1
+focus-visible | b12-select-dropdown-microphone | <unlabelled> | Input volume # open: focus indicator below 3:1
+focus-visible | b12-select-dropdown-microphone | <unlabelled> | Output volume # open: focus indicator below 3:1
+focus-visible | b13-select-dropdown-speaker | <unlabelled> | Input volume # open: focus indicator below 3:1
+focus-visible | b13-select-dropdown-speaker | <unlabelled> | Output volume # open: focus indicator below 3:1
+keyboard | b11-select-dropdown-input-profile | Studio / Your microphone as it is, with no processing. | <root> # open: Tab never reaches it
+keyboard | b11-select-dropdown-input-profile | Voice Isolation / Clears background noise like fans, traffic and typing from your voice. | <root> # open: Tab never reaches it
+keyboard | b12-select-dropdown-microphone | Built-in Microphone | <root> # open: Tab never reaches it
+keyboard | b12-select-dropdown-microphone | Headset Microphone | <root> # open: Tab never reaches it
+keyboard | b12-select-dropdown-microphone | System default | <root> # open: Tab never reaches it
+keyboard | b13-select-dropdown-speaker | Built-in Speakers | <root> # open: Tab never reaches it
+keyboard | b13-select-dropdown-speaker | Headphones | <root> # open: Tab never reaches it
+keyboard | b13-select-dropdown-speaker | System output | <root> # open: Tab never reaches it
+keyboard | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
+keyboard | b4-select-open | Monday | <root> # open: Tab never reaches it
+keyboard | b4-select-open | Saturday | <root> # open: Tab never reaches it
+keyboard | b4-select-open | Sunday | <root> # open: Tab never reaches it
+keyboard | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b14-sync-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
+missing-role | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b5-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
+small-target | b16-settings-sync-paused | Keep all media on this device | <root> # open: tap target under the platform minimum
+small-target | b16-settings-sync-paused | Pause sync | <root> # open: tap target under the platform minimum
+small-target | b16-settings-sync-paused@2x | Keep all media on this device | <root> # open: tap target under the platform minimum
+small-target | b16-settings-sync-paused@2x | Pause sync | <root> # open: tap target under the platform minimum
+small-target | b2-settings-spell-unavailable | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
+small-target | b2-settings-spell-unavailable@2x | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
+small-target | b4-select-open | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
+small-target | b4-select-open | Spell check | <root> # open: tap target under the platform minimum
+small-target | b4-select-open@2x | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
+small-target | b4-select-open@2x | Spell check | <root> # open: tap target under the platform minimum
+small-target | b6-settings-reminders | Daily reminder | <root> # open: tap target under the platform minimum
+small-target | b6-settings-reminders | Reflection question | <root> # open: tap target under the platform minimum
+small-target | b6-settings-reminders | Sound effects | <root> # open: tap target under the platform minimum
+small-target | b6-settings-reminders@2x | Daily reminder | <root> # open: tap target under the platform minimum
+small-target | b6-settings-reminders@2x | Reflection question | <root> # open: tap target under the platform minimum
+small-target | b6-settings-reminders@2x | Sound effects | <root> # open: tap target under the platform minimum
+small-target | b7-settings-journal | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
+small-target | b7-settings-journal | Spell check | <root> # open: tap target under the platform minimum
+small-target | b7-settings-journal@2x | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
+small-target | b7-settings-journal@2x | Spell check | <root> # open: tap target under the platform minimum
+small-target | b9-settings-about | Check automatically | <root> # open: tap target under the platform minimum
+small-target | b9-settings-about@2x | Check automatically | <root> # open: tap target under the platform minimum

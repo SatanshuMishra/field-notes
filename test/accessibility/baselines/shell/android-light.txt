@@ -1,0 +1,429 @@
+flutter-text-contrast | a1-today-empty | Capture a moment — write it, speak it, or film it. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a1-today-empty | Good morning | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a1-today-empty | today · 0 logs | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a1-today-empty@2x | Capture a moment — write it, speak it, or film it. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a1-today-empty@2x | Good morning | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a1-today-empty@2x | today · 0 logs | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a10-search-no-match | No days match "zzz". | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a10-search-no-match@2x | No days match "zzz". | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a10-search-no-match@2x | search | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a11-calendar-next-month@2x | This month | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a13-search-empty | No days yet. Start journaling and your days appear here. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a13-search-empty@2x | No days yet. Start journaling and your days appear here. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a13-search-empty@2x | search | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a16-search-error | Your days could not be loaded right now. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a16-search-error@2x | Your days could not be loaded right now. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a16-search-error@2x | search | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a8-garden-phone | Calendar | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a8-garden-phone | Meadow | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a8-garden-phone | Search | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a8-garden-phone | Today | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a8-garden-phone@2x | Calendar | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a8-garden-phone@2x | Meadow | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a8-garden-phone@2x | Search | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a8-garden-phone@2x | Today | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | a9-search-results@2x | search | <root> # open: fails Flutter's text contrast guideline
+focus-visible | a6-garden-empty | Full screen | <root> # open: focus indicator below 3:1
+focus-visible | a7-garden-blooms | Full screen | <root> # open: focus indicator below 3:1
+focus-visible | a8-garden-phone | Full screen | <root> # open: focus indicator below 3:1
+missing-role | a5-calendar-picker | Dismiss month picker | <root> # Flutter's own control
+missing-role | a5-calendar-picker@2x | Dismiss month picker | <root> # Flutter's own control
+small-target | a1-today-empty | Settings | <root> # open: phone header Settings gear is under 48 dp
+small-target | a1-today-empty@2x | Settings | <root> # open: phone header Settings gear is under 48 dp
+small-target | a2-today-feed | buy seed packets | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a2-today-feed | water the peonies | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a2-today-feed@2x | buy seed packets | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a2-today-feed@2x | water the peonies | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a3-card-actions | buy seed packets | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a3-card-actions | water the peonies | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a3-card-actions@2x | buy seed packets | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a3-card-actions@2x | water the peonies | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a8-garden-phone | Settings | <root> # open: phone header Settings gear is under 48 dp
+small-target | a8-garden-phone@2x | Settings | <root> # open: phone header Settings gear is under 48 dp
+text-contrast | a1-today-empty | Capture a moment — write it, speak it, or film it. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a1-today-empty | Good morning | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a1-today-empty | tap to plant today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a1-today-empty | today · 0 logs | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a1-today-empty@2x | Capture a moment — write it, speak it, or film it. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a1-today-empty@2x | tap to plant today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a10-search-no-match | No days match "zzz". | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a10-search-no-match | search | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a10-search-no-match@2x | No days match "zzz". | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a10-search-no-match@2x | search | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 1 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 10 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 11 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 12 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 13 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 14 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 15 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 16 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 17 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 18 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 19 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 2 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 20 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 21 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 22 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 23 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 24 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 25 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 26 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 27 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 28 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 29 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 3 blooms this month | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 3 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 30 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 31 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 4 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 5 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 6 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 7 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 8 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | 9 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | F | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | M | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | S | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | S | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | T | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | T | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | W | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month | explore | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 1 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 10 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 11 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 12 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 13 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 14 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 15 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 16 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 17 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 18 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 19 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 2 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 20 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 21 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 22 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 23 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 24 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 25 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 26 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 27 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 28 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 29 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 3 blooms this month | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 3 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 30 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 31 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 4 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 5 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 6 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 7 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 8 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | 9 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | F | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | M | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | S | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | S | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | T | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | T | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | W | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a11-calendar-next-month@2x | explore | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 1 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 10 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 11 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 12 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 13 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 14 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 15 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 16 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 17 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 18 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 19 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 2 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 20 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 21 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 22 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 23 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 24 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 26 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 27 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 28 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 29 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 3 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 30 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 4 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 5 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 6 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 7 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 8 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | 9 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | F | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | M | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | Nothing planted this month | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | S | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | S | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | T | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | T | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | W | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty | explore | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 1 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 10 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 11 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 12 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 13 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 14 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 15 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 16 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 17 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 18 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 19 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 2 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 20 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 21 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 22 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 23 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 24 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 26 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 27 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 28 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 29 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 3 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 30 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 4 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 5 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 6 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 7 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 8 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | 9 | explore / September 2026 / Nothing planted this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | F | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | M | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | Nothing planted this month | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | S | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | S | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | T | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | T | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | W | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a12-calendar-empty@2x | explore | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a13-search-empty | No days yet. Start journaling and your days appear here. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a13-search-empty | Search your days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a13-search-empty | search | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a13-search-empty@2x | No days yet. Start journaling and your days appear here. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a13-search-empty@2x | Search your days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a13-search-empty@2x | search | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a16-search-error | Search your days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a16-search-error | Your days could not be loaded right now. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a16-search-error | search | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a16-search-error@2x | Search your days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a16-search-error@2x | Your days could not be loaded right now. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a16-search-error@2x | search | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | 0:00 / 0:42 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | 0:04 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | 1 photo | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | 9:30 AM · morning | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | 9:30 AM · morning | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | 9:30 AM · morning | <root> #3 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | 9:30 AM · morning | <root> #4 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | 9:30 AM · morning | <root> #5 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | I stood there with my coffee for a long while and watched... | 9:30 AM · morning / NOTE / The peonies finally opened along the back fence. / I stood there with my coffee for a long while and watched the bees work the blooms, then walked the long way round to the harbour to see the ferry… / Read › # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | NOTE | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | NOTE | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | NOTE | <root> #3 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | Read › | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | Read › | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | VIDEO | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | VOICE | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed | Watch › | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed@2x | 1 photo | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed@2x | NOTE | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed@2x | NOTE | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed@2x | NOTE | <root> #3 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed@2x | Read › | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a2-today-feed@2x | Read › | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | 0:00 / 0:42 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | 0:04 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | 1 photo | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | 9:30 AM · morning | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | 9:30 AM · morning | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | 9:30 AM · morning | <root> #3 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | 9:30 AM · morning | <root> #4 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | 9:30 AM · morning | <root> #5 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | I stood there with my coffee for a long while and watched... | 9:30 AM · morning / NOTE / The peonies finally opened along the back fence. / I stood there with my coffee for a long while and watched the bees work the blooms, then walked the long way round to the harbour to see the ferry… / Read › # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | NOTE | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | NOTE | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | NOTE | <root> #3 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | Read › | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | Read › | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | VIDEO | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | VOICE | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions | Watch › | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions@2x | 1 photo | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions@2x | NOTE | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions@2x | NOTE | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions@2x | NOTE | <root> #3 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions@2x | Read › | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a3-card-actions@2x | Read › | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 1 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 10 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 11 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 12 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 13 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 15 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 16 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 17 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 18 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 19 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 2 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 20 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 21 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 22 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 23 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 26 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 27 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 28 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 29 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 3 blooms this month | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 3 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 30 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 4 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 5 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 6 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 8 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | 9 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | F | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | M | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | S | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | S | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | T | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | T | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | W | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month | explore | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 1 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 10 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 11 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 12 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 13 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 15 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 16 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 17 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 18 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 19 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 2 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 20 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 21 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 22 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 23 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 26 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 27 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 28 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 29 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 3 blooms this month | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 3 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 30 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 4 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 5 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 6 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 8 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | 9 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | F | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | M | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | S | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | S | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | T | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | T | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | W | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a4-calendar-month@2x | explore | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 1 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 10 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 11 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 12 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 13 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 14 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 15 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 16 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 17 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 18 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 19 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 2 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 3 blooms this month | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 3 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 4 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 5 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 6 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 7 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 8 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | 9 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | F | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | M | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | S | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | S | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | T | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | T | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | W | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker | explore | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 1 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 10 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 11 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 12 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 13 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 14 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 15 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 16 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 17 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 18 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 19 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 2 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 3 blooms this month | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 3 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 4 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 5 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 6 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 7 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 8 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | 9 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | F | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | M | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | S | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | S | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | T | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | T | <root> #2 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | W | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a5-calendar-picker@2x | explore | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty | 0 blooms and 0 sprouts so far in 2026 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty | Every day, a bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty | Your meadow is waiting. Every day you journal plants a bl... | Your meadow is waiting. Every day you journal plants a bloom here. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty | your meadow | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty@2x | 0 blooms and 0 sprouts so far in 2026 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty@2x | Every day, a bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a7-garden-blooms | 1 bloom and 1 sprout so far in 2026 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a7-garden-blooms | your meadow | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a7-garden-blooms@2x | 1 bloom and 1 sprout so far in 2026 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a7-garden-blooms@2x | Every day, a bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone | 0 blooms and 0 sprouts so far in 2026 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone | Calendar | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone | Every day, a bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone | Meadow | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone | Search | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone | Today | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone | Your meadow is waiting. Every day you journal plants a bl... | Your meadow is waiting. Every day you journal plants a bloom here. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone | your meadow | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone@2x | 0 blooms and 0 sprouts so far in 2026 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone@2x | Calendar | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone@2x | Every day, a bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone@2x | Meadow | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone@2x | Search | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone@2x | Today | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a8-garden-phone@2x | your meadow | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a9-search-results | 1 entry | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a9-search-results | Thursday, September 24 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a9-search-results | search | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a9-search-results@2x | 1 entry | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a9-search-results@2x | search | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+truncated-text | a1-today-empty@2x | How are you feeling? | <root> # open: text is cut short at 2x text
+truncated-text | a11-calendar-next-month@2x | October 2026 | <root> # open: text is cut short at 2x text
+truncated-text | a12-calendar-empty@2x | September 2026 | <root> # open: text is cut short at 2x text
+truncated-text | a4-calendar-month@2x | September 2026 | <root> # open: text is cut short at 2x text
+truncated-text | a5-calendar-picker@2x | September 2026 | <root> # open: text is cut short at 2x text
+truncated-text | a9-search-results@2x | The peonies opened by the fence | <root> # open: text is cut short at 2x text
+truncated-text | a9-search-results@2x | Thursday, September 24 | <root> # open: text is cut short at 2x text

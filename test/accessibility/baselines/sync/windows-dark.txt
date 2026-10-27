@@ -1,0 +1,10 @@
+focus-visible | s2-sync-join | Join my journal / 0 of 8 | <root> # open: focus indicator below 3:1
+focus-visible | s7-sync-error-unreachable | Invite code | <root> # open: focus indicator below 3:1
+focus-visible | s7-sync-error-unreachable | Server address | <root> # open: focus indicator below 3:1
+text-contrast | s1-sync-start | https://sync.example.com | Server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s1-sync-start@2x | https://sync.example.com | Server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | Leave it empty if your other device uses the usual server. | Server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s3-sync-restore | https://sync.example.com | Server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s3-sync-restore@2x | https://sync.example.com | Server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s5-change-server | https://sync.example.com | New server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s5-change-server@2x | https://sync.example.com | New server address # open: text contrast below 4.5:1, or 3:1 for large text

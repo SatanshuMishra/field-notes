@@ -1,0 +1,1 @@
+overlapping-text | i11-voice-save-error@2x | 0:00 + Could not save your entry. | <root> # open: text overlaps other text at 2x text

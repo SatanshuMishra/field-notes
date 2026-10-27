@@ -69,3 +69,25 @@ _Avoid_: bright window
 **Mist**:
 The low fog the Meadow lays over the heaviest stretch's flowers, lying around their stems with the blooms rising out of it.
 _Avoid_: fog pocket, hollow fog
+
+## Accessibility
+
+**Sweep**:
+The committed run that checks every main-path state of the app, on each platform and theme, against the UI standard's rules.
+_Avoid_: audit run, a11y pass
+
+**Baseline line**:
+One finding the sweep still reports, kept in the baseline for its area, platform and theme together with the written reason it remains.
+_Avoid_: known issue, allowlist entry
+
+**Open line**:
+A baseline line whose reason says it is still to be fixed.
+_Avoid_: todo line
+
+**Accepted deviation**:
+A place where Field Notes knowingly departs from a platform rule, recorded with the reason, such as the phone bottom bar's centre capture button.
+_Avoid_: exception, waiver
+
+**Destructive look**:
+The one appearance of an action that deletes or discards: danger ink without a fill, never the default action.
+_Avoid_: red button, danger fill

@@ -1,0 +1,31 @@
+flutter-text-contrast | u3-update-greeting | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | u3-update-greeting@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
+missing-role | u1-update-notes-new | Close | <root> # open: tappable node has no role
+missing-role | u1-update-notes-new@2x | Close | <root> # open: tappable node has no role
+missing-role | u2-update-notes-installed | Close | <root> # open: tappable node has no role
+missing-role | u2-update-notes-installed@2x | Close | <root> # open: tappable node has no role
+overlapping-text | u3-update-greeting@2x | field / notes + Today | <root> # open: text overlaps other text at 2x text
+small-target | u3-update-greeting | Collapse sidebar (⌘\) | <root> # open: tap target under the platform minimum
+small-target | u3-update-greeting@2x | Collapse sidebar (⌘\) | <root> # open: tap target under the platform minimum
+small-target | u4-update-error-offline | Check automatically | <root> # open: tap target under the platform minimum
+small-target | u4-update-error-offline@2x | Check automatically | <root> # open: tap target under the platform minimum
+text-contrast | u1-update-notes-new | open installed notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u1-update-notes-new | open new notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u2-update-notes-installed | open installed notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u2-update-notes-installed | open new notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting | Fri | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting | Sat | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting | Sun | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting | Thu | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting | Tue | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting | Wed | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting | field notes — a journal of days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting@2x | Fri | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting@2x | Sat | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting@2x | Sun | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting@2x | Thu | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting@2x | Tue | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting@2x | Wed | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | u3-update-greeting@2x | field / notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+truncated-text | u3-update-greeting@2x | Calendar | <root> # open: text is cut short at 2x text
+truncated-text | u3-update-greeting@2x | Meadow | <root> # open: text is cut short at 2x text

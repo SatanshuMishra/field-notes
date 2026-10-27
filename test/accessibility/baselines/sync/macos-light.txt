@@ -1,0 +1,84 @@
+flutter-text-contrast | s1-sync-start | Enter your server's address and the invite code you were given. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s1-sync-start@2x | Enter your server's address and the invite code you were given. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s2-sync-join | They're under the code on your other device. Paste all 8 at once if you like. | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s2-sync-join@2x | They're under the code on your other device. Paste all 8 at once if you like. | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s3-sync-restore | Capitals and extra spaces are fine. A word that isn't on the list is caught before anything is sent. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s3-sync-restore@2x | Capitals and extra spaces are fine. A word that isn't on the list is caught before anything is sent. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s4-add-device-unreachable | On your other device, open Field Notes and choose "Join my journal", then scan this code. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s4-add-device-unreachable | sync | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s4-add-device-unreachable@2x | On your other device, open Field Notes and choose "Join my journal", then scan this code. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s4-add-device-unreachable@2x | sync | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s5-change-server | Every device follows when you change it. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s5-change-server@2x | Every device follows when you change it. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s7-sync-error-unreachable | Enter your server's address and the invite code you were given. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s7-sync-error-unreachable@2x | Enter your server's address and the invite code you were given. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s8-devices-list-sync-error | Can't reach your server right now. | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | s8-devices-list-sync-error@2x | Can't reach your server right now. | <root> # open: fails Flutter's text contrast guideline
+focus-visible | s2-sync-join | Hold your other device up to this Mac's camera. / or / 0 of 8 | <root> # open: focus indicator below 3:1
+focus-visible | s7-sync-error-unreachable | Invite code | <root> # open: focus indicator below 3:1
+focus-visible | s7-sync-error-unreachable | Server address | <root> # open: focus indicator below 3:1
+keyboard | s1-sync-start | Dismiss | <root> # Flutter's own control
+keyboard | s2-sync-join | Dismiss | <root> # Flutter's own control
+keyboard | s3-sync-restore | Dismiss | <root> # Flutter's own control
+keyboard | s4-add-device-unreachable | Dismiss | <root> # Flutter's own control
+keyboard | s5-change-server | Dismiss | <root> # Flutter's own control
+keyboard | s6-devices-list | Dismiss | <root> # Flutter's own control
+keyboard | s7-sync-error-unreachable | Dismiss | <root> # Flutter's own control
+keyboard | s8-devices-list-sync-error | Dismiss | <root> # Flutter's own control
+missing-role | s1-sync-start | Dismiss | <root> # Flutter's own control
+missing-role | s1-sync-start@2x | Dismiss | <root> # Flutter's own control
+missing-role | s2-sync-join | Dismiss | <root> # Flutter's own control
+missing-role | s2-sync-join@2x | Dismiss | <root> # Flutter's own control
+missing-role | s3-sync-restore | Dismiss | <root> # Flutter's own control
+missing-role | s3-sync-restore@2x | Dismiss | <root> # Flutter's own control
+missing-role | s4-add-device-unreachable | Dismiss | <root> # Flutter's own control
+missing-role | s4-add-device-unreachable@2x | Dismiss | <root> # Flutter's own control
+missing-role | s5-change-server | Dismiss | <root> # Flutter's own control
+missing-role | s5-change-server@2x | Dismiss | <root> # Flutter's own control
+missing-role | s6-devices-list | Dismiss | <root> # Flutter's own control
+missing-role | s6-devices-list@2x | Dismiss | <root> # Flutter's own control
+missing-role | s7-sync-error-unreachable | Dismiss | <root> # Flutter's own control
+missing-role | s7-sync-error-unreachable@2x | Dismiss | <root> # Flutter's own control
+missing-role | s8-devices-list-sync-error | Dismiss | <root> # Flutter's own control
+missing-role | s8-devices-list-sync-error@2x | Dismiss | <root> # Flutter's own control
+text-contrast | s1-sync-start | Enter your server's address and the invite code you were ... | Enter your server's address and the invite code you were given. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s1-sync-start | https://sync.example.com | Server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s1-sync-start@2x | https://sync.example.com | Server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | 0 of 8 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | 1 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | 2 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | 3 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | 4 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | 5 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | 6 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | 7 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | 8 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | Hold your other device up to this Mac's camera. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | Leave it empty if your other device uses the usual server. | Server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | They're under the code on your other device. Paste all 8 ... | They're under the code on your other device. Paste all 8 at once if you like. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join | or | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join@2x | 0 of 8 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join@2x | 1 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join@2x | 2 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join@2x | 3 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join@2x | 4 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join@2x | 5 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join@2x | 6 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join@2x | 7 | Hold your other device up to this Mac's camera. / or / 0 of 8 # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join@2x | 8 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join@2x | Hold your other device up to this Mac's camera. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join@2x | Leave it empty if your other device uses the usual server. | Server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join@2x | They're under the code on your other device. Paste all 8 ... | They're under the code on your other device. Paste all 8 at once if you like. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s2-sync-join@2x | or | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s3-sync-restore | Capitals and extra spaces are fine. A word that isn't on ... | Capitals and extra spaces are fine. A word that isn't on the list is caught before anything is sent. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s3-sync-restore | https://sync.example.com | Server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s3-sync-restore@2x | https://sync.example.com | Server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s4-add-device-unreachable | On your other device, open Field Notes and choose "Join m... | On your other device, open Field Notes and choose "Join my journal", then scan this code. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s4-add-device-unreachable | sync | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s5-change-server | Every device follows when you change it. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s5-change-server | https://sync.example.com | New server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s5-change-server@2x | https://sync.example.com | New server address # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s6-devices-list | Last seen 40 days ago | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s6-devices-list | This Mac | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s7-sync-error-unreachable | Enter your server's address and the invite code you were ... | Enter your server's address and the invite code you were given. # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | s8-devices-list-sync-error | Can't reach your server right now. | <root> # open: text contrast below 4.5:1, or 3:1 for large text

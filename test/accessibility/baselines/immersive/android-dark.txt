@@ -1,0 +1,12 @@
+overlapping-text | i11-voice-save-error@2x | 0:00 + Could not save your entry. | <root> # open: text overlaps other text at 2x text
+truncated-text | i1-voice-question@2x | Only you will hear this | a question, if you want one / What felt heavier than it needed to? # open: text is cut short at 2x text
+truncated-text | i11-voice-save-error@2x | Keep this | <root> # open: text is cut short at 2x text
+truncated-text | i11-voice-save-error@2x | Only you will hear this | <root> # open: text is cut short at 2x text
+truncated-text | i2-voice-breathing@2x | Only you will hear this | <root> # open: text is cut short at 2x text
+truncated-text | i3-voice-recording@2x | Keep this | <root> # open: text is cut short at 2x text
+truncated-text | i3-voice-recording@2x | Only you will hear this | <root> # open: text is cut short at 2x text
+truncated-text | i4-voice-paused@2x | Keep this | <root> # open: text is cut short at 2x text
+truncated-text | i4-voice-paused@2x | Only you will hear this | <root> # open: text is cut short at 2x text
+truncated-text | i5-voice-let-go@2x | Only you will hear this | <root> # open: text is cut short at 2x text
+truncated-text | i6-voice-saving@2x | Keep this | <root> # open: text is cut short at 2x text
+truncated-text | i6-voice-saving@2x | Only you will hear this | <root> # open: text is cut short at 2x text

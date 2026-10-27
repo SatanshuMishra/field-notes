@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'states/onboarding_states.dart';
+import 'support/a11y_baseline.dart';
 import 'support/a11y_rules.dart';
 import 'support/a11y_state.dart';
 import 'support/reading_order.dart';
@@ -22,7 +23,6 @@ const Size _smallestBottomBar = Size(360, 640);
 const List<double> _textScales = <double>[1, 1.3];
 const int _maxPresses = 60;
 const String _sidebarSuffix = '-sidebar';
-const String _baselinePath = 'test/accessibility/baselines/onboarding.txt';
 const String _notificationsOffState = 'reminder-notifications-off';
 const List<String> _notificationsOffIds = <String>[
   'o35-reminder-notifications-off-sidebar',
@@ -193,10 +193,15 @@ final class _Stop {
   final bool note;
 }
 
-Set<String> _baselineLines() => <String>{
-  for (final String line in File(_baselinePath).readAsLinesSync())
-    if (line.trim() case final String trimmed when trimmed.isNotEmpty) trimmed,
-};
+Set<A11yBaselineLine> _baselineLines(A11yState state) {
+  final A11yVariant variant = state.pump.defaultVariant;
+  return <A11yBaselineLine>{
+    for (final String line in File(
+      a11yBaselinePath('onboarding', variant.baseline),
+    ).readAsLinesSync())
+      if (line.trim().isNotEmpty) A11yBaselineLine.parse(line),
+  };
+}
 
 Rect _globalRect(SemanticsNode node) {
   Rect rect = node.rect;
@@ -428,7 +433,6 @@ void main() {
       expect(<String>[
         for (final A11yState state in appended) state.id,
       ], _notificationsOffIds);
-      final Set<String> baseline = _baselineLines();
       for (final A11yState state in appended) {
         final A11yStateResult result = await runA11yState(tester, state);
         if (result case A11yNotLoaded(:final String message)) {
@@ -449,8 +453,10 @@ void main() {
         expect(found, unorderedEquals(expected), reason: state.id);
         expect(
           <String>[
-            for (final String line in baseline)
-              if (line.contains(' | ${state.id} | ')) line,
+            for (final A11yBaselineLine line in _baselineLines(state))
+              if (line.rule == 'small-target' &&
+                  line.id.contains(' | ${state.id} | '))
+                line.id,
           ],
           unorderedEquals(expected),
           reason: '${state.id} baseline',
