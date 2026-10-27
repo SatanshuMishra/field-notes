@@ -545,6 +545,15 @@ class _NoteCard extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     final BorderRadius radius = BorderRadius.circular(metrics.cardRadius);
     final String? problem = error;
+    final Widget hint = Text(
+      saved ? _savedHint : _waitingHint,
+      style: TextStyle(
+        fontFamily: TypographyTokens.accent,
+        fontSize: metrics.hintSize,
+        fontWeight: FontWeight.w600,
+        color: colors.sage,
+      ),
+    );
     final BoxShadow rest = BoxShadow(
       color: colors.shadowTint(0x2E),
       offset: metrics.cardShadow,
@@ -578,18 +587,10 @@ class _NoteCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               _CardHeader(metrics: metrics, draft: draft, clock: clock),
+              if (fills) ...<Widget>[SizedBox(height: metrics.hintTop), hint],
               SizedBox(height: metrics.fieldTop),
               if (fills) Expanded(child: field) else field,
-              SizedBox(height: metrics.hintTop),
-              Text(
-                saved ? _savedHint : _waitingHint,
-                style: TextStyle(
-                  fontFamily: TypographyTokens.accent,
-                  fontSize: metrics.hintSize,
-                  fontWeight: FontWeight.w600,
-                  color: colors.sage,
-                ),
-              ),
+              if (!fills) ...<Widget>[SizedBox(height: metrics.hintTop), hint],
               if (problem != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),

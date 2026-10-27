@@ -242,6 +242,7 @@ class _SceneMetrics {
     required this.tagSize,
     required this.tagLongSize,
     required this.post,
+    this.seatedPost,
     required this.slide,
     required this.seedSize,
     required this.seedBottom,
@@ -310,6 +311,7 @@ class _SceneMetrics {
     tagSize: 21,
     tagLongSize: 18,
     post: Size(5, 44),
+    seatedPost: Size(5, 14),
     slide: 72,
     seedSize: Size(12, 15),
     seedBottom: 269,
@@ -352,6 +354,7 @@ class _SceneMetrics {
   final double tagSize;
   final double tagLongSize;
   final Size post;
+  final Size? seatedPost;
   final double slide;
   final Size seedSize;
   final double seedBottom;
@@ -1204,6 +1207,11 @@ class _Stake extends StatelessWidget {
     final double size = name.length > _longName
         ? metrics.tagLongSize
         : metrics.tagSize;
+    final Size? seated = switch (metrics.seatedPost) {
+      final Size post when MediaQuery.textScalerOf(context).scale(1) > 1 =>
+        post,
+      _ => null,
+    };
     return Semantics(
       key: gardenStakeKey,
       container: true,
@@ -1237,6 +1245,7 @@ class _Stake extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 1,
               softWrap: false,
+              textScaler: seated == null ? null : TextScaler.noScaling,
               style: TextStyle(
                 fontFamily: TypographyTokens.accent,
                 fontSize: size,
@@ -1249,7 +1258,7 @@ class _Stake extends StatelessWidget {
           Transform.translate(
             offset: const Offset(0, -1),
             child: SizedBox.fromSize(
-              size: metrics.post,
+              size: seated ?? metrics.post,
               child: const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

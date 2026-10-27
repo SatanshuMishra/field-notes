@@ -68,7 +68,7 @@ const List<Duration> _waveBeats = <Duration>[
 
 const Color _speakFill = Palette.coral;
 const Color _filmFill = Color(0xFF2F2A25);
-const Color _snapFill = Palette.snapSage;
+final Color _snapFill = FieldNotesColors.light.sage;
 const Color _white = Color(0xFFFFFFFF);
 const Color _cream = Palette.creamOnSoil;
 const Color _filmBody = Color(0xFFCBB99F);
@@ -82,34 +82,23 @@ const Color _photoShadow = Color.fromRGBO(0, 0, 0, 0.5);
 class _BlockInk {
   const _BlockInk({
     required this.kicker,
-    required this.kickerAlpha,
     required this.title,
     required this.body,
-    required this.bodyAlpha,
   });
 
   final Color kicker;
-  final double kickerAlpha;
   final Color title;
   final Color body;
-  final double bodyAlpha;
 }
 
 const _BlockInk _onColour = _BlockInk(
   kicker: _white,
-  kickerAlpha: 0.9,
   title: _white,
   body: _white,
-  bodyAlpha: 0.92,
 );
 
-_BlockInk _onDark(Color kicker) => _BlockInk(
-  kicker: kicker,
-  kickerAlpha: 1,
-  title: _cream,
-  body: _filmBody,
-  bodyAlpha: 1,
-);
+_BlockInk _onDark(Color kicker) =>
+    _BlockInk(kicker: kicker, title: _cream, body: _filmBody);
 
 class OtherWaysPanel extends StatelessWidget {
   const OtherWaysPanel({super.key, required this.layout});
@@ -305,7 +294,7 @@ class _Block extends StatelessWidget {
                           fontFamily: TypographyTokens.accent,
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
-                          color: ink.kicker.withValues(alpha: ink.kickerAlpha),
+                          color: ink.kicker,
                         ),
                       ),
                       Text(
@@ -329,7 +318,7 @@ class _Block extends StatelessWidget {
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           height: 1.4,
-                          color: ink.body.withValues(alpha: ink.bodyAlpha),
+                          color: ink.body,
                         ),
                       ),
                     ],

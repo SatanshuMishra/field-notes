@@ -1,15 +1,3 @@
-flutter-text-contrast | o20-year-playing-bottom-bar | Skip | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | o20-year-playing-bottom-bar@2x | Skip | <root> # open: fails Flutter's text contrast guideline
-focus-visible | o20-year-playing-bottom-bar | A day | <root> # open: focus indicator below 3:1
-focus-visible | o20-year-playing-bottom-bar | A moment | <root> # open: focus indicator below 3:1
-focus-visible | o20-year-playing-bottom-bar | A month | <root> # open: focus indicator below 3:1
-focus-visible | o20-year-playing-bottom-bar | Opening | <root> # open: focus indicator below 3:1
-focus-visible | o22-year-finished-bottom-bar | A day | <root> # open: focus indicator below 3:1
-focus-visible | o22-year-finished-bottom-bar | A moment | <root> # open: focus indicator below 3:1
-focus-visible | o22-year-finished-bottom-bar | A month | <root> # open: focus indicator below 3:1
-focus-visible | o22-year-finished-bottom-bar | Opening | <root> # open: focus indicator below 3:1
-focus-visible | o22-year-finished-bottom-bar | Skip | <root> # open: focus indicator below 3:1
-focus-visible | o22-year-finished-bottom-bar | Switch to dark | <root> # open: theme toggle shows no visible focus
 focus-visible | o6-day-happy-bottom-bar | Angry | a day / Every feeling grows its own flower. / There are ten. Pick the one that fits today. # open: focus indicator below 3:1
 focus-visible | o6-day-happy-bottom-bar | Anxious | a day / Every feeling grows its own flower. / There are ten. Pick the one that fits today. # open: focus indicator below 3:1
 focus-visible | o6-day-happy-bottom-bar | Calm | a day / Every feeling grows its own flower. / There are ten. Pick the one that fits today. # open: focus indicator below 3:1
@@ -30,172 +18,13 @@ focus-visible | o8-day-calm-bottom-bar | Loved | a day / Every feeling grows its
 focus-visible | o8-day-calm-bottom-bar | Sad | a day / Every feeling grows its own flower. / There are ten. Pick the one that fits today. # open: focus indicator below 3:1
 focus-visible | o8-day-calm-bottom-bar | Tired | a day / Every feeling grows its own flower. / There are ten. Pick the one that fits today. # open: focus indicator below 3:1
 focus-visible | o8-day-calm-bottom-bar | Warm | a day / Every feeling grows its own flower. / There are ten. Pick the one that fits today. # open: focus indicator below 3:1
-overflow | o32-map-end-bottom-bar@2x | swipe to start journaling | <root> # open: layout overflows
-overlapping-text | o10-moment-empty-bottom-bar@2x | write anything at all to keep going + Write a line or two first. | <root> # open: text overlaps other text at 2x text
-overlapping-text | o6-day-happy-bottom-bar@2x | peony + There are ten. Pick the one that fits today. | <root> # open: text overlaps other text at 2x text
-overlapping-text | o8-day-calm-bottom-bar@2x | lavender + There are ten. Pick the one that fits today. | <root> # open: text overlaps other text at 2x text
-small-target | o10-moment-empty-bottom-bar | A day | <root> # open: tap target under the platform minimum
-small-target | o10-moment-empty-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o10-moment-empty-bottom-bar | Skip | <root> # open: tap target under the platform minimum
-small-target | o10-moment-empty-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o10-moment-empty-bottom-bar@2x | A day | <root> # open: tap target under the platform minimum
-small-target | o10-moment-empty-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o10-moment-empty-bottom-bar@2x | Skip | <root> # open: tap target under the platform minimum
-small-target | o10-moment-empty-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o12-moment-saved-bottom-bar | A day | <root> # open: tap target under the platform minimum
-small-target | o12-moment-saved-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o12-moment-saved-bottom-bar | Skip | <root> # open: tap target under the platform minimum
-small-target | o12-moment-saved-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o12-moment-saved-bottom-bar@2x | A day | <root> # open: tap target under the platform minimum
-small-target | o12-moment-saved-bottom-bar@2x | Back | <root> # open: tap target under the platform minimum
-small-target | o12-moment-saved-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o12-moment-saved-bottom-bar@2x | Skip | <root> # open: tap target under the platform minimum
-small-target | o12-moment-saved-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o14-moment-failed-bottom-bar | A day | <root> # open: tap target under the platform minimum
-small-target | o14-moment-failed-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o14-moment-failed-bottom-bar | Skip | <root> # open: tap target under the platform minimum
-small-target | o14-moment-failed-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o14-moment-failed-bottom-bar@2x | A day | <root> # open: tap target under the platform minimum
-small-target | o14-moment-failed-bottom-bar@2x | Back | <root> # open: tap target under the platform minimum
-small-target | o14-moment-failed-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o14-moment-failed-bottom-bar@2x | Skip | <root> # open: tap target under the platform minimum
-small-target | o14-moment-failed-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o16-month-empty-bottom-bar | A day | <root> # open: tap target under the platform minimum
-small-target | o16-month-empty-bottom-bar | A moment | <root> # open: tap target under the platform minimum
-small-target | o16-month-empty-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o16-month-empty-bottom-bar | Skip | <root> # open: tap target under the platform minimum
-small-target | o16-month-empty-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o16-month-empty-bottom-bar@2x | A day | <root> # open: tap target under the platform minimum
-small-target | o16-month-empty-bottom-bar@2x | A moment | <root> # open: tap target under the platform minimum
-small-target | o16-month-empty-bottom-bar@2x | Back | <root> # open: tap target under the platform minimum
-small-target | o16-month-empty-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o16-month-empty-bottom-bar@2x | Skip | <root> # open: tap target under the platform minimum
-small-target | o16-month-empty-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o18-month-full-bottom-bar | A day | <root> # open: tap target under the platform minimum
-small-target | o18-month-full-bottom-bar | A moment | <root> # open: tap target under the platform minimum
-small-target | o18-month-full-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o18-month-full-bottom-bar | Skip | <root> # open: tap target under the platform minimum
-small-target | o18-month-full-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o18-month-full-bottom-bar@2x | A day | <root> # open: tap target under the platform minimum
-small-target | o18-month-full-bottom-bar@2x | A moment | <root> # open: tap target under the platform minimum
-small-target | o18-month-full-bottom-bar@2x | Back | <root> # open: tap target under the platform minimum
-small-target | o18-month-full-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o18-month-full-bottom-bar@2x | Skip | <root> # open: tap target under the platform minimum
-small-target | o18-month-full-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o2-opening-unplanted-bottom-bar | Skip | <root> # open: tap target under the platform minimum
-small-target | o2-opening-unplanted-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o2-opening-unplanted-bottom-bar@2x | Skip | <root> # open: tap target under the platform minimum
-small-target | o2-opening-unplanted-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o20-year-playing-bottom-bar | A day | <root> # open: tap target under the platform minimum
-small-target | o20-year-playing-bottom-bar | A moment | <root> # open: tap target under the platform minimum
-small-target | o20-year-playing-bottom-bar | A month | <root> # open: tap target under the platform minimum
-small-target | o20-year-playing-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o20-year-playing-bottom-bar | Skip | <root> # open: tap target under the platform minimum
-small-target | o20-year-playing-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o20-year-playing-bottom-bar@2x | A day | <root> # open: tap target under the platform minimum
-small-target | o20-year-playing-bottom-bar@2x | A moment | <root> # open: tap target under the platform minimum
-small-target | o20-year-playing-bottom-bar@2x | A month | <root> # open: tap target under the platform minimum
-small-target | o20-year-playing-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o20-year-playing-bottom-bar@2x | Skip | <root> # open: tap target under the platform minimum
-small-target | o20-year-playing-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o22-year-finished-bottom-bar | A day | <root> # open: tap target under the platform minimum
-small-target | o22-year-finished-bottom-bar | A moment | <root> # open: tap target under the platform minimum
-small-target | o22-year-finished-bottom-bar | A month | <root> # open: tap target under the platform minimum
-small-target | o22-year-finished-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o22-year-finished-bottom-bar | Skip | <root> # open: tap target under the platform minimum
-small-target | o22-year-finished-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o22-year-finished-bottom-bar@2x | A day | <root> # open: tap target under the platform minimum
-small-target | o22-year-finished-bottom-bar@2x | A moment | <root> # open: tap target under the platform minimum
-small-target | o22-year-finished-bottom-bar@2x | A month | <root> # open: tap target under the platform minimum
-small-target | o22-year-finished-bottom-bar@2x | Back | <root> # open: tap target under the platform minimum
-small-target | o22-year-finished-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o22-year-finished-bottom-bar@2x | Skip | <root> # open: tap target under the platform minimum
-small-target | o22-year-finished-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o24-theme-bottom-bar | A day | <root> # open: tap target under the platform minimum
-small-target | o24-theme-bottom-bar | A moment | <root> # open: tap target under the platform minimum
-small-target | o24-theme-bottom-bar | A month | <root> # open: tap target under the platform minimum
-small-target | o24-theme-bottom-bar | A year | <root> # open: tap target under the platform minimum
-small-target | o24-theme-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o24-theme-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o24-theme-bottom-bar@2x | A day | <root> # open: tap target under the platform minimum
-small-target | o24-theme-bottom-bar@2x | A moment | <root> # open: tap target under the platform minimum
-small-target | o24-theme-bottom-bar@2x | A month | <root> # open: tap target under the platform minimum
-small-target | o24-theme-bottom-bar@2x | A year | <root> # open: tap target under the platform minimum
-small-target | o24-theme-bottom-bar@2x | Back | <root> # open: tap target under the platform minimum
-small-target | o24-theme-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o24-theme-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o26-reminder-time-bottom-bar | A day | <root> # open: tap target under the platform minimum
-small-target | o26-reminder-time-bottom-bar | A moment | <root> # open: tap target under the platform minimum
-small-target | o26-reminder-time-bottom-bar | A month | <root> # open: tap target under the platform minimum
-small-target | o26-reminder-time-bottom-bar | A year | <root> # open: tap target under the platform minimum
-small-target | o26-reminder-time-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o26-reminder-time-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o26-reminder-time-bottom-bar | Theme | <root> # open: tap target under the platform minimum
-small-target | o26-reminder-time-bottom-bar@2x | A day | <root> # open: tap target under the platform minimum
-small-target | o26-reminder-time-bottom-bar@2x | A moment | <root> # open: tap target under the platform minimum
-small-target | o26-reminder-time-bottom-bar@2x | A month | <root> # open: tap target under the platform minimum
-small-target | o26-reminder-time-bottom-bar@2x | A year | <root> # open: tap target under the platform minimum
-small-target | o26-reminder-time-bottom-bar@2x | Back | <root> # open: tap target under the platform minimum
-small-target | o26-reminder-time-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o26-reminder-time-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o26-reminder-time-bottom-bar@2x | Theme | <root> # open: tap target under the platform minimum
-small-target | o28-reminder-off-bottom-bar | A day | <root> # open: tap target under the platform minimum
-small-target | o28-reminder-off-bottom-bar | A moment | <root> # open: tap target under the platform minimum
-small-target | o28-reminder-off-bottom-bar | A month | <root> # open: tap target under the platform minimum
-small-target | o28-reminder-off-bottom-bar | A year | <root> # open: tap target under the platform minimum
-small-target | o28-reminder-off-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o28-reminder-off-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o28-reminder-off-bottom-bar | Theme | <root> # open: tap target under the platform minimum
-small-target | o28-reminder-off-bottom-bar@2x | A day | <root> # open: tap target under the platform minimum
-small-target | o28-reminder-off-bottom-bar@2x | A moment | <root> # open: tap target under the platform minimum
-small-target | o28-reminder-off-bottom-bar@2x | A month | <root> # open: tap target under the platform minimum
-small-target | o28-reminder-off-bottom-bar@2x | A year | <root> # open: tap target under the platform minimum
-small-target | o28-reminder-off-bottom-bar@2x | Back | <root> # open: tap target under the platform minimum
-small-target | o28-reminder-off-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o28-reminder-off-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o28-reminder-off-bottom-bar@2x | Theme | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar | A day | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar | A moment | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar | A month | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar | A year | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar | Reminder | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o30-week-bottom-bar | Theme | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar@2x | A day | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar@2x | A moment | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar@2x | A month | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar@2x | A year | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar@2x | Back | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar@2x | Reminder | <root> # open: tap target under the platform minimum
-small-target | o30-week-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o30-week-bottom-bar@2x | Theme | <root> # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar | A day | <root> # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar | A moment | <root> # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar | A month | <root> # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar | A year | <root> # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar | Reminder | <root> # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o32-map-end-bottom-bar | Theme | <root> # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar | Week | <root> # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar@2x | A day | <root> # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar@2x | A moment | <root> # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar@2x | A month | <root> # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar@2x | A year | <root> # open: tap target under the platform minimum
 small-target | o32-map-end-bottom-bar@2x | Calendar, A month of flowers. Swipe to change month. | one last thing / Here's where everything lives. / Tap a row to see it in the app. # open: tap target under the platform minimum
 small-target | o32-map-end-bottom-bar@2x | Meadow, Your year in bloom, full screen. | one last thing / Here's where everything lives. / Tap a row to see it in the app. # open: tap target under the platform minimum
 small-target | o32-map-end-bottom-bar@2x | New log, Write, speak, film or add a photo. | one last thing / Here's where everything lives. / Tap a row to see it in the app. # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar@2x | Reminder | <root> # open: tap target under the platform minimum
 small-target | o32-map-end-bottom-bar@2x | Search, The field sits at the bottom, by your thumb. | one last thing / Here's where everything lives. / Tap a row to see it in the app. # open: tap target under the platform minimum
 small-target | o32-map-end-bottom-bar@2x | Settings, The gear beside it: theme, reminders, week. | one last thing / Here's where everything lives. / Tap a row to see it in the app. # open: tap target under the platform minimum
 small-target | o32-map-end-bottom-bar@2x | Streak, Days in a row, top right of every page. | one last thing / Here's where everything lives. / Tap a row to see it in the app. # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o32-map-end-bottom-bar@2x | Theme | <root> # open: tap target under the platform minimum
 small-target | o32-map-end-bottom-bar@2x | Today, Your day, its mood and its logs. | one last thing / Here's where everything lives. / Tap a row to see it in the app. # open: tap target under the platform minimum
-small-target | o32-map-end-bottom-bar@2x | Week | <root> # open: tap target under the platform minimum
 small-target | o34-map-replay-bottom-bar@2x | Calendar, A month of flowers. Swipe to change month. | one last thing / Here's where everything lives. / Tap a row to see it in the app. # open: tap target under the platform minimum
 small-target | o34-map-replay-bottom-bar@2x | Meadow, Your year in bloom, full screen. | one last thing / Here's where everything lives. / Tap a row to see it in the app. # open: tap target under the platform minimum
 small-target | o34-map-replay-bottom-bar@2x | New log, Write, speak, film or add a photo. | one last thing / Here's where everything lives. / Tap a row to see it in the app. # open: tap target under the platform minimum
@@ -203,45 +32,7 @@ small-target | o34-map-replay-bottom-bar@2x | Search, The field sits at the bott
 small-target | o34-map-replay-bottom-bar@2x | Settings, The gear beside it: theme, reminders, week. | one last thing / Here's where everything lives. / Tap a row to see it in the app. # open: tap target under the platform minimum
 small-target | o34-map-replay-bottom-bar@2x | Streak, Days in a row, top right of every page. | one last thing / Here's where everything lives. / Tap a row to see it in the app. # open: tap target under the platform minimum
 small-target | o34-map-replay-bottom-bar@2x | Today, Your day, its mood and its logs. | one last thing / Here's where everything lives. / Tap a row to see it in the app. # open: tap target under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar | A day | <root> # open: tap target under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar | A moment | <root> # open: tap target under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar | A month | <root> # open: tap target under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar | A year | <root> # open: tap target under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar | Theme | <root> # open: tap target under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar@2x | A day | <root> # open: tap target under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar@2x | A moment | <root> # open: tap target under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar@2x | A month | <root> # open: tap target under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar@2x | A year | <root> # open: tap target under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar@2x | Back | <root> # open: tap target under the platform minimum
 small-target | o36-reminder-notifications-off-bottom-bar@2x | Open System Settings | and you / When should we check in? / 8:30 PM # open: tap target under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o36-reminder-notifications-off-bottom-bar@2x | Theme | <root> # open: tap target under the platform minimum
-small-target | o4-opening-grown-bottom-bar | Skip | <root> # open: tap target under the platform minimum
-small-target | o4-opening-grown-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o4-opening-grown-bottom-bar@2x | Skip | <root> # open: tap target under the platform minimum
-small-target | o4-opening-grown-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o6-day-happy-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o6-day-happy-bottom-bar | Skip | <root> # open: tap target under the platform minimum
-small-target | o6-day-happy-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o6-day-happy-bottom-bar@2x | Back | <root> # open: tap target under the platform minimum
-small-target | o6-day-happy-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o6-day-happy-bottom-bar@2x | Skip | <root> # open: tap target under the platform minimum
-small-target | o6-day-happy-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o8-day-calm-bottom-bar | Opening | <root> # open: tap target under the platform minimum
-small-target | o8-day-calm-bottom-bar | Skip | <root> # open: tap target under the platform minimum
-small-target | o8-day-calm-bottom-bar | Switch to dark | <root> # open: theme toggle is under the platform minimum
-small-target | o8-day-calm-bottom-bar@2x | Back | <root> # open: tap target under the platform minimum
-small-target | o8-day-calm-bottom-bar@2x | Opening | <root> # open: tap target under the platform minimum
-small-target | o8-day-calm-bottom-bar@2x | Skip | <root> # open: tap target under the platform minimum
-small-target | o8-day-calm-bottom-bar@2x | Switch to dark | <root> # open: theme toggle is under the platform minimum
-text-contrast | o12-moment-saved-bottom-bar | Add a photo | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o12-moment-saved-bottom-bar | On a walk, in the car. Hold it like a call. | Say it out loud # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o12-moment-saved-bottom-bar | Straight from the camera, or one from earlier. | Add a photo # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o12-moment-saved-bottom-bar | snap | Add a photo # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o12-moment-saved-bottom-bar | speak | Say it out loud # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o16-month-empty-bottom-bar | 1 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o16-month-empty-bottom-bar | 10 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o16-month-empty-bottom-bar | 11 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
@@ -284,6 +75,7 @@ text-contrast | o16-month-empty-bottom-bar@2x | 17 | July 20, today, Happy # ope
 text-contrast | o16-month-empty-bottom-bar@2x | 18 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o16-month-empty-bottom-bar@2x | 19 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o16-month-empty-bottom-bar@2x | 2 | a month / Give it a few weeks. / July / 1 flower so far # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | o16-month-empty-bottom-bar@2x | 20 | a month / Give it a few weeks. / July / 1 flower so far # open: text-contrast
 text-contrast | o16-month-empty-bottom-bar@2x | 21 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o16-month-empty-bottom-bar@2x | 22 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o16-month-empty-bottom-bar@2x | 23 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
@@ -341,7 +133,6 @@ text-contrast | o18-month-full-bottom-bar@2x | 7 | July 20, today, Happy # open:
 text-contrast | o18-month-full-bottom-bar@2x | 8 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o18-month-full-bottom-bar@2x | 9 | July 20, today, Happy # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o20-year-playing-bottom-bar | 195 of 365 days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o20-year-playing-bottom-bar | Skip | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o20-year-playing-bottom-bar | This is roughly what a year of you looks like. | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o20-year-playing-bottom-bar | a year | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o20-year-playing-bottom-bar@2x | 195 of 365 days | <root> # open: text contrast below 4.5:1, or 3:1 for large text
@@ -349,7 +140,8 @@ text-contrast | o20-year-playing-bottom-bar@2x | This is roughly what a year of 
 text-contrast | o20-year-playing-bottom-bar@2x | a year | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o22-year-finished-bottom-bar | a year | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | o22-year-finished-bottom-bar@2x | a year | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | o8-day-calm-bottom-bar | lavender | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | o8-day-calm-bottom-bar | lavender | <root> # measured: 6.7:1 by token arithmetic
+text-contrast | o8-day-calm-bottom-bar@2x | lavender | <root> # measured: 6.7:1 by token arithmetic
 truncated-text | o16-month-empty-bottom-bar@2x | F | a month / Give it a few weeks. / July / 1 flower so far # open: truncated-text
 truncated-text | o16-month-empty-bottom-bar@2x | M | a month / Give it a few weeks. / July / 1 flower so far # open: truncated-text
 truncated-text | o16-month-empty-bottom-bar@2x | S | a month / Give it a few weeks. / July / 1 flower so far # open: truncated-text
