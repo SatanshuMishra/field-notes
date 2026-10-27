@@ -76,4 +76,30 @@ void main() {
       handle.dispose();
     },
   );
+
+  testWidgets('future day numbers on the phone calendar keep full ink', (
+    WidgetTester tester,
+  ) async {
+    await _pumpAugust(tester);
+
+    final List<Element> numbers = find
+        .descendant(
+          of: find.byKey(phoneMonthGridKey),
+          matching: find.byType(Text),
+        )
+        .evaluate()
+        .toList();
+    expect(numbers, isNotEmpty);
+    for (final Element number in numbers) {
+      final List<double> dimming = <double>[];
+      number.visitAncestorElements((Element ancestor) {
+        final Widget widget = ancestor.widget;
+        if (widget is Opacity && widget.opacity < 1) {
+          dimming.add(widget.opacity);
+        }
+        return widget.key != phoneMonthGridKey;
+      });
+      expect(dimming, isEmpty, reason: (number.widget as Text).data);
+    }
+  });
 }

@@ -33,6 +33,7 @@ const Size _smallestSidebarArea = Size(873, 558);
 const Size _smallestBottomBarArea = Size(360, 640);
 const List<double> _textScales = <double>[1, 1.3];
 const List<double> _fills = <double>[0, 1];
+const List<double> _artTextScales = <double>[1, 1.3, 2];
 const int _sixWeekRows = 6;
 const double _legibleCell = 24;
 const double _sliderTarget = 48;
@@ -616,6 +617,46 @@ void main() {
             }
           }
         }
+      }
+    }
+  });
+
+  testWidgets('a month keeps every flower clear of its day number at large '
+      'text', (WidgetTester tester) async {
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final DateTime today = DateTime(2026, DateTime.october, 27, 9);
+    for (final ShellLayout layout in ShellLayout.values) {
+      for (final double scale in _artTextScales) {
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        await _onLayout(layout, () async {
+          await _pumpSmallestMonth(
+            tester,
+            layout: layout,
+            today: today,
+            week: WeekStart.sunday,
+            fill: 1,
+          );
+          for (int day = 1; day <= _lastDay; day++) {
+            final Finder art = find.descendant(
+              of: _day(day),
+              matching: find.byWidgetPredicate(
+                (Widget widget) =>
+                    widget is FlowerBloom || widget.key == monthRingKey,
+              ),
+            );
+            if (art.evaluate().isEmpty) {
+              continue;
+            }
+            final Rect numeral = tester.getRect(
+              find.descendant(of: _day(day), matching: find.text('$day')),
+            );
+            expect(
+              numeral.bottom,
+              lessThanOrEqualTo(tester.getRect(art.first).top + _edge),
+              reason: '${layout.name}, text scale $scale, day $day',
+            );
+          }
+        });
       }
     }
   });

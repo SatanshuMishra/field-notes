@@ -65,6 +65,26 @@ Iterable<double> _opacitiesIn(WidgetTester tester, Finder cell) {
       .map((Opacity opacity) => opacity.opacity);
 }
 
+Iterable<double> _numeralOpacities(
+  WidgetTester tester,
+  Finder cell,
+  int dayOfMonth,
+) {
+  final Element numeral = find
+      .descendant(of: cell, matching: find.text('$dayOfMonth'))
+      .evaluate()
+      .single;
+  final List<double> opacities = <double>[];
+  numeral.visitAncestorElements((Element ancestor) {
+    final Widget widget = ancestor.widget;
+    if (widget is Opacity) {
+      opacities.add(widget.opacity);
+    }
+    return ancestor.widget.key != (cell.evaluate().single.widget.key);
+  });
+  return opacities;
+}
+
 void main() {
   testWidgets('tapping today opens the Today page', (
     WidgetTester tester,
@@ -102,6 +122,7 @@ void main() {
     expect(openedToday, isEmpty);
     expect(_opacitiesIn(tester, _dayCell('2026-07-20')), contains(0.55));
     expect(_opacitiesIn(tester, _dayCell('2026-07-14')), isNot(contains(0.55)));
+    expect(_numeralOpacities(tester, _dayCell('2026-07-20'), 20), isEmpty);
   });
 
   testWidgets('a Monday week start leads the grid and the labels with Monday', (
@@ -120,8 +141,9 @@ void main() {
         .toList();
     expect(labels, <String>['M', 'T', 'W', 'T', 'F', 'S', 'S']);
 
-    final CalendarDayCell first =
-        tester.widgetList<CalendarDayCell>(find.byType(CalendarDayCell)).first;
+    final CalendarDayCell first = tester
+        .widgetList<CalendarDayCell>(find.byType(CalendarDayCell))
+        .first;
     expect(first.cell.dateKey, '2026-06-29');
   });
 
