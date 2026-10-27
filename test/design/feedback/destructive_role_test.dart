@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -21,6 +22,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../features/settings/support/settings_harness.dart';
+import '../../support/sync_overrides.dart';
 import '../../support/face_boxes.dart';
 
 const Size _phone = Size(412, 915);
@@ -411,12 +413,11 @@ void main() {
           of: deleteAll,
           matching: find.byType(StickerButton),
         );
-        if (platform == TargetPlatform.android) {
-          expect(
-            tester.widget<StickerButton>(sticker).variant,
-            StickerButtonVariant.danger,
-          );
-        }
+        expect(
+          tester.widget<StickerButton>(sticker).variant,
+          StickerButtonVariant.danger,
+          reason: '$platform Delete all is the danger sticker button',
+        );
         final BoxDecoration face = _faceDecoration(tester, deleteAll);
         final FieldNotesColors colors = FieldNotesColors.light;
         expect(
@@ -430,6 +431,35 @@ void main() {
           reason: '$platform Delete all draws the danger ink',
         );
       }
+    }),
+  );
+
+  testWidgets(
+    'delete all with sync on uses the danger look on the phone',
+    _resettingPlatform((WidgetTester tester) async {
+      await _pumpOn(
+        tester,
+        TargetPlatform.android,
+        ProviderScope(
+          overrides: syncOnOverrides(
+            status: SyncedStatus(DateTime.now().toUtc()),
+          ),
+          child: _app(
+            TargetPlatform.android,
+            _opener('Open', (BuildContext context) async {
+              await confirmDeleteAll(context);
+            }),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      final Finder everywhere = find.byKey(deleteEverywhereKey);
+      expect(
+        tester.widget<StickerButton>(everywhere).variant,
+        StickerButtonVariant.danger,
+      );
+      expect(_faceDecoration(tester, everywhere).color, isNull);
     }),
   );
 
