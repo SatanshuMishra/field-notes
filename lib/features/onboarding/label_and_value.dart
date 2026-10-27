@@ -1,3 +1,4 @@
+import 'package:field_notes/design/format/text_extent.dart';
 import 'package:flutter/widgets.dart';
 
 class LabelAndValue extends StatelessWidget {
@@ -16,20 +17,12 @@ class LabelAndValue extends StatelessWidget {
   final TextStyle valueStyle;
   final double gap;
 
-  double _widthOf(BuildContext context, String text, TextStyle style) {
-    final TextPainter painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: DefaultTextStyle.of(context).style.merge(style),
-      ),
-      textDirection: Directionality.of(context),
-      textScaler: MediaQuery.textScalerOf(context),
-      maxLines: 1,
-    )..layout();
-    final double width = painter.width;
-    painter.dispose();
-    return width;
-  }
+  double _widthOf(BuildContext context, String text, TextStyle style) =>
+      singleLineWidth(
+        context,
+        text,
+        DefaultTextStyle.of(context).style.merge(style),
+      );
 
   @override
   Widget build(BuildContext context) {

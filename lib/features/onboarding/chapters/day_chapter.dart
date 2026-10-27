@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/format/text_extent.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -273,19 +274,11 @@ class _MoodTiles extends StatelessWidget {
   double _widestLabel(BuildContext context) {
     final TextStyle style = DefaultTextStyle.of(context).style
         .merge(_labelStyle(metrics, context.colors.ink));
-    final TextScaler scaler = MediaQuery.textScalerOf(context);
-    final TextDirection direction = Directionality.of(context);
-    return moodOrder.fold(0.0, (double widest, Mood mood) {
-      final TextPainter painter = TextPainter(
-        text: TextSpan(text: mood.label, style: style),
-        textDirection: direction,
-        textScaler: scaler,
-        maxLines: 1,
-      )..layout();
-      final double width = painter.width;
-      painter.dispose();
-      return math.max(widest, width);
-    });
+    return moodOrder.fold(
+      0.0,
+      (double widest, Mood mood) =>
+          math.max(widest, singleLineWidth(context, mood.label, style)),
+    );
   }
 
   @override

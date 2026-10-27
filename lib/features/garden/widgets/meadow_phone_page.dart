@@ -1,3 +1,4 @@
+import 'package:field_notes/design/format/text_extent.dart';
 import 'package:flutter/material.dart';
 
 import 'package:field_notes/app/shell/bottom_bar_shell.dart';
@@ -21,18 +22,6 @@ const EdgeInsets _yearPadding = EdgeInsets.symmetric(horizontal: 13);
 const double _backChevronSize = 14;
 const double _caretSize = 12;
 const double _glyphGap = 6;
-
-double _textWidth(BuildContext context, String text, TextStyle style) {
-  final TextPainter painter = TextPainter(
-    text: TextSpan(text: text, style: style),
-    textDirection: Directionality.of(context),
-    textScaler: MediaQuery.textScalerOf(context),
-    maxLines: 1,
-  )..layout();
-  final double width = painter.width;
-  painter.dispose();
-  return width;
-}
 
 class MeadowPhonePage extends StatelessWidget {
   const MeadowPhonePage({super.key, required this.chrome, this.study});
@@ -113,10 +102,10 @@ class MeadowPhonePage extends StatelessWidget {
         _backPadding.horizontal +
         _backChevronSize +
         _glyphGap +
-        _textWidth(context, meadowBackCompactLabel, meadowSans(13));
+        singleLineWidth(context, meadowBackCompactLabel, meadowSans(13));
     final double year =
         _yearPadding.horizontal +
-        _textWidth(context, '${chrome.year.year}', meadowSans(14)) +
+        singleLineWidth(context, '${chrome.year.year}', meadowSans(14)) +
         _glyphGap +
         _caretSize;
     final double fixed =
@@ -124,7 +113,7 @@ class MeadowPhonePage extends StatelessWidget {
         year +
         meadowPhoneControlHeight * 2 +
         meadowPhoneDockGap * 4 +
-        _textWidth(context, meadowReplayShortLabel, meadowSans(13)) +
+        singleLineWidth(context, meadowReplayShortLabel, meadowSans(13)) +
         meadowReplayPadding;
     return fixed <= room;
   }

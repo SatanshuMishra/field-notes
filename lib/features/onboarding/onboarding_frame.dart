@@ -6,6 +6,7 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/format/text_extent.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
@@ -1201,7 +1202,9 @@ class _SwipeCueState extends State<_SwipeCue>
             builder: (BuildContext context, BoxConstraints constraints) {
               final bool track =
                   widget.track &&
-                  _labelWidth(context, label, style) + _trackWidth + _cueGap <=
+                  singleLineWidth(context, label, style) +
+                          _trackWidth +
+                          _cueGap <=
                       constraints.maxWidth;
               return Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1239,18 +1242,6 @@ class _SwipeCueState extends State<_SwipeCue>
       ),
     );
   }
-}
-
-double _labelWidth(BuildContext context, String label, TextStyle style) {
-  final TextPainter painter = TextPainter(
-    text: TextSpan(text: label, style: style),
-    textDirection: Directionality.of(context),
-    textScaler: MediaQuery.textScalerOf(context),
-    maxLines: 1,
-  )..layout();
-  final double width = painter.width;
-  painter.dispose();
-  return width;
 }
 
 class _CuePainter extends CustomPainter {

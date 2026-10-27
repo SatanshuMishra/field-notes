@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/system_bars.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/format/text_extent.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
@@ -211,24 +212,20 @@ TextStyle _messageStyle(BuildContext context) =>
       color: Palette.mediaInk,
     );
 
-double _headerHeight(BuildContext context, double width) {
-  final TextScaler scaler = MediaQuery.textScalerOf(context);
-  final TextDirection direction = Directionality.of(context);
-  double laidOutHeight(String text, TextStyle style) {
-    final TextPainter painter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: direction,
-      textScaler: scaler,
-    )..layout(maxWidth: math.max(0, width));
-    final double height = painter.height;
-    painter.dispose();
-    return height;
-  }
-
-  return laidOutHeight(joinScanKicker, _kickerStyle(context)) +
-      _kickerGap +
-      laidOutHeight(joinScanMessage, _messageStyle(context));
-}
+double _headerHeight(BuildContext context, double width) =>
+    wrappedHeight(
+      context,
+      joinScanKicker,
+      _kickerStyle(context),
+      maxWidth: width,
+    ) +
+    _kickerGap +
+    wrappedHeight(
+      context,
+      joinScanMessage,
+      _messageStyle(context),
+      maxWidth: width,
+    );
 
 enum _ControlSlot { cancel, typeWords, error }
 
