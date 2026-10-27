@@ -296,6 +296,7 @@ Future<List<String>> _swept(
   Widget widget, {
   required Set<String> rules,
   Color ground = _ground,
+  A11yPumpBody? setUp,
 }) async {
   final A11yStateResult result = await runA11yState(
     tester,
@@ -318,6 +319,7 @@ Future<List<String>> _swept(
           ),
         );
         await tester.pump(const Duration(milliseconds: 200));
+        await setUp?.call(tester, variant);
       },
       proof: <A11yProof>[A11yProof(find.byKey(_plantedKey))],
     ),
@@ -379,6 +381,29 @@ class _RingButtonState extends State<_RingButton> {
         child: _box(120, 48),
       ),
     ),
+  );
+}
+
+class _TabbedHeading extends StatefulWidget {
+  const _TabbedHeading();
+
+  @override
+  State<_TabbedHeading> createState() => _TabbedHeadingState();
+}
+
+class _TabbedHeadingState extends State<_TabbedHeading> {
+  bool _about = false;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: <Widget>[
+      Text(_about ? 'About' : 'Data'),
+      TextButton(
+        onPressed: () => setState(() => _about = true),
+        child: const Text('Show About'),
+      ),
+    ],
   );
 }
 
@@ -1041,6 +1066,25 @@ void main() {
       isEmpty,
     );
   });
+
+  testWidgets(
+    "a text the state's own setup changes is not a live-region finding",
+    (WidgetTester tester) async {
+      expect(
+        await _swept(
+          tester,
+          _android,
+          const _TabbedHeading(),
+          rules: <String>{'live-region'},
+          setUp: (WidgetTester tester, A11yVariant variant) async {
+            await tester.tap(find.text('Show About'));
+            await tester.pump();
+          },
+        ),
+        isEmpty,
+      );
+    },
+  );
 
   testWidgets('a tappable control tab cannot reach is a keyboard finding', (
     WidgetTester tester,
