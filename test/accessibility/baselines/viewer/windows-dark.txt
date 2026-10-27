@@ -1,13 +1,8 @@
 focus-visible | d5-reader-menu-sidebar | Copy | <root> # Flutter's own control
 focus-visible | d5-reader-menu-sidebar | Select all | <root> # Flutter's own control
-keyboard | d7-day-with-entries-sidebar | 2:30 PM · afternoon · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: keyboard
-small-target | d1-viewer-todos-sidebar | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d1-viewer-todos-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: small-target
 small-target | d5-reader-menu-sidebar | Copy | <root> # Flutter's own control
 small-target | d5-reader-menu-sidebar | Select all | <root> # Flutter's own control
 small-target | d5-reader-menu-sidebar@2x | Copy | <root> # Flutter's own control
 small-target | d5-reader-menu-sidebar@2x | Select all | <root> # Flutter's own control
-small-target | d6-task-toast-sidebar | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d6-task-toast-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: small-target
 text-contrast | d5-reader-menu-sidebar@2x | Copy | <root> # Flutter's own control
 truncated-text | d5-reader-menu-sidebar@2x | Select all | <root> # Flutter's own control

@@ -1,21 +1,16 @@
 focus-visible | d5-reader-menu-sidebar | Copy | <root> # Flutter's own control
 focus-visible | d5-reader-menu-sidebar | Select all | <root> # Flutter's own control
-keyboard | d7-day-with-entries-sidebar | 2:30 PM · afternoon · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: keyboard
-small-target | d1-viewer-todos-sidebar | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d1-viewer-todos-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: small-target
 small-target | d5-reader-menu-sidebar | Copy | <root> # Flutter's own control
 small-target | d5-reader-menu-sidebar | Select all | <root> # Flutter's own control
 small-target | d5-reader-menu-sidebar@2x | Copy | <root> # Flutter's own control
 small-target | d5-reader-menu-sidebar@2x | Select all | <root> # Flutter's own control
-small-target | d6-task-toast-sidebar | call the ferry office | Friday, September 18 / Morning note # open: small-target
-small-target | d6-task-toast-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: small-target
-text-contrast | d11-mood-picker-sidebar | tap to plant today's bloom | <root> # open: text-contrast
-text-contrast | d13-change-mood-dialog-sidebar | Change | Feeling Calm / Lavender · today's bloom # open: text-contrast
-text-contrast | d13-change-mood-dialog-sidebar | Feeling Calm | <root> # open: text-contrast
-text-contrast | d13-change-mood-dialog-sidebar | Lavender · today's bloom | <root> # open: text-contrast
-text-contrast | d13-change-mood-dialog-sidebar@2x | Change | Feeling Calm / Lavender · today's bloom # open: text-contrast
-text-contrast | d13-change-mood-dialog-sidebar@2x | Feeling Calm | <root> # open: text-contrast
-text-contrast | d13-change-mood-dialog-sidebar@2x | Lavender · today's bloom | <root> # open: text-contrast
+text-contrast | d11-mood-picker-sidebar | tap to plant today's bloom | <root> # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar | Change | Feeling Calm / Lavender · today's bloom # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar | Feeling Calm | <root> # measured: 8.58:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar | Lavender · today's bloom | <root> # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar@2x | Change | Feeling Calm / Lavender · today's bloom # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar@2x | Feeling Calm | <root> # measured: 8.58:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar@2x | Lavender · today's bloom | <root> # measured: 5.76:1 by token arithmetic
 text-contrast | d14-delete-entry-dialog-sidebar | 9:30 AM | Friday, September 18 / Morning note # measured: 6.53:1 by token arithmetic
 text-contrast | d14-delete-entry-dialog-sidebar | Close | Friday, September 18 / Morning note # measured: 9.41:1 by token arithmetic
 text-contrast | d14-delete-entry-dialog-sidebar | Friday, September 18 | <root> # measured: 6.53:1 by token arithmetic
