@@ -1,3 +1,5 @@
+flutter-text-contrast | c1-chooser-sidebar | how do you want to plant today? | <root> # open: flutter-text-contrast
+flutter-text-contrast | c1-chooser-sidebar@2x | how do you want to plant today? | <root> # open: flutter-text-contrast
 flutter-text-contrast | c11-draft-chip | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # open: fails Flutter's text contrast guideline
 flutter-text-contrast | c11-draft-chip@2x | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # open: fails Flutter's text contrast guideline
 flutter-text-contrast | c19-photo-removed-toast | Photo removed | <root> # open: fails Flutter's text contrast guideline
@@ -95,6 +97,21 @@ small-target | c9-selection-menu@2x | Copy | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Cut | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Paste | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Select all | <root> # Flutter's own control
+text-contrast | c1-chooser-sidebar | a moving snapshot | <root> # open: text-contrast
+text-contrast | c1-chooser-sidebar | how do you want to plant today? | <root> # open: text-contrast
+text-contrast | c1-chooser-sidebar | put the day into words | <root> # open: text-contrast
+text-contrast | c1-chooser-sidebar | speak it, hands-free | <root> # open: text-contrast
+text-contrast | c1-chooser-sidebar@2x | a moving snapshot | <root> # open: text-contrast
+text-contrast | c1-chooser-sidebar@2x | put the day into words | <root> # open: text-contrast
+text-contrast | c1-chooser-sidebar@2x | speak it, hands-free | <root> # open: text-contrast
+text-contrast | c10-discard-dialog-sidebar | # title   - list   1. steps   > quote | <root> # open: text-contrast
+text-contrast | c10-discard-dialog-sidebar | Cancel | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: text-contrast
+text-contrast | c10-discard-dialog-sidebar | New note | <root> # open: text-contrast
+text-contrast | c10-discard-dialog-sidebar | Today · 9:30 AM | <root> # open: text-contrast
+text-contrast | c10-discard-dialog-sidebar@2x | # title   - list   1. steps   > quote | <root> # open: text-contrast
+text-contrast | c10-discard-dialog-sidebar@2x | Cancel | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: text-contrast
+text-contrast | c10-discard-dialog-sidebar@2x | New note | <root> # open: text-contrast
+text-contrast | c10-discard-dialog-sidebar@2x | Today · 9:30 AM | <root> # open: text-contrast
 text-contrast | c11-draft-chip | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c11-draft-chip | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c11-draft-chip | Today · 9:30 AM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
@@ -106,9 +123,15 @@ text-contrast | c19-photo-removed-toast | Today · 9:30 AM | <root> # open: text
 text-contrast | c19-photo-removed-toast | Undo | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c19-photo-removed-toast@2x | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c19-photo-removed-toast@2x | Undo | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | c2-composer-new-sidebar | # title   - list   1. steps   > quote | <root> # open: text-contrast
+text-contrast | c2-composer-new-sidebar | Today · 9:30 AM | <root> # open: text-contrast
+text-contrast | c2-composer-new-sidebar@2x | # title   - list   1. steps   > quote | <root> # open: text-contrast
 text-contrast | c4-more-formats | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c4-more-formats | Today · 9:30 AM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c4-more-formats@2x | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | c5-edit-note-sidebar | # title   - list   1. steps   > quote | <root> # open: text-contrast
+text-contrast | c5-edit-note-sidebar | Friday, September 18 | <root> # open: text-contrast
+text-contrast | c5-edit-note-sidebar@2x | # title   - list   1. steps   > quote | <root> # open: text-contrast
 text-contrast | c6-photo-selected | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c6-photo-selected | Today · 9:30 AM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c6-photo-selected@2x | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
@@ -128,4 +151,5 @@ text-contrast | c9-selection-menu@2x | Paste | <root> # Flutter's own control
 text-contrast | c9-selection-menu@2x | Select all | <root> # Flutter's own control
 truncated-text | c13-voice-recording@2x | space pause · ctrl+enter keep · esc leave | <root> # open: text is cut short at 2x text
 truncated-text | c14-voice-paused@2x | space resume · ctrl+enter keep · esc leave | <root> # open: text is cut short at 2x text
+truncated-text | c5-edit-note-sidebar@2x | Editing morning note | <root> # open: truncated-text
 truncated-text | c9-selection-menu@2x | Select all | <root> # Flutter's own control

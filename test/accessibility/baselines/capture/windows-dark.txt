@@ -92,9 +92,14 @@ small-target | c9-selection-menu@2x | Copy | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Cut | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Paste | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Select all | <root> # Flutter's own control
+text-contrast | c1-chooser-sidebar | put the day into words | <root> # open: text-contrast
+text-contrast | c1-chooser-sidebar@2x | put the day into words | <root> # open: text-contrast
+text-contrast | c10-discard-dialog-sidebar | # title   - list   1. steps   > quote | <root> # open: text-contrast
 text-contrast | c11-draft-chip | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c19-photo-removed-toast | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | c2-composer-new-sidebar | # title   - list   1. steps   > quote | <root> # open: text-contrast
 text-contrast | c4-more-formats | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | c5-edit-note-sidebar | # title   - list   1. steps   > quote | <root> # open: text-contrast
 text-contrast | c6-photo-selected | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c7-photo-caption | # title   - list   1. steps   > quote | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | c7-photo-caption | Caption | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: text contrast below 4.5:1, or 3:1 for large text
@@ -106,4 +111,5 @@ text-contrast | c9-selection-menu@2x | Paste | <root> # Flutter's own control
 text-contrast | c9-selection-menu@2x | Select all | <root> # Flutter's own control
 truncated-text | c13-voice-recording@2x | space pause · ctrl+enter keep · esc leave | <root> # open: text is cut short at 2x text
 truncated-text | c14-voice-paused@2x | space resume · ctrl+enter keep · esc leave | <root> # open: text is cut short at 2x text
+truncated-text | c5-edit-note-sidebar@2x | Editing morning note | <root> # open: truncated-text
 truncated-text | c9-selection-menu@2x | Select all | <root> # Flutter's own control

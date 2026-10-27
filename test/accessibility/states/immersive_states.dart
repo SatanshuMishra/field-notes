@@ -56,11 +56,6 @@ Duration _fadeIn(A11yVariant variant) => immersiveFadeFor(variant.layout);
 List<VideoCaptureDevice> _camerasFor(A11yVariant variant) =>
     variant.desktop ? fakeVideoDevices : _phoneCameras;
 
-const List<Set<TargetPlatform>> _layoutPlatforms = <Set<TargetPlatform>>[
-  <TargetPlatform>{TargetPlatform.macOS, TargetPlatform.windows},
-  <TargetPlatform>{TargetPlatform.android},
-];
-
 typedef _Open = Future<Object?> Function(BuildContext context);
 
 class _Launcher extends StatelessWidget {
@@ -322,16 +317,12 @@ List<A11yState> _inBothLayouts({
   required List<A11yProof> proof,
   List<A11yStatefulControl> stateful = const <A11yStatefulControl>[],
 }) {
-  return <A11yState>[
-    for (final Set<TargetPlatform> platforms in _layoutPlatforms)
-      A11yState(
-        id: id,
-        pump: pump,
-        proof: proof,
-        stateful: stateful,
-        platforms: platforms,
-      ),
-  ];
+  final A11yLayoutHalf either = A11yLayoutHalf(
+    pump: pump,
+    proof: proof,
+    stateful: stateful,
+  );
+  return a11yInBothLayouts(id: id, phone: either, desktop: either);
 }
 
 final List<A11yState> immersiveStates = <A11yState>[

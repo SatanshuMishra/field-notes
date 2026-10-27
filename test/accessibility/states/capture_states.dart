@@ -1,6 +1,9 @@
 import 'package:camera/camera.dart' show CameraDescription, CameraLensDirection;
 import 'package:field_notes/app/capture/app_capture_routes.dart';
-import 'package:field_notes/design/widgets/widgets.dart' show PhoneSheet;
+import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/design/feedback/feedback.dart' show DialogHost;
+import 'package:field_notes/design/widgets/widgets.dart'
+    show PhoneSheet, StickerCard;
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/chooser/capture_chooser.dart';
 import 'package:field_notes/features/capture/chooser/capture_chooser_sheet.dart';
@@ -495,6 +498,25 @@ final Finder _fullScreenComposer = find.byElementPredicate(
   description: 'the composer filling the phone screen',
 );
 
+final Finder _panelComposer = find.byElementPredicate(
+  (Element element) =>
+      element.widget.key == composerPanelKey &&
+      switch (element.renderObject) {
+        final RenderBox box when box.hasSize =>
+          box.size.width < MediaQuery.sizeOf(element).width,
+        _ => false,
+      },
+  description: 'the composer as a panel narrower than the desktop window',
+);
+
+final Finder _desktopChooser = find.descendant(
+  of: find.byType(DialogHost),
+  matching: find.byWidgetPredicate(
+    (Widget widget) =>
+        widget is CaptureChooserSheet && widget.layout == ShellLayout.sidebar,
+  ),
+);
+
 List<A11yStatefulControl> _selectedControls(Iterable<Key> keys) =>
     <A11yStatefulControl>[
       for (final Key key in keys)
@@ -502,27 +524,42 @@ List<A11yStatefulControl> _selectedControls(Iterable<Key> keys) =>
     ];
 
 final List<A11yState> captureStates = <A11yState>[
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'c1-chooser',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: _pumpChooser,
-    proof: <A11yProof>[
-      A11yProof(
-        find.descendant(
-          of: find.byType(CaptureChooserSheet),
-          matching: find.byType(PhoneSheet),
+    desktopId: 'c1-chooser-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpChooser,
+      proof: <A11yProof>[
+        A11yProof(
+          find.descendant(
+            of: find.byType(CaptureChooserSheet),
+            matching: find.byType(PhoneSheet),
+          ),
         ),
-      ),
-    ],
+      ],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpChooser,
+      proof: <A11yProof>[A11yProof(_desktopChooser)],
+    ),
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'c2-composer-new',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: _pumpNewComposer,
-    proof: <A11yProof>[
-      A11yProof(find.byType(TextComposerSheet)),
-      A11yProof(_fullScreenComposer),
-    ],
+    desktopId: 'c2-composer-new-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpNewComposer,
+      proof: <A11yProof>[
+        A11yProof(find.byType(TextComposerSheet)),
+        A11yProof(_fullScreenComposer),
+      ],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpNewComposer,
+      proof: <A11yProof>[
+        A11yProof(find.byType(TextComposerSheet)),
+        A11yProof(_panelComposer),
+      ],
+    ),
   ),
   A11yState(
     id: 'c3-composer-keyboard',
@@ -538,14 +575,23 @@ final List<A11yState> captureStates = <A11yState>[
     pump: _pumpMoreFormats,
     proof: <A11yProof>[A11yProof(find.byKey(formatStrikethroughKey))],
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'c5-edit-note',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: _pumpEditNote,
-    proof: <A11yProof>[
-      A11yProof(find.text(editNoteSaveLabel)),
-      A11yProof(_fullScreenComposer),
-    ],
+    desktopId: 'c5-edit-note-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpEditNote,
+      proof: <A11yProof>[
+        A11yProof(find.text(editNoteSaveLabel)),
+        A11yProof(_fullScreenComposer),
+      ],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpEditNote,
+      proof: <A11yProof>[
+        A11yProof(find.text(editNoteSaveLabel)),
+        A11yProof(_panelComposer),
+      ],
+    ),
   ),
   A11yState(
     id: 'c6-photo-selected',
@@ -572,18 +618,31 @@ final List<A11yState> captureStates = <A11yState>[
     pump: _pumpSelectionMenu,
     proof: <A11yProof>[A11yProof(find.text('Copy'))],
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'c10-discard-dialog',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: _pumpDiscardNote,
-    proof: <A11yProof>[
-      A11yProof(
-        find.descendant(
-          of: find.byType(PhoneSheet),
-          matching: find.byKey(composerDiscardKey),
+    desktopId: 'c10-discard-dialog-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpDiscardNote,
+      proof: <A11yProof>[
+        A11yProof(
+          find.descendant(
+            of: find.byType(PhoneSheet),
+            matching: find.byKey(composerDiscardKey),
+          ),
         ),
-      ),
-    ],
+      ],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpDiscardNote,
+      proof: <A11yProof>[
+        A11yProof(
+          find.descendant(
+            of: find.byType(StickerCard),
+            matching: find.byKey(composerDiscardKey),
+          ),
+        ),
+      ],
+    ),
   ),
   A11yState(
     id: 'c11-draft-chip',

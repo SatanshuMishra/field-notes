@@ -93,6 +93,71 @@ class A11yState {
   bool runsIn(A11yVariant variant) => platforms.contains(variant.platform);
 }
 
+const Set<TargetPlatform> a11yPhonePlatforms = <TargetPlatform>{
+  TargetPlatform.android,
+};
+
+const Set<TargetPlatform> a11yDesktopPlatforms = <TargetPlatform>{
+  TargetPlatform.macOS,
+  TargetPlatform.windows,
+};
+
+final class A11yLayoutHalf {
+  const A11yLayoutHalf({
+    required this.pump,
+    required this.proof,
+    this.stateful = const <A11yStatefulControl>[],
+  });
+
+  final A11yPumpBody pump;
+  final List<A11yProof> proof;
+  final List<A11yStatefulControl> stateful;
+
+  A11yState _stateOn(String id, Set<TargetPlatform> platforms) => A11yState(
+    id: id,
+    pump: pump,
+    proof: proof,
+    stateful: stateful,
+    platforms: platforms,
+  );
+}
+
+List<A11yState> a11yInBothLayouts({
+  required String id,
+  required A11yLayoutHalf phone,
+  required A11yLayoutHalf desktop,
+  String? desktopId,
+}) => <A11yState>[
+  phone._stateOn(id, a11yPhonePlatforms),
+  desktop._stateOn(desktopId ?? id, a11yDesktopPlatforms),
+];
+
+const Set<String> a11yPhoneOnlySurfaces = <String>{'composer-keyboard'};
+
+final RegExp _areaNumber = RegExp(r'^[a-z]+\d+-');
+final RegExp _layoutWord = RegExp(r'-(sidebar|bottom-bar|phone)$');
+
+String a11ySurfaceOf(String id) =>
+    id.replaceFirst(_areaNumber, '').replaceFirst(_layoutWord, '');
+
+List<String> a11ySurfacesOffDesktop(List<A11yState> states) {
+  final Map<String, List<A11yState>> surfaces = <String, List<A11yState>>{};
+  for (final A11yState state in states) {
+    surfaces
+        .putIfAbsent(a11ySurfaceOf(state.id), () => <A11yState>[])
+        .add(state);
+  }
+  return <String>[
+    for (final MapEntry<String, List<A11yState>> surface in surfaces.entries)
+      if (!a11yPhoneOnlySurfaces.contains(surface.key) &&
+          !<TargetPlatform>{
+            for (final A11yState state in surface.value) ...state.platforms,
+          }.containsAll(a11yDesktopPlatforms))
+        '${surface.key} '
+            '(${surface.value.map((A11yState state) => state.id).join(', ')})',
+  ];
+}
+
 sealed class A11yStateResult {
   const A11yStateResult();
 }
@@ -230,6 +295,14 @@ void a11ySweepArea({
       keys,
       'states',
       'state ids must be unique on each platform',
+    );
+  }
+  final List<String> offDesktop = a11ySurfacesOffDesktop(states);
+  if (offDesktop.isNotEmpty) {
+    throw ArgumentError.value(
+      offDesktop,
+      'states',
+      'every surface must run on macos and windows with the sidebar layout',
     );
   }
   final bool write = writeBaseline ?? a11yWriteBaseline;

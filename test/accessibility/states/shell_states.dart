@@ -9,6 +9,9 @@ import 'package:field_notes/domain/notes/markdown/markdown.dart'
     show MdPhotoSize;
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/calendar/calendar.dart';
+import 'package:field_notes/features/calendar/widgets/calendar_chevron_button.dart';
+import 'package:field_notes/features/calendar/widgets/calendar_day_cell.dart';
+import 'package:field_notes/features/calendar/widgets/calendar_month_picker.dart';
 import 'package:field_notes/features/calendar/widgets/month_year_sheet.dart';
 import 'package:field_notes/features/calendar/widgets/phone_flower_month.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
@@ -82,12 +85,25 @@ final List<A11yStatefulControl> _tabs = <A11yStatefulControl>[
   ),
 ];
 
+bool _isRailItem(Widget widget) => switch (widget.key) {
+  ValueKey<String>(:final String value) => value.startsWith('rail-'),
+  _ => false,
+};
+
+final List<A11yStatefulControl> _railItems = <A11yStatefulControl>[
+  A11yStatefulControl.finder(
+    find.byWidgetPredicate(_isRailItem),
+    A11yStateKind.selected,
+    count: 4,
+  ),
+];
+
 final Set<String> _monthLabels = <String>{
   for (int month = 1; month <= 12; month++) monthAbbreviation(month),
 };
 
-final Finder _monthCells = find.descendant(
-  of: find.byType(MonthYearSheet),
+Finder _monthCellsIn(Type picker) => find.descendant(
+  of: find.byType(picker),
   matching: find.byWidgetPredicate(
     (Widget widget) => widget is Text && _monthLabels.contains(widget.data),
   ),
@@ -114,6 +130,12 @@ final Finder _phoneSearchField = find.byWidgetPredicate(
   (Widget widget) =>
       widget is SearchField && widget.variant == SearchFieldVariant.phone,
   description: 'the phone search field',
+);
+
+final Finder _desktopSearchField = find.byWidgetPredicate(
+  (Widget widget) =>
+      widget is SearchField && widget.variant == SearchFieldVariant.standard,
+  description: 'the desktop search field',
 );
 
 final List<Day> _septemberDays = <Day>[
@@ -477,6 +499,65 @@ final Finder _todayCell = find.descendant(
   matching: find.byKey(phoneMonthTodayPillKey),
 );
 
+final Finder _desktopJournaledCell = find.descendant(
+  of: find.byKey(const ValueKey<String>('day-2026-09-21')),
+  matching: find.byKey(calendarActivityDotKey),
+);
+
+final Finder _desktopTodayCell = find.byWidgetPredicate(
+  (Widget widget) =>
+      widget is CalendarDayCell &&
+      widget.isToday &&
+      widget.key == const ValueKey<String>('day-$_today'),
+  description: 'the desktop calendar cell for today',
+);
+
+final Finder _nextMonthChevron = find.byWidgetPredicate(
+  (Widget widget) =>
+      widget is CalendarChevronButton &&
+      widget.direction == ChevronDirection.next,
+  description: 'the next month chevron',
+);
+
+Future<void> _pumpCalendarPicker(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _pumpCalendar(tester, variant);
+  await tester.tap(
+    find.byKey(variant.desktop ? calendarTitleKey : phoneMonthPickerButtonKey),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _pumpCalendarNextMonth(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _pumpCalendar(tester, variant);
+  await tester.tap(
+    variant.desktop ? _nextMonthChevron : find.byKey(phoneMonthNextKey),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _pumpGardenTab(WidgetTester tester, A11yVariant variant) async {
+  await _pumpShell(tester, variant);
+  await tester.tap(
+    find.byKey(
+      ValueKey<String>(variant.desktop ? 'rail-garden' : 'tab-garden'),
+    ),
+  );
+  await tester.pump();
+  await _waitForMeadow(tester);
+}
+
+Future<void> _pumpSearchResults(WidgetTester tester, A11yVariant variant) =>
+    _pumpSearch(tester, variant, 'peonies');
+
+Future<void> _pumpSearchNoMatch(WidgetTester tester, A11yVariant variant) =>
+    _pumpSearch(tester, variant, 'zzz');
+
 final List<A11yState> shellStates = <A11yState>[
   A11yState(
     id: 'a1-today-empty',
@@ -505,36 +586,60 @@ final List<A11yState> shellStates = <A11yState>[
     },
     proof: <A11yProof>[A11yProof(_revealedPill)],
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'a4-calendar-month',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: _pumpCalendar,
-    proof: <A11yProof>[
-      A11yProof(find.byType(PhoneFlowerMonth)),
-      A11yProof(_journaledCell),
-      A11yProof(_todayCell),
-    ],
+    desktopId: 'a4-calendar-month-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpCalendar,
+      proof: <A11yProof>[
+        A11yProof(find.byType(PhoneFlowerMonth)),
+        A11yProof(_journaledCell),
+        A11yProof(_todayCell),
+      ],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpCalendar,
+      proof: <A11yProof>[
+        A11yProof(find.byType(CalendarGrid)),
+        A11yProof(_desktopJournaledCell),
+        A11yProof(_desktopTodayCell),
+      ],
+    ),
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'a5-calendar-picker',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) async {
-      await _pumpCalendar(tester, variant);
-      await tester.tap(find.byKey(phoneMonthPickerButtonKey));
-      await tester.pumpAndSettle();
-    },
-    proof: <A11yProof>[
-      A11yProof(
-        find.descendant(
-          of: find.byType(PhoneSheet),
-          matching: find.byType(MonthYearSheet),
+    desktopId: 'a5-calendar-picker-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpCalendarPicker,
+      proof: <A11yProof>[
+        A11yProof(
+          find.descendant(
+            of: find.byType(PhoneSheet),
+            matching: find.byType(MonthYearSheet),
+          ),
         ),
-      ),
-      A11yProof(find.byKey(monthYearBackKey)),
-    ],
-    stateful: <A11yStatefulControl>[
-      A11yStatefulControl.finder(_monthCells, A11yStateKind.selected),
-    ],
+        A11yProof(find.byKey(monthYearBackKey)),
+      ],
+      stateful: <A11yStatefulControl>[
+        A11yStatefulControl.finder(
+          _monthCellsIn(MonthYearSheet),
+          A11yStateKind.selected,
+        ),
+      ],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpCalendarPicker,
+      proof: <A11yProof>[
+        A11yProof(find.byKey(calendarPickerKey)),
+        A11yProof(find.text('Back to this week')),
+      ],
+      stateful: <A11yStatefulControl>[
+        A11yStatefulControl.finder(
+          _monthCellsIn(CalendarMonthPicker),
+          A11yStateKind.selected,
+        ),
+      ],
+    ),
   ),
   A11yState(
     id: 'a6-garden-empty',
@@ -569,50 +674,76 @@ final List<A11yState> shellStates = <A11yState>[
       A11yProof(find.byKey(meadowDetailsButtonKey)),
     ],
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'a8-garden-phone',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) async {
-      await _pumpShell(tester, variant);
-      await tester.tap(find.byKey(const ValueKey<String>('tab-garden')));
-      await tester.pump();
-      await _waitForMeadow(tester);
-    },
-    proof: <A11yProof>[A11yProof(_sceneStreakPill), A11yProof(_sceneTabBar)],
-    stateful: _tabs,
+    desktopId: 'a8-garden-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpGardenTab,
+      proof: <A11yProof>[A11yProof(_sceneStreakPill), A11yProof(_sceneTabBar)],
+      stateful: _tabs,
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpGardenTab,
+      proof: <A11yProof>[
+        A11yProof(find.byKey(sidebarRailKey)),
+        A11yProof(find.byType(MeadowStage)),
+      ],
+      stateful: _railItems,
+    ),
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'a9-search-results',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) =>
-        _pumpSearch(tester, variant, 'peonies'),
-    proof: <A11yProof>[
-      A11yProof(find.byType(SearchDayTile)),
-      A11yProof(_phoneSearchField),
-    ],
+    desktopId: 'a9-search-results-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpSearchResults,
+      proof: <A11yProof>[
+        A11yProof(find.byType(SearchDayTile)),
+        A11yProof(_phoneSearchField),
+      ],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpSearchResults,
+      proof: <A11yProof>[
+        A11yProof(find.byType(SearchDayTile)),
+        A11yProof(_desktopSearchField),
+      ],
+    ),
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'a10-search-no-match',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) =>
-        _pumpSearch(tester, variant, 'zzz'),
-    proof: <A11yProof>[
-      A11yProof(find.textContaining('No days match')),
-      A11yProof(_phoneSearchField),
-    ],
+    desktopId: 'a10-search-no-match-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpSearchNoMatch,
+      proof: <A11yProof>[
+        A11yProof(find.textContaining('No days match')),
+        A11yProof(_phoneSearchField),
+      ],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpSearchNoMatch,
+      proof: <A11yProof>[
+        A11yProof(find.textContaining('No days match')),
+        A11yProof(_desktopSearchField),
+      ],
+    ),
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'a11-calendar-next-month',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) async {
-      await _pumpCalendar(tester, variant);
-      await tester.tap(find.byKey(phoneMonthNextKey));
-      await tester.pumpAndSettle();
-    },
-    proof: <A11yProof>[
-      A11yProof(find.byType(PhoneFlowerMonth)),
-      A11yProof(find.byKey(phoneThisMonthKey)),
-    ],
+    desktopId: 'a11-calendar-next-month-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpCalendarNextMonth,
+      proof: <A11yProof>[
+        A11yProof(find.byType(PhoneFlowerMonth)),
+        A11yProof(find.byKey(phoneThisMonthKey)),
+      ],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpCalendarNextMonth,
+      proof: <A11yProof>[
+        A11yProof(find.byType(CalendarGrid)),
+        A11yProof(find.byKey(calendarThisWeekKey)),
+      ],
+    ),
   ),
   A11yState(
     id: 'a12-calendar-empty',
