@@ -200,9 +200,22 @@ text-contrast | a8-garden-sidebar@2x | Every day, a bloom | <root> # open: text-
 text-contrast | a8-garden-sidebar@2x | field notes — a journal of days | <root> # open: text-contrast
 text-contrast | a8-garden-sidebar@2x | sunset 7:25 PM | <root> # open: text-contrast
 text-contrast | a8-garden-sidebar@2x | your meadow | <root> # open: text-contrast
+truncated-text | a14-meadow-empty@2x | 2026 | Your meadows, year by year # open: truncated-text
 truncated-text | a14-meadow-empty@2x | Calendar | <root> # open: text is cut short at 2x text
 truncated-text | a14-meadow-empty@2x | Meadow | <root> # open: text is cut short at 2x text
+truncated-text | a14-meadow-empty@2x | Search | <root> # open: truncated-text
+truncated-text | a14-meadow-empty@2x | Today | <root> # open: truncated-text
+truncated-text | a14-meadow-empty@2x | field / notes | <root> # open: truncated-text
 truncated-text | a15-today-empty-sidebar@2x | Calendar | <root> # open: text is cut short at 2x text
 truncated-text | a15-today-empty-sidebar@2x | Meadow | <root> # open: text is cut short at 2x text
+truncated-text | a15-today-empty-sidebar@2x | Search | <root> # open: truncated-text
+truncated-text | a15-today-empty-sidebar@2x | Today | <root> # open: truncated-text
+truncated-text | a15-today-empty-sidebar@2x | field / notes | <root> # open: truncated-text
+truncated-text | a6-garden-empty@2x | 2026 | Your meadows, year by year # open: truncated-text
+truncated-text | a7-garden-blooms@2x | 2026 | Your meadows, year by year # open: truncated-text
+truncated-text | a8-garden-sidebar@2x | 2026 | Your meadows, year by year # open: truncated-text
 truncated-text | a8-garden-sidebar@2x | Calendar | <root> # open: truncated-text
 truncated-text | a8-garden-sidebar@2x | Meadow | <root> # open: truncated-text
+truncated-text | a8-garden-sidebar@2x | Search | <root> # open: truncated-text
+truncated-text | a8-garden-sidebar@2x | Today | <root> # open: truncated-text
+truncated-text | a8-garden-sidebar@2x | field / notes | <root> # open: truncated-text

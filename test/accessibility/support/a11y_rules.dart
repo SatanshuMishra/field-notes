@@ -1097,8 +1097,15 @@ List<A11yFinding> _contrastFindings(List<_Seen> seen, String state) =>
             ),
     ];
 
+bool _cutShortInHeight(RenderParagraph paragraph) =>
+    paragraph
+        .getDryLayout(BoxConstraints(maxWidth: paragraph.size.width))
+        .height >
+    paragraph.size.height + _clipSlack;
+
 bool _truncated(RenderParagraph paragraph) =>
     paragraph.didExceedMaxLines ||
+    _cutShortInHeight(paragraph) ||
     (!paragraph.softWrap &&
         paragraph.getMaxIntrinsicWidth(double.infinity) >
             paragraph.size.width + _clipSlack);

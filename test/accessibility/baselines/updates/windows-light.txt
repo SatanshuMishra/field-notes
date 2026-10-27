@@ -40,3 +40,6 @@ text-contrast | u3-update-greeting@2x | Wed | <root> # open: text contrast below
 text-contrast | u3-update-greeting@2x | field / notes | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 truncated-text | u3-update-greeting@2x | Calendar | <root> # open: text is cut short at 2x text
 truncated-text | u3-update-greeting@2x | Meadow | <root> # open: text is cut short at 2x text
+truncated-text | u3-update-greeting@2x | Search | <root> # open: truncated-text
+truncated-text | u3-update-greeting@2x | Today | <root> # open: truncated-text
+truncated-text | u3-update-greeting@2x | field / notes | <root> # open: truncated-text

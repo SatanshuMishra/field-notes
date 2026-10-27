@@ -390,8 +390,8 @@ class SyncFlowButton extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     final VoidCallback? onPressed = action.onPressed;
     if (action.danger) {
-      return SizedBox(
-        height: _flowButtonHeight,
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _flowButtonHeight),
         child: StickerButton(
           key: action.key,
           label: action.label,

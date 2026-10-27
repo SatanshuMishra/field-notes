@@ -11,3 +11,11 @@ text-contrast | m2-video-download-white-poster | Video · 1:04 · downloading 3.
 text-contrast | m2-video-download-white-poster@2x | 0:00 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | m2-video-download-white-poster@2x | 1:04 | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | m2-video-download-white-poster@2x | Video · 1:04 · downloading 3.0 of 12.0 MB | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+truncated-text | m1-video-download-black-poster@2x | Close | Play or pause video / Friday, September 18 · 9:30 AM / 0:00 / 1:04 # open: truncated-text
+truncated-text | m2-video-download-white-poster@2x | Close | Play or pause video / Friday, September 18 · 9:30 AM / 0:00 / 1:04 # open: truncated-text
+truncated-text | m3-video-controls@2x | Close | Friday, September 18 · 9:30 AM / 0:21 / 1:04 # open: truncated-text
+truncated-text | m4-photo-viewer@2x | Back to note | The harbour wall · 1 of 2 · Friday, September 18 / 1 of 2 # open: truncated-text
+truncated-text | m5-photo-error@2x | Back to note | The harbour wall · 1 of 2 · Friday, September 18 / 1 of 2 # open: truncated-text
+truncated-text | m6-video-error@2x | Close | Play or pause video / Friday, September 18 · 9:30 AM / 0:00 / 1:04 # open: truncated-text
+truncated-text | m6-video-error@2x | Try again | Can't play this video # open: truncated-text
+truncated-text | m7-voice-unavailable@2x | Close | Can't play this recording / 0:00 / 1:05 / Friday, September 18 · 9:30 AM # open: truncated-text

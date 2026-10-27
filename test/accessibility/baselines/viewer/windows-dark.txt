@@ -10,4 +10,12 @@ small-target | d5-reader-menu-sidebar@2x | Select all | <root> # open: small-tar
 small-target | d6-task-toast-sidebar | call the ferry office | Friday, September 18 / Morning note # open: small-target
 small-target | d6-task-toast-sidebar | pack the tide tables | Friday, September 18 / Morning note # open: small-target
 text-contrast | d5-reader-menu-sidebar@2x | Copy | <root> # open: text-contrast
+truncated-text | d1-viewer-todos-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
+truncated-text | d14-delete-entry-dialog-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
+truncated-text | d15-viewer-middle-entry-sidebar@2x | Close | Friday, September 18 / Morning note / 2 of 3 # open: truncated-text
+truncated-text | d2-viewer-photo-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
+truncated-text | d3-viewer-voice@2x | Close | 0:00 / 1:05 / Friday, September 18 · 9:30 AM # open: truncated-text
+truncated-text | d4-viewer-video@2x | Close | Friday, September 18 · 9:30 AM / 0:00 / 0:04 # open: truncated-text
+truncated-text | d5-reader-menu-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text
 truncated-text | d5-reader-menu-sidebar@2x | Select all | <root> # open: truncated-text
+truncated-text | d6-task-toast-sidebar@2x | Close | Friday, September 18 / Morning note # open: truncated-text

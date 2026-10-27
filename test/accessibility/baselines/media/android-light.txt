@@ -21,3 +21,4 @@ truncated-text | m4-photo-viewer@2x | Back to note | The harbour wall · 1 of 2 
 truncated-text | m4-photo-viewer@2x | The harbour wall · 1 of 2 · Friday, September 18 | <root> # open: text is cut short at 2x text
 truncated-text | m5-photo-error@2x | Back to note | The harbour wall · 1 of 2 · Friday, September 18 # open: text is cut short at 2x text
 truncated-text | m5-photo-error@2x | The harbour wall · 1 of 2 · Friday, September 18 | <root> # open: text is cut short at 2x text
+truncated-text | m6-video-error@2x | Try again | Can't play this video # open: truncated-text
