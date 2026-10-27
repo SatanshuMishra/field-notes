@@ -41,8 +41,6 @@ truncated-text | b11-select-dropdown-input-profile@2x | Output device | Voice # 
 truncated-text | b11-select-dropdown-input-profile@2x | Output volume | Voice # open: text is cut short at 2x text
 truncated-text | b11-select-dropdown-input-profile@2x | System default | Input device # open: text is cut short at 2x text
 truncated-text | b11-select-dropdown-input-profile@2x | System output | Output device # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | Built-in Microphone | <root> # open: text is cut short at 2x text
-truncated-text | b12-select-dropdown-microphone@2x | Headset Microphone | <root> # open: text is cut short at 2x text
 truncated-text | b12-select-dropdown-microphone@2x | Input device | Voice # open: text is cut short at 2x text
 truncated-text | b12-select-dropdown-microphone@2x | Input volume | Voice # open: text is cut short at 2x text
 truncated-text | b12-select-dropdown-microphone@2x | Output device | Voice # open: text is cut short at 2x text

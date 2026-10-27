@@ -3,15 +3,18 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/note_column.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/features/note_engine/capabilities.dart';
 import 'package:field_notes/features/note_engine/document/selection.dart';
-import 'package:field_notes/features/note_engine/gestures/mouse_selection.dart'
-    show noteCheckboxAt;
+import 'package:field_notes/features/note_engine/layout/block_layout.dart'
+    show noteCheckboxTarget, noteTouchCheckboxTarget;
 import 'package:field_notes/features/note_engine/layout/note_layout.dart'
     show PhotoRect;
 import 'package:field_notes/features/note_engine/layout/note_layout_engine.dart';
@@ -24,8 +27,6 @@ import 'package:field_notes/features/notes/render/note_photo_block.dart'
 
 const double _columnEms = 45;
 const String _objectReplacement = '\uFFFC';
-const double _touchCheckboxTarget = 48;
-const double _mouseCheckboxTarget = 24;
 
 class NoteReaderView extends StatefulWidget {
   const NoteReaderView({
@@ -48,6 +49,7 @@ class NoteReaderView extends StatefulWidget {
 class _NoteReaderViewState extends State<NoteReaderView> {
   final NoteLayoutEngine _engine = NoteLayoutEngine();
   final GlobalKey _renderKey = GlobalKey();
+  final GlobalKey _anchorKey = GlobalKey();
   final ContextMenuController _menu = ContextMenuController();
   final Object _tapGroup = Object();
   late MdTree _tree;
@@ -57,6 +59,8 @@ class _NoteReaderViewState extends State<NoteReaderView> {
   NoteSelection? _selection;
   int _pressOffset = 0;
   bool _overTarget = false;
+  bool _anchorSyncPending = false;
+  List<(int, Rect)> _anchors = const <(int, Rect)>[];
 
   @override
   void initState() {
@@ -128,12 +132,100 @@ class _NoteReaderViewState extends State<NoteReaderView> {
     if (render == null) {
       return null;
     }
-    return noteCheckboxAt(
-      render,
-      render.globalToContent(global),
-      minTarget: kind == PointerDeviceKind.touch
-          ? _touchCheckboxTarget
-          : _mouseCheckboxTarget,
+    return render.checkboxAt(
+      render.globalToLocal(global),
+      target: kind == PointerDeviceKind.touch
+          ? noteTouchCheckboxTarget
+          : noteCheckboxTarget(defaultTargetPlatform),
+    );
+  }
+
+  (double, double) _checkboxOverhang() =>
+      _render?.checkboxOverhang(noteCheckboxTarget(defaultTargetPlatform)) ??
+      (0, 0);
+
+  bool _reachesCheckbox(Offset global) =>
+      _checkboxAt(global, PointerDeviceKind.mouse) != null;
+
+  void _scheduleAnchorSync() {
+    if (_anchorSyncPending) {
+      return;
+    }
+    _anchorSyncPending = true;
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      _anchorSyncPending = false;
+      if (mounted) {
+        _syncAnchors();
+      }
+    });
+  }
+
+  void _syncAnchors() {
+    final RenderNoteView? render = _render;
+    final RenderObject? stack = _anchorKey.currentContext?.findRenderObject();
+    if (render == null || !render.hasSize || stack is! RenderBox) {
+      return;
+    }
+    final Offset origin = stack.globalToLocal(
+      render.localToGlobal(Offset.zero),
+    );
+    final List<(int, Rect)> anchors = List<(int, Rect)>.unmodifiable(
+      <(int, Rect)>[
+        for (final (int boxStart, Rect area) in render.checkboxRows(
+          noteCheckboxTarget(defaultTargetPlatform),
+        ))
+          (boxStart, area.shift(origin)),
+      ],
+    );
+    if (!listEquals(anchors, _anchors)) {
+      setState(() => _anchors = anchors);
+    }
+  }
+
+  void _focusCheckbox(int boxStart, bool focused) {
+    final RenderNoteView? render = _render;
+    if (render == null) {
+      return;
+    }
+    if (focused) {
+      render.focusedCheckbox = boxStart;
+    } else if (render.focusedCheckbox == boxStart) {
+      render.focusedCheckbox = null;
+    }
+  }
+
+  Widget _withAnchors(Widget view, ValueChanged<int> onToggleTask) {
+    _scheduleAnchorSync();
+    return _CheckboxInsets(
+      overhang: _checkboxOverhang,
+      reaches: _reachesCheckbox,
+      child: Stack(
+        key: _anchorKey,
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          view,
+          for (final (int boxStart, Rect area) in _anchors)
+            Positioned.fromRect(
+              key: ValueKey<int>(boxStart),
+              rect: area,
+              child: IgnorePointer(
+                child: Focus(
+                  canRequestFocus: false,
+                  skipTraversal: true,
+                  includeSemantics: false,
+                  onFocusChange: (bool focused) =>
+                      _focusCheckbox(boxStart, focused),
+                  child: FocusRing(
+                    onPressed: () => onToggleTask(boxStart),
+                    includeFocusSemantics: false,
+                    borderRadius: Shapes.buttonBorderRadius,
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -375,7 +467,7 @@ class _NoteReaderViewState extends State<NoteReaderView> {
                   },
                 ),
         },
-        child: view,
+        child: onToggleTask == null ? view : _withAnchors(view, onToggleTask),
       ),
     );
   }
@@ -486,6 +578,57 @@ class _NoteReaderViewState extends State<NoteReaderView> {
       },
     );
   }
+}
+
+class _CheckboxInsets extends SingleChildRenderObjectWidget {
+  const _CheckboxInsets({
+    required this.overhang,
+    required this.reaches,
+    required super.child,
+  });
+
+  final (double, double) Function() overhang;
+  final bool Function(Offset global) reaches;
+
+  @override
+  _RenderCheckboxInsets createRenderObject(BuildContext context) =>
+      _RenderCheckboxInsets(overhang: overhang, reaches: reaches);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderCheckboxInsets renderObject,
+  ) {
+    renderObject
+      ..overhang = overhang
+      ..reaches = reaches;
+  }
+}
+
+class _RenderCheckboxInsets extends RenderShiftedBox {
+  _RenderCheckboxInsets({required this.overhang, required this.reaches})
+    : super(null);
+
+  (double, double) Function() overhang;
+  bool Function(Offset global) reaches;
+
+  @override
+  void performLayout() {
+    final RenderBox? child = this.child;
+    if (child == null) {
+      size = constraints.smallest;
+      return;
+    }
+    child.layout(constraints.copyWith(minHeight: 0), parentUsesSize: true);
+    final (double top, double bottom) = overhang();
+    (child.parentData! as BoxParentData).offset = Offset(0, top);
+    size = constraints.constrain(
+      Size(child.size.width, child.size.height + top + bottom),
+    );
+  }
+
+  @override
+  bool hitTestSelf(Offset position) => reaches(localToGlobal(position));
 }
 
 class _CheckboxTapRecognizer extends TapGestureRecognizer {

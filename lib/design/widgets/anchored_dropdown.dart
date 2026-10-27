@@ -403,8 +403,6 @@ class _DropdownChoiceTile extends StatelessWidget {
                         children: <Widget>[
                           Text(
                             label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: context.textStyles.bodySans.copyWith(
                               color: ink,
                             ),

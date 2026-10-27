@@ -19,14 +19,6 @@ missing-role | a5-calendar-picker | Dismiss month picker | <root> # Flutter's ow
 missing-role | a5-calendar-picker@2x | Dismiss month picker | <root> # Flutter's own control
 small-target | a1-today-empty | Settings | <root> # open: phone header Settings gear is under 48 dp
 small-target | a1-today-empty@2x | Settings | <root> # open: phone header Settings gear is under 48 dp
-small-target | a2-today-feed | buy seed packets | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
-small-target | a2-today-feed | water the peonies | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
-small-target | a2-today-feed@2x | buy seed packets | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
-small-target | a2-today-feed@2x | water the peonies | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
-small-target | a3-card-actions | buy seed packets | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
-small-target | a3-card-actions | water the peonies | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
-small-target | a3-card-actions@2x | buy seed packets | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
-small-target | a3-card-actions@2x | water the peonies | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
 small-target | a8-garden-phone | Settings | <root> # open: phone header Settings gear is under 48 dp
 small-target | a8-garden-phone@2x | Settings | <root> # open: phone header Settings gear is under 48 dp
 text-contrast | a11-calendar-next-month | 1 | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # open: text contrast below 4.5:1, or 3:1 for large text
