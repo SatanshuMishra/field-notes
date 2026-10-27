@@ -36,6 +36,7 @@ const double _pillGlyphGap = 8;
 const double _pillPadding = 16;
 const double _pillWrapPadding = 6;
 const double _errorGap = 16;
+const double _frameGap = 16;
 const double _topShade = 180;
 const double _bottomShade = 220;
 const double _shadeAlpha = 0.72;
@@ -88,8 +89,18 @@ class JoinScanPage extends StatelessWidget {
       size.width * joinScanFrameShare,
       joinScanFrameMax,
     );
+    final double headerBottom =
+        padding.top +
+        _headerTop +
+        _headerHeight(context, size.width - _headerInset * 2);
     final Rect frame = Rect.fromCenter(
-      center: Offset(size.width / 2, size.height * joinScanFrameCentre),
+      center: Offset(
+        size.width / 2,
+        math.max(
+          size.height * joinScanFrameCentre,
+          headerBottom + _frameGap + side / 2,
+        ),
+      ),
       width: side,
       height: side,
     );
@@ -152,23 +163,11 @@ class JoinScanPage extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                joinScanKicker,
-                style: context.textStyles.pageEyebrowAccent.copyWith(
-                  color: Palette.mediaInk,
-                ),
-              ),
+              Text(joinScanKicker, style: _kickerStyle(context)),
               const SizedBox(height: _kickerGap),
               Semantics(
                 header: true,
-                child: Text(
-                  joinScanMessage,
-                  style: context.textStyles.headlineSerif.copyWith(
-                    fontSize: _messageSize,
-                    height: _messageHeight,
-                    color: Palette.mediaInk,
-                  ),
-                ),
+                child: Text(joinScanMessage, style: _messageStyle(context)),
               ),
             ],
           ),
@@ -200,6 +199,35 @@ class JoinScanPage extends StatelessWidget {
       ],
     );
   }
+}
+
+TextStyle _kickerStyle(BuildContext context) =>
+    context.textStyles.pageEyebrowAccent.copyWith(color: Palette.mediaInk);
+
+TextStyle _messageStyle(BuildContext context) =>
+    context.textStyles.headlineSerif.copyWith(
+      fontSize: _messageSize,
+      height: _messageHeight,
+      color: Palette.mediaInk,
+    );
+
+double _headerHeight(BuildContext context, double width) {
+  final TextScaler scaler = MediaQuery.textScalerOf(context);
+  final TextDirection direction = Directionality.of(context);
+  double laidOutHeight(String text, TextStyle style) {
+    final TextPainter painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: direction,
+      textScaler: scaler,
+    )..layout(maxWidth: math.max(0, width));
+    final double height = painter.height;
+    painter.dispose();
+    return height;
+  }
+
+  return laidOutHeight(joinScanKicker, _kickerStyle(context)) +
+      _kickerGap +
+      laidOutHeight(joinScanMessage, _messageStyle(context));
 }
 
 enum _ControlSlot { cancel, typeWords, error }
