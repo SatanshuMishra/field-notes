@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
@@ -80,27 +78,14 @@ class _SearchFieldState extends ConsumerState<SearchField> {
         width: FocusRingSurface.light.width,
       ),
     );
-    final TextPainter line = TextPainter(
-      text: TextSpan(text: _name, style: bodySans),
-      textScaler: MediaQuery.textScalerOf(context),
-      textDirection: Directionality.of(context),
-      maxLines: 1,
-    )..layout();
-    final double height = math.max(
-      _standardMinHeight,
-      line.height + 2 * _standardTextInset,
-    );
-    line.dispose();
     final Widget field = Semantics(
       label: _name,
-      child: SizedBox(
-        height: height,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _standardMinHeight),
         child: TextField(
           controller: _controller,
           style: bodySans,
           onChanged: _onChanged,
-          expands: true,
-          maxLines: null,
           textAlignVertical: TextAlignVertical.center,
           decoration: InputDecoration(
             hint: _hint(context, bodySans),
@@ -112,6 +97,7 @@ class _SearchFieldState extends ConsumerState<SearchField> {
             fillColor: colors.cardBright,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: _standardTextIndent,
+              vertical: _standardTextInset,
             ),
             border: border,
             enabledBorder: border,
