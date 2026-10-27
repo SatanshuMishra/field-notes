@@ -15,7 +15,6 @@ const Key composerDiscardKey = ValueKey<String>('composer-discard');
 const double _confirmMaxWidth = 420;
 const double _confirmTitleGap = 8;
 const double _confirmActionsGap = 20;
-const double _confirmActionSpacing = 12;
 
 typedef ComposerGuardBuilder = Widget Function(
   BuildContext context,
@@ -178,28 +177,23 @@ class _DiscardConfirmDialog extends StatelessWidget {
                   style: context.textStyles.bodySans,
                 ),
                 const SizedBox(height: _confirmActionsGap),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: _confirmActionSpacing,
-                  runSpacing: _confirmActionSpacing,
-                  children: <Widget>[
-                    StickerButton(
-                      key: composerKeepEditingKey,
-                      label: composerKeepEditingLabel,
-                      variant: StickerButtonVariant.secondary,
-                      padTapTarget: true,
-                      autofocus: true,
-                      onPressed: () => Navigator.of(context).pop(false),
-                    ),
-                    StickerButton(
-                      key: composerDiscardKey,
-                      label: composerDiscardLabel,
-                      variant: StickerButtonVariant.danger,
-                      labelStyle: context.textStyles.captureLabelSans,
-                      padTapTarget: true,
-                      onPressed: () => Navigator.of(context).pop(true),
-                    ),
-                  ],
+                ConfirmActionRow(
+                  cancel: StickerButton(
+                    key: composerKeepEditingKey,
+                    label: composerKeepEditingLabel,
+                    variant: StickerButtonVariant.secondary,
+                    padTapTarget: true,
+                    autofocus: true,
+                    onPressed: () => Navigator.of(context).pop(false),
+                  ),
+                  confirm: StickerButton(
+                    key: composerDiscardKey,
+                    label: composerDiscardLabel,
+                    variant: StickerButtonVariant.danger,
+                    labelStyle: context.textStyles.captureLabelSans,
+                    padTapTarget: true,
+                    onPressed: () => Navigator.of(context).pop(true),
+                  ),
                 ),
               ],
             ),

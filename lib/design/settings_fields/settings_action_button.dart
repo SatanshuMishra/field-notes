@@ -71,14 +71,17 @@ class _ActionPill extends StatelessWidget {
     final FieldNotesShadows shadows = context.shadows;
     final bool enabled = onPressed != null;
     final FocusRingSurface hoverSurface = switch (tone) {
-      SettingsActionTone.neutral => FocusRingSurface.light,
-      SettingsActionTone.primary ||
-      SettingsActionTone.danger => FocusRingSurface.dark,
+      SettingsActionTone.neutral ||
+      SettingsActionTone.danger => FocusRingSurface.light,
+      SettingsActionTone.primary => FocusRingSurface.dark,
     };
     final Color foreground = switch (tone) {
       SettingsActionTone.neutral => colors.accentInk,
       SettingsActionTone.primary => Palette.onAccent,
-      SettingsActionTone.danger => Palette.onAccent,
+      SettingsActionTone.danger => StickerButtonVariant.danger.inkOn(
+        StickerGround.page,
+        colors,
+      ),
     };
     return Pressable(
       label: label,
@@ -106,18 +109,16 @@ class _ActionPill extends StatelessWidget {
             boxShadow: shadows.control,
           ),
           SettingsActionTone.danger => BoxDecoration(
-            color: Palette.danger,
-            border: shadows.outline,
+            color: hoverFill,
+            border: Border.all(color: foreground, width: Shapes.outlineWidth),
             borderRadius: _pillRadius,
-            boxShadow: shadows.control,
           ),
         };
         final Widget text = Padding(
           padding: _pillPadding,
           child: Text(
             label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: context.textStyles.labelSans.copyWith(
               fontSize: _pillFontSize,
               fontWeight: FontWeight.w600,
@@ -134,7 +135,7 @@ class _ActionPill extends StatelessWidget {
               heightFactor: 1,
               child: DecoratedBox(
                 decoration: decoration,
-                child: tone == SettingsActionTone.neutral
+                child: tone != SettingsActionTone.primary
                     ? text
                     : HoverFill(
                         hovered: hovered,

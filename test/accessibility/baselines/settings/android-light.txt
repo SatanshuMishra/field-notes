@@ -99,9 +99,3 @@ truncated-text | b13-select-dropdown-speaker@2x | Output device | Voice # open: 
 truncated-text | b13-select-dropdown-speaker@2x | Output volume | Voice # open: text is cut short at 2x text
 truncated-text | b13-select-dropdown-speaker@2x | System default | Input device # open: text is cut short at 2x text
 truncated-text | b13-select-dropdown-speaker@2x | System output | Output device # open: text is cut short at 2x text
-truncated-text | b14-sync-delete-all-dialog@2x | Reclaim space | Data # open: text is cut short at 2x text
-truncated-text | b15-settings-data-error@2x | Reclaim space | Data # open: text is cut short at 2x text
-truncated-text | b16-settings-sync-paused@2x | Open battery settings | Sync & storage # open: text is cut short at 2x text
-truncated-text | b3-settings-notice@2x | Reclaim space | Data # open: text is cut short at 2x text
-truncated-text | b5-delete-all-dialog@2x | Reclaim space | Data # open: text is cut short at 2x text
-truncated-text | b8-settings-data@2x | Reclaim space | Data # open: text is cut short at 2x text

@@ -5,6 +5,7 @@ import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/sticker_button.dart';
 
 const String letGoTitle = 'Let this one go?';
 const String letGoMessage = 'Nothing will be saved. That’s okay too.';
@@ -33,15 +34,16 @@ const double _buttonGap = 8;
 const double _buttonLabelSize = 13;
 const double _outlineWidth = 1.5;
 const double _minTapTarget = 48;
+const TextStyle _buttonLabelStyle = TextStyle(
+  fontFamily: TypographyTokens.sans,
+  fontSize: _buttonLabelSize,
+  fontWeight: FontWeight.w600,
+);
 const BorderRadius _pillRadius = BorderRadius.all(Radius.circular(20));
 const BorderRadius _compactPillRadius = BorderRadius.all(Radius.circular(24));
 const EdgeInsets _keepGoingPadding = EdgeInsets.symmetric(
   horizontal: 16,
   vertical: 10,
-);
-const EdgeInsets _letGoPadding = EdgeInsets.symmetric(
-  horizontal: 17,
-  vertical: 11,
 );
 
 class LetGoPanel extends StatefulWidget {
@@ -189,17 +191,18 @@ class _LetGoPanelState extends State<LetGoPanel> {
   }
 
   Widget _letGo() {
-    return _PanelButton(
-      key: widget.letGoKey,
-      label: letGoConfirmLabel,
-      onPressed: widget.onLetGo,
-      compact: _compact,
-      padding: _letGoPadding,
-      decoration: BoxDecoration(
-        color: Palette.coral,
-        borderRadius: _compact ? _compactPillRadius : _pillRadius,
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: _compact ? _minTapTarget : 0),
+      child: StickerButton(
+        key: widget.letGoKey,
+        label: letGoConfirmLabel,
+        variant: StickerButtonVariant.danger,
+        ground: StickerGround.media,
+        focusSurface: FocusRingSurface.dark,
+        padTapTarget: !_compact,
+        labelStyle: _buttonLabelStyle,
+        onPressed: widget.onLetGo,
       ),
-      labelColor: Palette.onAccent,
     );
   }
 }
@@ -248,12 +251,7 @@ class _PanelButton extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: TypographyTokens.sans,
-                  fontSize: _buttonLabelSize,
-                  fontWeight: FontWeight.w600,
-                  color: labelColor,
-                ),
+                style: _buttonLabelStyle.copyWith(color: labelColor),
               ),
             ),
           ),

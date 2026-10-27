@@ -105,25 +105,20 @@ class DeleteAllConfirmDialog extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(_deleteAllMessage, style: textStyles.bodySans),
                 const SizedBox(height: 20),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: <Widget>[
-                    StickerButton(
-                      label: _keepLabel,
-                      variant: StickerButtonVariant.secondary,
-                      padTapTarget: true,
-                      autofocus: true,
-                      onPressed: () => Navigator.of(context).pop(false),
-                    ),
-                    StickerButton(
-                      label: _deleteLabel,
-                      variant: StickerButtonVariant.danger,
-                      padTapTarget: true,
-                      onPressed: () => Navigator.of(context).pop(true),
-                    ),
-                  ],
+                ConfirmActionRow(
+                  cancel: StickerButton(
+                    label: _keepLabel,
+                    variant: StickerButtonVariant.secondary,
+                    padTapTarget: true,
+                    autofocus: true,
+                    onPressed: () => Navigator.of(context).pop(false),
+                  ),
+                  confirm: StickerButton(
+                    label: _deleteLabel,
+                    variant: StickerButtonVariant.danger,
+                    padTapTarget: true,
+                    onPressed: () => Navigator.of(context).pop(true),
+                  ),
                 ),
               ],
             ),
