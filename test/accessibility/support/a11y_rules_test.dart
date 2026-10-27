@@ -444,6 +444,51 @@ class _StatusSwapState extends State<_StatusSwap> {
   );
 }
 
+class _StatusAppears extends StatefulWidget {
+  const _StatusAppears({required this.live});
+
+  final bool live;
+
+  @override
+  State<_StatusAppears> createState() => _StatusAppearsState();
+}
+
+class _StatusAppearsState extends State<_StatusAppears> {
+  late final Timer _searching;
+  bool _done = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _searching = Timer(
+      const Duration(milliseconds: 100),
+      () => setState(() => _done = true),
+    );
+  }
+
+  @override
+  void dispose() {
+    _searching.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: <Widget>[
+      const Text('Find a day'),
+      if (_done)
+        Semantics(
+          container: true,
+          liveRegion: widget.live,
+          child: const Text('No days match'),
+        )
+      else
+        const SizedBox(width: 120, height: 20),
+    ],
+  );
+}
+
 void main() {
   testWidgets('each known problem is caught by its rule', (
     WidgetTester tester,
@@ -1041,6 +1086,30 @@ void main() {
           rules: <String>{'focus-visible'},
         ),
         <String>['focus-visible | planted | Plain | <root>'],
+      );
+    },
+  );
+
+  testWidgets(
+    'a status that appears in a new text with no live region is a finding',
+    (WidgetTester tester) async {
+      expect(
+        await _swept(
+          tester,
+          _android,
+          const _StatusAppears(live: false),
+          rules: <String>{'live-region'},
+        ),
+        <String>['live-region | planted | No days match | <root>'],
+      );
+      expect(
+        await _swept(
+          tester,
+          _android,
+          const _StatusAppears(live: true),
+          rules: <String>{'live-region'},
+        ),
+        isEmpty,
       );
     },
   );
