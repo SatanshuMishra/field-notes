@@ -226,6 +226,9 @@ Future<void> _openViewer(
         entriesForDateProvider.overrideWith(
           (Ref ref, String date) => Stream<List<Entry>>.value(<Entry>[entry]),
         ),
+        dayForDateProvider.overrideWith(
+          (Ref ref, String date) => Stream<Day?>.value(null),
+        ),
         notesMediaResolverProvider.overrideWith((Ref ref) async => resolver),
         videoSlotsProvider.overrideWithValue(const UnlimitedVideoSlots()),
         todayVideoPlayerFactoryProvider.overrideWithValue(() => player),
