@@ -1,0 +1,38 @@
+keyboard | a2-today-feed | 9:30 AM · morning / NOTE / The peonies finally opened along the back fence. / I stood there with my coffee for a long while and watched the bees work the blooms, then walked the long way round to the harbour to see the ferry… / Read › | <root> # open: Tab never reaches it
+keyboard | a2-today-feed | 9:30 AM · morning / NOTE | <root> # open: Tab never reaches it
+keyboard | a2-today-feed | 9:30 AM · morning / VIDEO / A video from the morning / 0:04 / Watch › | <root> # open: Tab never reaches it
+keyboard | a2-today-feed | 9:30 AM · morning / VOICE / 0:00 / 0:42 | <root> # open: Tab never reaches it
+keyboard | a2-today-feed | Play | 9:30 AM · morning / VOICE / 0:00 / 0:42 # open: Tab never reaches it
+keyboard | a2-today-feed | buy seed packets | 9:30 AM · morning / NOTE # open: Tab never reaches the to-do checkbox
+keyboard | a2-today-feed | water the peonies | 9:30 AM · morning / NOTE # open: Tab never reaches the to-do checkbox
+keyboard | a3-card-actions | 9:30 AM · morning / NOTE / The peonies finally opened along the back fence. / I stood there with my coffee for a long while and watched the bees work the blooms, then walked the long way round to the harbour to see the ferry… / Read › | <root> # open: Tab never reaches it
+keyboard | a3-card-actions | 9:30 AM · morning / VIDEO / A video from the morning / 0:04 / Watch › | <root> # open: Tab never reaches it
+keyboard | a3-card-actions | 9:30 AM · morning / VOICE / 0:00 / 0:42 | <root> # open: Tab never reaches it
+keyboard | a3-card-actions | Play | 9:30 AM · morning / VOICE / 0:00 / 0:42 # open: Tab never reaches it
+overlapping-text | a2-today-feed@2x | The peonies finally opened along the back fence. + I stood there with my coffee for a long while and watched... | 9:30 AM · morning / NOTE / The peonies finally opened along the back fence. / I stood there with my coffee for a long while and watched the bees work the blooms, then walked the long way round to the harbour to see the ferry… / Read › # open: text overlaps other text at 2x text
+overlapping-text | a3-card-actions@2x | The peonies finally opened along the back fence. + I stood there with my coffee for a long while and watched... | 9:30 AM · morning / NOTE / The peonies finally opened along the back fence. / I stood there with my coffee for a long while and watched the bees work the blooms, then walked the long way round to the harbour to see the ferry… / Read › # open: text overlaps other text at 2x text
+small-target | a2-today-feed | buy seed packets | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a2-today-feed | water the peonies | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a2-today-feed@2x | buy seed packets | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a2-today-feed@2x | water the peonies | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a3-card-actions | buy seed packets | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a3-card-actions | water the peonies | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a3-card-actions@2x | buy seed packets | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+small-target | a3-card-actions@2x | water the peonies | 9:30 AM · morning / NOTE # open: to-do checkbox is under the platform minimum
+text-contrast | a6-garden-empty | 0 blooms and 0 sprouts so far in 2026 · quietly filling i... | Your meadow is waiting. Every day you journal plants a bloom here. / your meadow / Every day, a bloom / 0 blooms and 0 sprouts so far in 2026 · quietly filling in as the year goes / 9:30 AM / sunset 7:25 PM # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty | Every day, a bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty | Your meadow is waiting. Every day you journal plants a bl... | Your meadow is waiting. Every day you journal plants a bloom here. / your meadow / Every day, a bloom / 0 blooms and 0 sprouts so far in 2026 · quietly filling in as the year goes / 9:30 AM / sunset 7:25 PM # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty | sunset 7:25 PM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty | your meadow | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty@2x | 0 blooms and 0 sprouts so far in 2026 · quietly filling i... | Your meadow is waiting. Every day you journal plants a bloom here. / your meadow / Every day, a bloom / 0 blooms and 0 sprouts so far in 2026 · quietly filling in as the year goes / 9:30 AM / sunset 7:25 PM # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty@2x | Every day, a bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty@2x | sunset 7:25 PM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a6-garden-empty@2x | your meadow | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a7-garden-blooms | 1 bloom and 1 sprout so far in 2026 · quietly filling in ... | your meadow / Every day, a bloom / 1 bloom and 1 sprout so far in 2026 · quietly filling in as the year goes / 9:30 AM / sunset 7:25 PM # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a7-garden-blooms | Every day, a bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a7-garden-blooms | sunset 7:25 PM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a7-garden-blooms | your meadow | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a7-garden-blooms@2x | 1 bloom and 1 sprout so far in 2026 · quietly filling in ... | your meadow / Every day, a bloom / 1 bloom and 1 sprout so far in 2026 · quietly filling in as the year goes / 9:30 AM / sunset 7:25 PM # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a7-garden-blooms@2x | Every day, a bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a7-garden-blooms@2x | sunset 7:25 PM | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | a7-garden-blooms@2x | your meadow | <root> # open: text contrast below 4.5:1, or 3:1 for large text

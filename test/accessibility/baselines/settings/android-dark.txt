@@ -1,0 +1,12 @@
+flutter-text-contrast | b10-settings-about-phone | author | About # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b10-settings-about-phone@2x | author | About # open: fails Flutter's text contrast guideline
+live-region | b10-settings-about-phone | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: status change is not announced
+live-region | b10-settings-about-phone@2x | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: status change is not announced
+missing-role | b4-select-open | Dismiss | <root> # Flutter's own control
+missing-role | b4-select-open@2x | Dismiss | <root> # Flutter's own control
+missing-role | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b5-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
+text-contrast | b10-settings-about-phone@2x | Check for updates | About # open: text contrast below 4.5:1, or 3:1 for large text
+truncated-text | b3-settings-notice@2x | Reclaim space | Data # open: text is cut short at 2x text
+truncated-text | b5-delete-all-dialog@2x | Reclaim space | Data # open: text is cut short at 2x text
+truncated-text | b8-settings-data@2x | Reclaim space | Data # open: text is cut short at 2x text

@@ -1,7 +1,7 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
-import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/anchored_dropdown.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
@@ -31,7 +31,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../features/settings/support/fake_settings_repository.dart';
 import '../../features/settings/support/recording_reminder_scheduler.dart';
-import '../../features/settings/support/settings_harness.dart';
+import '../../features/settings/support/settings_harness.dart'
+    show FakeSettingsDataController;
 import '../../support/sync_overrides.dart';
 import '../../support/update_overrides.dart';
 import '../support/a11y_state.dart';
@@ -94,23 +95,52 @@ bool get _onPhone =>
 
 final Finder _weekStartChoices = find.byWidgetPredicate(
   (Widget widget) =>
-      _onPhone ? widget is PhoneSheet : widget is PopupMenuItem<WeekStart>,
-  description: 'the week start sheet on the phone, its menu on macOS',
+      _onPhone ? widget is PhoneSheet : widget is AnchoredDropdown<WeekStart>,
+  description: 'the week start sheet on the phone, its dropdown on desktop',
 );
 
 final Finder _deleteAllConfirm = find.byWidgetPredicate(
   (Widget widget) =>
       _onPhone ? widget is PhoneSheet : widget is DeleteAllConfirmDialog,
-  description: 'the delete-all confirm sheet on the phone, dialog on macOS',
+  description: 'the delete-all confirm sheet on the phone, dialog on desktop',
 );
 
-void _useTallSurface(WidgetTester tester) {
-  final bool sidebar =
-      resolveShellLayout(defaultTargetPlatform) == ShellLayout.sidebar;
-  tester.view.physicalSize = sidebar ? _tallDesktopSurface : _tallNoteSurface;
-  tester.view.devicePixelRatio = sidebar ? 1 : _noteDevicePixelRatio;
-  addTearDown(tester.view.reset);
-}
+void _useTallSurface(WidgetTester tester, A11yVariant variant) =>
+    variant.useWindow(
+      tester,
+      variant.desktop
+          ? const A11yWindow(
+              physicalSize: _tallDesktopSurface,
+              devicePixelRatio: 1,
+            )
+          : const A11yWindow(
+              physicalSize: _tallNoteSurface,
+              devicePixelRatio: _noteDevicePixelRatio,
+            ),
+    );
+
+Widget _settingsApp(
+  A11yVariant variant, {
+  required List<Override> overrides,
+  required Widget child,
+  EdgeInsetsGeometry padding = EdgeInsets.zero,
+}) => KeyedSubtree(
+  key: UniqueKey(),
+  child: ProviderScope(
+    overrides: overrides,
+    child: MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: variant.theme,
+      builder: variant.scaleText,
+      home: Builder(
+        builder: (BuildContext context) => Scaffold(
+          backgroundColor: context.colors.page,
+          body: Padding(padding: padding, child: child),
+        ),
+      ),
+    ),
+  ),
+);
 
 List<Override> _settingsOverrides({
   SpellCheckAvailability spellCheck = SpellCheckAvailability.available,
@@ -137,19 +167,18 @@ List<Override> _settingsOverrides({
 ];
 
 Future<void> _pumpSettings(
-  WidgetTester tester, {
+  WidgetTester tester,
+  A11yVariant variant, {
   SpellCheckAvailability spellCheck = SpellCheckAvailability.available,
   SettingsTab tab = SettingsTab.syncStorage,
 }) async {
-  _useTallSurface(tester);
+  _useTallSurface(tester, variant);
   await tester.pumpWidget(
-    KeyedSubtree(
-      key: UniqueKey(),
-      child: settingsFeatureHarness(
-        const SettingsScreen(),
-        scrollable: false,
-        overrides: _settingsOverrides(spellCheck: spellCheck),
-      ),
+    _settingsApp(
+      variant,
+      overrides: _settingsOverrides(spellCheck: spellCheck),
+      padding: const EdgeInsets.all(16),
+      child: const SettingsScreen(),
     ),
   );
   await tester.pumpAndSettle();
@@ -157,35 +186,18 @@ Future<void> _pumpSettings(
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpAbout(
-  WidgetTester tester, {
-  required TargetPlatform platform,
-}) async {
-  final bool sidebar = resolveShellLayout(platform) == ShellLayout.sidebar;
-  tester.view.physicalSize = sidebar ? _tallDesktopSurface : _tallNoteSurface;
-  tester.view.devicePixelRatio = sidebar ? 1 : _noteDevicePixelRatio;
-  addTearDown(tester.view.reset);
+Future<void> _pumpAbout(WidgetTester tester, A11yVariant variant) async {
+  _useTallSurface(tester, variant);
   await tester.pumpWidget(
-    KeyedSubtree(
-      key: UniqueKey(),
-      child: ProviderScope(
-        overrides: <Override>[
-          ..._settingsOverrides(),
-          installedAppProvider.overrideWith(
-            (Ref ref) async => const InstalledApp(version: _aboutVersion),
-          ),
-        ],
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: fieldNotesTheme(platform: platform),
-          home: Builder(
-            builder: (BuildContext context) => Scaffold(
-              backgroundColor: context.colors.page,
-              body: const SettingsScreen(),
-            ),
-          ),
+    _settingsApp(
+      variant,
+      overrides: <Override>[
+        ..._settingsOverrides(),
+        installedAppProvider.overrideWith(
+          (Ref ref) async => const InstalledApp(version: _aboutVersion),
         ),
-      ),
+      ],
+      child: const SettingsScreen(),
     ),
   );
   await tester.pumpAndSettle();
@@ -193,8 +205,8 @@ Future<void> _pumpAbout(
   await tester.pumpAndSettle();
 }
 
-Future<void> _openDeleteAll(WidgetTester tester) async {
-  await _pumpSettings(tester, tab: SettingsTab.data);
+Future<void> _openDeleteAll(WidgetTester tester, A11yVariant variant) async {
+  await _pumpSettings(tester, variant, tab: SettingsTab.data);
   await tester.tap(find.text(_deleteAll));
   await tester.pumpAndSettle();
 }
@@ -212,8 +224,9 @@ List<A11yState> get settingsStates => <A11yState>[
   ),
   A11yState(
     id: 'b2-settings-spell-unavailable',
-    pump: (WidgetTester tester) => _pumpSettings(
+    pump: (WidgetTester tester, A11yVariant variant) => _pumpSettings(
       tester,
+      variant,
       spellCheck: SpellCheckAvailability.unavailable,
       tab: SettingsTab.journal,
     ),
@@ -222,8 +235,8 @@ List<A11yState> get settingsStates => <A11yState>[
   ),
   A11yState(
     id: 'b3-settings-notice',
-    pump: (WidgetTester tester) async {
-      await _openDeleteAll(tester);
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _openDeleteAll(tester, variant);
       await tester.tap(find.text('Delete everything'));
       await tester.pumpAndSettle();
     },
@@ -232,15 +245,15 @@ List<A11yState> get settingsStates => <A11yState>[
   ),
   A11yState(
     id: 'b4-select-open',
-    pump: (WidgetTester tester) async {
-      await _pumpSettings(tester, tab: SettingsTab.journal);
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _pumpSettings(tester, variant, tab: SettingsTab.journal);
       await tester.tap(find.byType(SettingsSelect<WeekStart>));
       await tester.pumpAndSettle();
     },
     proof: <A11yProof>[
       A11yProof(_weekStartChoices),
       A11yProof(
-        find.descendant(of: _weekStartChoices, matching: find.text('Monday')),
+        find.descendant(of: _weekStartChoices, matching: find.text('Saturday')),
       ),
     ],
     stateful: _journalStateful,
@@ -261,30 +274,34 @@ List<A11yState> get settingsStates => <A11yState>[
   ),
   A11yState(
     id: 'b6-settings-reminders',
-    pump: (WidgetTester tester) =>
-        _pumpSettings(tester, tab: SettingsTab.remindersSound),
+    pump: (WidgetTester tester, A11yVariant variant) =>
+        _pumpSettings(tester, variant, tab: SettingsTab.remindersSound),
     proof: <A11yProof>[A11yProof(find.byType(RemindersSoundSection))],
     stateful: _remindersStateful,
   ),
   A11yState(
     id: 'b7-settings-journal',
-    pump: (WidgetTester tester) =>
-        _pumpSettings(tester, tab: SettingsTab.journal),
+    pump: (WidgetTester tester, A11yVariant variant) =>
+        _pumpSettings(tester, variant, tab: SettingsTab.journal),
     proof: <A11yProof>[A11yProof(find.byType(JournalSection))],
     stateful: _journalStateful,
   ),
   A11yState(
     id: 'b8-settings-data',
-    pump: (WidgetTester tester) => _pumpSettings(tester, tab: SettingsTab.data),
+    pump: (WidgetTester tester, A11yVariant variant) =>
+        _pumpSettings(tester, variant, tab: SettingsTab.data),
     proof: <A11yProof>[
-      A11yProof(find.widgetWithText(StickerButton, _deleteAll)),
+      A11yProof(find.widgetWithText(SettingsActionButton, _deleteAll)),
     ],
     stateful: _tabStateful,
   ),
   A11yState(
     id: 'b9-settings-about',
-    pump: (WidgetTester tester) =>
-        _pumpAbout(tester, platform: TargetPlatform.macOS),
+    pump: _pumpAbout,
+    platforms: const <TargetPlatform>{
+      TargetPlatform.macOS,
+      TargetPlatform.windows,
+    },
     proof: <A11yProof>[
       A11yProof(find.byKey(settingsTabRailKey)),
       A11yProof(find.byType(AboutSection)),
@@ -295,8 +312,8 @@ List<A11yState> get settingsStates => <A11yState>[
   ),
   A11yState(
     id: 'b10-settings-about-phone',
-    pump: (WidgetTester tester) =>
-        _pumpAbout(tester, platform: TargetPlatform.android),
+    pump: _pumpAbout,
+    platforms: const <TargetPlatform>{TargetPlatform.android},
     proof: <A11yProof>[
       A11yProof(find.byType(AboutSection)),
       A11yProof(find.byType(SettingsBackPill)),

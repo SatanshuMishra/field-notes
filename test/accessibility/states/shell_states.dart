@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/phone_bottom_bar.dart';
-import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
@@ -44,9 +43,6 @@ import '../../features/search/support/search_harness.dart' show entryOf;
 import '../../features/today/support/today_harness.dart';
 import '../../support/photo_line_fixture.dart';
 import '../support/a11y_state.dart';
-
-const Size _noteTenPlusSize = Size(1080, 2280);
-const double _noteTenPlusRatio = 2.625;
 
 const String _today = '2026-09-25';
 const String _voiceMediaId = 'voice-1';
@@ -263,34 +259,40 @@ List<Override> _searchOverrides() => <Override>[
 
 Future<void> _pumpApp(
   WidgetTester tester,
+  A11yVariant variant,
   Widget home, {
   required List<Override> overrides,
-  TargetPlatform platform = TargetPlatform.android,
+  A11yWindow? window,
 }) async {
-  tester.view.physicalSize = _noteTenPlusSize;
-  tester.view.devicePixelRatio = _noteTenPlusRatio;
-  addTearDown(tester.view.reset);
+  variant.useWindow(tester, window);
   await tester.pumpWidget(
     ProviderScope(
       retry: (int retryCount, Object error) => null,
       overrides: overrides,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: fieldNotesTheme(platform: platform),
+        theme: variant.theme,
+        builder: variant.scaleText,
         home: home,
       ),
     ),
   );
 }
 
-Future<void> _pumpShell(WidgetTester tester) async {
-  await _pumpApp(tester, const AppShell(), overrides: _shellStateOverrides());
+Future<void> _pumpShell(WidgetTester tester, A11yVariant variant) async {
+  await _pumpApp(
+    tester,
+    variant,
+    const AppShell(),
+    overrides: _shellStateOverrides(),
+  );
   await tester.pump();
 }
 
-Future<void> _pumpFeed(WidgetTester tester) async {
+Future<void> _pumpFeed(WidgetTester tester, A11yVariant variant) async {
   await _pumpApp(
     tester,
+    variant,
     const Scaffold(
       body: Align(
         alignment: Alignment.topLeft,
@@ -309,9 +311,10 @@ Future<void> _pumpFeed(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpCalendar(WidgetTester tester) async {
+Future<void> _pumpCalendar(WidgetTester tester, A11yVariant variant) async {
   await _pumpApp(
     tester,
+    variant,
     Scaffold(body: CalendarScreen(today: _now)),
     overrides: _calendarOverrides(),
   );
@@ -321,20 +324,38 @@ Future<void> _pumpCalendar(WidgetTester tester) async {
 Future<void> pumpMacCalendar(WidgetTester tester) async {
   await _pumpApp(
     tester,
+    const A11yVariant(platform: TargetPlatform.macOS),
     Scaffold(body: CalendarScreen(today: _now)),
     overrides: _calendarOverrides(),
-    platform: TargetPlatform.macOS,
+    window: a11yPhoneWindow,
   );
   await tester.pump();
 }
 
+bool _meadowReady(WidgetTester tester) {
+  final Finder stage = find.byType(MeadowStage);
+  return stage.evaluate().isNotEmpty &&
+      tester.state<MeadowStageState>(stage).debugIsReady;
+}
+
+Future<void> _waitForMeadow(WidgetTester tester) async {
+  for (int i = 0; i < 6000 && !_meadowReady(tester); i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 2)),
+    );
+    await tester.pump(const Duration(milliseconds: 1));
+  }
+}
+
 Future<void> _pumpGarden(
-  WidgetTester tester, {
+  WidgetTester tester,
+  A11yVariant variant, {
   required List<Day> days,
   required List<String> journaled,
 }) async {
   await _pumpApp(
     tester,
+    variant,
     const Scaffold(body: GardenScreen()),
     overrides: _gardenOverrides(days: days, journaled: journaled),
   );
@@ -342,9 +363,14 @@ Future<void> _pumpGarden(
   await tester.pump();
 }
 
-Future<void> _pumpSearch(WidgetTester tester, String query) async {
+Future<void> _pumpSearch(
+  WidgetTester tester,
+  A11yVariant variant,
+  String query,
+) async {
   await _pumpApp(
     tester,
+    variant,
     const Scaffold(body: SearchScreen()),
     overrides: _searchOverrides(),
   );
@@ -376,6 +402,7 @@ final Finder _todayCell = find.descendant(
 final List<A11yState> shellStates = <A11yState>[
   A11yState(
     id: 'a1-today-empty',
+    platforms: const <TargetPlatform>{TargetPlatform.android},
     pump: _pumpShell,
     proof: <A11yProof>[
       A11yProof(find.byKey(const ValueKey<String>('capture-button'))),
@@ -388,12 +415,12 @@ final List<A11yState> shellStates = <A11yState>[
   A11yState(
     id: 'a2-today-feed',
     pump: _pumpFeed,
-    proof: <A11yProof>[A11yProof(find.byType(CompactLogCard), count: 5)],
+    proof: <A11yProof>[A11yProof(find.byType(CompactLogCard), count: 4)],
   ),
   A11yState(
     id: 'a3-card-actions',
-    pump: (WidgetTester tester) async {
-      await _pumpFeed(tester);
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _pumpFeed(tester, variant);
       await tester.longPress(find.byType(CompactLogCard).first);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
@@ -402,6 +429,7 @@ final List<A11yState> shellStates = <A11yState>[
   ),
   A11yState(
     id: 'a4-calendar-month',
+    platforms: const <TargetPlatform>{TargetPlatform.android},
     pump: _pumpCalendar,
     proof: <A11yProof>[
       A11yProof(find.byType(PhoneFlowerMonth)),
@@ -411,8 +439,9 @@ final List<A11yState> shellStates = <A11yState>[
   ),
   A11yState(
     id: 'a5-calendar-picker',
-    pump: (WidgetTester tester) async {
-      await _pumpCalendar(tester);
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _pumpCalendar(tester, variant);
       await tester.tap(find.byKey(phoneMonthPickerButtonKey));
       await tester.pumpAndSettle();
     },
@@ -431,34 +460,31 @@ final List<A11yState> shellStates = <A11yState>[
   ),
   A11yState(
     id: 'a6-garden-empty',
-    pump: (WidgetTester tester) async {
+    pump: (WidgetTester tester, A11yVariant variant) async {
       await _pumpGarden(
         tester,
+        variant,
         days: const <Day>[],
         journaled: const <String>[],
       );
-      final MeadowStageState stage = tester.state<MeadowStageState>(
-        find.byType(MeadowStage),
-      );
-      for (int i = 0; i < 6000 && !stage.debugIsReady; i++) {
-        await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 2)),
-        );
-        await tester.pump(const Duration(milliseconds: 1));
-      }
+      await _waitForMeadow(tester);
     },
     proof: <A11yProof>[A11yProof(find.text(_gardenEmptyMessage))],
   ),
   A11yState(
     id: 'a7-garden-blooms',
-    pump: (WidgetTester tester) => _pumpGarden(
-      tester,
-      days: <Day>[
-        dayOf('2026-09-23'),
-        dayOf('2026-09-24', mood: Mood.grateful),
-      ],
-      journaled: const <String>['2026-09-23', '2026-09-24'],
-    ),
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _pumpGarden(
+        tester,
+        variant,
+        days: <Day>[
+          dayOf('2026-09-23'),
+          dayOf('2026-09-24', mood: Mood.grateful),
+        ],
+        journaled: const <String>['2026-09-23', '2026-09-24'],
+      );
+      await _waitForMeadow(tester);
+    },
     proof: <A11yProof>[
       A11yProof(find.byType(MeadowStage)),
       A11yProof(find.byKey(meadowTimeButtonKey)),
@@ -467,17 +493,21 @@ final List<A11yState> shellStates = <A11yState>[
   ),
   A11yState(
     id: 'a8-garden-phone',
-    pump: (WidgetTester tester) async {
-      await _pumpShell(tester);
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _pumpShell(tester, variant);
       await tester.tap(find.byKey(const ValueKey<String>('tab-garden')));
       await tester.pump();
+      await _waitForMeadow(tester);
     },
     proof: <A11yProof>[A11yProof(_sceneStreakPill), A11yProof(_sceneTabBar)],
     stateful: _tabs,
   ),
   A11yState(
     id: 'a9-search-results',
-    pump: (WidgetTester tester) => _pumpSearch(tester, 'peonies'),
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) =>
+        _pumpSearch(tester, variant, 'peonies'),
     proof: <A11yProof>[
       A11yProof(find.byType(SearchDayTile)),
       A11yProof(_phoneSearchField),
@@ -485,7 +515,9 @@ final List<A11yState> shellStates = <A11yState>[
   ),
   A11yState(
     id: 'a10-search-no-match',
-    pump: (WidgetTester tester) => _pumpSearch(tester, 'zzz'),
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) =>
+        _pumpSearch(tester, variant, 'zzz'),
     proof: <A11yProof>[
       A11yProof(find.textContaining('No days match')),
       A11yProof(_phoneSearchField),
@@ -493,8 +525,9 @@ final List<A11yState> shellStates = <A11yState>[
   ),
   A11yState(
     id: 'a11-calendar-next-month',
-    pump: (WidgetTester tester) async {
-      await _pumpCalendar(tester);
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _pumpCalendar(tester, variant);
       await tester.tap(find.byKey(phoneMonthNextKey));
       await tester.pumpAndSettle();
     },

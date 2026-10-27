@@ -38,25 +38,21 @@ import 'package:field_notes/state/settings_providers.dart'
     show reflectionPromptsEnabledProvider;
 import 'package:field_notes/state/state.dart' show journalRepositoryProvider;
 import 'package:flutter/gestures.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../features/capture/core/capture_test_support.dart'
-    show
-        FakeDraftStore,
-        FakeNoteWriter,
-        captureHarness,
-        draftIdleDebounceForTest;
+    show FakeDraftStore, FakeNoteWriter, draftIdleDebounceForTest;
 import '../../features/capture/photo/photo_test_support.dart'
     show FakePhotoPicker;
 import '../../features/capture/video/video_test_support.dart'
-    show FakeVideoRecorder, videoHarness;
+    show FakeVideoRecorder, fakeVideoDevices;
 import '../../features/capture/voice/voice_test_support.dart'
-    show FakeCaptureService, FakeVoiceRecorder, voiceHarness;
+    show FakeCaptureService, FakeVoiceRecorder;
 import '../../features/day_detail/support/day_detail_harness.dart'
-    show FakeJournalRepository, dayDetailHarness;
+    show FakeJournalRepository;
 import '../../features/notes/support/notes_harness.dart'
     show
         FakeNoteMediaResolver,
@@ -68,8 +64,6 @@ import '../../support/note_editor_driver.dart';
 import '../../support/photo_line_fixture.dart';
 import '../support/a11y_state.dart';
 
-const Size _galaxySurface = Size(1080, 2280);
-const double _galaxyPixelRatio = 2.625;
 const double _keyboardInset = 300;
 
 const String _today = '2026-09-18';
@@ -124,14 +118,23 @@ class _Launcher extends ConsumerWidget {
   }
 }
 
-void _useGalaxySurface(WidgetTester tester, {double keyboard = 0}) {
-  tester.view.physicalSize = _galaxySurface;
-  tester.view.devicePixelRatio = _galaxyPixelRatio;
+void _useSurface(
+  WidgetTester tester,
+  A11yVariant variant, {
+  double keyboard = 0,
+}) {
+  variant.useWindow(tester);
   tester.view.viewInsets = FakeViewPadding(
-    bottom: keyboard * _galaxyPixelRatio,
+    bottom: variant.desktop ? 0 : keyboard * variant.window.devicePixelRatio,
   );
-  addTearDown(tester.view.reset);
 }
+
+Widget _harness(A11yVariant variant, Widget child) => MaterialApp(
+  debugShowCheckedModeBanner: false,
+  theme: variant.theme,
+  builder: variant.scaleText,
+  home: Scaffold(body: Center(child: child)),
+);
 
 List<Override> _composerOverrides({
   FakeDraftStore? drafts,
@@ -158,8 +161,8 @@ Future<void> _launch(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpChooser(WidgetTester tester) async {
-  _useGalaxySurface(tester);
+Future<void> _pumpChooser(WidgetTester tester, A11yVariant variant) async {
+  _useSurface(tester, variant);
   await tester.pumpWidget(
     ProviderScope(
       overrides: _composerOverrides(
@@ -167,7 +170,8 @@ Future<void> _pumpChooser(WidgetTester tester) async {
           captureRoutesProvider.overrideWithValue(appCaptureRoutes),
         ],
       ),
-      child: captureHarness(
+      child: _harness(
+        variant,
         _Launcher(
           (BuildContext context, WidgetRef ref) =>
               openCapture(context, ref, date: _today),
@@ -179,16 +183,18 @@ Future<void> _pumpChooser(WidgetTester tester) async {
 }
 
 Future<void> _openComposer(
-  WidgetTester tester, {
+  WidgetTester tester,
+  A11yVariant variant, {
   FakeDraftStore? drafts,
   List<Override> extra = const <Override>[],
   double keyboard = 0,
 }) async {
-  _useGalaxySurface(tester, keyboard: keyboard);
+  _useSurface(tester, variant, keyboard: keyboard);
   await tester.pumpWidget(
     ProviderScope(
       overrides: _composerOverrides(drafts: drafts, extra: extra),
-      child: captureHarness(
+      child: _harness(
+        variant,
         _Launcher(
           (BuildContext context, WidgetRef ref) =>
               showTextComposer(context, _today),
@@ -201,24 +207,27 @@ Future<void> _openComposer(
 
 Future<void> _composeNote(
   WidgetTester tester,
+  A11yVariant variant,
   String text, {
   List<Override> extra = const <Override>[],
   double keyboard = 0,
 }) async {
-  await _openComposer(tester, extra: extra, keyboard: keyboard);
+  await _openComposer(tester, variant, extra: extra, keyboard: keyboard);
   await NoteEditorDriver(tester).enterText(text);
   await tester.pump(draftIdleDebounceForTest);
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpNewComposer(WidgetTester tester) =>
-    _composeNote(tester, _noteText);
+Future<void> _pumpNewComposer(WidgetTester tester, A11yVariant variant) =>
+    _composeNote(tester, variant, _noteText);
 
-Future<void> _pumpComposerWithKeyboard(WidgetTester tester) =>
-    _composeNote(tester, _noteText, keyboard: _keyboardInset);
+Future<void> _pumpComposerWithKeyboard(
+  WidgetTester tester,
+  A11yVariant variant,
+) => _composeNote(tester, variant, _noteText, keyboard: _keyboardInset);
 
-Future<void> _pumpMoreFormats(WidgetTester tester) async {
-  await _pumpComposerWithKeyboard(tester);
+Future<void> _pumpMoreFormats(WidgetTester tester, A11yVariant variant) async {
+  await _pumpComposerWithKeyboard(tester, variant);
   await tester.ensureVisible(find.byKey(formatMoreKey));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(formatMoreKey));
@@ -234,8 +243,8 @@ Entry _savedNote() => Entry(
   updatedAt: 0,
 );
 
-Future<void> _pumpEditNote(WidgetTester tester) async {
-  _useGalaxySurface(tester);
+Future<void> _pumpEditNote(WidgetTester tester, A11yVariant variant) async {
+  _useSurface(tester, variant);
   final Entry entry = _savedNote();
   await tester.pumpWidget(
     ProviderScope(
@@ -246,7 +255,8 @@ Future<void> _pumpEditNote(WidgetTester tester) async {
           ),
         ],
       ),
-      child: dayDetailHarness(
+      child: _harness(
+        variant,
         _Launcher(
           (BuildContext context, WidgetRef ref) =>
               showEditNote(context, entry: entry, date: _today),
@@ -257,9 +267,13 @@ Future<void> _pumpEditNote(WidgetTester tester) async {
   await _launch(tester);
 }
 
-Future<void> _pumpPhotoSelected(WidgetTester tester) async {
+Future<void> _pumpPhotoSelected(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
   await _composeNote(
     tester,
+    variant,
     'one\n${mdPhotoLine(photoIdA)}\ntwo',
     extra: <Override>[_photoResolver()],
   );
@@ -268,22 +282,22 @@ Future<void> _pumpPhotoSelected(WidgetTester tester) async {
   await tester.pump();
 }
 
-Future<void> _pumpPhotoCaption(WidgetTester tester) async {
-  await _pumpPhotoSelected(tester);
+Future<void> _pumpPhotoCaption(WidgetTester tester, A11yVariant variant) async {
+  await _pumpPhotoSelected(tester, variant);
   await NoteEditorDriver(tester)
       .press(find.byKey(photoToolbarCaptionKey), _photoHold);
   await tester.pump();
 }
 
-Future<void> _pumpPhotoRemoved(WidgetTester tester) async {
-  await _pumpPhotoSelected(tester);
+Future<void> _pumpPhotoRemoved(WidgetTester tester, A11yVariant variant) async {
+  await _pumpPhotoSelected(tester, variant);
   await NoteEditorDriver(tester)
       .press(find.byKey(photoToolbarRemoveKey), _photoHold);
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpTableToolbar(WidgetTester tester) async {
-  await _composeNote(tester, _tableNote);
+Future<void> _pumpTableToolbar(WidgetTester tester, A11yVariant variant) async {
+  await _composeNote(tester, variant, _tableNote);
   await NoteEditorDriver(tester)
       .setSelection(const TextSelection.collapsed(offset: _insideTable));
   await tester.pumpAndSettle();
@@ -291,8 +305,11 @@ Future<void> _pumpTableToolbar(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpSelectionMenu(WidgetTester tester) async {
-  await _composeNote(tester, _selectionNote);
+Future<void> _pumpSelectionMenu(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _composeNote(tester, variant, _selectionNote);
   final NoteEditorDriver driver = NoteEditorDriver(tester);
   await driver.setSelection(
     const TextSelection.collapsed(offset: _insideHarbour),
@@ -306,15 +323,16 @@ Future<void> _pumpSelectionMenu(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpDiscardNote(WidgetTester tester) async {
-  await _pumpNewComposer(tester);
+Future<void> _pumpDiscardNote(WidgetTester tester, A11yVariant variant) async {
+  await _pumpNewComposer(tester, variant);
   await tester.tap(find.byKey(composerCloseKey));
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpDraftChip(WidgetTester tester) async {
+Future<void> _pumpDraftChip(WidgetTester tester, A11yVariant variant) async {
   await _openComposer(
     tester,
+    variant,
     drafts: FakeDraftStore(
       drafts: <String, String>{'new-$_today': _crashDraft},
     ),
@@ -339,8 +357,8 @@ void _requireVideoPhase(WidgetTester tester, VideoRecorderPhase phase) {
   }
 }
 
-Future<void> _openVoice(WidgetTester tester) async {
-  _useGalaxySurface(tester);
+Future<void> _openVoice(WidgetTester tester, A11yVariant variant) async {
+  _useSurface(tester, variant);
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
@@ -349,7 +367,8 @@ Future<void> _openVoice(WidgetTester tester) async {
         captureServiceProvider.overrideWith((Ref ref) => FakeCaptureService()),
         reflectionPromptsEnabledProvider.overrideWithValue(false),
       ],
-      child: voiceHarness(
+      child: _harness(
+        variant,
         _Launcher(
           (BuildContext context, WidgetRef ref) =>
               showVoiceComposer(context, _today),
@@ -369,48 +388,57 @@ Future<void> _tapRecord(WidgetTester tester) async {
   await tester.pump(_recorderSettle);
 }
 
-Future<void> _pumpVoiceIdle(WidgetTester tester) async {
-  await _openVoice(tester);
+Future<void> _pumpVoiceIdle(WidgetTester tester, A11yVariant variant) async {
+  await _openVoice(tester, variant);
   await tester.pump(_recorderSettle);
   _requireVoicePhase(tester, VoiceRecorderPhase.idle);
 }
 
-Future<void> _pumpVoiceRecording(WidgetTester tester) async {
-  await _openVoice(tester);
+Future<void> _pumpVoiceRecording(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _openVoice(tester, variant);
   await _tapRecord(tester);
   _requireVoicePhase(tester, VoiceRecorderPhase.breathing);
   await _tapRecord(tester);
   _requireVoicePhase(tester, VoiceRecorderPhase.recording);
 }
 
-Future<void> _pumpVoicePaused(WidgetTester tester) async {
-  await _pumpVoiceRecording(tester);
+Future<void> _pumpVoicePaused(WidgetTester tester, A11yVariant variant) async {
+  await _pumpVoiceRecording(tester, variant);
   await _tapRecord(tester);
   _requireVoicePhase(tester, VoiceRecorderPhase.paused);
 }
 
-Future<void> _pumpDiscardRecording(WidgetTester tester) async {
-  await _pumpVoiceRecording(tester);
+Future<void> _pumpDiscardRecording(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _pumpVoiceRecording(tester, variant);
   await tester.tap(find.byKey(voiceDiscardPillKey));
   await tester.pump();
   await tester.pump(_letGoOpen);
   _requireVoicePhase(tester, VoiceRecorderPhase.paused);
 }
 
-Future<void> _openVideo(WidgetTester tester) async {
-  _useGalaxySurface(tester);
+Future<void> _openVideo(WidgetTester tester, A11yVariant variant) async {
+  _useSurface(tester, variant);
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
         todayClockProvider.overrideWithValue(_clock),
         videoRecorderProvider.overrideWith(
-          (Ref ref) =>
-              FakeVideoRecorder(devices: _phoneCameras, supportsPause: true),
+          (Ref ref) => FakeVideoRecorder(
+            devices: variant.desktop ? fakeVideoDevices : _phoneCameras,
+            supportsPause: true,
+          ),
         ),
         captureServiceProvider.overrideWith((Ref ref) => FakeCaptureService()),
         reflectionPromptsEnabledProvider.overrideWithValue(false),
       ],
-      child: videoHarness(
+      child: _harness(
+        variant,
         _Launcher(
           (BuildContext context, WidgetRef ref) =>
               showVideoComposer(context, _today),
@@ -431,14 +459,17 @@ Future<void> _tapShutter(WidgetTester tester) async {
   await tester.pump(_recorderSettle);
 }
 
-Future<void> _pumpVideoIdle(WidgetTester tester) async {
-  await _openVideo(tester);
+Future<void> _pumpVideoIdle(WidgetTester tester, A11yVariant variant) async {
+  await _openVideo(tester, variant);
   await tester.pump(_recorderSettle);
   _requireVideoPhase(tester, VideoRecorderPhase.idle);
 }
 
-Future<void> _pumpVideoRecording(WidgetTester tester) async {
-  await _openVideo(tester);
+Future<void> _pumpVideoRecording(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _openVideo(tester, variant);
   await tester.pump(_recorderSettle);
   _requireVideoPhase(tester, VideoRecorderPhase.idle);
   await _tapShutter(tester);
@@ -447,8 +478,8 @@ Future<void> _pumpVideoRecording(WidgetTester tester) async {
   _requireVideoPhase(tester, VideoRecorderPhase.recording);
 }
 
-Future<void> _pumpVideoPaused(WidgetTester tester) async {
-  await _pumpVideoRecording(tester);
+Future<void> _pumpVideoPaused(WidgetTester tester, A11yVariant variant) async {
+  await _pumpVideoRecording(tester, variant);
   await _tapShutter(tester);
   _requireVideoPhase(tester, VideoRecorderPhase.paused);
 }
@@ -473,6 +504,7 @@ List<A11yStatefulControl> _selectedControls(Iterable<Key> keys) =>
 final List<A11yState> captureStates = <A11yState>[
   A11yState(
     id: 'c1-chooser',
+    platforms: const <TargetPlatform>{TargetPlatform.android},
     pump: _pumpChooser,
     proof: <A11yProof>[
       A11yProof(
@@ -485,6 +517,7 @@ final List<A11yState> captureStates = <A11yState>[
   ),
   A11yState(
     id: 'c2-composer-new',
+    platforms: const <TargetPlatform>{TargetPlatform.android},
     pump: _pumpNewComposer,
     proof: <A11yProof>[
       A11yProof(find.byType(TextComposerSheet)),
@@ -493,6 +526,7 @@ final List<A11yState> captureStates = <A11yState>[
   ),
   A11yState(
     id: 'c3-composer-keyboard',
+    platforms: const <TargetPlatform>{TargetPlatform.android},
     pump: _pumpComposerWithKeyboard,
     proof: <A11yProof>[
       A11yProof(find.byType(TextComposerSheet)),
@@ -506,6 +540,7 @@ final List<A11yState> captureStates = <A11yState>[
   ),
   A11yState(
     id: 'c5-edit-note',
+    platforms: const <TargetPlatform>{TargetPlatform.android},
     pump: _pumpEditNote,
     proof: <A11yProof>[
       A11yProof(find.text(editNoteSaveLabel)),
@@ -539,6 +574,7 @@ final List<A11yState> captureStates = <A11yState>[
   ),
   A11yState(
     id: 'c10-discard-dialog',
+    platforms: const <TargetPlatform>{TargetPlatform.android},
     pump: _pumpDiscardNote,
     proof: <A11yProof>[
       A11yProof(

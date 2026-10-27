@@ -1,0 +1,41 @@
+flutter-text-contrast | b2-settings-spell-unavailable | Sunday | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b4-select-open | Sunday | <root> # open: fails Flutter's text contrast guideline
+flutter-text-contrast | b7-settings-journal | Sunday | <root> # open: fails Flutter's text contrast guideline
+keyboard | b4-select-open | Monday | <root> # open: Tab never reaches it
+keyboard | b4-select-open | Saturday | <root> # open: Tab never reaches it
+keyboard | b4-select-open | Sunday | <root> # open: Tab never reaches it
+keyboard | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
+live-region | b1-settings | Sync & storage | <root> # open: status change is not announced
+live-region | b1-settings@2x | Sync & storage | <root> # open: status change is not announced
+live-region | b3-settings-notice | Data | <root> # open: status change is not announced
+live-region | b3-settings-notice@2x | Data | <root> # open: status change is not announced
+live-region | b5-delete-all-dialog | Data | <root> # open: status change is not announced
+live-region | b5-delete-all-dialog@2x | Data | <root> # open: status change is not announced
+live-region | b6-settings-reminders | Reminders & sound | <root> # open: status change is not announced
+live-region | b6-settings-reminders@2x | Reminders & sound | <root> # open: status change is not announced
+live-region | b8-settings-data | Data | <root> # open: status change is not announced
+live-region | b8-settings-data@2x | Data | <root> # open: status change is not announced
+live-region | b9-settings-about | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: status change is not announced
+live-region | b9-settings-about | About | <root> # open: status change is not announced
+live-region | b9-settings-about@2x | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: status change is not announced
+live-region | b9-settings-about@2x | About | <root> # open: status change is not announced
+missing-role | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b5-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
+small-target | b2-settings-spell-unavailable | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
+small-target | b2-settings-spell-unavailable@2x | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
+small-target | b4-select-open | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
+small-target | b4-select-open | Spell check | <root> # open: tap target under the platform minimum
+small-target | b4-select-open@2x | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
+small-target | b4-select-open@2x | Spell check | <root> # open: tap target under the platform minimum
+small-target | b6-settings-reminders | Daily reminder | <root> # open: tap target under the platform minimum
+small-target | b6-settings-reminders | Reflection question | <root> # open: tap target under the platform minimum
+small-target | b6-settings-reminders | Sound effects | <root> # open: tap target under the platform minimum
+small-target | b6-settings-reminders@2x | Daily reminder | <root> # open: tap target under the platform minimum
+small-target | b6-settings-reminders@2x | Reflection question | <root> # open: tap target under the platform minimum
+small-target | b6-settings-reminders@2x | Sound effects | <root> # open: tap target under the platform minimum
+small-target | b7-settings-journal | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
+small-target | b7-settings-journal | Spell check | <root> # open: tap target under the platform minimum
+small-target | b7-settings-journal@2x | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
+small-target | b7-settings-journal@2x | Spell check | <root> # open: tap target under the platform minimum
+small-target | b9-settings-about | Check automatically | <root> # open: tap target under the platform minimum
+small-target | b9-settings-about@2x | Check automatically | <root> # open: tap target under the platform minimum

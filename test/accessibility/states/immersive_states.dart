@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:camera/camera.dart' show CameraDescription, CameraLensDirection;
-import 'package:field_notes/app/shell/shell_layout.dart';
-import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
@@ -18,7 +16,6 @@ import 'package:field_notes/features/capture/voice/voice_composer.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
 import 'package:field_notes/state/settings_providers.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -54,40 +51,17 @@ final List<VideoCaptureDevice> _phoneCameras = cameraDeviceLabels(
   ],
 );
 
-enum _Layout {
-  sidebar(
-    suffix: 'sidebar',
-    platform: TargetPlatform.macOS,
-    window: Size(1280, 800),
-  ),
-  bottomBar(
-    suffix: 'bottom-bar',
-    platform: TargetPlatform.android,
-    window: Size(360, 740),
-  );
+Duration _fadeIn(A11yVariant variant) => immersiveFadeFor(variant.layout);
 
-  const _Layout({
-    required this.suffix,
-    required this.platform,
-    required this.window,
-  });
+List<VideoCaptureDevice> _camerasFor(A11yVariant variant) =>
+    variant.desktop ? fakeVideoDevices : _phoneCameras;
 
-  final String suffix;
-  final TargetPlatform platform;
-  final Size window;
-
-  Duration get fade => immersiveFadeFor(resolveShellLayout(platform));
-
-  List<VideoCaptureDevice> get cameras =>
-      this == sidebar ? fakeVideoDevices : _phoneCameras;
-}
+const List<Set<TargetPlatform>> _layoutPlatforms = <Set<TargetPlatform>>[
+  <TargetPlatform>{TargetPlatform.macOS, TargetPlatform.windows},
+  <TargetPlatform>{TargetPlatform.android},
+];
 
 typedef _Open = Future<Object?> Function(BuildContext context);
-
-typedef _LayoutPump = Future<void> Function(
-  WidgetTester tester,
-  _Layout layout,
-);
 
 class _Launcher extends StatelessWidget {
   const _Launcher(this.open);
@@ -104,59 +78,49 @@ class _Launcher extends StatelessWidget {
   }
 }
 
-Future<void> _inLayout(
-  WidgetTester tester,
-  _Layout layout,
-  _LayoutPump pump,
-) async {
-  debugDefaultTargetPlatformOverride = layout.platform;
-  try {
-    await pump(tester, layout);
-  } finally {
-    debugDefaultTargetPlatformOverride = null;
-  }
-}
-
 Future<void> _openRecorder(
   WidgetTester tester, {
-  required _Layout layout,
+  required A11yVariant variant,
   required _Open open,
   required List<Override> overrides,
 }) async {
-  tester.view.physicalSize = layout.window;
-  tester.view.devicePixelRatio = 1;
-  addTearDown(tester.view.reset);
+  variant.useWindow(tester);
   await tester.pumpWidget(
     ProviderScope(
       overrides: overrides,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: fieldNotesTheme(platform: layout.platform),
+        theme: variant.theme,
+        builder: variant.scaleText,
         home: Scaffold(body: Center(child: _Launcher(open))),
       ),
     ),
   );
   await tester.tap(find.text(_launcherLabel));
   await tester.pump();
-  await tester.pump(layout.fade);
+  await tester.pump(_fadeIn(variant));
   await tester.pump(_step);
 }
 
 Future<void> _openVoice(
   WidgetTester tester,
-  _Layout layout, {
+  A11yVariant variant, {
   bool prompts = false,
   FakeCaptureService? service,
+  VoidCallback? onClosed,
 }) {
   return _openRecorder(
     tester,
-    layout: layout,
+    variant: variant,
     open: (BuildContext context) => showVoiceComposer(context, _today),
     overrides: <Override>[
       voiceRecorderProvider.overrideWith((Ref ref) => FakeVoiceRecorder()),
-      captureServiceProvider.overrideWith(
-        (Ref ref) => service ?? FakeCaptureService(),
-      ),
+      captureServiceProvider.overrideWith((Ref ref) {
+        if (onClosed != null) {
+          ref.onDispose(onClosed);
+        }
+        return service ?? FakeCaptureService();
+      }),
       reflectionPromptsEnabledProvider.overrideWithValue(prompts),
     ],
   );
@@ -164,17 +128,17 @@ Future<void> _openVoice(
 
 Future<void> _openVideo(
   WidgetTester tester,
-  _Layout layout, {
+  A11yVariant variant, {
   bool supportsPause = true,
 }) {
   return _openRecorder(
     tester,
-    layout: layout,
+    variant: variant,
     open: (BuildContext context) => showVideoComposer(context, _today),
     overrides: <Override>[
       videoRecorderProvider.overrideWith(
         (Ref ref) => FakeVideoRecorder(
-          devices: layout.cameras,
+          devices: _camerasFor(variant),
           supportsPause: supportsPause,
         ),
       ),
@@ -230,70 +194,103 @@ Future<void> _startVideoTake(WidgetTester tester) async {
   _requireVideoPhase(tester, VideoRecorderPhase.recording);
 }
 
-Future<void> _pumpVoiceQuestion(WidgetTester tester, _Layout layout) async {
-  await _openVoice(tester, layout, prompts: true);
+Future<void> _showSecondQuestion(WidgetTester tester) async {
+  final Finder first = find.descendant(
+    of: find.byKey(reflectionQuestionKey),
+    matching: find.text(reflectionQuestions.first, findRichText: true),
+  );
+  for (
+    int shuffle = 0;
+    shuffle < reflectionQuestions.length && first.evaluate().isEmpty;
+    shuffle++
+  ) {
+    await _tap(tester, reflectionShuffleKey);
+    await tester.pump(_panelOpen);
+  }
+  await _tap(tester, reflectionShuffleKey);
+  await tester.pump(_panelOpen);
+}
+
+Future<void> _pumpVoiceQuestion(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _openVoice(tester, variant, prompts: true);
+  await _showSecondQuestion(tester);
   _requireVoicePhase(tester, VoiceRecorderPhase.idle);
 }
 
-Future<void> _pumpVoiceBreathing(WidgetTester tester, _Layout layout) async {
-  await _openVoice(tester, layout);
+Future<void> _pumpVoiceBreathing(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _openVoice(tester, variant);
   await _tap(tester, voiceRecordButtonKey);
   _requireVoicePhase(tester, VoiceRecorderPhase.breathing);
 }
 
-Future<void> _pumpVoiceRecording(WidgetTester tester, _Layout layout) async {
-  await _openVoice(tester, layout);
+Future<void> _pumpVoiceRecording(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _openVoice(tester, variant);
   await _startVoiceTake(tester);
 }
 
-Future<void> _pumpVoicePaused(WidgetTester tester, _Layout layout) async {
-  await _pumpVoiceRecording(tester, layout);
+Future<void> _pumpVoicePaused(WidgetTester tester, A11yVariant variant) async {
+  await _pumpVoiceRecording(tester, variant);
   await _tap(tester, voiceRecordButtonKey);
   _requireVoicePhase(tester, VoiceRecorderPhase.paused);
 }
 
-Future<void> _pumpVoiceLetGo(WidgetTester tester, _Layout layout) async {
-  await _pumpVoiceRecording(tester, layout);
+Future<void> _pumpVoiceLetGo(WidgetTester tester, A11yVariant variant) async {
+  await _pumpVoiceRecording(tester, variant);
   await _openPanel(tester, voiceDiscardPillKey);
   _requireVoicePhase(tester, VoiceRecorderPhase.paused);
 }
 
-Future<void> _pumpVoiceSaving(WidgetTester tester, _Layout layout) async {
+Future<void> _pumpVoiceSaving(WidgetTester tester, A11yVariant variant) async {
   final Completer<void> heldSave = Completer<void>();
   await _openVoice(
     tester,
-    layout,
+    variant,
     service: FakeCaptureService(
       failure: _heldSaveFailure,
       gate: heldSave.future,
     ),
+    onClosed: heldSave.complete,
   );
   await _startVoiceTake(tester);
   await _tap(tester, voiceSavePillKey);
   _requireVoicePhase(tester, VoiceRecorderPhase.saving);
-  tester.binding.addPostFrameCallback((Duration _) => heldSave.complete());
 }
 
-Future<void> _pumpVideoIdle(WidgetTester tester, _Layout layout) async {
-  await _openVideo(tester, layout);
+Future<void> _pumpVideoIdle(WidgetTester tester, A11yVariant variant) async {
+  await _openVideo(tester, variant);
   _requireVideoPhase(tester, VideoRecorderPhase.idle);
 }
 
-Future<void> _pumpVideoCameraOff(WidgetTester tester, _Layout layout) async {
-  await _openVideo(tester, layout);
+Future<void> _pumpVideoCameraOff(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _openVideo(tester, variant);
   await _tap(tester, videoCameraKey);
   await _startVideoTake(tester);
 }
 
-Future<void> _pumpVideoLetGo(WidgetTester tester, _Layout layout) async {
-  await _openVideo(tester, layout);
+Future<void> _pumpVideoLetGo(WidgetTester tester, A11yVariant variant) async {
+  await _openVideo(tester, variant);
   await _startVideoTake(tester);
   await _openPanel(tester, videoDiscardCircleKey);
   _requireVideoPhase(tester, VideoRecorderPhase.paused);
 }
 
-Future<void> _pumpVideoWithoutPause(WidgetTester tester, _Layout layout) async {
-  await _openVideo(tester, layout, supportsPause: false);
+Future<void> _pumpVideoWithoutPause(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _openVideo(tester, variant, supportsPause: false);
   await _startVideoTake(tester);
 }
 
@@ -307,17 +304,18 @@ const List<A11yStatefulControl> _cameraToggle = <A11yStatefulControl>[
 
 List<A11yState> _inBothLayouts({
   required String id,
-  required _LayoutPump pump,
+  required A11yPumpBody pump,
   required List<A11yProof> proof,
   List<A11yStatefulControl> stateful = const <A11yStatefulControl>[],
 }) {
   return <A11yState>[
-    for (final _Layout layout in _Layout.values)
+    for (final Set<TargetPlatform> platforms in _layoutPlatforms)
       A11yState(
-        id: '$id-${layout.suffix}',
-        pump: (WidgetTester tester) => _inLayout(tester, layout, pump),
+        id: id,
+        pump: pump,
         proof: proof,
         stateful: stateful,
+        platforms: platforms,
       ),
   ];
 }

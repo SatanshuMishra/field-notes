@@ -1,0 +1,17 @@
+flutter-text-contrast | d12-mood-set | Change | Feeling Calm / Lavender · today's bloom # open: fails Flutter's text contrast guideline
+flutter-text-contrast | d12-mood-set@2x | Change | Feeling Calm / Lavender · today's bloom # open: fails Flutter's text contrast guideline
+focus-visible | d4-viewer-video | Friday, September 18 · 9:30 AM / 0:00 / 0:04 | Play or pause video # open: focus indicator below 3:1
+focus-visible | d4-viewer-video | Play | Friday, September 18 · 9:30 AM / 0:00 / 0:04 # open: focus indicator below 3:1
+text-contrast | d10-mood-prompt-past | tap to plant this day's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | d10-mood-prompt-past@2x | tap to plant this day's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | d12-mood-set | Change | Feeling Calm / Lavender · today's bloom # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | d12-mood-set | Lavender · today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | d12-mood-set@2x | Lavender · today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | d4-viewer-video | 0:00 | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | d4-viewer-video | 0:04 | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | d4-viewer-video | Friday, September 18 · 9:30 AM | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | d4-viewer-video@2x | 0:00 | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | d4-viewer-video@2x | 0:04 | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | d4-viewer-video@2x | Friday, September 18 · 9:30 AM | Play or pause video # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | d9-mood-prompt-today | tap to plant today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text
+text-contrast | d9-mood-prompt-today@2x | tap to plant today's bloom | <root> # open: text contrast below 4.5:1, or 3:1 for large text

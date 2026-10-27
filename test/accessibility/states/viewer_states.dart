@@ -57,11 +57,12 @@ const String _plainNote = 'The fog lifted over the harbour.';
 const String _voiceId = 'voice-1';
 const String _videoId = 'video-1';
 
-void _useNote10Surface(WidgetTester tester) {
-  tester.view.physicalSize = const Size(1080, 2280);
-  tester.view.devicePixelRatio = 2.625;
-  addTearDown(tester.view.reset);
-}
+MaterialApp _app(A11yVariant variant, Widget home) => MaterialApp(
+  debugShowCheckedModeBanner: false,
+  theme: variant.theme,
+  builder: variant.scaleText,
+  home: home,
+);
 
 Entry _entry({
   required String id,
@@ -134,23 +135,26 @@ Future<void> _launch(WidgetTester tester) async {
 }
 
 Future<void> _openViewer(
-  WidgetTester tester, {
+  WidgetTester tester,
+  A11yVariant variant, {
   required Entry entry,
   MediaResolver? resolver,
 }) => _openViewerAmong(
   tester,
+  variant,
   entries: <Entry>[entry],
   entryId: entry.id,
   resolver: resolver,
 );
 
 Future<void> _openViewerAmong(
-  WidgetTester tester, {
+  WidgetTester tester,
+  A11yVariant variant, {
   required List<Entry> entries,
   required String entryId,
   MediaResolver? resolver,
 }) async {
-  _useNote10Surface(tester);
+  variant.useWindow(tester);
   final LruVideoSlots slots = LruVideoSlots(cap: 1);
   addTearDown(slots.dispose);
   await tester.pumpWidget(
@@ -177,9 +181,9 @@ Future<void> _openViewerAmong(
         videoAspectProvider.overrideWith((Ref ref, String mediaId) => null),
         todayClockProvider.overrideWithValue(() => _now),
       ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: _Launcher(
+      child: _app(
+        variant,
+        _Launcher(
           open: (BuildContext context) => showLogViewer(
             context,
             date: _today,
@@ -226,10 +230,11 @@ Future<void> _longPressText(WidgetTester tester, int sourceOffset) async {
 
 Future<void> _openDay(
   WidgetTester tester,
+  A11yVariant variant,
   List<Entry> entries, {
   Day? day,
 }) async {
-  _useNote10Surface(tester);
+  variant.useWindow(tester);
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
@@ -242,9 +247,9 @@ Future<void> _openDay(
         ),
         todayClockProvider.overrideWithValue(() => _now),
       ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: _Launcher(
+      child: _app(
+        variant,
+        _Launcher(
           open: (BuildContext context) =>
               showDayDetail(context, date: _pastDay),
         ),
@@ -256,10 +261,11 @@ Future<void> _openDay(
 
 Future<void> _pumpMood(
   WidgetTester tester,
+  A11yVariant variant,
   MoodBannerForDate banner, {
   Mood? mood,
 }) async {
-  _useNote10Surface(tester);
+  variant.useWindow(tester);
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
@@ -274,7 +280,7 @@ Future<void> _pumpMood(
         soundPlayerProvider.overrideWithValue(FakeSoundPlayer()),
         todayClockProvider.overrideWithValue(() => _now),
       ],
-      child: mood_support.moodHarness(banner),
+      child: _app(variant, Scaffold(body: Center(child: banner))),
     ),
   );
   await tester.pumpAndSettle();
@@ -299,8 +305,12 @@ class _TodayDockPage extends StatelessWidget {
   }
 }
 
-Future<void> _pumpDock(WidgetTester tester, {Mood? mood}) async {
-  _useNote10Surface(tester);
+Future<void> _pumpDock(
+  WidgetTester tester,
+  A11yVariant variant, {
+  Mood? mood,
+}) async {
+  variant.useWindow(tester);
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
@@ -315,10 +325,7 @@ Future<void> _pumpDock(WidgetTester tester, {Mood? mood}) async {
         soundPlayerProvider.overrideWithValue(FakeSoundPlayer()),
         todayClockProvider.overrideWithValue(() => _now),
       ],
-      child: const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(body: _TodayDockPage()),
-      ),
+      child: _app(variant, const Scaffold(body: _TodayDockPage())),
     ),
   );
   await tester.pumpAndSettle();
@@ -345,7 +352,9 @@ Future<void> _tapText(WidgetTester tester, String text) async {
 final List<A11yState> viewerStates = <A11yState>[
   A11yState(
     id: 'd1-viewer-todos',
-    pump: (WidgetTester tester) => _openViewer(tester, entry: _note(_todoNote)),
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) =>
+        _openViewer(tester, variant, entry: _note(_todoNote)),
     proof: <A11yProof>[A11yProof(_logSheet)],
     stateful: const <A11yStatefulControl>[
       A11yStatefulControl.label(_firstTodo, A11yStateKind.checked),
@@ -354,8 +363,10 @@ final List<A11yState> viewerStates = <A11yState>[
   ),
   A11yState(
     id: 'd2-viewer-photo',
-    pump: (WidgetTester tester) => _openViewer(
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) => _openViewer(
       tester,
+      variant,
       entry: _note('A harbour morning.\n${photoLine(photoIdA)}'),
       resolver: FakeNoteMediaResolver(<String, ResolvedMedia>{
         prefixOf(photoIdA): availablePhoto(photoIdA),
@@ -365,8 +376,9 @@ final List<A11yState> viewerStates = <A11yState>[
   ),
   A11yState(
     id: 'd3-viewer-voice',
-    pump: (WidgetTester tester) => _openViewer(
+    pump: (WidgetTester tester, A11yVariant variant) => _openViewer(
       tester,
+      variant,
       entry: _entry(
         id: 'entry-1',
         type: EntryType.voice,
@@ -388,8 +400,9 @@ final List<A11yState> viewerStates = <A11yState>[
   ),
   A11yState(
     id: 'd4-viewer-video',
-    pump: (WidgetTester tester) => _openViewer(
+    pump: (WidgetTester tester, A11yVariant variant) => _openViewer(
       tester,
+      variant,
       entry: _entry(
         id: 'entry-1',
         type: EntryType.video,
@@ -411,19 +424,18 @@ final List<A11yState> viewerStates = <A11yState>[
   ),
   A11yState(
     id: 'd5-reader-menu',
-    pump: (WidgetTester tester) async {
-      await _openViewer(tester, entry: _note(_plainNote));
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _openViewer(tester, variant, entry: _note(_plainNote));
       await _longPressText(tester, _plainNote.indexOf('harbour') + 2);
     },
-    proof: <A11yProof>[
-      A11yProof(_logSheet),
-      A11yProof(find.text('Select all')),
-    ],
+    proof: <A11yProof>[A11yProof(_logSheet), A11yProof(find.text('Copy'))],
   ),
   A11yState(
     id: 'd6-task-toast',
-    pump: (WidgetTester tester) async {
-      await _openViewer(tester, entry: _note(_todoNote));
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _openViewer(tester, variant, entry: _note(_todoNote));
       await _tickTask(tester, 2);
     },
     proof: <A11yProof>[
@@ -433,25 +445,29 @@ final List<A11yState> viewerStates = <A11yState>[
   ),
   A11yState(
     id: 'd7-day-with-entries',
-    pump: (WidgetTester tester) => _openDay(tester, <Entry>[
-      _entry(
-        id: 'entry-1',
-        type: EntryType.text,
-        createdAt: DateTime(2026, 9, 17, 9, 30),
-        textContent: 'a good day',
-      ),
-      _entry(
-        id: 'entry-2',
-        type: EntryType.text,
-        createdAt: DateTime(2026, 9, 17, 14, 30),
-        textContent: 'and a walk',
-      ),
-    ]),
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) =>
+        _openDay(tester, variant, <Entry>[
+          _entry(
+            id: 'entry-1',
+            type: EntryType.text,
+            createdAt: DateTime(2026, 9, 17, 9, 30),
+            textContent: 'a good day',
+          ),
+          _entry(
+            id: 'entry-2',
+            type: EntryType.text,
+            createdAt: DateTime(2026, 9, 17, 14, 30),
+            textContent: 'and a walk',
+          ),
+        ]),
     proof: <A11yProof>[A11yProof(_daySheet)],
   ),
   A11yState(
     id: 'd8-day-empty',
-    pump: (WidgetTester tester) => _openDay(tester, const <Entry>[]),
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) =>
+        _openDay(tester, variant, const <Entry>[]),
     proof: <A11yProof>[
       A11yProof(_daySheet),
       A11yProof(find.text(dayDetailEmptyMessage)),
@@ -467,16 +483,18 @@ final List<A11yState> viewerStates = <A11yState>[
   ),
   A11yState(
     id: 'd10-mood-prompt-past',
-    pump: (WidgetTester tester) => _pumpMood(
+    pump: (WidgetTester tester, A11yVariant variant) => _pumpMood(
       tester,
+      variant,
       const MoodBannerForDate(date: _pastDay, promptText: dayDetailMoodPrompt),
     ),
     proof: <A11yProof>[A11yProof(find.text("tap to plant this day's bloom"))],
   ),
   A11yState(
     id: 'd11-mood-picker',
-    pump: (WidgetTester tester) async {
-      await _pumpDock(tester);
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _pumpDock(tester, variant);
       await _tapText(tester, todayMoodDockChooseLabel);
     },
     proof: <A11yProof>[
@@ -491,7 +509,8 @@ final List<A11yState> viewerStates = <A11yState>[
   ),
   A11yState(
     id: 'd12-mood-set',
-    pump: (WidgetTester tester) => _pumpDock(tester, mood: Mood.calm),
+    pump: (WidgetTester tester, A11yVariant variant) =>
+        _pumpDock(tester, variant, mood: Mood.calm),
     proof: <A11yProof>[
       A11yProof(find.text('Feeling ${Mood.calm.label}')),
       A11yProof(find.text(todayMoodDockChangeLabel)),
@@ -499,8 +518,9 @@ final List<A11yState> viewerStates = <A11yState>[
   ),
   A11yState(
     id: 'd13-change-mood-dialog',
-    pump: (WidgetTester tester) async {
-      await _pumpDock(tester, mood: Mood.calm);
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _pumpDock(tester, variant, mood: Mood.calm);
       await _tapText(tester, todayMoodDockChangeLabel);
       await _tapText(tester, 'Happy');
     },
@@ -516,8 +536,9 @@ final List<A11yState> viewerStates = <A11yState>[
   ),
   A11yState(
     id: 'd14-delete-entry-dialog',
-    pump: (WidgetTester tester) async {
-      await _openViewer(tester, entry: _note(_plainNote));
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _openViewer(tester, variant, entry: _note(_plainNote));
       await tester.tap(find.byKey(logActionsDeleteKey));
       await tester.pumpAndSettle();
     },
@@ -532,8 +553,10 @@ final List<A11yState> viewerStates = <A11yState>[
   ),
   A11yState(
     id: 'd15-viewer-middle-entry',
-    pump: (WidgetTester tester) => _openViewerAmong(
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) => _openViewerAmong(
       tester,
+      variant,
       entries: <Entry>[
         _entry(
           id: 'n1',
@@ -560,8 +583,10 @@ final List<A11yState> viewerStates = <A11yState>[
   ),
   A11yState(
     id: 'd16-day-past-mood',
-    pump: (WidgetTester tester) => _openDay(
+    platforms: const <TargetPlatform>{TargetPlatform.android},
+    pump: (WidgetTester tester, A11yVariant variant) => _openDay(
       tester,
+      variant,
       <Entry>[
         _entry(
           id: 'entry-1',

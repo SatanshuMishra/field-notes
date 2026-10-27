@@ -19,8 +19,10 @@ import 'package:field_notes/features/onboarding/chapters/tour_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/week_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/year_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding.dart';
+import 'package:field_notes/features/reminders/notifications_off_notice.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/reminders/reminder_scheduler.dart';
+import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -40,10 +42,14 @@ const Size onboardingBottomBarSurface = Size(384, 832);
 const double onboardingStatusBar = 34;
 const double onboardingGestureBar = 24;
 
-const List<ShellLayout> _layouts = <ShellLayout>[
-  ShellLayout.sidebar,
-  ShellLayout.bottomBar,
-];
+const List<(ShellLayout, Set<TargetPlatform>)> _layouts =
+    <(ShellLayout, Set<TargetPlatform>)>[
+      (
+        ShellLayout.sidebar,
+        <TargetPlatform>{TargetPlatform.macOS, TargetPlatform.windows},
+      ),
+      (ShellLayout.bottomBar, <TargetPlatform>{TargetPlatform.android}),
+    ];
 
 const int _meadowFrames = 6000;
 const Duration _meadowWait = Duration(milliseconds: 2);
@@ -53,6 +59,7 @@ const Duration _yearToEnd = Duration(seconds: 12);
 const double _swipe = 120;
 const double _swipeSpeed = 800;
 
+final DateTime _onboardingMorning = DateTime(2026, 7, 20, 9);
 const String _firstLine = 'A first line about today';
 const String _lineFailure =
     "Couldn't save this line. Keep typing to try again.";
@@ -61,7 +68,6 @@ const String _emptyHint = 'write anything at all to keep going';
 const String _lookAhead = 'drag to look ahead →';
 const String _reminderOff = 'No nudges. Your meadow waits quietly.';
 const String _notificationsOff = 'Notifications are off for Field Notes.';
-const String _openSystemSettings = 'Open System Settings';
 const String _goOnWithout =
     'You can still go on. Reminders stay off until notifications are on.';
 const String _otherWaysTitle = 'Some days are easier said.';
@@ -100,15 +106,27 @@ enum _Year { untouched, playing, finished }
 
 enum _Notifications { allowed, refused }
 
-FakeSettingsRepository _freshInstall() =>
-    FakeSettingsRepository(storedValues: false);
+Appearance _appearanceOf(A11yVariant variant) => switch (variant.brightness) {
+  Brightness.light => Appearance.light,
+  Brightness.dark => Appearance.dark,
+};
 
-FakeSettingsRepository _onboarded() => FakeSettingsRepository(
-  initial: AppSettings.defaults.copyWith(
-    onboardingStatus: OnboardingStatus.done,
-    notificationPermissionAsked: true,
-  ),
-);
+FakeSettingsRepository _freshInstall(A11yVariant variant) =>
+    FakeSettingsRepository(
+      initial: AppSettings.defaults.copyWith(
+        appearance: _appearanceOf(variant),
+      ),
+      storedValues: false,
+    );
+
+FakeSettingsRepository _onboarded(A11yVariant variant) =>
+    FakeSettingsRepository(
+      initial: AppSettings.defaults.copyWith(
+        appearance: _appearanceOf(variant),
+        onboardingStatus: OnboardingStatus.done,
+        notificationPermissionAsked: true,
+      ),
+    );
 
 void _stay(OnboardingController controller) {}
 
@@ -178,16 +196,17 @@ RecordingReminderScheduler _scheduler(_Notifications notifications) =>
       ),
     };
 
-List<Override> _overrides(_Screen screen) => <Override>[
+List<Override> _overrides(_Screen screen, A11yVariant variant) => <Override>[
   for (final Override override in shellOverrides())
     if (override.origin != settingsRepositoryProvider &&
         override.origin != reminderSchedulerProvider)
       override,
   settingsRepositoryProvider.overrideWithValue(
-    screen.replay ? _onboarded() : _freshInstall(),
+    screen.replay ? _onboarded(variant) : _freshInstall(variant),
   ),
   reminderSchedulerProvider.overrideWithValue(_scheduler(screen.notifications)),
   onboardingCountryCodeProvider.overrideWithValue('US'),
+  todayClockProvider.overrideWithValue(() => _onboardingMorning),
   noteWriterProvider.overrideWith((Ref ref) => _writer(screen.line)),
 ];
 
@@ -279,40 +298,33 @@ void _placeOn(WidgetTester tester, ShellLayout layout, Size surface) {
 
 Future<void> _pumpScreen(
   WidgetTester tester,
+  A11yVariant variant,
   ShellLayout layout,
   Size surface,
   _Screen screen,
 ) async {
   _placeOn(tester, layout, surface);
-  debugDefaultTargetPlatformOverride = switch (layout) {
-    ShellLayout.sidebar => TargetPlatform.macOS,
-    ShellLayout.bottomBar => TargetPlatform.android,
-  };
-  try {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: _overrides(screen),
-        child: const FieldNotesApp(),
-      ),
-    );
-    await _settle(tester);
-    final OnboardingController controller = ProviderScope.containerOf(
-      tester.element(find.byType(AppShell)),
-    ).read(onboardingControllerProvider.notifier);
-    if (screen.replay) {
-      controller.showMap();
-    } else {
-      await _walkTo(tester, controller, screen.chapter);
-      screen.setUp(controller);
-    }
-    await _settle(tester);
-    if (layout == ShellLayout.bottomBar) {
-      await screen.phoneAct(tester, screen.chapter);
-    }
-    await _growYear(tester, screen.year);
-  } finally {
-    debugDefaultTargetPlatformOverride = null;
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: _overrides(screen, variant),
+      child: const FieldNotesApp(),
+    ),
+  );
+  await _settle(tester);
+  final OnboardingController controller = ProviderScope.containerOf(
+    tester.element(find.byType(AppShell)),
+  ).read(onboardingControllerProvider.notifier);
+  if (screen.replay) {
+    controller.showMap();
+  } else {
+    await _walkTo(tester, controller, screen.chapter);
+    screen.setUp(controller);
   }
+  await _settle(tester);
+  if (layout == ShellLayout.bottomBar) {
+    await screen.phoneAct(tester, screen.chapter);
+  }
+  await _growYear(tester, screen.year);
 }
 
 Finder _primaryLabelled(String label) => find.descendant(
@@ -565,7 +577,12 @@ final List<_Screen> _screens = <_Screen>[
     setUp: (OnboardingController controller) => controller.next(),
     shows: (ShellLayout layout) => <Finder>[
       find.text(_notificationsOff),
-      find.text(_openSystemSettings),
+      find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is Text &&
+            widget.data == openSettingsLabelFor(defaultTargetPlatform),
+        description: "the platform's open-settings button",
+      ),
       find.text(_goOnWithout),
       switch (layout) {
         ShellLayout.sidebar => _primaryLabelled(onboardingNextLabel),
@@ -580,13 +597,15 @@ List<A11yState> onboardingStatesAt({
   required Size bottomBar,
 }) => <A11yState>[
   for (final (int index, _Screen screen) in _screens.indexed)
-    for (final (int side, ShellLayout layout) in _layouts.indexed)
+    for (final (int side, (ShellLayout layout, Set<TargetPlatform> platforms))
+        in _layouts.indexed)
       A11yState(
         id:
             'o${index * _layouts.length + side + 1}-'
             '${screen.name}-${_layoutName(layout)}',
-        pump: (WidgetTester tester) =>
-            _pumpScreen(tester, layout, switch (layout) {
+        platforms: platforms,
+        pump: (WidgetTester tester, A11yVariant variant) =>
+            _pumpScreen(tester, variant, layout, switch (layout) {
               ShellLayout.sidebar => sidebar,
               ShellLayout.bottomBar => bottomBar,
             }, screen),
