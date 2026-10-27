@@ -160,10 +160,7 @@ Future<db.AppDatabase> _pumpMonth(
         for (final Override override in shellOverrides())
           if (override.origin != journalRepositoryProvider) override,
         journalRepositoryProvider.overrideWithValue(
-          DriftJournalRepository(
-            database,
-            recorder: ChangeRecorder(database),
-          ),
+          DriftJournalRepository(database, recorder: ChangeRecorder(database)),
         ),
         onboardingControllerProvider.overrideWithBuild(
           (Ref ref, OnboardingController controller) => OnboardingFlowRunning(
@@ -323,6 +320,17 @@ double _opacity(WidgetTester tester, int day) => tester
     )
     .opacity;
 
+bool _numeralFaded(int day) => find
+    .descendant(
+      of: find.descendant(
+        of: _day(day),
+        matching: find.byType(AnimatedOpacity),
+      ),
+      matching: find.text('$day'),
+    )
+    .evaluate()
+    .isNotEmpty;
+
 void _expectGrid(
   WidgetTester tester, {
   required int firstWeekday,
@@ -358,6 +366,7 @@ void _expectGrid(
 void _expectBeforeLooking(WidgetTester tester, Mood mood) {
   for (int day = 1; day < _today; day++) {
     expect(_opacity(tester, day), lessThan(1));
+    expect(_numeralFaded(day), isFalse);
     expect(_flowerIn(day), findsNothing);
     expect(_ringIn(day), findsNothing);
   }
@@ -369,6 +378,7 @@ void _expectBeforeLooking(WidgetTester tester, Mood mood) {
   );
   for (int day = _today + 1; day <= _lastDay; day++) {
     expect(_opacity(tester, day), lessThan(1));
+    expect(_numeralFaded(day), isFalse);
     expect(_flowerIn(day), findsNothing);
     expect(_ringIn(day), findsNothing);
   }
