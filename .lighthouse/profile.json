@@ -44,7 +44,9 @@
   "suite": {
     "command": "flutter pub get && dart run build_runner build --delete-conflicting-outputs && flutter test",
     "junit": null,
-    "timeout_minutes": null
+    "timeout_minutes": null,
+    "rerun": "flutter test --name {names_regex}",
+    "isolated": true
   },
   "setup": {
     "command": "flutter pub get && dart run build_runner build --delete-conflicting-outputs"
