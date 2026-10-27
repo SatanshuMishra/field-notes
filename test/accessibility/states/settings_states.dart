@@ -307,8 +307,8 @@ List<A11yState> get settingsStates => <A11yState>[
   ),
   A11yState(
     id: 'b3-settings-notice',
-    pump: _openDeleteAll,
-    act: (WidgetTester tester, A11yVariant variant) async {
+    pump: (WidgetTester tester, A11yVariant variant) async {
+      await _openDeleteAll(tester, variant);
       await tester.tap(find.text('Delete everything'));
       await tester.pumpAndSettle();
     },
@@ -458,8 +458,6 @@ List<A11yState> get settingsStates => <A11yState>[
         tab: SettingsTab.data,
         exportResult: const DataActionFailed(_exportFailed),
       );
-    },
-    act: (WidgetTester tester, A11yVariant variant) async {
       await tester.tap(find.text('Export…'));
       await tester.pumpAndSettle();
     },

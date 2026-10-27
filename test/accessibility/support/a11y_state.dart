@@ -79,11 +79,10 @@ class A11yState {
     required this.id,
     required A11yPumpBody pump,
     required this.proof,
-    A11yPumpBody? act,
     this.stateful = const <A11yStatefulControl>[],
     this.platforms = a11yPlatforms,
   }) : assert(platforms.isNotEmpty && platforms.every(a11yPlatforms.contains)),
-       pump = A11yPump(_reachThenAct(pump, act), platforms);
+       pump = A11yPump(pump, platforms);
 
   final String id;
   final A11yPump pump;
@@ -93,12 +92,6 @@ class A11yState {
 
   bool runsIn(A11yVariant variant) => platforms.contains(variant.platform);
 }
-
-A11yPumpBody _reachThenAct(A11yPumpBody reach, A11yPumpBody? act) =>
-    (WidgetTester tester, A11yVariant variant) async {
-      await reach(tester, variant);
-      await act?.call(tester, variant);
-    };
 
 const Set<TargetPlatform> a11yPhonePlatforms = <TargetPlatform>{
   TargetPlatform.android,
@@ -113,20 +106,17 @@ final class A11yLayoutHalf {
   const A11yLayoutHalf({
     required this.pump,
     required this.proof,
-    this.act,
     this.stateful = const <A11yStatefulControl>[],
   });
 
   final A11yPumpBody pump;
   final List<A11yProof> proof;
-  final A11yPumpBody? act;
   final List<A11yStatefulControl> stateful;
 
   A11yState _stateOn(String id, Set<TargetPlatform> platforms) => A11yState(
     id: id,
     pump: pump,
     proof: proof,
-    act: act,
     stateful: stateful,
     platforms: platforms,
   );

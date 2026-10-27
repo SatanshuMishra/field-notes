@@ -397,22 +397,19 @@ Future<void> _pumpVoiceIdle(WidgetTester tester, A11yVariant variant) async {
   _requireVoicePhase(tester, VoiceRecorderPhase.idle);
 }
 
-Future<void> _recordVoice(WidgetTester tester, A11yVariant variant) async {
+Future<void> _pumpVoiceRecording(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _openVoice(tester, variant);
   await _tapRecord(tester);
   _requireVoicePhase(tester, VoiceRecorderPhase.breathing);
   await _tapRecord(tester);
   _requireVoicePhase(tester, VoiceRecorderPhase.recording);
 }
 
-Future<void> _pumpVoiceRecording(
-  WidgetTester tester,
-  A11yVariant variant,
-) async {
-  await _openVoice(tester, variant);
-  await _recordVoice(tester, variant);
-}
-
-Future<void> _pauseVoice(WidgetTester tester, A11yVariant variant) async {
+Future<void> _pumpVoicePaused(WidgetTester tester, A11yVariant variant) async {
+  await _pumpVoiceRecording(tester, variant);
   await _tapRecord(tester);
   _requireVoicePhase(tester, VoiceRecorderPhase.paused);
 }
@@ -471,22 +468,19 @@ Future<void> _pumpVideoIdle(WidgetTester tester, A11yVariant variant) async {
   _requireVideoPhase(tester, VideoRecorderPhase.idle);
 }
 
-Future<void> _recordVideo(WidgetTester tester, A11yVariant variant) async {
+Future<void> _pumpVideoRecording(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _pumpVideoIdle(tester, variant);
   await _tapShutter(tester);
   _requireVideoPhase(tester, VideoRecorderPhase.breathing);
   await _tapShutter(tester);
   _requireVideoPhase(tester, VideoRecorderPhase.recording);
 }
 
-Future<void> _pumpVideoRecording(
-  WidgetTester tester,
-  A11yVariant variant,
-) async {
-  await _pumpVideoIdle(tester, variant);
-  await _recordVideo(tester, variant);
-}
-
-Future<void> _pauseVideo(WidgetTester tester, A11yVariant variant) async {
+Future<void> _pumpVideoPaused(WidgetTester tester, A11yVariant variant) async {
+  await _pumpVideoRecording(tester, variant);
   await _tapShutter(tester);
   _requireVideoPhase(tester, VideoRecorderPhase.paused);
 }
@@ -660,14 +654,12 @@ final List<A11yState> captureStates = <A11yState>[
   ),
   A11yState(
     id: 'c13-voice-recording',
-    pump: _openVoice,
-    act: _recordVoice,
+    pump: _pumpVoiceRecording,
     proof: <A11yProof>[A11yProof(find.byType(VoiceRecorderSheet))],
   ),
   A11yState(
     id: 'c14-voice-paused',
-    pump: _pumpVoiceRecording,
-    act: _pauseVoice,
+    pump: _pumpVoicePaused,
     proof: <A11yProof>[A11yProof(find.text(stagePausedStatus))],
   ),
   A11yState(
@@ -677,14 +669,12 @@ final List<A11yState> captureStates = <A11yState>[
   ),
   A11yState(
     id: 'c16-video-recording',
-    pump: _pumpVideoIdle,
-    act: _recordVideo,
+    pump: _pumpVideoRecording,
     proof: <A11yProof>[A11yProof(find.byType(VideoRecorderSheet))],
   ),
   A11yState(
     id: 'c17-video-paused',
-    pump: _pumpVideoRecording,
-    act: _pauseVideo,
+    pump: _pumpVideoPaused,
     proof: <A11yProof>[A11yProof(find.byType(VideoRecorderSheet))],
   ),
   A11yState(
