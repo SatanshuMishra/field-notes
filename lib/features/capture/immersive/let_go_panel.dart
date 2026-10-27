@@ -201,6 +201,7 @@ class _LetGoPanelState extends State<LetGoPanel> {
         focusSurface: FocusRingSurface.dark,
         padTapTarget: !_compact,
         labelStyle: _buttonLabelStyle,
+        borderRadius: _compact ? _compactPillRadius : _pillRadius,
         onPressed: widget.onLetGo,
       ),
     );

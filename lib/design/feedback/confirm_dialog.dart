@@ -203,6 +203,7 @@ class _ConfirmSheetState extends State<_ConfirmSheet>
               label: content.confirmLabel,
               variant: StickerButtonVariant.danger,
               labelStyle: _phoneSheetButtonStyle,
+              borderRadius: phoneSheetButtonRadius,
               onPressed: () => resolve(true),
             ),
           )

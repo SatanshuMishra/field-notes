@@ -52,6 +52,7 @@ class StickerButton extends StatelessWidget {
     this.focusSurface = FocusRingSurface.light,
     this.autofocus = false,
     this.ground = StickerGround.page,
+    this.borderRadius,
   });
 
   final String label;
@@ -63,6 +64,7 @@ class StickerButton extends StatelessWidget {
   final FocusRingSurface focusSurface;
   final bool autofocus;
   final StickerGround ground;
+  final BorderRadius? borderRadius;
 
   bool get isEnabled => onPressed != null;
 
@@ -75,25 +77,26 @@ class StickerButton extends StatelessWidget {
       context.colors,
       shadows,
     );
+    final BorderRadius radius = borderRadius ?? style.borderRadius;
     return Pressable(
       label: label,
       onPressed: onPressed,
       autofocus: autofocus,
       surface: focusSurface,
-      borderRadius: style.borderRadius,
+      borderRadius: radius,
       paintsHover: false,
       builder: (BuildContext context, bool hovered) {
         final Widget face = DecoratedBox(
           decoration: BoxDecoration(
             color: style.background,
             border: style.edge,
-            borderRadius: style.borderRadius,
+            borderRadius: radius,
             boxShadow: style.shadow,
           ),
           child: HoverFill(
             hovered: hovered,
             surface: style.hoverSurface,
-            borderRadius: style.borderRadius,
+            borderRadius: radius,
             position: DecorationPosition.background,
             child: Padding(
               padding: style.padding,
