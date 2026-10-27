@@ -334,6 +334,35 @@ class _LogActionButtonState extends State<_LogActionButton> {
   }
 }
 
+class LogActionsCorner extends StatelessWidget {
+  const LogActionsCorner({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool covered =
+        context.dependOnInheritedWidgetOfExactType<_LogActionsShown>()?.shown ??
+        false;
+    return AnimatedOpacity(
+      opacity: covered ? 0 : 1,
+      duration: _revealDuration,
+      alwaysIncludeSemantics: true,
+      child: child,
+    );
+  }
+}
+
+class _LogActionsShown extends InheritedWidget {
+  const _LogActionsShown({required this.shown, required super.child});
+
+  final bool shown;
+
+  @override
+  bool updateShouldNotify(_LogActionsShown oldWidget) =>
+      shown != oldWidget.shown;
+}
+
 class LogActionsReveal extends StatefulWidget {
   const LogActionsReveal({
     super.key,
@@ -721,7 +750,10 @@ class _LogActionsRevealState extends State<LogActionsReveal>
                     behavior: HitTestBehavior.opaque,
                     excludeFromSemantics: true,
                     onLongPress: _onLongPress,
-                    child: widget.builder(context, hovered),
+                    child: _LogActionsShown(
+                      shown: _visible,
+                      child: widget.builder(context, hovered),
+                    ),
                   ),
                 ),
               ),
