@@ -397,19 +397,22 @@ Future<void> _pumpVoiceIdle(WidgetTester tester, A11yVariant variant) async {
   _requireVoicePhase(tester, VoiceRecorderPhase.idle);
 }
 
-Future<void> _pumpVoiceRecording(
-  WidgetTester tester,
-  A11yVariant variant,
-) async {
-  await _openVoice(tester, variant);
+Future<void> _recordVoice(WidgetTester tester, A11yVariant variant) async {
   await _tapRecord(tester);
   _requireVoicePhase(tester, VoiceRecorderPhase.breathing);
   await _tapRecord(tester);
   _requireVoicePhase(tester, VoiceRecorderPhase.recording);
 }
 
-Future<void> _pumpVoicePaused(WidgetTester tester, A11yVariant variant) async {
-  await _pumpVoiceRecording(tester, variant);
+Future<void> _pumpVoiceRecording(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _openVoice(tester, variant);
+  await _recordVoice(tester, variant);
+}
+
+Future<void> _pauseVoice(WidgetTester tester, A11yVariant variant) async {
   await _tapRecord(tester);
   _requireVoicePhase(tester, VoiceRecorderPhase.paused);
 }
@@ -468,21 +471,22 @@ Future<void> _pumpVideoIdle(WidgetTester tester, A11yVariant variant) async {
   _requireVideoPhase(tester, VideoRecorderPhase.idle);
 }
 
-Future<void> _pumpVideoRecording(
-  WidgetTester tester,
-  A11yVariant variant,
-) async {
-  await _openVideo(tester, variant);
-  await tester.pump(_recorderSettle);
-  _requireVideoPhase(tester, VideoRecorderPhase.idle);
+Future<void> _recordVideo(WidgetTester tester, A11yVariant variant) async {
   await _tapShutter(tester);
   _requireVideoPhase(tester, VideoRecorderPhase.breathing);
   await _tapShutter(tester);
   _requireVideoPhase(tester, VideoRecorderPhase.recording);
 }
 
-Future<void> _pumpVideoPaused(WidgetTester tester, A11yVariant variant) async {
-  await _pumpVideoRecording(tester, variant);
+Future<void> _pumpVideoRecording(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _pumpVideoIdle(tester, variant);
+  await _recordVideo(tester, variant);
+}
+
+Future<void> _pauseVideo(WidgetTester tester, A11yVariant variant) async {
   await _tapShutter(tester);
   _requireVideoPhase(tester, VideoRecorderPhase.paused);
 }
@@ -656,12 +660,14 @@ final List<A11yState> captureStates = <A11yState>[
   ),
   A11yState(
     id: 'c13-voice-recording',
-    pump: _pumpVoiceRecording,
+    pump: _openVoice,
+    act: _recordVoice,
     proof: <A11yProof>[A11yProof(find.byType(VoiceRecorderSheet))],
   ),
   A11yState(
     id: 'c14-voice-paused',
-    pump: _pumpVoicePaused,
+    pump: _pumpVoiceRecording,
+    act: _pauseVoice,
     proof: <A11yProof>[A11yProof(find.text(stagePausedStatus))],
   ),
   A11yState(
@@ -671,12 +677,14 @@ final List<A11yState> captureStates = <A11yState>[
   ),
   A11yState(
     id: 'c16-video-recording',
-    pump: _pumpVideoRecording,
+    pump: _pumpVideoIdle,
+    act: _recordVideo,
     proof: <A11yProof>[A11yProof(find.byType(VideoRecorderSheet))],
   ),
   A11yState(
     id: 'c17-video-paused',
-    pump: _pumpVideoPaused,
+    pump: _pumpVideoRecording,
+    act: _pauseVideo,
     proof: <A11yProof>[A11yProof(find.byType(VideoRecorderSheet))],
   ),
   A11yState(

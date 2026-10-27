@@ -215,14 +215,16 @@ Future<void> _pumpVoiceQuestion(
   _requireVoicePhase(tester, VoiceRecorderPhase.idle);
 }
 
-Future<void> _pumpVoiceBreathing(
-  WidgetTester tester,
-  A11yVariant variant,
-) async {
-  await _openVoice(tester, variant);
+Future<void> _reachVoice(WidgetTester tester, A11yVariant variant) =>
+    _openVoice(tester, variant);
+
+Future<void> _breatheVoice(WidgetTester tester, A11yVariant variant) async {
   await _tap(tester, voiceRecordButtonKey);
   _requireVoicePhase(tester, VoiceRecorderPhase.breathing);
 }
+
+Future<void> _recordVoice(WidgetTester tester, A11yVariant variant) =>
+    _startVoiceTake(tester);
 
 Future<void> _pumpVoiceRecording(
   WidgetTester tester,
@@ -232,8 +234,7 @@ Future<void> _pumpVoiceRecording(
   await _startVoiceTake(tester);
 }
 
-Future<void> _pumpVoicePaused(WidgetTester tester, A11yVariant variant) async {
-  await _pumpVoiceRecording(tester, variant);
+Future<void> _pauseVoice(WidgetTester tester, A11yVariant variant) async {
   await _tap(tester, voiceRecordButtonKey);
   _requireVoicePhase(tester, VoiceRecorderPhase.paused);
 }
@@ -244,7 +245,10 @@ Future<void> _pumpVoiceLetGo(WidgetTester tester, A11yVariant variant) async {
   _requireVoicePhase(tester, VoiceRecorderPhase.paused);
 }
 
-Future<void> _pumpVoiceSaving(WidgetTester tester, A11yVariant variant) async {
+Future<void> _reachHeldVoiceTake(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
   final Completer<void> heldSave = Completer<void>();
   await _openVoice(
     tester,
@@ -256,11 +260,14 @@ Future<void> _pumpVoiceSaving(WidgetTester tester, A11yVariant variant) async {
     onClosed: heldSave.complete,
   );
   await _startVoiceTake(tester);
+}
+
+Future<void> _saveVoiceHeld(WidgetTester tester, A11yVariant variant) async {
   await _tap(tester, voiceSavePillKey);
   _requireVoicePhase(tester, VoiceRecorderPhase.saving);
 }
 
-Future<void> _pumpVoiceSaveError(
+Future<void> _reachFailingVoiceTake(
   WidgetTester tester,
   A11yVariant variant,
 ) async {
@@ -270,6 +277,9 @@ Future<void> _pumpVoiceSaveError(
     service: FakeCaptureService(failure: _heldSaveFailure),
   );
   await _startVoiceTake(tester);
+}
+
+Future<void> _saveVoiceFailing(WidgetTester tester, A11yVariant variant) async {
   await _tap(tester, voiceSavePillKey);
   await tester.pump(_panelOpen);
 }
@@ -279,14 +289,16 @@ Future<void> _pumpVideoIdle(WidgetTester tester, A11yVariant variant) async {
   _requireVideoPhase(tester, VideoRecorderPhase.idle);
 }
 
-Future<void> _pumpVideoCameraOff(
+Future<void> _reachVideoCameraOff(
   WidgetTester tester,
   A11yVariant variant,
 ) async {
   await _openVideo(tester, variant);
   await _tap(tester, videoCameraKey);
-  await _startVideoTake(tester);
 }
+
+Future<void> _recordVideo(WidgetTester tester, A11yVariant variant) =>
+    _startVideoTake(tester);
 
 Future<void> _pumpVideoLetGo(WidgetTester tester, A11yVariant variant) async {
   await _openVideo(tester, variant);
@@ -295,13 +307,10 @@ Future<void> _pumpVideoLetGo(WidgetTester tester, A11yVariant variant) async {
   _requireVideoPhase(tester, VideoRecorderPhase.paused);
 }
 
-Future<void> _pumpVideoWithoutPause(
+Future<void> _reachVideoWithoutPause(
   WidgetTester tester,
   A11yVariant variant,
-) async {
-  await _openVideo(tester, variant, supportsPause: false);
-  await _startVideoTake(tester);
-}
+) => _openVideo(tester, variant, supportsPause: false);
 
 Finder _semanticsLabelled(String label) => find.byWidgetPredicate(
   (Widget widget) => widget is Semantics && widget.properties.label == label,
@@ -315,11 +324,13 @@ List<A11yState> _inBothLayouts({
   required String id,
   required A11yPumpBody pump,
   required List<A11yProof> proof,
+  A11yPumpBody? act,
   List<A11yStatefulControl> stateful = const <A11yStatefulControl>[],
 }) {
   final A11yLayoutHalf either = A11yLayoutHalf(
     pump: pump,
     proof: proof,
+    act: act,
     stateful: stateful,
   );
   return a11yInBothLayouts(id: id, phone: either, desktop: either);
@@ -337,7 +348,8 @@ final List<A11yState> immersiveStates = <A11yState>[
   ),
   ..._inBothLayouts(
     id: 'i2-voice-breathing',
-    pump: _pumpVoiceBreathing,
+    pump: _reachVoice,
+    act: _breatheVoice,
     proof: <A11yProof>[
       A11yProof(find.text(stageCountdownWords)),
       A11yProof(_semanticsLabelled(voiceStartNowLabel)),
@@ -345,7 +357,8 @@ final List<A11yState> immersiveStates = <A11yState>[
   ),
   ..._inBothLayouts(
     id: 'i3-voice-recording',
-    pump: _pumpVoiceRecording,
+    pump: _reachVoice,
+    act: _recordVoice,
     proof: <A11yProof>[
       A11yProof(find.text(stageRecordingStatus)),
       A11yProof(find.byKey(recorderTimerKey)),
@@ -355,7 +368,8 @@ final List<A11yState> immersiveStates = <A11yState>[
   ),
   ..._inBothLayouts(
     id: 'i4-voice-paused',
-    pump: _pumpVoicePaused,
+    pump: _pumpVoiceRecording,
+    act: _pauseVoice,
     proof: <A11yProof>[
       A11yProof(find.text(stagePausedStatus)),
       A11yProof(_semanticsLabelled(voiceResumeLabel)),
@@ -373,7 +387,8 @@ final List<A11yState> immersiveStates = <A11yState>[
   ),
   ..._inBothLayouts(
     id: 'i6-voice-saving',
-    pump: _pumpVoiceSaving,
+    pump: _reachHeldVoiceTake,
+    act: _saveVoiceHeld,
     proof: <A11yProof>[A11yProof(find.text(voiceSavingStatus))],
   ),
   ..._inBothLayouts(
@@ -393,7 +408,8 @@ final List<A11yState> immersiveStates = <A11yState>[
   ),
   ..._inBothLayouts(
     id: 'i8-video-camera-off',
-    pump: _pumpVideoCameraOff,
+    pump: _reachVideoCameraOff,
+    act: _recordVideo,
     proof: <A11yProof>[
       A11yProof(find.text(videoCameraOffTitle)),
       A11yProof(find.text(stageRecordingStatus)),
@@ -411,7 +427,8 @@ final List<A11yState> immersiveStates = <A11yState>[
   ),
   ..._inBothLayouts(
     id: 'i10-video-without-pause',
-    pump: _pumpVideoWithoutPause,
+    pump: _reachVideoWithoutPause,
+    act: _recordVideo,
     proof: <A11yProof>[
       A11yProof(_semanticsLabelled(videoStopAndKeepLabel)),
       A11yProof(find.text(stageRecordingStatus)),
@@ -420,7 +437,8 @@ final List<A11yState> immersiveStates = <A11yState>[
   ),
   ..._inBothLayouts(
     id: 'i11-voice-save-error',
-    pump: _pumpVoiceSaveError,
+    pump: _reachFailingVoiceTake,
+    act: _saveVoiceFailing,
     proof: <A11yProof>[
       A11yProof(find.byKey(voiceErrorKey)),
       A11yProof(find.text(_heldSaveFailure.message)),

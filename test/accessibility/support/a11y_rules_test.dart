@@ -318,9 +318,10 @@ Future<List<String>> _swept(
             ),
           ),
         );
-        await tester.pump(const Duration(milliseconds: 200));
         await setUp?.call(tester, variant);
       },
+      act: (WidgetTester tester, A11yVariant variant) =>
+          tester.pump(const Duration(milliseconds: 200)),
       proof: <A11yProof>[A11yProof(find.byKey(_plantedKey))],
     ),
     variant: variant,

@@ -32,6 +32,14 @@ keyboard | c8-table-toolbar | Save | Today · 9:30 AM / New note / # title   - l
 keyboard | c8-table-toolbar | Table | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: Tab never reaches it
 keyboard | c8-table-toolbar | Task list | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: Tab never reaches it
 keyboard | c8-table-toolbar | Undo | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # open: Tab never reaches it
+live-region | c13-voice-recording | space pause · ⌘↩ keep · esc leave | <root> # open: live-region
+live-region | c13-voice-recording@2x | space pause · ⌘↩ keep · esc leave | <root> # open: live-region
+live-region | c14-voice-paused | space resume · ⌘↩ keep · esc leave | <root> # open: live-region
+live-region | c14-voice-paused@2x | space resume · ⌘↩ keep · esc leave | <root> # open: live-region
+live-region | c16-video-recording | space pause · ⌘↩ keep · esc leave | <root> # open: live-region
+live-region | c16-video-recording@2x | space pause · ⌘↩ keep · esc leave | <root> # open: live-region
+live-region | c17-video-paused | space resume · ⌘↩ keep · esc leave | <root> # open: live-region
+live-region | c17-video-paused@2x | space resume · ⌘↩ keep · esc leave | <root> # open: live-region
 missing-role | c1-chooser-sidebar | Dismiss capture chooser | <root> # open: missing-role
 missing-role | c1-chooser-sidebar@2x | Dismiss capture chooser | <root> # open: missing-role
 missing-role | c10-discard-dialog-sidebar | Dismiss | <root> # open: missing-role

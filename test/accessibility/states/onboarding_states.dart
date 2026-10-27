@@ -318,7 +318,20 @@ Future<void> _pumpScreen(
     controller.showMap();
   } else {
     await _walkTo(tester, controller, screen.chapter);
-    screen.setUp(controller);
+  }
+  await tester.pump();
+}
+
+Future<void> _actOnScreen(
+  WidgetTester tester,
+  ShellLayout layout,
+  _Screen screen,
+) async {
+  if (!screen.replay) {
+    screen.setUp(
+      ProviderScope.containerOf(tester.element(find.byType(AppShell)))
+          .read(onboardingControllerProvider.notifier),
+    );
   }
   await _settle(tester);
   if (layout == ShellLayout.bottomBar) {
@@ -609,6 +622,8 @@ List<A11yState> onboardingStatesAt({
               ShellLayout.sidebar => sidebar,
               ShellLayout.bottomBar => bottomBar,
             }, screen),
+        act: (WidgetTester tester, A11yVariant variant) =>
+            _actOnScreen(tester, layout, screen),
         proof: _proof(screen, layout),
       ),
 ];

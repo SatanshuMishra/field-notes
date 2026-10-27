@@ -36,6 +36,10 @@ keyboard | a3-card-actions | 9:30 AM · morning / VIDEO / A video from the morni
 keyboard | a3-card-actions | 9:30 AM · morning / VOICE / 0:00 / 0:42 | <root> # open: Tab never reaches it
 keyboard | a3-card-actions | Play | 9:30 AM · morning / VOICE / 0:00 / 0:42 # open: Tab never reaches it
 keyboard | a5-calendar-picker-sidebar | Dismiss month picker | <root> # open: keyboard
+live-region | a9-search-results-sidebar | 1 entry | <root> # open: live-region
+live-region | a9-search-results-sidebar | The peonies opened by the fence | <root> # open: live-region
+live-region | a9-search-results-sidebar@2x | 1 entry | <root> # open: live-region
+live-region | a9-search-results-sidebar@2x | The peonies opened by the fence | <root> # open: live-region
 overlapping-text | a14-meadow-empty@2x | field / notes + Today | <root> # open: text overlaps other text at 2x text
 overlapping-text | a15-today-empty-sidebar@2x | field / notes + Today | <root> # open: text overlaps other text at 2x text
 overlapping-text | a2-today-feed@2x | The peonies finally opened along the back fence. + I stood there with my coffee for a long while and watched... | 9:30 AM · morning / NOTE / The peonies finally opened along the back fence. / I stood there with my coffee for a long while and watched the bees work the blooms, then walked the long way round to the harbour to see the ferry… / Read › # open: text overlaps other text at 2x text

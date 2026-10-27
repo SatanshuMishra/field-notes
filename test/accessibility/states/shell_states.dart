@@ -463,11 +463,7 @@ Future<void> _pumpSearchOf(
   await tester.pump();
 }
 
-Future<void> _pumpSearch(
-  WidgetTester tester,
-  A11yVariant variant,
-  String query,
-) async {
+Future<void> _pumpSearch(WidgetTester tester, A11yVariant variant) async {
   await _pumpApp(
     tester,
     variant,
@@ -475,9 +471,13 @@ Future<void> _pumpSearch(
     overrides: _searchOverrides(),
   );
   await tester.pump();
-  await tester.enterText(find.byType(TextField), query);
-  await tester.pump();
 }
+
+A11yPumpBody _searchFor(String query) =>
+    (WidgetTester tester, A11yVariant variant) async {
+      await tester.enterText(find.byType(TextField), query);
+      await tester.pump();
+    };
 
 final Finder _revealedPill = find.descendant(
   of: find.byKey(logActionsPillKey),
@@ -552,11 +552,9 @@ Future<void> _pumpGardenTab(WidgetTester tester, A11yVariant variant) async {
   await _waitForMeadow(tester);
 }
 
-Future<void> _pumpSearchResults(WidgetTester tester, A11yVariant variant) =>
-    _pumpSearch(tester, variant, 'peonies');
+final A11yPumpBody _searchResults = _searchFor('peonies');
 
-Future<void> _pumpSearchNoMatch(WidgetTester tester, A11yVariant variant) =>
-    _pumpSearch(tester, variant, 'zzz');
+final A11yPumpBody _searchNoMatch = _searchFor('zzz');
 
 final List<A11yState> shellStates = <A11yState>[
   A11yState(
@@ -695,14 +693,16 @@ final List<A11yState> shellStates = <A11yState>[
     id: 'a9-search-results',
     desktopId: 'a9-search-results-sidebar',
     phone: A11yLayoutHalf(
-      pump: _pumpSearchResults,
+      pump: _pumpSearch,
+      act: _searchResults,
       proof: <A11yProof>[
         A11yProof(find.byType(SearchDayTile)),
         A11yProof(_phoneSearchField),
       ],
     ),
     desktop: A11yLayoutHalf(
-      pump: _pumpSearchResults,
+      pump: _pumpSearch,
+      act: _searchResults,
       proof: <A11yProof>[
         A11yProof(find.byType(SearchDayTile)),
         A11yProof(_desktopSearchField),
@@ -713,14 +713,16 @@ final List<A11yState> shellStates = <A11yState>[
     id: 'a10-search-no-match',
     desktopId: 'a10-search-no-match-sidebar',
     phone: A11yLayoutHalf(
-      pump: _pumpSearchNoMatch,
+      pump: _pumpSearch,
+      act: _searchNoMatch,
       proof: <A11yProof>[
         A11yProof(find.textContaining('No days match')),
         A11yProof(_phoneSearchField),
       ],
     ),
     desktop: A11yLayoutHalf(
-      pump: _pumpSearchNoMatch,
+      pump: _pumpSearch,
+      act: _searchNoMatch,
       proof: <A11yProof>[
         A11yProof(find.textContaining('No days match')),
         A11yProof(_desktopSearchField),

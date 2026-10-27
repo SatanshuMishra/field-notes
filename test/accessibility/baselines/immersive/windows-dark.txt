@@ -1,3 +1,11 @@
+live-region | i10-video-without-pause | ctrl+enter keep · esc leave | <root> # open: live-region
+live-region | i10-video-without-pause@2x | ctrl+enter keep · esc leave | <root> # open: live-region
+live-region | i3-voice-recording | space pause · ctrl+enter keep · esc leave | <root> # open: live-region
+live-region | i3-voice-recording@2x | space pause · ctrl+enter keep · esc leave | <root> # open: live-region
+live-region | i4-voice-paused | space resume · ctrl+enter keep · esc leave | <root> # open: live-region
+live-region | i4-voice-paused@2x | space resume · ctrl+enter keep · esc leave | <root> # open: live-region
+live-region | i8-video-camera-off | space pause · ctrl+enter keep · esc leave | <root> # open: live-region
+live-region | i8-video-camera-off@2x | space pause · ctrl+enter keep · esc leave | <root> # open: live-region
 overlapping-text | i11-voice-save-error@2x | 0:00 + Could not save your entry. | <root> # open: text overlaps other text at 2x text
 truncated-text | i11-voice-save-error@2x | space pause · ctrl+enter keep · esc leave | <root> # open: text is cut short at 2x text
 truncated-text | i3-voice-recording@2x | space pause · ctrl+enter keep · esc leave | <root> # open: text is cut short at 2x text
