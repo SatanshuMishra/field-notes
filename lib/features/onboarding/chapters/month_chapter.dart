@@ -1092,16 +1092,49 @@ class _DayCell extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     final BorderRadius radius = BorderRadius.circular(metrics.radius);
     final Widget? art = _art(colors);
+    final double numberBottom =
+        metrics.numberTop +
+        MediaQuery.textScalerOf(context).scale(metrics.numberSize);
     final Widget face = Stack(
       fit: StackFit.expand,
       clipBehavior: Clip.none,
       children: <Widget>[
         if (art != null)
-          Center(
-            child: Padding(
-              padding: EdgeInsets.only(top: metrics.artLift),
-              child: art,
-            ),
+          LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final double size = math.min(
+                metrics.art,
+                math.max(0, constraints.maxHeight - numberBottom),
+              );
+              if (size <= 0 || size < metrics.art / 2) {
+                return const SizedBox.shrink();
+              }
+              final double centredTop =
+                  (constraints.maxHeight - size + metrics.artLift) / 2;
+              return Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  Positioned(
+                    top: math.max(centredTop, numberBottom),
+                    left: 0,
+                    right: 0,
+                    height: size,
+                    child: Center(
+                      child: SizedBox.square(
+                        dimension: size,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: SizedBox.square(
+                            dimension: metrics.art,
+                            child: Center(child: art),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         Positioned(
           left: metrics.numberLeft,

@@ -62,7 +62,7 @@ class CalendarDayCell extends StatelessWidget {
               : _CellMetrics.regular;
           final BorderRadius radius = BorderRadius.circular(metrics.radius);
           Widget faceWith(bool hovered) {
-            final Widget face = cell.isInMonth
+            return cell.isInMonth
                 ? _InMonthFace(
                     dayOfMonth: cell.dayOfMonth,
                     day: day,
@@ -70,6 +70,7 @@ class CalendarDayCell extends StatelessWidget {
                     inCurrentWeek: inCurrentWeek,
                     metrics: metrics,
                     hovered: hovered,
+                    dimming: dimming,
                   )
                 : _NumberOnly(
                     dayOfMonth: cell.dayOfMonth,
@@ -77,9 +78,6 @@ class CalendarDayCell extends StatelessWidget {
                     metrics: metrics,
                     hovered: hovered,
                   );
-            return dimming == null
-                ? face
-                : Opacity(opacity: dimming, child: face);
           }
 
           final VoidCallback? onTap = this.onTap;
@@ -144,6 +142,7 @@ class _InMonthFace extends StatelessWidget {
     required this.inCurrentWeek,
     required this.metrics,
     required this.hovered,
+    required this.dimming,
   });
 
   final int dayOfMonth;
@@ -152,6 +151,7 @@ class _InMonthFace extends StatelessWidget {
   final bool inCurrentWeek;
   final _CellMetrics metrics;
   final bool hovered;
+  final double? dimming;
 
   @override
   Widget build(BuildContext context) {
@@ -169,18 +169,29 @@ class _InMonthFace extends StatelessWidget {
             Center(child: FlowerBloom.forMood(mood, size: metrics.flowerSize))
           else if (day != null)
             const _ActivityDot(key: calendarActivityDotKey),
-          _DayNumber(
-            dayOfMonth: dayOfMonth,
-            color: isToday
-                ? colors.accentInk
-                : inCurrentWeek
-                ? colors.ink
-                : colors.mutedDeep,
-            metrics: metrics,
-          ),
         ],
       ),
     );
+    final Widget frame = _frame(colors, radius, content);
+    final double? dimming = this.dimming;
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        if (dimming == null) frame else Opacity(opacity: dimming, child: frame),
+        _DayNumber(
+          dayOfMonth: dayOfMonth,
+          color: isToday
+              ? colors.accentInk
+              : inCurrentWeek
+              ? colors.ink
+              : colors.mutedDeep,
+          metrics: metrics,
+        ),
+      ],
+    );
+  }
+
+  Widget _frame(FieldNotesColors colors, BorderRadius radius, Widget content) {
     if (isToday) {
       return DecoratedBox(
         decoration: BoxDecoration(

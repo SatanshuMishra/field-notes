@@ -567,17 +567,16 @@ class _PhoneDayCell extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _mark(context),
+          if (isFuture)
+            Opacity(opacity: phoneMonthFutureOpacity, child: _mark(context))
+          else
+            _mark(context),
           const SizedBox(height: _markGap),
           _number(context),
         ],
       ),
     );
-    final Widget centred = Center(
-      child: isFuture
-          ? Opacity(opacity: phoneMonthFutureOpacity, child: face)
-          : face,
-    );
+    final Widget centred = Center(child: face);
     final VoidCallback? onTap = this.onTap;
     if (onTap == null) {
       return Semantics(

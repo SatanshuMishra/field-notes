@@ -14,6 +14,7 @@ import 'package:field_notes/data/media/blob_paths.dart';
 import 'package:field_notes/data/settings/drift_settings_repository.dart';
 import 'package:field_notes/data/settings/journal_settings_store.dart';
 import 'package:field_notes/data/sync/change_recorder.dart';
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/note_tree.dart';
 import 'package:field_notes/domain/notes/markdown/syntax_tree.dart';
@@ -27,7 +28,7 @@ import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/photo/photo_picker.dart';
 import 'package:field_notes/features/capture/text/editor/photo_toolbar.dart'
-    show photoToolbarTargetFor, photoToolbarWidthFor;
+    show photoToolbarWidthFor;
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
@@ -1203,7 +1204,7 @@ final class _Probe {
         scaler: layout.inputs.textScaler,
         placement: false,
         moves: true,
-        target: photoToolbarTargetFor(defaultTargetPlatform),
+        target: minTargetOn(defaultTargetPlatform),
       ),
       'blocks': _blocksJson(surface),
       'lines': _linesJson(layout),
