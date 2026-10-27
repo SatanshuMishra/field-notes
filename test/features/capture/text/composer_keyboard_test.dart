@@ -218,8 +218,8 @@ void main() {
         final TextSelection cell = NoteEditorDriver(tester).selection;
         await _focusEditor(tester, editor);
         await _press(tester, LogicalKeyboardKey.tab);
-        expect(editor.hasPrimaryFocus, isTrue);
-        expect(NoteEditorDriver(tester).selection, isNot(cell));
+        expect(_primaryFocusIn(find.byType(TableToolbar)), findsOneWidget);
+        expect(NoteEditorDriver(tester).selection, cell);
 
         await NoteEditorDriver(tester).setSelection(cell);
         await _expectLeavesBothWays(

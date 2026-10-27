@@ -178,6 +178,8 @@ final class _FakeHost implements NoteActionHost {
   final List<TextPosition> verticalAnswers = <TextPosition>[];
   bool dismissible = false;
   bool toolbarTakesFocus = false;
+  bool tableToolbarTakesFocus = false;
+  int tableToolbarRequests = 0;
   int dismissals = 0;
   int undos = 0;
   int redos = 0;
@@ -295,6 +297,12 @@ final class _FakeHost implements NoteActionHost {
   bool focusPhotoToolbar() {
     toolbarRequests++;
     return toolbarTakesFocus;
+  }
+
+  @override
+  bool focusTableToolbar() {
+    tableToolbarRequests++;
+    return tableToolbarTakesFocus;
   }
 }
 
@@ -868,6 +876,29 @@ void main() {
       await tester.pump();
       expect(harness.host.toolbarRequests, 2);
       expect(harness.siblingNode.hasPrimaryFocus, isTrue);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'tab in a table cell enters the table toolbar and shift tab leaves',
+    (WidgetTester tester) async {
+      const String table = '| a | b |\n| --- | --- |\n| c | d |';
+      final NoteSelection inCell = NoteSelection.collapsed(table.indexOf('c'));
+      final _Harness harness = await _pump(tester, table, selection: inCell);
+      harness.host.tableToolbarTakesFocus = true;
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      expect(harness.host.tableToolbarRequests, 1);
+      expect(harness.host.state.selection, inCell);
+      expect(harness.host.applied, isEmpty);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      expect(harness.host.tableToolbarRequests, 1);
+      expect(harness.host.applied, isEmpty);
+      expect(harness.editorNode.hasPrimaryFocus, isFalse);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );

@@ -54,6 +54,8 @@ abstract interface class NoteActionHost {
   void dismiss();
 
   bool focusPhotoToolbar();
+
+  bool focusTableToolbar();
 }
 
 final class _CutToLineEndIntent extends Intent {
@@ -925,6 +927,10 @@ class NoteActions {
 
   Object? _focusStep({required bool forward}) {
     final EditorState state = host.state;
+    if (caretInTable(state)) {
+      return (forward && host.focusTableToolbar()) ||
+          _moveFocus(forward: forward);
+    }
     final Transaction? command = host.commands
         .commandFor(forward ? NoteCommandId.indent : NoteCommandId.outdent)
         ?.call(state);
