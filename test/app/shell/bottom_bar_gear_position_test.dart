@@ -18,10 +18,10 @@ void main() {
         tester.view.physicalSize.width / tester.view.devicePixelRatio;
     final Rect gear = tester.getRect(find.byIcon(Icons.settings_outlined));
     expect(gear.size, const Size.square(22));
-    expect(gear.center.dy, moreOrLessEquals(22, epsilon: 0.01));
-    expect(width - gear.right, moreOrLessEquals(19, epsilon: 0.01));
+    expect(gear.center.dy, moreOrLessEquals(24, epsilon: 0.01));
+    expect(width - gear.right, moreOrLessEquals(21, epsilon: 0.01));
     final Rect wordmark = tester.getRect(find.text('field notes'));
     expect(wordmark.left, 18);
-    expect(wordmark.center.dy, moreOrLessEquals(22, epsilon: 0.01));
+    expect(wordmark.center.dy, moreOrLessEquals(24, epsilon: 0.01));
   });
 }

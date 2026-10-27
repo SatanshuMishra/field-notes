@@ -32,7 +32,7 @@ import '../day_detail/support/day_detail_harness.dart' show FakeMediaResolver;
 const Size _phone = Size(384, 832);
 const double _statusBar = 34;
 const double _gestureBar = 24;
-const double _headerBottom = _statusBar + 44;
+const double _headerBottom = _statusBar + 48;
 const MonthRef _july = MonthRef(2026, 7);
 
 const List<String> _monthAbbreviations = <String>[

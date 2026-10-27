@@ -36,7 +36,7 @@ const double _phoneHeight = 832;
 const Size _phone = Size(384, _phoneHeight);
 const double _statusBar = 34;
 const double _gestureBar = 24;
-const double _headerBottom = _statusBar + 44;
+const double _headerBottom = _statusBar + 48;
 const double _dockBottom = _phoneHeight - _gestureBar - 80 - 12;
 const int _buildFrames = 6000;
 

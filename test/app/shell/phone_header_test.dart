@@ -22,7 +22,7 @@ import '../support/app_shell_harness.dart';
 const Size _surface = Size(384, 832);
 const double _statusBar = 34;
 const double _gestureBar = 24;
-const double _headerHeight = _statusBar + 44;
+const double _headerHeight = _statusBar + 48;
 
 final Finder _gear = find.byKey(const ValueKey<String>('gear-button'));
 
@@ -143,7 +143,7 @@ void main() {
         expect(pill, pillHome, reason: reason);
         expect(gear, gearHome, reason: reason);
 
-        expect(gear.size, const Size.square(44), reason: reason);
+        expect(gear.size, const Size.square(48), reason: reason);
         expect(gear.top, _statusBar, reason: reason);
         expect(gear.right, _surface.width - 8, reason: reason);
         expect(pill.height, 30, reason: reason);
