@@ -24,7 +24,6 @@ keyboard | b13-select-dropdown-speaker | System output | <root> # open: Tab neve
 keyboard | b4-select-open | Monday | <root> # open: Tab never reaches it
 keyboard | b4-select-open | Saturday | <root> # open: Tab never reaches it
 keyboard | b4-select-open | Sunday | <root> # open: Tab never reaches it
-small-target | b15-settings-data-error | Delete all… | <root> # open: tap target under the platform minimum
 small-target | b15-settings-data-error | Export… | <root> # open: tap target under the platform minimum
 small-target | b15-settings-data-error | Open | <root> # open: tap target under the platform minimum
 small-target | b15-settings-data-error | Reclaim space | <root> # open: tap target under the platform minimum
@@ -45,7 +44,6 @@ small-target | b2-settings-spell-unavailable | Small | <root> # open: tap target
 small-target | b2-settings-spell-unavailable | Sunday | <root> # open: tap target under the platform minimum
 small-target | b2-settings-spell-unavailable | System | <root> # open: tap target under the platform minimum
 small-target | b2-settings-spell-unavailable@2x | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
-small-target | b3-settings-notice | Delete all… | <root> # open: tap target under the platform minimum
 small-target | b3-settings-notice | Export… | <root> # open: tap target under the platform minimum
 small-target | b3-settings-notice | Open | <root> # open: tap target under the platform minimum
 small-target | b3-settings-notice | Reclaim space | <root> # open: tap target under the platform minimum
@@ -79,7 +77,6 @@ small-target | b7-settings-journal | Sunday | <root> # open: tap target under th
 small-target | b7-settings-journal | System | <root> # open: tap target under the platform minimum
 small-target | b7-settings-journal@2x | Pause the Meadow in the background | <root> # open: tap target under the platform minimum
 small-target | b7-settings-journal@2x | Spell check | <root> # open: tap target under the platform minimum
-small-target | b8-settings-data | Delete all… | <root> # open: tap target under the platform minimum
 small-target | b8-settings-data | Export… | <root> # open: tap target under the platform minimum
 small-target | b8-settings-data | Open | <root> # open: tap target under the platform minimum
 small-target | b8-settings-data | Reclaim space | <root> # open: tap target under the platform minimum

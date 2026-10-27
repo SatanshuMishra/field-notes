@@ -389,12 +389,21 @@ class SyncFlowButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final VoidCallback? onPressed = action.onPressed;
-    final bool emphasis = action.primary || action.danger;
-    final Color background = action.danger
-        ? Palette.danger
-        : action.primary
-        ? Palette.coral
-        : colors.cardLight;
+    if (action.danger) {
+      return SizedBox(
+        height: _flowButtonHeight,
+        child: StickerButton(
+          key: action.key,
+          label: action.label,
+          onPressed: onPressed,
+          variant: StickerButtonVariant.danger,
+          borderRadius: _flowButtonRadius,
+          labelStyle: _flowButtonStyle,
+        ),
+      );
+    }
+    final bool emphasis = action.primary;
+    final Color background = emphasis ? Palette.coral : colors.cardLight;
     return Pressable(
       key: action.key,
       label: action.label,

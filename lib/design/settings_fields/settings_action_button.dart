@@ -34,13 +34,26 @@ class SettingsActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return switch (resolveShellLayout(Theme.of(context).platform)) {
-      ShellLayout.sidebar => _ActionPill(
+    final ShellLayout layout = resolveShellLayout(Theme.of(context).platform);
+    return switch ((layout, tone)) {
+      (ShellLayout.sidebar, SettingsActionTone.neutral) => _ActionPill(
         label: label,
         onPressed: onPressed,
-        tone: tone,
+        tone: _PillTone.neutral,
       ),
-      ShellLayout.bottomBar => StickerButton(
+      (ShellLayout.sidebar, SettingsActionTone.primary) => _ActionPill(
+        label: label,
+        onPressed: onPressed,
+        tone: _PillTone.primary,
+      ),
+      (ShellLayout.sidebar, SettingsActionTone.danger) => StickerButton(
+        label: label,
+        onPressed: onPressed,
+        padTapTarget: true,
+        variant: StickerButtonVariant.danger,
+        labelStyle: _pillLabelStyle(context),
+      ),
+      (ShellLayout.bottomBar, _) => StickerButton(
         label: label,
         onPressed: onPressed,
         padTapTarget: true,
@@ -54,6 +67,11 @@ class SettingsActionButton extends StatelessWidget {
   }
 }
 
+TextStyle _pillLabelStyle(BuildContext context) => context.textStyles.labelSans
+    .copyWith(fontSize: _pillFontSize, fontWeight: FontWeight.w600);
+
+enum _PillTone { neutral, primary }
+
 class _ActionPill extends StatelessWidget {
   const _ActionPill({
     required this.label,
@@ -63,7 +81,7 @@ class _ActionPill extends StatelessWidget {
 
   final String label;
   final VoidCallback? onPressed;
-  final SettingsActionTone tone;
+  final _PillTone tone;
 
   @override
   Widget build(BuildContext context) {
@@ -71,17 +89,12 @@ class _ActionPill extends StatelessWidget {
     final FieldNotesShadows shadows = context.shadows;
     final bool enabled = onPressed != null;
     final FocusRingSurface hoverSurface = switch (tone) {
-      SettingsActionTone.neutral ||
-      SettingsActionTone.danger => FocusRingSurface.light,
-      SettingsActionTone.primary => FocusRingSurface.dark,
+      _PillTone.neutral => FocusRingSurface.light,
+      _PillTone.primary => FocusRingSurface.dark,
     };
     final Color foreground = switch (tone) {
-      SettingsActionTone.neutral => colors.accentInk,
-      SettingsActionTone.primary => Palette.onAccent,
-      SettingsActionTone.danger => StickerButtonVariant.danger.inkOn(
-        StickerGround.page,
-        colors,
-      ),
+      _PillTone.neutral => colors.accentInk,
+      _PillTone.primary => Palette.onAccent,
     };
     return Pressable(
       label: label,
@@ -94,7 +107,7 @@ class _ActionPill extends StatelessWidget {
             ? HoverStyle.of(context, hoverSurface, HoverShape.pill)
             : null;
         final BoxDecoration decoration = switch (tone) {
-          SettingsActionTone.neutral => BoxDecoration(
+          _PillTone.neutral => BoxDecoration(
             color: hoverFill,
             border: Border.all(
               color: Palette.coral,
@@ -102,16 +115,11 @@ class _ActionPill extends StatelessWidget {
             ),
             borderRadius: _pillRadius,
           ),
-          SettingsActionTone.primary => BoxDecoration(
+          _PillTone.primary => BoxDecoration(
             color: Palette.coral,
             border: shadows.outline,
             borderRadius: _pillRadius,
             boxShadow: shadows.control,
-          ),
-          SettingsActionTone.danger => BoxDecoration(
-            color: hoverFill,
-            border: Border.all(color: foreground, width: Shapes.outlineWidth),
-            borderRadius: _pillRadius,
           ),
         };
         final Widget text = Padding(
@@ -119,11 +127,7 @@ class _ActionPill extends StatelessWidget {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: context.textStyles.labelSans.copyWith(
-              fontSize: _pillFontSize,
-              fontWeight: FontWeight.w600,
-              color: foreground,
-            ),
+            style: _pillLabelStyle(context).copyWith(color: foreground),
           ),
         );
         return Opacity(
@@ -135,7 +139,7 @@ class _ActionPill extends StatelessWidget {
               heightFactor: 1,
               child: DecoratedBox(
                 decoration: decoration,
-                child: tone != SettingsActionTone.primary
+                child: tone != _PillTone.primary
                     ? text
                     : HoverFill(
                         hovered: hovered,
