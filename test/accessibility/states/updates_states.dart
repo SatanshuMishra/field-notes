@@ -228,7 +228,7 @@ Future<void> _pumpGreeting(WidgetTester tester, A11yVariant variant) async {
   await tester.pump();
 }
 
-Future<void> _pumpOfflineAbout(WidgetTester tester, A11yVariant variant) async {
+Future<void> _pumpOfflineCheck(WidgetTester tester, A11yVariant variant) async {
   variant.useWindow(tester);
   await tester.pumpWidget(
     _app(
@@ -248,9 +248,6 @@ Future<void> _pumpOfflineAbout(WidgetTester tester, A11yVariant variant) async {
     ),
   );
   await tester.pumpAndSettle();
-}
-
-Future<void> _checkForUpdates(WidgetTester tester, A11yVariant variant) async {
   await tester.tap(find.text(checkForUpdatesLabel));
   await tester.pumpAndSettle();
 }
@@ -291,8 +288,7 @@ final List<A11yState> updatesStates = <A11yState>[
   ),
   A11yState(
     id: 'u4-update-error-offline',
-    pump: _pumpOfflineAbout,
-    act: _checkForUpdates,
+    pump: _pumpOfflineCheck,
     proof: <A11yProof>[
       A11yProof(find.byType(AboutSection)),
       A11yProof(

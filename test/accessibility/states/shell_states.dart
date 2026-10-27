@@ -475,6 +475,7 @@ Future<void> _pumpSearch(WidgetTester tester, A11yVariant variant) async {
 
 A11yPumpBody _searchFor(String query) =>
     (WidgetTester tester, A11yVariant variant) async {
+      await _pumpSearch(tester, variant);
       await tester.enterText(find.byType(TextField), query);
       await tester.pump();
     };
@@ -693,16 +694,14 @@ final List<A11yState> shellStates = <A11yState>[
     id: 'a9-search-results',
     desktopId: 'a9-search-results-sidebar',
     phone: A11yLayoutHalf(
-      pump: _pumpSearch,
-      act: _searchResults,
+      pump: _searchResults,
       proof: <A11yProof>[
         A11yProof(find.byType(SearchDayTile)),
         A11yProof(_phoneSearchField),
       ],
     ),
     desktop: A11yLayoutHalf(
-      pump: _pumpSearch,
-      act: _searchResults,
+      pump: _searchResults,
       proof: <A11yProof>[
         A11yProof(find.byType(SearchDayTile)),
         A11yProof(_desktopSearchField),
@@ -713,16 +712,14 @@ final List<A11yState> shellStates = <A11yState>[
     id: 'a10-search-no-match',
     desktopId: 'a10-search-no-match-sidebar',
     phone: A11yLayoutHalf(
-      pump: _pumpSearch,
-      act: _searchNoMatch,
+      pump: _searchNoMatch,
       proof: <A11yProof>[
         A11yProof(find.textContaining('No days match')),
         A11yProof(_phoneSearchField),
       ],
     ),
     desktop: A11yLayoutHalf(
-      pump: _pumpSearch,
-      act: _searchNoMatch,
+      pump: _searchNoMatch,
       proof: <A11yProof>[
         A11yProof(find.textContaining('No days match')),
         A11yProof(_desktopSearchField),
