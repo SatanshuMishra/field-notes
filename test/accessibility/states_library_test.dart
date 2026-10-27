@@ -182,6 +182,8 @@ void main() {
       'c17-video-paused',
       'c18-discard-recording',
       'c19-photo-removed-toast',
+      'c20-video-no-camera',
+      'c21-voice-cannot-hear',
     ]);
     expect(_ids(viewerStates), <String>[
       'd1-viewer-todos',
