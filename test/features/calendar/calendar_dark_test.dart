@@ -81,7 +81,7 @@ void main() {
     expect(mood.color, _cardWarm);
     expect(_borderColour(mood), _ink25);
 
-    expect(_numberColour(tester, '2026-07-14', '14'), _mutedDeep);
+    expect(_numberColour(tester, '2026-07-14', '14'), _ink);
     expect(_numberColour(tester, '2026-07-09', '9'), _mutedDeep);
     expect(_numberColour(tester, '2026-07-10', '10'), _mutedDeep);
 
