@@ -1,8 +1,6 @@
 flutter-text-contrast | a11-calendar-next-month@2x | This month | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 5.08:1 by token arithmetic
 missing-role | a5-calendar-picker | Dismiss month picker | <root> # Flutter's own control
 missing-role | a5-calendar-picker@2x | Dismiss month picker | <root> # Flutter's own control
-text-contrast | a3-card-actions | NOTE | <root> # open: text contrast below 4.5:1, or 3:1 for large text
-text-contrast | a3-card-actions@2x | NOTE | <root> # open: text contrast below 4.5:1, or 3:1 for large text
 text-contrast | a5-calendar-picker | 1 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
 text-contrast | a5-calendar-picker | 10 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
 text-contrast | a5-calendar-picker | 11 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
