@@ -9,6 +9,8 @@ import '../tokens/tokens.dart';
 import '../widgets/icon_sticker_button.dart';
 import '../widgets/phone_sheet.dart';
 
+import 'package:field_notes/design/interaction/min_target.dart';
+
 const double settingsSelectSheetRowHeight = 48;
 
 const EdgeInsets _sheetListPadding = EdgeInsets.fromLTRB(12, 6, 12, 8);
@@ -35,7 +37,6 @@ const EdgeInsets _sidebarFieldPadding = EdgeInsets.symmetric(
 );
 const double _sidebarChevronSize = 14;
 const double _sidebarChevronGap = 7;
-const double _sidebarMinTapTarget = 24;
 
 class SettingsSelectOption<T> {
   const SettingsSelectOption({required this.value, required this.label});
@@ -110,9 +111,7 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
     final BorderRadius radius = sheet
         ? Shapes.buttonBorderRadius
         : _sidebarFieldRadius;
-    final double minTapTarget = sheet
-        ? kMinInteractiveDimension
-        : _sidebarMinTapTarget;
+    final double minTapTarget = minTargetOn(Theme.of(context).platform);
     final String? semanticLabel = widget.semanticLabel;
     Widget trigger(VoidCallback open) => Pressable(
       includeFocusSemantics: false,

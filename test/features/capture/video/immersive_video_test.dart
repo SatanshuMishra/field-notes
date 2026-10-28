@@ -897,7 +897,8 @@ void main() {
         expect(find.byType(CameraPicker), findsNothing, reason: '$layout');
 
         final int listed = recorder.listCalls;
-        await _tapShutter(tester);
+        await tester.tap(find.byKey(videoTryAgainKey));
+        await tester.pump();
         await _settle(tester);
         expect(recorder.listCalls, listed + 1, reason: '$layout');
         expect(recorder.startCalls, 0, reason: '$layout');

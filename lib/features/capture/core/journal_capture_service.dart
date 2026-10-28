@@ -12,19 +12,18 @@ const Duration _mediaReadyPollInterval = Duration(milliseconds: 50);
 const int _mediaReadyPollAttempts = 20;
 const Duration _mediaProbeTimeout = Duration(seconds: 5);
 
-const String blankTextMessage = 'Add a few words before saving your note.';
+const String blankTextMessage = 'Add a few words before keeping your note.';
 const String invalidDateMessage =
-    'That day could not be identified. Nothing was saved.';
+    'Couldn’t tell which day this log is for, so nothing was kept. Close this and try again.';
 const String invalidDurationMessage =
-    'That recording has no length. Nothing was saved.';
+    'That recording has no length, so nothing was kept. Record it again.';
 const String mediaWriteMessage =
-    'Could not save your media. Check your available space and try again.';
+    'Couldn’t keep this log. Check your free space and try again.';
 const String mediaMissingMessage =
-    'That recording did not finish saving. Nothing was saved — please try again.';
-const String entryWriteMessage =
-    'Could not save your entry. Nothing was saved — please try again.';
+    'That recording didn’t finish, so nothing was kept. Try again.';
+const String entryWriteMessage = 'Couldn’t keep this log. Try again.';
 const String photoAttachMessage =
-    'Your entry was saved, but some photos could not be attached.';
+    'Your log was kept, but some photos couldn’t be added. Try adding them again.';
 
 typedef _Resolved = ({
   String? text,

@@ -2,6 +2,7 @@ import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/features/capture/audio/cannot_hear_notice.dart';
 import 'package:field_notes/features/capture/audio/microphone_glyph.dart';
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
+import 'package:field_notes/features/capture/immersive/stage_phase.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
@@ -54,6 +55,15 @@ Future<void> _pump(
   await tester.pump();
 }
 
+double _orbOpacity(WidgetTester tester) => tester
+    .widget<AnimatedOpacity>(
+      find.descendant(
+        of: find.byKey(voiceRecordButtonKey),
+        matching: find.byType(AnimatedOpacity),
+      ),
+    )
+    .opacity;
+
 void main() {
   testWidgets(
     "the voice recorder does not start and shows the can't-hear-you notice",
@@ -84,10 +94,18 @@ void main() {
         findsOneWidget,
       );
       expect(find.bySemanticsLabel(cannotHearNoticeLabel), findsOneWidget);
+      expect(
+        tester.getSemantics(find.byKey(voiceRecordButtonKey)),
+        isSemantics(hasEnabledState: true, isEnabled: false),
+      );
+      expect(_orbOpacity(tester), voiceSavingOrbOpacity);
+      expect(find.textContaining(stageIdleStatus), findsNothing);
 
       hearing.value = MicrophoneHearing.hearing;
       await tester.pump();
       expect(find.byKey(cannotHearNoticeKey), findsNothing);
+      expect(find.textContaining(stageIdleStatus), findsOneWidget);
+      expect(_orbOpacity(tester), 1);
       await tester.tap(find.byKey(voiceRecordButtonKey));
       await tester.pump();
       expect(calls.starts, 1);

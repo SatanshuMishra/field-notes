@@ -1,9 +1,10 @@
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const String captureOpenErrorMessage =
@@ -81,7 +82,7 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
 
   Widget _captureRow(CaptureOption option, CaptureRoute route) {
     final StickerButtonVariant variant = _captureVariantFor(option.type);
-    return StickerButton(
+    final Widget button = StickerButton(
       label: option.label,
       variant: variant,
       icon: CaptureIcon(
@@ -92,6 +93,12 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
       labelStyle: context.textStyles.captureLabelSans,
       onPressed: () => _openRoute(route),
     );
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: minTargetOn(Theme.of(context).platform),
+      ),
+      child: button,
+    );
   }
 
   @override
@@ -99,10 +106,10 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
     final CaptureRouteRegistry registry = ref.watch(captureRoutesProvider);
     final List<(CaptureOption, CaptureRoute)> orderedRoutes =
         <(CaptureOption, CaptureRoute)>[
-      for (final CaptureOption option in captureOptions)
-        if (registry.routeFor(option.type) case final CaptureRoute route)
-          (option, route),
-    ];
+          for (final CaptureOption option in captureOptions)
+            if (registry.routeFor(option.type) case final CaptureRoute route)
+              (option, route),
+        ];
     final String? error = _error;
     final FieldNotesTextStyles textStyles = context.textStyles;
 

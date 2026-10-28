@@ -58,6 +58,8 @@ const int _wordColumnsPhone = 2;
 const double _wordGap = 8;
 const double _flowButtonHeight = 48;
 const double _flowButtonBorderWidth = 1.5;
+const double _fieldRingGap = 2;
+const FocusRingSurface _fieldRingSurface = FocusRingSurface.light;
 const EdgeInsets _sheetBodyPadding = EdgeInsets.fromLTRB(20, 10, 20, 4);
 const EdgeInsets _sheetFooterPadding = EdgeInsets.fromLTRB(12, 14, 12, 12);
 const EdgeInsets _wordPadding = EdgeInsets.symmetric(
@@ -389,12 +391,21 @@ class SyncFlowButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final VoidCallback? onPressed = action.onPressed;
-    final bool emphasis = action.primary || action.danger;
-    final Color background = action.danger
-        ? Palette.danger
-        : action.primary
-        ? Palette.coral
-        : colors.cardLight;
+    if (action.danger) {
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _flowButtonHeight),
+        child: StickerButton(
+          key: action.key,
+          label: action.label,
+          onPressed: onPressed,
+          variant: StickerButtonVariant.danger,
+          borderRadius: _flowButtonRadius,
+          labelStyle: _flowButtonStyle,
+        ),
+      );
+    }
+    final bool emphasis = action.primary;
+    final Color background = emphasis ? Palette.coral : colors.cardLight;
     return Pressable(
       key: action.key,
       label: action.label,
@@ -440,7 +451,7 @@ class SyncFlowButton extends StatelessWidget {
   }
 }
 
-class SyncFlowField extends StatelessWidget {
+class SyncFlowField extends StatefulWidget {
   const SyncFlowField({
     super.key,
     required this.label,
@@ -465,28 +476,74 @@ class SyncFlowField extends StatelessWidget {
   final bool enableIMEPersonalizedLearning;
 
   @override
+  State<SyncFlowField> createState() => _SyncFlowFieldState();
+}
+
+class _SyncFlowFieldState extends State<SyncFlowField> {
+  late final FocusNode _focus = FocusNode(debugLabel: widget.label)
+    ..addListener(_onFocusChange);
+
+  void _onFocusChange() => setState(() {});
+
+  @override
+  void dispose() {
+    _focus
+      ..removeListener(_onFocusChange)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final double reach = _fieldRingGap + _fieldRingSurface.width;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         ExcludeSemantics(
-          child: Text(label, style: context.textStyles.labelSans),
+          child: Text(widget.label, style: context.textStyles.labelSans),
         ),
         const SizedBox(height: _labelGap),
-        ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: _flowButtonHeight),
-          child: SettingsTextField(
-            controller: controller,
-            hintText: hintText,
-            keyboardType: keyboardType,
-            enabled: enabled,
-            onChanged: onChanged,
-            semanticLabel: label,
-            autocorrect: autocorrect,
-            enableSuggestions: enableSuggestions,
-            enableIMEPersonalizedLearning: enableIMEPersonalizedLearning,
-          ),
+        Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: _flowButtonHeight),
+              child: SettingsTextField(
+                controller: widget.controller,
+                focusNode: _focus,
+                hintText: widget.hintText,
+                keyboardType: widget.keyboardType,
+                enabled: widget.enabled,
+                onChanged: widget.onChanged,
+                semanticLabel: widget.label,
+                autocorrect: widget.autocorrect,
+                enableSuggestions: widget.enableSuggestions,
+                enableIMEPersonalizedLearning:
+                    widget.enableIMEPersonalizedLearning,
+              ),
+            ),
+            if (_focus.hasFocus)
+              Positioned(
+                left: -reach,
+                top: -reach,
+                right: -reach,
+                bottom: -reach,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: _fieldRingSurface.colorIn(context.colors),
+                        width: _fieldRingSurface.width,
+                      ),
+                      borderRadius:
+                          Shapes.buttonBorderRadius +
+                          BorderRadius.all(Radius.circular(reach)),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ],
     );

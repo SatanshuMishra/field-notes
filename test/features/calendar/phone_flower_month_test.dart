@@ -32,7 +32,7 @@ import '../day_detail/support/day_detail_harness.dart' show FakeMediaResolver;
 const Size _phone = Size(384, 832);
 const double _statusBar = 34;
 const double _gestureBar = 24;
-const double _headerBottom = _statusBar + 44;
+const double _headerBottom = _statusBar + 48;
 const MonthRef _july = MonthRef(2026, 7);
 
 const List<String> _monthAbbreviations = <String>[
@@ -228,7 +228,7 @@ void main() {
         matching: find.byType(DecoratedBox),
       );
       expect(tester.getSize(dotFace), const Size(8, 8));
-      expect(_fillsIn(tester, dot), <int>[0xFF6D876D]);
+      expect(_fillsIn(tester, dot), <int>[0xFF4C5B4C]);
       expect(
         tester
             .widget<Text>(_inCell('2026-07-10', find.text('10')))

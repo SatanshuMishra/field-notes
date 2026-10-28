@@ -72,13 +72,13 @@ void main() {
   });
 
   testWidgets(
-    'pressing Start with no camera keeps the message while it checks again',
+    'pressing Try again with no camera keeps the message while it checks again',
     (WidgetTester tester) async {
       final _SlowSecondListRecorder recorder = _SlowSecondListRecorder();
       await tester.pumpWidget(_app(recorder));
       await _open(tester);
 
-      await tester.tap(find.byKey(videoShutterKey));
+      await tester.tap(find.byKey(videoTryAgainKey));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 

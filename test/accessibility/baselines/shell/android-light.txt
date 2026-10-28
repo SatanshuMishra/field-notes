@@ -1,0 +1,52 @@
+flutter-text-contrast | a11-calendar-next-month@2x | This month | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 5.08:1 by token arithmetic
+missing-role | a5-calendar-picker | Dismiss month picker | <root> # Flutter's own control
+missing-role | a5-calendar-picker@2x | Dismiss month picker | <root> # Flutter's own control
+text-contrast | a5-calendar-picker | 1 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 10 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 11 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 12 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 13 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 14 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 6.71:1 by token arithmetic
+text-contrast | a5-calendar-picker | 15 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 16 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 17 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 18 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 19 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 2 | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 3 blooms this month | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 3 | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 4 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 5 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 6 | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 7 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 6.71:1 by token arithmetic
+text-contrast | a5-calendar-picker | 8 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | 9 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | F | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | M | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | S | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | S | <root> #2 # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | T | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | T | <root> #2 # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | W | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker | explore | <root> # measured: 4.50:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | 1 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | 10 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | 11 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | 12 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | 2 | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | 3 blooms this month | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | 3 | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | 4 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | 5 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | 6 | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | 7 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 6.71:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | 8 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | 9 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | F | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | M | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | S | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | S | <root> #2 # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | T | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | T | <root> #2 # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | W | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | a5-calendar-picker@2x | explore | <root> # measured: 4.50:1 by token arithmetic

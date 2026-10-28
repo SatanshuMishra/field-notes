@@ -56,10 +56,10 @@ void main() {
   group('FieldNotesTextStyles', () {
     test('light text styles equal the live typography tokens', () {
       const Color ink = Color(0xFF4A3B2E);
-      const Color mutedDeep = Color(0xFF8A7358);
-      const Color coral = Color(0xFFB8566A);
-      const Color sage = Color(0xFF6D876D);
-      const Color muted = Color(0xFFA08A70);
+      const Color mutedDeep = Color(0xFF665440);
+      const Color accentInk = Color(0xFF903B4C);
+      const Color sage = Color(0xFF4C5B4C);
+      const Color muted = Color(0xFF635544);
 
       expect(_styles(const FieldNotesTextStyles(FieldNotesColors.light)), <
         String,
@@ -96,24 +96,24 @@ void main() {
           color: ink,
         ),
         'wordmarkAccent': TypographyTokens.wordmarkAccent.copyWith(
-          color: coral,
+          color: accentInk,
         ),
-        'streakAccent': TypographyTokens.streakAccent.copyWith(color: coral),
+        'streakAccent': TypographyTokens.streakAccent.copyWith(color: accentInk),
         'sectionHeaderAccent': TypographyTokens.sectionHeaderAccent.copyWith(
           color: sage,
         ),
         'pageEyebrowAccent': TypographyTokens.pageEyebrowAccent.copyWith(
-          color: coral,
+          color: accentInk,
         ),
         'composerTitleAccent': TypographyTokens.composerTitleAccent.copyWith(
-          color: coral,
+          color: accentInk,
         ),
         'hintAccent': TypographyTokens.hintAccent.copyWith(color: muted),
         'subtitleAccent': TypographyTokens.subtitleAccent.copyWith(
           color: muted,
         ),
         'windowTitleAccent': TypographyTokens.windowTitleAccent.copyWith(
-          color: const Color(0xFFA3866A),
+          color: const Color(0xFF705A46),
         ),
         'stampAccent': TypographyTokens.stampAccent.copyWith(color: sage),
         'promptAccent': TypographyTokens.promptAccent.copyWith(color: muted),
@@ -124,7 +124,7 @@ void main() {
         'captionSans': TypographyTokens.captionSans.copyWith(color: muted),
         'captureLabelSans': TypographyTokens.captureLabelSans,
         'toastSans': TypographyTokens.toastSans,
-        'caption11Sans': TypographyTokens.caption11Sans.copyWith(color: coral),
+        'caption11Sans': TypographyTokens.caption11Sans.copyWith(color: accentInk),
         'toolbarSans': TypographyTokens.toolbarSans.copyWith(
           color: const Color(0xFFE9DCC6),
         ),
@@ -137,7 +137,7 @@ void main() {
         'syncSecondarySans': TypographyTokens.syncSecondarySans.copyWith(
           color: muted,
         ),
-        'chipMicroSans': TypographyTokens.chipMicroSans.copyWith(color: coral),
+        'chipMicroSans': TypographyTokens.chipMicroSans.copyWith(color: accentInk),
         'viewportMonoLabel': TypographyTokens.viewportMonoLabel.copyWith(
           color: const Color(0x4DFFFFFF),
         ),
@@ -180,7 +180,7 @@ void main() {
       expect(
         styles.windowTitleAccent,
         TypographyTokens.windowTitleAccent.copyWith(
-          color: const Color(0xFF837675),
+          color: const Color(0xFF8F8382),
         ),
       );
       expect(

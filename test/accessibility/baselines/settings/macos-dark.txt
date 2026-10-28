@@ -1,0 +1,12 @@
+flutter-text-contrast | b2-settings-spell-unavailable | Sunday | <root> # measured: 13.37:1 by token arithmetic
+flutter-text-contrast | b4-select-open | Sunday | <root> # measured: 13.37:1 by token arithmetic
+flutter-text-contrast | b7-settings-journal | Sunday | <root> # measured: 13.37:1 by token arithmetic
+keyboard | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
+keyboard | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b14-sync-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
+missing-role | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b5-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
+text-contrast | b11-select-dropdown-input-profile | System default | Input device # measured: 6.45:1 by token arithmetic, dark muted 0xFF9F9191 on the dark page 0xFF0D0C0C; the sweep reads the open dropdown menu drawn over this text
+text-contrast | b12-select-dropdown-microphone | 100% | <root> # measured: 6.45:1 by token arithmetic, dark muted 0xFF9F9191 on the dark page 0xFF0D0C0C; the sweep reads the open dropdown menu drawn over this text
+text-contrast | b13-select-dropdown-speaker | 100% | <root> # measured: 6.45:1 by token arithmetic, dark muted 0xFF9F9191 on the dark page 0xFF0D0C0C; the sweep reads the open dropdown menu drawn over this text

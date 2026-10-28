@@ -1,11 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'a11y_baseline.dart';
 import 'a11y_rules.dart';
 import 'a11y_state.dart';
 
@@ -177,7 +174,7 @@ final List<_Example> _examples = <_Example>[
 A11yState _planted(Widget widget, List<A11yStatefulControl> stateful) =>
     A11yState(
       id: 'planted',
-      pump: (WidgetTester tester) => tester.pumpWidget(
+      pump: (WidgetTester tester, A11yVariant variant) => tester.pumpWidget(
         MaterialApp(
           home: Material(child: Center(child: widget)),
         ),
@@ -266,13 +263,121 @@ List<SemanticsNode> _childrenOf(SemanticsNode node) {
   return children;
 }
 
-A11yFinding _finding(String rule, String label) => A11yFinding(
-  rule: rule,
-  state: 'baseline',
-  label: label,
-  anchor: '',
-  rect: const Rect.fromLTWH(10, 20, 30, 40),
+const Color _ground = Color(0xFFFFFFFF);
+const Color _focusRing = Color(0xFF949494);
+const Color _mediaBlack = Color(0xFF0E0B09);
+
+const A11yVariant _android = A11yVariant(platform: TargetPlatform.android);
+const A11yVariant _androidAt2x = A11yVariant(
+  platform: TargetPlatform.android,
+  textScale: A11yTextScale.doubled,
 );
+const A11yVariant _macos = A11yVariant(platform: TargetPlatform.macOS);
+const A11yVariant _windows = A11yVariant(platform: TargetPlatform.windows);
+
+Widget _sized(String label, double width, double height) => Semantics(
+  container: true,
+  button: true,
+  label: label,
+  onTap: _noop,
+  child: _box(width, height),
+);
+
+Widget _pair(Widget first, Widget second) => Row(
+  mainAxisSize: MainAxisSize.min,
+  children: <Widget>[first, const SizedBox(width: 24), second],
+);
+
+Future<List<String>> _swept(
+  WidgetTester tester,
+  A11yVariant variant,
+  Widget widget, {
+  required Set<String> rules,
+  Color ground = _ground,
+}) async {
+  final A11yStateResult result = await runA11yState(
+    tester,
+    A11yState(
+      id: 'planted',
+      platforms: <TargetPlatform>{variant.platform},
+      pump: (WidgetTester tester, A11yVariant variant) async {
+        variant.useWindow(tester);
+        await tester.pumpWidget(
+          MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: variant.theme,
+            builder: variant.scaleText,
+            home: Material(
+              color: ground,
+              child: Center(
+                child: KeyedSubtree(key: _plantedKey, child: widget),
+              ),
+            ),
+          ),
+        );
+      },
+      proof: <A11yProof>[A11yProof(find.byKey(_plantedKey))],
+    ),
+    variant: variant,
+    checks: A11yChecks.full,
+  );
+  return switch (result) {
+    A11yLoaded(:final List<A11yFinding> findings) => <String>[
+      for (final A11yFinding finding in findings)
+        if (rules.contains(finding.rule)) finding.id,
+    ],
+    A11yNotLoaded(:final String message) => throw TestFailure(message),
+  };
+}
+
+class _RingButton extends StatefulWidget {
+  const _RingButton({required this.label, required this.ring});
+
+  final String label;
+  final Color ring;
+
+  @override
+  State<_RingButton> createState() => _RingButtonState();
+}
+
+class _RingButtonState extends State<_RingButton> {
+  final FocusNode _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_repaint);
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _repaint() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    button: true,
+    label: widget.label,
+    onTap: _noop,
+    child: Focus(
+      focusNode: _focus,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: _ground,
+          border: Border.all(
+            color: _focus.hasFocus ? widget.ring : _ground,
+            width: 2,
+          ),
+        ),
+        child: _box(120, 48),
+      ),
+    ),
+  );
+}
 
 void main() {
   testWidgets('each known problem is caught by its rule', (
@@ -317,7 +422,7 @@ void main() {
     final List<A11yState> states = <A11yState>[
       A11yState(
         id: 'absent-key',
-        pump: (WidgetTester tester) => tester.pumpWidget(
+        pump: (WidgetTester tester, A11yVariant variant) => tester.pumpWidget(
           const MaterialApp(
             home: Material(child: Center(child: Text('Loaded'))),
           ),
@@ -328,7 +433,7 @@ void main() {
       ),
       A11yState(
         id: 'too-few',
-        pump: (WidgetTester tester) => tester.pumpWidget(
+        pump: (WidgetTester tester, A11yVariant variant) => tester.pumpWidget(
           const MaterialApp(
             home: Material(child: Center(child: Text('Loaded'))),
           ),
@@ -337,7 +442,7 @@ void main() {
       ),
       A11yState(
         id: 'throwing-pump',
-        pump: (WidgetTester tester) async {
+        pump: (WidgetTester tester, A11yVariant variant) async {
           throw StateError('the fixture failed');
         },
         proof: <A11yProof>[A11yProof(find.text('Loaded'))],
@@ -351,69 +456,6 @@ void main() {
         startsWith('${state.id} did not load: '),
       );
     }
-  });
-
-  test('the baseline flags new and stale findings', () {
-    final Directory directory = Directory.systemTemp.createTempSync(
-      'a11y_baseline_',
-    );
-    addTearDown(() => directory.deleteSync(recursive: true));
-    final String path = '${directory.path}/area.txt';
-    final File file = File(path);
-    final A11yFinding kept = _finding('missing-role', 'Cancel');
-    final A11yFinding added = _finding('unlabelled-tap', '');
-
-    final A11yBaselineResult missing = compareA11yBaseline(path, <A11yFinding>[
-      kept,
-    ]);
-    expect(missing.missing, isTrue);
-    expect(missing.matches, isFalse);
-    expect(describeA11yBaseline(path, missing), '$path baseline missing');
-
-    file.writeAsStringSync('${kept.id}\n');
-    final A11yBaselineResult grown = compareA11yBaseline(path, <A11yFinding>[
-      kept,
-      added,
-    ]);
-    expect(grown.missing, isFalse);
-    expect(grown.matches, isFalse);
-    expect(
-      <String>[for (final A11yFinding finding in grown.added) finding.id],
-      <String>[added.id],
-    );
-    expect(grown.stale, isEmpty);
-    expect(
-      describeA11yBaseline(path, grown),
-      allOf(
-        contains(added.id),
-        contains(a11yRuleDescriptions['unlabelled-tap']),
-        contains(added.rect.toString()),
-      ),
-    );
-
-    const String gone = 'small-target | baseline | Close | <root>';
-    file.writeAsStringSync('${kept.id}\n$gone\n');
-    final A11yBaselineResult shrunk = compareA11yBaseline(path, <A11yFinding>[
-      kept,
-    ]);
-    expect(shrunk.matches, isFalse);
-    expect(shrunk.added, isEmpty);
-    expect(shrunk.stale, <String>[gone]);
-    expect(describeA11yBaseline(path, shrunk), contains(gone));
-
-    file.writeAsStringSync('${kept.id}\n');
-    expect(compareA11yBaseline(path, <A11yFinding>[kept]).matches, isTrue);
-
-    file.writeAsStringSync('  \n${kept.id}\n\t\n');
-    expect(compareA11yBaseline(path, <A11yFinding>[kept]).matches, isTrue);
-
-    writeA11yBaseline(path, <A11yFinding>[kept, added]);
-    final List<String> sorted = <String>[kept.id, added.id]..sort();
-    expect(file.readAsStringSync(), '${sorted.join('\n')}\n');
-    expect(
-      compareA11yBaseline(path, <A11yFinding>[added, kept]).matches,
-      isTrue,
-    );
   });
 
   testWidgets('a doubled target is reported on the later node unless only '
@@ -567,7 +609,7 @@ void main() {
       tester,
       A11yState(
         id: 'flush',
-        pump: (WidgetTester tester) => tester.pumpWidget(
+        pump: (WidgetTester tester, A11yVariant variant) => tester.pumpWidget(
           MaterialApp(
             home: Material(
               child: Align(
@@ -702,5 +744,279 @@ void main() {
         finding.id,
     ];
     expect(ids, contains('small-target | planted | Reach me too | <root>'));
+  });
+  testWidgets('a windows control under 40 by 40 is a small target', (
+    WidgetTester tester,
+  ) async {
+    expect(
+      await _swept(
+        tester,
+        _windows,
+        _pair(_sized('Square', 40, 40), _sized('Short', 40, 39)),
+        rules: <String>{'small-target'},
+      ),
+      <String>['small-target | planted | Short | <root>'],
+    );
+  });
+
+  testWidgets('a macos control under 28 by 28 is a small target', (
+    WidgetTester tester,
+  ) async {
+    expect(
+      await _swept(
+        tester,
+        _macos,
+        _pair(_sized('Square', 28, 28), _sized('Narrow', 27, 28)),
+        rules: <String>{'small-target'},
+      ),
+      <String>['small-target | planted | Narrow | <root>'],
+    );
+  });
+
+  testWidgets('an android control under 48 dp is a small target', (
+    WidgetTester tester,
+  ) async {
+    expect(
+      await _swept(
+        tester,
+        _android,
+        _pair(_sized('Square', 48, 48), _sized('Short', 48, 44)),
+        rules: <String>{'small-target'},
+      ),
+      <String>['small-target | planted | Short | <root>'],
+    );
+  });
+
+  testWidgets(
+    'text below 4.5:1 is a contrast finding even under ExcludeSemantics',
+    (WidgetTester tester) async {
+      expect(
+        await _swept(
+          tester,
+          _android,
+          const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ExcludeSemantics(
+                child: Text(
+                  'Downloading the video',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF3A322B)),
+                ),
+              ),
+              SizedBox(height: 24),
+              Text(
+                'Ready to play',
+                style: TextStyle(fontSize: 12, color: Color(0xFFF3E6D1)),
+              ),
+            ],
+          ),
+          rules: <String>{'text-contrast', 'flutter-text-contrast'},
+          ground: _mediaBlack,
+        ),
+        <String>['text-contrast | planted | Downloading the video | <root>'],
+      );
+    },
+  );
+
+  testWidgets('text of 23 px at 3.5:1 is a contrast finding', (
+    WidgetTester tester,
+  ) async {
+    expect(
+      await _swept(
+        tester,
+        _android,
+        const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              'Twenty three',
+              style: TextStyle(
+                fontSize: 23,
+                fontWeight: FontWeight.w400,
+                color: Color(0xFF898989),
+              ),
+            ),
+            SizedBox(height: 24),
+            Text(
+              'Twenty four',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w400,
+                color: Color(0xFF898989),
+              ),
+            ),
+          ],
+        ),
+        rules: <String>{'text-contrast', 'flutter-text-contrast'},
+      ),
+      <String>['text-contrast | planted | Twenty three | <root>'],
+    );
+  });
+
+  testWidgets('text covered by an opaque panel is not judged', (
+    WidgetTester tester,
+  ) async {
+    expect(
+      await _swept(
+        tester,
+        _androidAt2x,
+        const SizedBox(
+          width: 240,
+          height: 160,
+          child: Stack(
+            children: <Widget>[
+              Text(
+                'Hidden behind the panel',
+                style: TextStyle(fontSize: 14, color: Color(0xFFDDDDDD)),
+              ),
+              Positioned.fill(
+                child: ColoredBox(
+                  color: _ground,
+                  child: Text(
+                    'On the panel',
+                    style: TextStyle(fontSize: 14, color: Color(0xFF000000)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        rules: <String>{'text-contrast', 'overlapping-text'},
+      ),
+      isEmpty,
+    );
+  });
+
+  testWidgets('an overflow or ellipsis at 2x text is a finding', (
+    WidgetTester tester,
+  ) async {
+    final Widget crowded = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        SizedBox(
+          width: 200,
+          child: Row(
+            children: <Widget>[
+              Builder(
+                builder: (BuildContext context) => SizedBox(
+                  width: MediaQuery.textScalerOf(context).scale(110),
+                  child: const Text('Wide badge'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        const SizedBox(
+          width: 200,
+          child: Text(
+            'Saved to your meadow',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+    const Set<String> rules = <String>{'overflow', 'truncated-text'};
+    expect(
+      await _swept(tester, _androidAt2x, crowded, rules: rules),
+      unorderedEquals(<String>[
+        'overflow | planted@2x | Wide badge | <root>',
+        'truncated-text | planted@2x | Saved to your meadow | <root>',
+      ]),
+    );
+    expect(await _swept(tester, _android, crowded, rules: rules), isEmpty);
+  });
+
+  testWidgets('text cut short in height at 2x text is a finding', (
+    WidgetTester tester,
+  ) async {
+    const Widget squeezed = SizedBox(
+      width: 300,
+      height: 20,
+      child: Text(
+        'Delete everywhere',
+        style: TextStyle(fontSize: 14, height: 1),
+      ),
+    );
+    const Set<String> rules = <String>{'truncated-text'};
+    expect(await _swept(tester, _androidAt2x, squeezed, rules: rules), <String>[
+      'truncated-text | planted@2x | Delete everywhere | <root>',
+    ]);
+    expect(await _swept(tester, _android, squeezed, rules: rules), isEmpty);
+  });
+
+  testWidgets('overlapping text at 2x is a finding', (
+    WidgetTester tester,
+  ) async {
+    const TextStyle tight = TextStyle(fontSize: 10, height: 1);
+    expect(
+      await _swept(
+        tester,
+        _androidAt2x,
+        const SizedBox(
+          width: 300,
+          height: 200,
+          child: Stack(
+            children: <Widget>[
+              Positioned(
+                left: 0,
+                top: 0,
+                child: Text('Morning walk', style: tight),
+              ),
+              Positioned(
+                left: 0,
+                top: 16,
+                child: Text('Harbour fog', style: tight),
+              ),
+            ],
+          ),
+        ),
+        rules: <String>{'overlapping-text'},
+      ),
+      <String>[
+        'overlapping-text | planted@2x | Morning walk + Harbour fog | <root>',
+      ],
+    );
+  });
+
+  testWidgets(
+    'a control whose focus paint differs below 3:1 is a focus finding',
+    (WidgetTester tester) async {
+      expect(
+        await _swept(
+          tester,
+          _macos,
+          _pair(
+            const _RingButton(label: 'Plain', ring: _ground),
+            const _RingButton(label: 'Ringed', ring: _focusRing),
+          ),
+          rules: <String>{'focus-visible'},
+        ),
+        <String>['focus-visible | planted | Plain | <root>'],
+      );
+    },
+  );
+
+  testWidgets('a tappable control tab cannot reach is a keyboard finding', (
+    WidgetTester tester,
+  ) async {
+    final Widget controls = _pair(
+      Semantics(
+        container: true,
+        button: true,
+        label: 'Hold to record',
+        child: GestureDetector(onTap: _noop, child: _box(120, 48)),
+      ),
+      TextButton(onPressed: _noop, child: const Text('Keep this')),
+    );
+    expect(
+      await _swept(tester, _macos, controls, rules: <String>{'keyboard'}),
+      <String>['keyboard | planted | Hold to record | <root>'],
+    );
+    expect(
+      await _swept(tester, _android, controls, rules: <String>{'keyboard'}),
+      isEmpty,
+    );
   });
 }

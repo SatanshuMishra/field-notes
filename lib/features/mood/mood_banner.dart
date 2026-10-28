@@ -238,20 +238,26 @@ class DayMoodCard extends StatelessWidget {
           ),
           const SizedBox(width: _dayMoodCardGap),
           Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: OverflowBar(
+              alignment: MainAxisAlignment.spaceBetween,
+              spacing: _dayMoodCardGap,
+              overflowSpacing: _dayMoodCardGap,
               children: <Widget>[
-                Text('Felt ${mood.label}', style: textStyles.sectionSerif),
-                Text(
-                  "${mood.flower.label} · the day's bloom",
-                  style: textStyles.caption10Sans,
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text('Felt ${mood.label}', style: textStyles.sectionSerif),
+                    Text(
+                      "${mood.flower.label} · the day's bloom",
+                      style: textStyles.caption10Sans,
+                    ),
+                  ],
                 ),
+                _ChangeMoodButton(label: changeLabel, onTap: onChangeMood),
               ],
             ),
           ),
-          const SizedBox(width: _dayMoodCardGap),
-          _ChangeMoodButton(label: changeLabel, onTap: onChangeMood),
         ],
       ),
     );

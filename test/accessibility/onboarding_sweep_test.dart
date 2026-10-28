@@ -13,7 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'states/onboarding_states.dart';
-import 'support/a11y_rules.dart';
+import 'support/a11y_baseline.dart';
 import 'support/a11y_state.dart';
 import 'support/reading_order.dart';
 
@@ -22,7 +22,6 @@ const Size _smallestBottomBar = Size(360, 640);
 const List<double> _textScales = <double>[1, 1.3];
 const int _maxPresses = 60;
 const String _sidebarSuffix = '-sidebar';
-const String _baselinePath = 'test/accessibility/baselines/onboarding.txt';
 const String _notificationsOffState = 'reminder-notifications-off';
 const List<String> _notificationsOffIds = <String>[
   'o35-reminder-notifications-off-sidebar',
@@ -30,6 +29,9 @@ const List<String> _notificationsOffIds = <String>[
 ];
 const String _openSystemSettings = 'Open System Settings';
 const double _minimumTarget = 48;
+const String _onboardingBaselines = 'test/accessibility/baselines/onboarding';
+const String _reasonMark = ' # ';
+const String _openReason = '# open';
 
 const List<String> _layoutNames = <String>['sidebar', 'bottom-bar'];
 
@@ -193,10 +195,15 @@ final class _Stop {
   final bool note;
 }
 
-Set<String> _baselineLines() => <String>{
-  for (final String line in File(_baselinePath).readAsLinesSync())
-    if (line.trim() case final String trimmed when trimmed.isNotEmpty) trimmed,
-};
+Set<A11yBaselineLine> _baselineLines(A11yState state) {
+  final A11yVariant variant = state.pump.defaultVariant;
+  return <A11yBaselineLine>{
+    for (final String line in File(
+      a11yBaselinePath('onboarding', variant.baseline),
+    ).readAsLinesSync())
+      if (line.trim().isNotEmpty) A11yBaselineLine.parse(line),
+  };
+}
 
 Rect _globalRect(SemanticsNode node) {
   Rect rect = node.rect;
@@ -428,31 +435,20 @@ void main() {
       expect(<String>[
         for (final A11yState state in appended) state.id,
       ], _notificationsOffIds);
-      final Set<String> baseline = _baselineLines();
       for (final A11yState state in appended) {
         final A11yStateResult result = await runA11yState(tester, state);
         if (result case A11yNotLoaded(:final String message)) {
           fail(message);
         }
-        final List<String> found = <String>[
-          for (final A11yFinding finding in (result as A11yLoaded).findings)
-            finding.id,
-        ];
-        final List<String> expected = <String>[
-          if (!state.id.endsWith(_sidebarSuffix)) ...<String>[
-            for (final OnboardingChapter past in OnboardingChapter.values)
-              if (past.index < OnboardingChapter.reminder.index)
-                'small-target | ${state.id} | ${past.progressName} | <root>',
-            'small-target | ${state.id} | Switch to dark | <root>',
-          ],
-        ];
-        expect(found, unorderedEquals(expected), reason: state.id);
+        expect((result as A11yLoaded).findings, isEmpty, reason: state.id);
         expect(
           <String>[
-            for (final String line in baseline)
-              if (line.contains(' | ${state.id} | ')) line,
+            for (final A11yBaselineLine line in _baselineLines(state))
+              if (line.rule == 'small-target' &&
+                  line.id.contains(' | ${state.id} | '))
+                line.id,
           ],
-          unorderedEquals(expected),
+          isEmpty,
           reason: '${state.id} baseline',
         );
 
@@ -491,6 +487,21 @@ void main() {
       }
     },
   );
+
+  test('onboarding baselines hold no open lines', () {
+    final List<String> open = <String>[
+      for (final File file in Directory(
+        _onboardingBaselines,
+      ).listSync().whereType<File>())
+        for (final String line in file.readAsLinesSync())
+          if (line.contains(_reasonMark) &&
+              line
+                  .substring(line.lastIndexOf(_reasonMark) + 1)
+                  .startsWith(_openReason))
+            '${file.path}: $line',
+    ];
+    expect(open, isEmpty);
+  });
 
   group('every onboarding chapter fits the smallest windows', () {
     final List<A11yState> smallest = onboardingStatesAt(

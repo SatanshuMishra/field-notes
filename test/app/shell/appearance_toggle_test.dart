@@ -287,7 +287,7 @@ void _expectReachableDuringOnboarding(
     case ShellLayout.bottomBar:
       expect(
         target,
-        const Rect.fromLTWH(8, _statusBar + 2, 44, 44),
+        const Rect.fromLTWH(6, _statusBar, 48, 48),
         reason: reason,
       );
       expect(tester.getRect(glass), target, reason: reason);

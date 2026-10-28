@@ -297,7 +297,13 @@ final List<_Row> _desktopRows = <_Row>[
     _Shape.rounded,
     12,
   ),
-  _Row('Delete note', find.byKey(_dangerStickerKey), _dark, _Shape.rounded, 11),
+  _Row(
+    'Delete note',
+    find.byKey(_dangerStickerKey),
+    _lightRow,
+    _Shape.rounded,
+    11,
+  ),
   _Row(
     'Open settings',
     find.byKey(_iconStickerKey),
@@ -313,7 +319,13 @@ final List<_Row> _desktopRows = <_Row>[
     13,
   ),
   _Row('Update now', find.byKey(_primaryActionKey), _dark, _Shape.rounded, 13),
-  _Row('Delete all', find.byKey(_dangerActionKey), _dark, _Shape.rounded, 13),
+  _Row(
+    'Delete all',
+    find.byKey(_dangerActionKey),
+    _lightRow,
+    _Shape.rounded,
+    11,
+  ),
   _Row('Week starts on', find.byKey(_selectKey), _lightRow, _Shape.rounded, 9),
   _Row(
     'Server address',
@@ -377,7 +389,7 @@ final List<_Row> _dialogRows = <_Row>[
   _Row(
     'Delete',
     find.byKey(confirmDialogConfirmKey),
-    _dark,
+    _lightRow,
     _Shape.rounded,
     11,
   ),

@@ -75,6 +75,7 @@ class PhotoFigure extends StatelessWidget {
     required this.media,
     this.resolver,
     this.selected = false,
+    this.focused = false,
     this.captionHidden = false,
     this.onActivate,
     this.semanticsSortKey,
@@ -86,6 +87,7 @@ class PhotoFigure extends StatelessWidget {
   final ResolvedMedia? media;
   final MediaResolver? resolver;
   final bool selected;
+  final bool focused;
   final bool captionHidden;
   final VoidCallback? onActivate;
   final SemanticsSortKey? semanticsSortKey;
@@ -124,6 +126,7 @@ class PhotoFigure extends StatelessWidget {
       container: true,
       button: true,
       selected: selected,
+      focused: focused,
       label: label,
       value: value,
       sortKey: semanticsSortKey,

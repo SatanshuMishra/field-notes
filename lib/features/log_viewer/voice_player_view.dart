@@ -19,7 +19,6 @@ import 'package:field_notes/features/log_viewer/log_viewer.dart'
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show
         logViewerBackKey,
-        logViewerDeleteLabel,
         logViewerEarlierKey,
         logViewerEarlierLabel,
         logViewerLaterKey,
@@ -43,8 +42,6 @@ const double _totalSize = 17;
 const double _totalAlpha = 0.6;
 const double _elapsedGap = 18;
 
-const double _phoneQuietTop = 16;
-const double _phoneQuietSide = 18;
 const double _phoneWaveHeight = 176;
 const double _phoneWaveSide = 22;
 const double _phoneElapsedSize = 48;
@@ -246,17 +243,18 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
   }
 
   Widget _phonePlayer(VoidCallback? toggle) {
+    final LogViewerScene scene = widget.scene;
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final double statusBar = MediaQuery.paddingOf(context).top;
         final double waveTop = (constraints.maxHeight - _phoneWaveHeight) / 2;
         return Stack(
           children: <Widget>[
-            Positioned(
-              top: statusBar + _phoneQuietTop,
-              left: _phoneQuietSide,
-              right: _phoneQuietSide,
-              child: Center(child: _quietLine(context)),
+            Positioned.fill(
+              child: ViewerTopBar(
+                centre: _quietLine(context),
+                onDelete: scene.onDelete,
+                deleteKey: logActionsDeleteKey,
+              ),
             ),
             Positioned(
               top: waveTop,
@@ -334,20 +332,6 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
             onPressed: onLater,
           ),
         ),
-      ViewerDockSlot(
-        label: logViewerDeleteLabel,
-        control: ViewerGlassCircle(
-          grouped: true,
-          key: logActionsDeleteKey,
-          label: logViewerDeleteLabel,
-          glyph: const IconStickerGlyphIcon(
-            glyph: IconStickerGlyph.trash,
-            color: Palette.mediaInk,
-            size: _dockGlyphSize,
-          ),
-          onPressed: scene.onDelete,
-        ),
-      ),
     ];
   }
 

@@ -12,7 +12,6 @@ import 'calendar_chevron_button.dart';
 
 const Key calendarActivityDotKey = Key('calendar-activity-dot');
 
-const double _neighbourOpacity = 0.35;
 const double _futureOpacity = 0.55;
 const double _compactWidthBelow = 64;
 const double _compactHeightBelow = 60;
@@ -24,6 +23,7 @@ class CalendarDayCell extends StatelessWidget {
     this.day,
     this.isToday = false,
     this.isFuture = false,
+    this.inCurrentWeek = false,
     this.hasEntries = false,
     this.onTap,
     this.tapReach = EdgeInsets.zero,
@@ -33,6 +33,7 @@ class CalendarDayCell extends StatelessWidget {
   final Day? day;
   final bool isToday;
   final bool isFuture;
+  final bool inCurrentWeek;
   final bool hasEntries;
   final VoidCallback? onTap;
   final EdgeInsets tapReach;
@@ -49,9 +50,7 @@ class CalendarDayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double? dimming = !cell.isInMonth
-        ? _neighbourOpacity
-        : (isFuture ? _futureOpacity : null);
+    final double? dimming = isFuture ? _futureOpacity : null;
     return CalendarTapArea(
       reach: onTap == null ? EdgeInsets.zero : tapReach,
       child: LayoutBuilder(
@@ -63,28 +62,29 @@ class CalendarDayCell extends StatelessWidget {
               : _CellMetrics.regular;
           final BorderRadius radius = BorderRadius.circular(metrics.radius);
           Widget faceWith(bool hovered) {
-            final Widget face = cell.isInMonth
+            return cell.isInMonth
                 ? _InMonthFace(
                     dayOfMonth: cell.dayOfMonth,
                     day: day,
                     isToday: isToday,
+                    inCurrentWeek: inCurrentWeek,
                     metrics: metrics,
                     hovered: hovered,
+                    dimming: dimming,
                   )
                 : _NumberOnly(
                     dayOfMonth: cell.dayOfMonth,
+                    inCurrentWeek: inCurrentWeek,
                     metrics: metrics,
                     hovered: hovered,
                   );
-            return dimming == null
-                ? face
-                : Opacity(opacity: dimming, child: face);
           }
 
           final VoidCallback? onTap = this.onTap;
           if (onTap == null) {
             return Semantics(
               label: semanticLabel,
+              enabled: isFuture ? false : null,
               excludeSemantics: true,
               child: faceWith(false),
             );
@@ -139,15 +139,19 @@ class _InMonthFace extends StatelessWidget {
     required this.dayOfMonth,
     required this.day,
     required this.isToday,
+    required this.inCurrentWeek,
     required this.metrics,
     required this.hovered,
+    required this.dimming,
   });
 
   final int dayOfMonth;
   final Day? day;
   final bool isToday;
+  final bool inCurrentWeek;
   final _CellMetrics metrics;
   final bool hovered;
+  final double? dimming;
 
   @override
   Widget build(BuildContext context) {
@@ -165,14 +169,29 @@ class _InMonthFace extends StatelessWidget {
             Center(child: FlowerBloom.forMood(mood, size: metrics.flowerSize))
           else if (day != null)
             const _ActivityDot(key: calendarActivityDotKey),
-          _DayNumber(
-            dayOfMonth: dayOfMonth,
-            color: isToday ? colors.accentInk : colors.mutedDeep,
-            metrics: metrics,
-          ),
         ],
       ),
     );
+    final Widget frame = _frame(colors, radius, content);
+    final double? dimming = this.dimming;
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        if (dimming == null) frame else Opacity(opacity: dimming, child: frame),
+        _DayNumber(
+          dayOfMonth: dayOfMonth,
+          color: isToday
+              ? colors.accentInk
+              : inCurrentWeek
+              ? colors.ink
+              : colors.mutedDeep,
+          metrics: metrics,
+        ),
+      ],
+    );
+  }
+
+  Widget _frame(FieldNotesColors colors, BorderRadius radius, Widget content) {
     if (isToday) {
       return DecoratedBox(
         decoration: BoxDecoration(
@@ -218,11 +237,13 @@ class _InMonthFace extends StatelessWidget {
 class _NumberOnly extends StatelessWidget {
   const _NumberOnly({
     required this.dayOfMonth,
+    required this.inCurrentWeek,
     required this.metrics,
     required this.hovered,
   });
 
   final int dayOfMonth;
+  final bool inCurrentWeek;
   final _CellMetrics metrics;
   final bool hovered;
 
@@ -237,7 +258,9 @@ class _NumberOnly extends StatelessWidget {
         children: <Widget>[
           _DayNumber(
             dayOfMonth: dayOfMonth,
-            color: context.colors.mutedDeep,
+            color: inCurrentWeek
+                ? context.colors.ink
+                : context.colors.mutedDeep,
             metrics: metrics,
           ),
         ],

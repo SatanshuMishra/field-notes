@@ -1,0 +1,26 @@
+focus-visible | s7-sync-error-unreachable | Invite code | <root> # measured: 10.32:1 by token arithmetic
+focus-visible | s7-sync-error-unreachable | Server address | <root> # measured: 10.32:1 by token arithmetic
+keyboard | s1-sync-start | Dismiss | <root> # Flutter's own control
+keyboard | s2-sync-join | Dismiss | <root> # Flutter's own control
+keyboard | s3-sync-restore | Dismiss | <root> # Flutter's own control
+keyboard | s4-add-device-unreachable | Dismiss | <root> # Flutter's own control
+keyboard | s5-change-server | Dismiss | <root> # Flutter's own control
+keyboard | s6-devices-list | Dismiss | <root> # Flutter's own control
+keyboard | s7-sync-error-unreachable | Dismiss | <root> # Flutter's own control
+keyboard | s8-devices-list-sync-error | Dismiss | <root> # Flutter's own control
+missing-role | s1-sync-start | Dismiss | <root> # Flutter's own control
+missing-role | s1-sync-start@2x | Dismiss | <root> # Flutter's own control
+missing-role | s2-sync-join | Dismiss | <root> # Flutter's own control
+missing-role | s2-sync-join@2x | Dismiss | <root> # Flutter's own control
+missing-role | s3-sync-restore | Dismiss | <root> # Flutter's own control
+missing-role | s3-sync-restore@2x | Dismiss | <root> # Flutter's own control
+missing-role | s4-add-device-unreachable | Dismiss | <root> # Flutter's own control
+missing-role | s4-add-device-unreachable@2x | Dismiss | <root> # Flutter's own control
+missing-role | s5-change-server | Dismiss | <root> # Flutter's own control
+missing-role | s5-change-server@2x | Dismiss | <root> # Flutter's own control
+missing-role | s6-devices-list | Dismiss | <root> # Flutter's own control
+missing-role | s6-devices-list@2x | Dismiss | <root> # Flutter's own control
+missing-role | s7-sync-error-unreachable | Dismiss | <root> # Flutter's own control
+missing-role | s7-sync-error-unreachable@2x | Dismiss | <root> # Flutter's own control
+missing-role | s8-devices-list-sync-error | Dismiss | <root> # Flutter's own control
+missing-role | s8-devices-list-sync-error@2x | Dismiss | <root> # Flutter's own control

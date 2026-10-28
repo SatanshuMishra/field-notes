@@ -20,7 +20,7 @@ Day _day(String date, {Mood? mood}) => Day(
 
 void main() {
   testWidgets(
-      'neighbouring-month cell shows only its dimmed number and still taps',
+      'neighbouring-month cell shows only its number at full ink and still taps',
       (WidgetTester tester) async {
     int taps = 0;
     await tester.pumpWidget(
@@ -40,7 +40,7 @@ void main() {
     expect(find.byType(FlowerBloom), findsNothing);
     expect(find.byKey(calendarActivityDotKey), findsNothing);
     expect(find.text('29'), findsOneWidget);
-    expect(tester.widget<Opacity>(find.byType(Opacity)).opacity, 0.35);
+    expect(find.byType(Opacity), findsNothing);
 
     await tester.tap(find.byType(CalendarDayCell));
     expect(taps, 1);

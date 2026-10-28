@@ -1,0 +1,11 @@
+flutter-text-contrast | b10-settings-about-phone | author | About # measured: 9.25:1 by token arithmetic
+flutter-text-contrast | b10-settings-about-phone@2x | author | About # measured: 9.25:1 by token arithmetic
+missing-role | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b14-sync-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
+missing-role | b4-select-open | Dismiss | <root> # Flutter's own control
+missing-role | b4-select-open@2x | Dismiss | <root> # Flutter's own control
+missing-role | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b5-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
+text-contrast | b11-select-dropdown-input-profile | 100% | Voice # measured: 5.18:1 by token arithmetic, dark muted 0xFF9F9191 on its card cardWarm 0xFF272222; the sweep reads the open dropdown menu drawn over this text
+text-contrast | b12-select-dropdown-microphone | 100% | Voice # measured: 5.18:1 by token arithmetic, dark muted 0xFF9F9191 on its card cardWarm 0xFF272222; the sweep reads the open dropdown menu drawn over this text
+text-contrast | b13-select-dropdown-speaker | 100% | Voice # measured: 5.18:1 by token arithmetic, dark muted 0xFF9F9191 on its card cardWarm 0xFF272222; the sweep reads the open dropdown menu drawn over this text

@@ -1,0 +1,23 @@
+flutter-text-contrast | d16-day-past-mood | 9:30 AM · morning · note | <root> # measured: 7.42:1 by token arithmetic
+flutter-text-contrast | d7-day-with-entries | 2:30 PM · afternoon · note | <root> # measured: 7.42:1 by token arithmetic
+flutter-text-contrast | d7-day-with-entries | 9:30 AM · morning · note | <root> # measured: 7.42:1 by token arithmetic
+focus-visible | d5-reader-menu | <unlabelled> | <root> # Flutter's own control
+focus-visible | d5-reader-menu | Copy | <root> # Flutter's own control
+focus-visible | d5-reader-menu | Select all | <root> # Flutter's own control
+missing-role | d11-mood-picker | Dismiss mood picker | <root> # Flutter's own control
+missing-role | d11-mood-picker@2x | Dismiss mood picker | <root> # Flutter's own control
+missing-role | d13-change-mood-dialog | Dismiss | <root> # Flutter's own control
+missing-role | d13-change-mood-dialog@2x | Dismiss | <root> # Flutter's own control
+missing-role | d14-delete-entry-dialog | Dismiss | <root> # Flutter's own control
+missing-role | d14-delete-entry-dialog@2x | Dismiss | <root> # Flutter's own control
+missing-role | d16-day-past-mood | Dismiss day detail | <root> # Flutter's own control
+missing-role | d16-day-past-mood@2x | Dismiss day detail | <root> # Flutter's own control
+missing-role | d7-day-with-entries | Dismiss day detail | <root> # Flutter's own control
+missing-role | d7-day-with-entries@2x | Dismiss day detail | <root> # Flutter's own control
+missing-role | d8-day-empty | Dismiss day detail | <root> # Flutter's own control
+missing-role | d8-day-empty@2x | Dismiss day detail | <root> # Flutter's own control
+overlapping-text | d5-reader-menu@2x | Copy + Select all | <root> # Flutter's own control
+small-target | d5-reader-menu | Copy | <root> # Flutter's own control
+small-target | d5-reader-menu | Select all | <root> # Flutter's own control
+small-target | d5-reader-menu@2x | <unlabelled> | <root> # Flutter's own control
+small-target | d5-reader-menu@2x | Copy | <root> # Flutter's own control

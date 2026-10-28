@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/system_bars.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/format/text_extent.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
@@ -34,7 +35,9 @@ const double _cancelGlyph = 16;
 const double _pillGlyph = 16;
 const double _pillGlyphGap = 8;
 const double _pillPadding = 16;
+const double _pillWrapPadding = 6;
 const double _errorGap = 16;
+const double _frameGap = 16;
 const double _topShade = 180;
 const double _bottomShade = 220;
 const double _shadeAlpha = 0.72;
@@ -87,8 +90,18 @@ class JoinScanPage extends StatelessWidget {
       size.width * joinScanFrameShare,
       joinScanFrameMax,
     );
+    final double headerBottom =
+        padding.top +
+        _headerTop +
+        _headerHeight(context, size.width - _headerInset * 2);
     final Rect frame = Rect.fromCenter(
-      center: Offset(size.width / 2, size.height * joinScanFrameCentre),
+      center: Offset(
+        size.width / 2,
+        math.max(
+          size.height * joinScanFrameCentre,
+          headerBottom + _frameGap + side / 2,
+        ),
+      ),
       width: side,
       height: side,
     );
@@ -151,50 +164,139 @@ class JoinScanPage extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                joinScanKicker,
-                style: context.textStyles.pageEyebrowAccent.copyWith(
-                  color: Palette.mediaInk,
-                ),
-              ),
+              Text(joinScanKicker, style: _kickerStyle(context)),
               const SizedBox(height: _kickerGap),
               Semantics(
                 header: true,
-                child: Text(
-                  joinScanMessage,
-                  style: context.textStyles.headlineSerif.copyWith(
-                    fontSize: _messageSize,
-                    height: _messageHeight,
-                    color: Palette.mediaInk,
-                  ),
-                ),
+                child: Text(joinScanMessage, style: _messageStyle(context)),
               ),
             ],
           ),
         ),
-        if (error != null)
-          Positioned(
-            left: _sideInset,
-            right: _sideInset,
-            bottom: size.height - controlsTop + _errorGap,
-            child: _ScanError(message: error),
-          ),
-        Positioned(
-          top: controlsTop,
-          left: _sideInset,
-          right: _sideInset,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        Positioned.fill(
+          child: CustomMultiChildLayout(
+            delegate: _ControlsLayout(
+              controlsTop: controlsTop,
+              bottomInset: padding.bottom,
+              textDirection: Directionality.of(context),
+            ),
             children: <Widget>[
-              _CancelControl(onCancel: onCancel),
-              const SizedBox(width: _controlGap),
-              Expanded(child: _TypeWordsPill(onPressed: onTypeWords)),
+              LayoutId(
+                id: _ControlSlot.cancel,
+                child: _CancelControl(onCancel: onCancel),
+              ),
+              LayoutId(
+                id: _ControlSlot.typeWords,
+                child: _TypeWordsPill(onPressed: onTypeWords),
+              ),
+              if (error != null)
+                LayoutId(
+                  id: _ControlSlot.error,
+                  child: _ScanError(message: error),
+                ),
             ],
           ),
         ),
       ],
     );
   }
+}
+
+TextStyle _kickerStyle(BuildContext context) =>
+    context.textStyles.pageEyebrowAccent.copyWith(color: Palette.mediaInk);
+
+TextStyle _messageStyle(BuildContext context) =>
+    context.textStyles.headlineSerif.copyWith(
+      fontSize: _messageSize,
+      height: _messageHeight,
+      color: Palette.mediaInk,
+    );
+
+double _headerHeight(BuildContext context, double width) =>
+    wrappedHeight(
+      context,
+      joinScanKicker,
+      _kickerStyle(context),
+      maxWidth: width,
+    ) +
+    _kickerGap +
+    wrappedHeight(
+      context,
+      joinScanMessage,
+      _messageStyle(context),
+      maxWidth: width,
+    );
+
+enum _ControlSlot { cancel, typeWords, error }
+
+class _ControlsLayout extends MultiChildLayoutDelegate {
+  _ControlsLayout({
+    required this.controlsTop,
+    required this.bottomInset,
+    required this.textDirection,
+  });
+
+  final double controlsTop;
+  final double bottomInset;
+  final TextDirection textDirection;
+
+  double _startAligned(Size size, double start, double width) =>
+      textDirection == TextDirection.rtl ? size.width - start - width : start;
+
+  @override
+  void performLayout(Size size) {
+    final double rowWidth = math.max(0, size.width - _sideInset * 2);
+    final Size cancel = layoutChild(
+      _ControlSlot.cancel,
+      BoxConstraints.loose(Size(rowWidth, size.height)),
+    );
+    final double cancelTop = math.min(
+      controlsTop,
+      size.height - bottomInset - cancel.height,
+    );
+    positionChild(
+      _ControlSlot.cancel,
+      Offset(_startAligned(size, _sideInset, cancel.width), cancelTop),
+    );
+    final double pillLeft = _sideInset + cancel.width + _controlGap;
+    final double pillWidth = math.max(0, size.width - _sideInset - pillLeft);
+    final Size pill = layoutChild(
+      _ControlSlot.typeWords,
+      BoxConstraints(
+        minWidth: pillWidth,
+        maxWidth: pillWidth,
+        maxHeight: size.height,
+      ),
+    );
+    final double pillTop = cancelTop + joinScanControlExtent - pill.height;
+    positionChild(
+      _ControlSlot.typeWords,
+      Offset(_startAligned(size, pillLeft, pill.width), pillTop),
+    );
+    if (hasChild(_ControlSlot.error)) {
+      final Size error = layoutChild(
+        _ControlSlot.error,
+        BoxConstraints(
+          minWidth: rowWidth,
+          maxWidth: rowWidth,
+          maxHeight: size.height,
+        ),
+      );
+      positionChild(
+        _ControlSlot.error,
+        Offset(
+          _sideInset,
+          math.min(cancelTop, pillTop) - _errorGap - error.height,
+        ),
+      );
+    }
+  }
+
+  @override
+  bool shouldRelayout(_ControlsLayout oldDelegate) =>
+      oldDelegate.controlsTop != controlsTop ||
+      oldDelegate.bottomInset != bottomInset ||
+      oldDelegate.textDirection != textDirection;
 }
 
 class JoinScanBrackets extends StatelessWidget {
@@ -366,10 +468,13 @@ class _TypeWordsPill extends StatelessWidget {
         child: GlassSurface(
           tone: GlassTone.media,
           borderRadius: _pillRadius,
-          child: SizedBox(
-            height: joinScanControlExtent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: joinScanControlExtent),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: _pillPadding),
+              padding: const EdgeInsets.symmetric(
+                horizontal: _pillPadding,
+                vertical: _pillWrapPadding,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
@@ -382,8 +487,7 @@ class _TypeWordsPill extends StatelessWidget {
                   Flexible(
                     child: Text(
                       typeWordsInsteadLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
                       style: context.textStyles.buttonSans.copyWith(
                         color: Palette.mediaInk,
                       ),

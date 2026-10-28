@@ -345,13 +345,11 @@ class _SliderRow extends StatelessWidget {
     return Row(
       children: <Widget>[
         SizedBox(
-          width: compact ? 84 : 96,
+          width: MediaQuery.textScalerOf(context)
+              .scale(compact ? _phoneLabelWidth : _deskLabelWidth),
           child: ExcludeSemantics(
             child: Text(
               label,
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.ellipsis,
               style: meadowSans(compact ? 11 : 12, opacity: 0.85),
             ),
           ),
@@ -376,11 +374,13 @@ class _SliderRow extends StatelessWidget {
   }
 }
 
-const double _replayPadding = 12;
-const String _replayShortLabel = 'Replay';
+const double meadowReplayPadding = 12;
+const double _phoneLabelWidth = 84;
+const double _deskLabelWidth = 96;
+const String meadowReplayShortLabel = 'Replay';
 
 String _shortReplay(String label) =>
-    label == meadowReplayLabel ? _replayShortLabel : label;
+    label == meadowReplayLabel ? meadowReplayShortLabel : label;
 
 double _measureText(BuildContext context, String text, TextStyle style) {
   final TextPainter painter = TextPainter(
@@ -431,13 +431,13 @@ class _PhoneReplayButton extends StatelessWidget {
               builder: (BuildContext context, BoxConstraints constraints) {
                 final TextStyle style = meadowSans(13)
                     .copyWith(color: Palette.onAccent);
-                final double room = constraints.maxWidth - _replayPadding;
+                final double room = constraints.maxWidth - meadowReplayPadding;
                 final String shown = _measureText(context, label, style) <= room
                     ? label
                     : _shortReplay(label);
                 return Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: _replayPadding / 2,
+                    horizontal: meadowReplayPadding / 2,
                   ),
                   child: Center(
                     child: FittedBox(

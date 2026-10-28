@@ -1,0 +1,35 @@
+missing-role | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b14-sync-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
+missing-role | b4-select-open | Dismiss | <root> # Flutter's own control
+missing-role | b4-select-open@2x | Dismiss | <root> # Flutter's own control
+missing-role | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b5-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
+text-contrast | b14-sync-delete-all-dialog | Erase every entry, photo, and mood on this device. | Data # measured: 6.32:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Remove photo files no entry or draft still refers to. | Data # measured: 6.32:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Save a zip of every entry and photo. | Data # measured: 6.32:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # measured: 6.32:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | settings | Data # measured: 4.50:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | settings | Data # measured: 4.50:1 by token arithmetic
+text-contrast | b4-select-open | A map of where everything lives. | Journal # measured: 6.32:1 by token arithmetic
+text-contrast | b4-select-open | Applies across the app. | Journal # measured: 6.32:1 by token arithmetic
+text-contrast | b4-select-open | Dark | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open | Large | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open | Light, dark, or match your device. | Journal # measured: 6.32:1 by token arithmetic
+text-contrast | b4-select-open | Performance | Journal # measured: 6.33:1 by token arithmetic
+text-contrast | b4-select-open | Small | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open | Stops the Meadow's motion while Field Notes is open but a... | Pause the Meadow in the background / Stops the Meadow's motion while Field Notes is open but another window or app is in front. Saves battery. # measured: 6.32:1 by token arithmetic
+text-contrast | b4-select-open | System | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open | Underlines misspelled words as you write. Checked on this... | Spell check / Underlines misspelled words as you write. Checked on this device only. # measured: 6.32:1 by token arithmetic
+text-contrast | b4-select-open | Used by the calendar and this-week garden. | Journal # measured: 6.32:1 by token arithmetic
+text-contrast | b4-select-open | settings | Journal # measured: 4.50:1 by token arithmetic
+text-contrast | b4-select-open@2x | Dark | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open@2x | Large | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open@2x | Small | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open@2x | System | Journal # measured: 5.64:1 by token arithmetic
+text-contrast | b4-select-open@2x | settings | Journal # measured: 4.50:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Erase every entry, photo, and mood on this device. | Data # measured: 6.32:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Remove photo files no entry or draft still refers to. | Data # measured: 6.32:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Save a zip of every entry and photo. | Data # measured: 6.32:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # measured: 6.32:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | settings | Data # measured: 4.50:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | settings | Data # measured: 4.50:1 by token arithmetic

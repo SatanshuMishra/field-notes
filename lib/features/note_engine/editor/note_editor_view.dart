@@ -82,6 +82,7 @@ class NotePhotoToolbarRequest {
     required this.captionOpen,
     required this.importer,
     required this.firstControlFocusNode,
+    required this.captionFocusNode,
     required this.onOpenCaption,
     required this.onCloseCaption,
     required this.onReturnToEditor,
@@ -101,6 +102,7 @@ class NotePhotoToolbarRequest {
   final bool captionOpen;
   final Future<List<String>> Function()? importer;
   final FocusNode firstControlFocusNode;
+  final FocusNode captionFocusNode;
   final VoidCallback onOpenCaption;
   final VoidCallback onCloseCaption;
   final VoidCallback onReturnToEditor;
@@ -218,6 +220,10 @@ class NoteEditorViewState extends State<NoteEditorView>
   final GlobalKey _keyScopeKey = GlobalKey();
   final NoteLayoutEngine _engine = NoteLayoutEngine();
   final FocusNode _toolbarFocusNode = FocusNode(debugLabel: 'NotePhotoToolbar');
+  final FocusNode _captionFocusNode = FocusNode(debugLabel: 'NotePhotoCaption');
+  final FocusNode _tableToolbarFocusNode = FocusNode(
+    debugLabel: 'NoteTableToolbar',
+  );
   final ValueNotifier<int> _geometryRevision = ValueNotifier<int>(0);
   final CommandRegistry _commands = const _EditorCommands(
     NoteCommandRegistry(tablesEnabled: tablesEnabled),
@@ -460,6 +466,8 @@ class NoteEditorViewState extends State<NoteEditorView>
       ..dispose();
     _reveal?.dispose();
     _toolbarFocusNode.dispose();
+    _tableToolbarFocusNode.dispose();
+    _captionFocusNode.dispose();
     _geometryRevision.dispose();
     if (_removalToastArmed) {
       _removalToastArmed = false;
@@ -1266,10 +1274,28 @@ class NoteEditorViewState extends State<NoteEditorView>
   }
 
   bool _focusPhotoToolbar() {
-    if (!_photoToolbarShown || _toolbarFocusNode.context == null) {
+    if (!_photoToolbarShown) {
       return false;
     }
-    _toolbarFocusNode.requestFocus();
+    final FocusNode entry = _captionOpen && _captionFocusNode.context != null
+        ? _captionFocusNode
+        : _toolbarFocusNode;
+    if (entry.context == null) {
+      return false;
+    }
+    entry.requestFocus();
+    return true;
+  }
+
+  bool _focusTableToolbar() {
+    final FocusNode? first =
+        _tableToolbarFocusNode.traversalDescendants.firstOrNull;
+    final BuildContext? control = first?.context;
+    if (first == null || control == null) {
+      return false;
+    }
+    first.requestFocus();
+    unawaited(Scrollable.ensureVisible(control));
     return true;
   }
 
@@ -1874,6 +1900,7 @@ class NoteEditorViewState extends State<NoteEditorView>
         captionOpen: _captionOpen,
         importer: widget.photoImporter,
         firstControlFocusNode: _toolbarFocusNode,
+        captionFocusNode: _captionFocusNode,
         onOpenCaption: () => _setCaptionLine(lineStart),
         onCloseCaption: () => _setCaptionLine(null),
         onReturnToEditor: widget.focusNode.requestFocus,
@@ -1931,6 +1958,7 @@ class NoteEditorViewState extends State<NoteEditorView>
         onDismiss: widget.focusNode.requestFocus,
         tapRegionGroupId: EditableText,
         enabled: tablesEnabled,
+        focusNode: _tableToolbarFocusNode,
       ),
     );
   }
@@ -2080,6 +2108,9 @@ final class _EditorActionHost implements NoteActionHost {
 
   @override
   bool focusPhotoToolbar() => _view._focusPhotoToolbar();
+
+  @override
+  bool focusTableToolbar() => _view._focusTableToolbar();
 }
 
 final class _EditorViewDelegate implements NoteViewDelegate {

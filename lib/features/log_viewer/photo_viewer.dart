@@ -260,6 +260,7 @@ class _PhotoViewerState extends State<PhotoViewer> {
                   fit: StackFit.expand,
                   children: <Widget>[
                     const ViewerOverlayShade(top: true),
+                    const ViewerOverlayShade(top: false),
                     Padding(
                       padding: EdgeInsets.fromLTRB(
                         _phoneQuietSide,

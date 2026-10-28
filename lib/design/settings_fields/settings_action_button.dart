@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import '../tokens/tokens.dart';
 import '../widgets/sticker_button.dart';
 
+import 'package:field_notes/design/interaction/min_target.dart';
+
 const BorderRadius _pillRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusPill),
 );
@@ -16,7 +18,6 @@ const EdgeInsets _pillPadding = EdgeInsets.symmetric(
   vertical: 5 + Shapes.outlineWidth,
 );
 const double _pillFontSize = 12;
-const double _pillMinTapTarget = 24;
 
 enum SettingsActionTone { neutral, primary, danger }
 
@@ -34,13 +35,26 @@ class SettingsActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return switch (resolveShellLayout(Theme.of(context).platform)) {
-      ShellLayout.sidebar => _ActionPill(
+    final ShellLayout layout = resolveShellLayout(Theme.of(context).platform);
+    return switch ((layout, tone)) {
+      (ShellLayout.sidebar, SettingsActionTone.neutral) => _ActionPill(
         label: label,
         onPressed: onPressed,
-        tone: tone,
+        tone: _PillTone.neutral,
       ),
-      ShellLayout.bottomBar => StickerButton(
+      (ShellLayout.sidebar, SettingsActionTone.primary) => _ActionPill(
+        label: label,
+        onPressed: onPressed,
+        tone: _PillTone.primary,
+      ),
+      (ShellLayout.sidebar, SettingsActionTone.danger) => StickerButton(
+        label: label,
+        onPressed: onPressed,
+        padTapTarget: true,
+        variant: StickerButtonVariant.danger,
+        labelStyle: _pillLabelStyle(context),
+      ),
+      (ShellLayout.bottomBar, _) => StickerButton(
         label: label,
         onPressed: onPressed,
         padTapTarget: true,
@@ -54,6 +68,11 @@ class SettingsActionButton extends StatelessWidget {
   }
 }
 
+TextStyle _pillLabelStyle(BuildContext context) => context.textStyles.labelSans
+    .copyWith(fontSize: _pillFontSize, fontWeight: FontWeight.w600);
+
+enum _PillTone { neutral, primary }
+
 class _ActionPill extends StatelessWidget {
   const _ActionPill({
     required this.label,
@@ -63,7 +82,7 @@ class _ActionPill extends StatelessWidget {
 
   final String label;
   final VoidCallback? onPressed;
-  final SettingsActionTone tone;
+  final _PillTone tone;
 
   @override
   Widget build(BuildContext context) {
@@ -71,14 +90,12 @@ class _ActionPill extends StatelessWidget {
     final FieldNotesShadows shadows = context.shadows;
     final bool enabled = onPressed != null;
     final FocusRingSurface hoverSurface = switch (tone) {
-      SettingsActionTone.neutral => FocusRingSurface.light,
-      SettingsActionTone.primary ||
-      SettingsActionTone.danger => FocusRingSurface.dark,
+      _PillTone.neutral => FocusRingSurface.light,
+      _PillTone.primary => FocusRingSurface.dark,
     };
     final Color foreground = switch (tone) {
-      SettingsActionTone.neutral => colors.accentInk,
-      SettingsActionTone.primary => Palette.onAccent,
-      SettingsActionTone.danger => Palette.onAccent,
+      _PillTone.neutral => colors.accentInk,
+      _PillTone.primary => Palette.onAccent,
     };
     return Pressable(
       label: label,
@@ -91,7 +108,7 @@ class _ActionPill extends StatelessWidget {
             ? HoverStyle.of(context, hoverSurface, HoverShape.pill)
             : null;
         final BoxDecoration decoration = switch (tone) {
-          SettingsActionTone.neutral => BoxDecoration(
+          _PillTone.neutral => BoxDecoration(
             color: hoverFill,
             border: Border.all(
               color: Palette.coral,
@@ -99,14 +116,8 @@ class _ActionPill extends StatelessWidget {
             ),
             borderRadius: _pillRadius,
           ),
-          SettingsActionTone.primary => BoxDecoration(
+          _PillTone.primary => BoxDecoration(
             color: Palette.coral,
-            border: shadows.outline,
-            borderRadius: _pillRadius,
-            boxShadow: shadows.control,
-          ),
-          SettingsActionTone.danger => BoxDecoration(
-            color: Palette.danger,
             border: shadows.outline,
             borderRadius: _pillRadius,
             boxShadow: shadows.control,
@@ -116,25 +127,22 @@ class _ActionPill extends StatelessWidget {
           padding: _pillPadding,
           child: Text(
             label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: context.textStyles.labelSans.copyWith(
-              fontSize: _pillFontSize,
-              fontWeight: FontWeight.w600,
-              color: foreground,
-            ),
+            textAlign: TextAlign.center,
+            style: _pillLabelStyle(context).copyWith(color: foreground),
           ),
         );
         return Opacity(
           opacity: enabled ? 1.0 : 0.5,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: _pillMinTapTarget),
+            constraints: BoxConstraints(
+              minHeight: minTargetOn(Theme.of(context).platform),
+            ),
             child: Center(
               widthFactor: 1,
               heightFactor: 1,
               child: DecoratedBox(
                 decoration: decoration,
-                child: tone == SettingsActionTone.neutral
+                child: tone != _PillTone.primary
                     ? text
                     : HoverFill(
                         hovered: hovered,

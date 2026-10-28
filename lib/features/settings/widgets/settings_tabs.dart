@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/format/text_extent.dart';
 import 'package:field_notes/design/icons/settings_icons.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
@@ -88,6 +91,29 @@ const BorderRadius _entryRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusControl),
 );
 
+double settingsTabRailWidthFor(BuildContext context) {
+  final TextStyle style = _labelStyle(context);
+  final double widestLabelWord = SettingsTab.values
+      .map((SettingsTab tab) => widestWordWidth(context, tab.label, style))
+      .fold<double>(0, math.max);
+  return math.max(
+    settingsTabRailWidth,
+    _entryPadding.horizontal +
+        settingsTabIconSize +
+        _iconGap +
+        widestLabelWord +
+        _iconGap +
+        settingsTabMarkSize,
+  );
+}
+
+TextStyle _labelStyle(BuildContext context) =>
+    context.textStyles.labelSans.copyWith(
+      fontSize: _labelSize,
+      fontWeight: FontWeight.w600,
+      color: context.colors.ink,
+    );
+
 class SettingsTabRail extends StatelessWidget {
   const SettingsTabRail({
     super.key,
@@ -104,7 +130,7 @@ class SettingsTabRail extends StatelessWidget {
   Widget build(BuildContext context) {
     const double boxGap = settingsTabEntryGap - 2 * _hitInset;
     return SizedBox(
-      width: settingsTabRailWidth,
+      width: settingsTabRailWidthFor(context),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -203,16 +229,7 @@ class _TabEntry extends StatelessWidget {
                 color: selected ? colors.accentInk : colors.ink,
               ),
               const SizedBox(width: _iconGap),
-              Expanded(
-                child: Text(
-                  tab.label,
-                  style: context.textStyles.labelSans.copyWith(
-                    fontSize: _labelSize,
-                    fontWeight: FontWeight.w600,
-                    color: colors.ink,
-                  ),
-                ),
-              ),
+              Expanded(child: Text(tab.label, style: _labelStyle(context))),
               if (marked) ...<Widget>[
                 const SizedBox(width: _iconGap),
                 Container(

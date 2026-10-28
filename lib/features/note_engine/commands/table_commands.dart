@@ -91,6 +91,9 @@ Transaction? nextCell(EditorState state) {
   return table.appendRow(state, 0);
 }
 
+bool caretInTable(EditorState state) =>
+    _Table.atHead(state)?.cellAt(state.selection.head) != null;
+
 Transaction? previousCell(EditorState state) {
   final _Table? table = _Table.atHead(state);
   final _Cell? cell = table?.cellAt(state.selection.head);

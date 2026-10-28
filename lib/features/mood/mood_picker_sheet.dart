@@ -65,7 +65,7 @@ class MoodPickerSheet extends StatelessWidget {
                 ),
                 boxShadow: Shadows.softLift,
               ),
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(_panelPadding),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

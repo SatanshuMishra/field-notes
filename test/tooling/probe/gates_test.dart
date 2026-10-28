@@ -127,9 +127,9 @@ Map<String, Object?> _document(
   'samples': samples,
 };
 
-RowOutcome _row(Map<String, Object?> document, String id) => evaluateResult(
-  document,
-).singleWhere((RowOutcome outcome) => outcome.row == id);
+RowOutcome _row(Map<String, Object?> document, String id) =>
+    evaluateResult(document)
+        .singleWhere((RowOutcome outcome) => outcome.row == id);
 
 Map<String, Object?> _expectSample(
   String row,
@@ -171,10 +171,8 @@ bool _onPath(String executable) {
 
 final bool _dartAvailable = _onPath('dart');
 
-Future<ProcessResult> _gates(List<String> arguments) => Process.run(
-  'dart',
-  <String>['run', 'tool/probe/lib/gates.dart', ...arguments],
-);
+Future<ProcessResult> _gates(List<String> arguments) =>
+    Process.run('dart', <String>['tool/probe/lib/gates.dart', ...arguments]);
 
 Map<String, Object?> _relocationSample({
   required OracleNote note,
@@ -1237,9 +1235,8 @@ void main() {
       'GR3',
     );
     expect(
-      evaluateResult(
-        _document('perf-keystroke', <Map<String, Object?>>[]),
-      ).map((RowOutcome outcome) => outcome.row),
+      evaluateResult(_document('perf-keystroke', <Map<String, Object?>>[]))
+          .map((RowOutcome outcome) => outcome.row),
       <String>['GP1', 'GP2', 'GP3'],
     );
   });

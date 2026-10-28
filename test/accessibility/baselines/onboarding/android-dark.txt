@@ -1,0 +1,2 @@
+text-contrast | o8-day-calm-bottom-bar | lavender | <root> # measured: 6.7:1 by token arithmetic
+text-contrast | o8-day-calm-bottom-bar@2x | lavender | <root> # measured: 6.7:1 by token arithmetic

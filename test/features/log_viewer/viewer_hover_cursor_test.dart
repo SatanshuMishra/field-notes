@@ -7,6 +7,7 @@ import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
@@ -486,11 +487,11 @@ void main() {
           radius: 14,
         ),
         _Row(
-          'Delete entry',
+          'Delete',
           find.byKey(logActionsDeleteKey),
-          _dark,
+          _lightRow,
           _Shape.rounded,
-          radius: 14,
+          radius: Shapes.radiusSm,
         ),
       ]);
 

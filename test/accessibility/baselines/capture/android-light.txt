@@ -1,0 +1,20 @@
+flutter-text-contrast | c11-draft-chip | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # measured: 6.92:1 by token arithmetic
+focus-visible | c9-selection-menu | <unlabelled> | <root> # Flutter's own control
+focus-visible | c9-selection-menu | Copy | <root> # Flutter's own control
+focus-visible | c9-selection-menu | Cut | <root> # Flutter's own control
+focus-visible | c9-selection-menu | Paste | <root> # Flutter's own control
+focus-visible | c9-selection-menu | Select all | <root> # Flutter's own control
+missing-role | c1-chooser | Dismiss capture chooser | <root> # Flutter's own control
+missing-role | c1-chooser@2x | Dismiss capture chooser | <root> # Flutter's own control
+missing-role | c10-discard-dialog | Dismiss | <root> # Flutter's own control
+missing-role | c10-discard-dialog@2x | Dismiss | <root> # Flutter's own control
+overlapping-text | c9-selection-menu@2x | Copy + Paste | <root> # Flutter's own control
+overlapping-text | c9-selection-menu@2x | Cut + Paste | <root> # Flutter's own control
+small-target | c9-selection-menu | Copy | <root> # Flutter's own control
+small-target | c9-selection-menu | Cut | <root> # Flutter's own control
+small-target | c9-selection-menu | Paste | <root> # Flutter's own control
+small-target | c9-selection-menu | Select all | <root> # Flutter's own control
+small-target | c9-selection-menu@2x | <unlabelled> | <root> # Flutter's own control
+small-target | c9-selection-menu@2x | Copy | <root> # Flutter's own control
+small-target | c9-selection-menu@2x | Cut | <root> # Flutter's own control
+text-contrast | c10-discard-dialog | Today · 9:30 AM | <root> # measured: 6.53:1 by token arithmetic

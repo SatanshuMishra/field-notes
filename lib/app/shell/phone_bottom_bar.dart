@@ -34,7 +34,9 @@ const BorderRadius _captureRadius = BorderRadius.all(
   Radius.circular(_captureExtent / 2),
 );
 
-const Color _sceneInk = Color.fromRGBO(251, 243, 228, 0.82);
+const Color phoneBottomBarSceneInk = Color.fromRGBO(251, 243, 228, 0.82);
+const Color phoneBottomBarSceneTint = Color.fromRGBO(28, 22, 16, 0.72);
+const Color phoneBottomBarScenePill = Palette.coral30;
 const Color _captureGlow = Color.fromRGBO(120, 50, 30, 0.55);
 const Color _captureHighlight = Color.fromRGBO(255, 255, 255, 0.25);
 
@@ -78,6 +80,7 @@ class PhoneBottomBar extends StatelessWidget {
         tone: tone,
         borderRadius: _barBorderRadius,
         grouped: grouped,
+        tint: overScene ? phoneBottomBarSceneTint : null,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
@@ -96,11 +99,15 @@ class PhoneBottomBar extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     return switch ((overScene, isSelected)) {
       (true, true) => colors.accentTint,
-      (true, false) => _sceneInk,
+      (true, false) => phoneBottomBarSceneInk,
       (false, true) => colors.accentInkStrong,
       (false, false) => colors.mutedInkStrong,
     };
   }
+
+  Color _pillFor(BuildContext context) => overScene
+      ? phoneBottomBarScenePill
+      : tone.pillFor(Theme.of(context).brightness);
 
   FocusRingSurface get _surface =>
       overScene ? FocusRingSurface.dark : FocusRingSurface.light;
@@ -114,7 +121,7 @@ class PhoneBottomBar extends StatelessWidget {
       width: double.infinity,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: isSelected ? tone.pillFor(Theme.of(context).brightness) : null,
+          color: isSelected ? _pillFor(context) : null,
           borderRadius: _cellRadius,
         ),
         child: HoverFill(

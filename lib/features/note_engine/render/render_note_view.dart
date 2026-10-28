@@ -50,8 +50,7 @@ abstract class NoteViewDecoration {
 
 const double _tableOverflowSlack = 0.01;
 const double _viewportSlack = 0.5;
-const double _androidTarget = 48;
-const double _desktopTarget = 24;
+const double _editorMouseTarget = 24;
 const int _lineFeed = 0x0A;
 final RegExp _wordGap = RegExp(r'[\s\p{P}\p{S}]', unicode: true);
 
@@ -399,6 +398,7 @@ class RenderNoteView extends RenderBox
   LayerLink? _startHandleLayerLink;
   LayerLink? _endHandleLayerLink;
   List<NoteViewDecoration> _decorations;
+  int? _focusedCheckbox;
 
   NoteSemanticsNodes _semanticsNodes = NoteSemanticsNodes();
   late final NoteCaretBlink _blink = NoteCaretBlink(onChanged: markNeedsPaint);
@@ -646,6 +646,15 @@ class RenderNoteView extends RenderBox
     markNeedsSemanticsUpdate();
   }
 
+  int? get focusedCheckbox => _focusedCheckbox;
+  set focusedCheckbox(int? value) {
+    if (value == _focusedCheckbox) {
+      return;
+    }
+    _focusedCheckbox = value;
+    markNeedsSemanticsUpdate();
+  }
+
   LayerLink? get startHandleLayerLink => _startHandleLayerLink;
   set startHandleLayerLink(LayerLink? value) {
     if (identical(value, _startHandleLayerLink)) {
@@ -887,6 +896,15 @@ class RenderNoteView extends RenderBox
   bool get isRepaintBoundary => true;
 
   @override
+  Rect get semanticBounds => _readOnly
+      ? checkboxTargets(noteCheckboxTarget(defaultTargetPlatform)).fold(
+          Offset.zero & size,
+          (Rect bounds, (int, Rect) target) =>
+              bounds.expandToInclude(target.$2),
+        )
+      : Offset.zero & size;
+
+  @override
   void describeSemanticsConfiguration(SemanticsConfiguration config) {
     super.describeSemanticsConfiguration(config);
     config
@@ -1064,24 +1082,36 @@ class RenderNoteView extends RenderBox
         : notePreviousCharacterOffset(text, at);
   }
 
-  Rect _withMinimumTarget(Rect rect) {
-    final double minimum = defaultTargetPlatform == TargetPlatform.android
-        ? _androidTarget
-        : _desktopTarget;
-    return Rect.fromCenter(
-      center: rect.center,
-      width: math.max(rect.width, minimum),
-      height: math.max(rect.height, minimum),
-    );
+  Rect _withMinimumTarget(Rect rect, double target) => Rect.fromCenter(
+    center: rect.center,
+    width: math.max(rect.width, target),
+    height: math.max(rect.height, target),
+  );
+
+  Rect _withinColumn(Rect area) {
+    final double shift = area.left < 0
+        ? -area.left
+        : area.right > size.width
+        ? math.max(size.width - area.right, -area.left)
+        : 0;
+    return area.shift(Offset(shift, 0));
   }
 
-  List<Rect> _checkboxAreas(List<Rect> boxes) {
+  List<Rect> _checkboxAreas(List<Rect> boxes, double target) {
     final List<(double, Rect)> targets = <(double, Rect)>[
-      for (final Rect box in boxes) (box.center.dy, _withMinimumTarget(box)),
+      for (final Rect box in boxes)
+        (
+          box.center.dy,
+          _readOnly
+              ? _withinColumn(_withMinimumTarget(box, target))
+              : _withMinimumTarget(box, target),
+        ),
     ];
     return List<Rect>.unmodifiable(<Rect>[
       for (final (double centre, Rect target) in targets)
-        _onView(_ownSide(centre, target, targets)),
+        _readOnly
+            ? _ownSide(centre, target, targets)
+            : _onView(_ownSide(centre, target, targets)),
     ]);
   }
 
@@ -1116,8 +1146,13 @@ class RenderNoteView extends RenderBox
     return area.overlaps(bounds) ? area.intersect(bounds) : area;
   }
 
-  List<SemanticsNode> _checkboxNodes() {
-    final List<(NoteCheckboxSemantics, Rect)> placed =
+  double get _semanticsTarget =>
+      _readOnly || defaultTargetPlatform == TargetPlatform.android
+      ? noteCheckboxTarget(defaultTargetPlatform)
+      : _editorMouseTarget;
+
+  List<(NoteCheckboxSemantics, Rect)> _placedCheckboxes() =>
+      List<(NoteCheckboxSemantics, Rect)>.unmodifiable(
         <(NoteCheckboxSemantics, Rect)>[
           for (final NoteCheckboxSemantics box in noteCheckboxSemanticsOf(
             _tree,
@@ -1126,10 +1161,72 @@ class RenderNoteView extends RenderBox
             if (contentRectToLocal(_noteLayout.rangeBounds(box.boxRange))
                 case final Rect rect)
               (box, rect),
-        ];
+        ],
+      );
+
+  List<(int, Rect)> checkboxTargets(double target) {
+    final List<(NoteCheckboxSemantics, Rect)> placed = _placedCheckboxes();
     final List<Rect> areas = _checkboxAreas(<Rect>[
       for (final (NoteCheckboxSemantics _, Rect rect) in placed) rect,
+    ], target);
+    return List<(int, Rect)>.unmodifiable(<(int, Rect)>[
+      for (int i = 0; i < placed.length; i++) (placed[i].$1.boxStart, areas[i]),
     ]);
+  }
+
+  List<(int, Rect)> checkboxRows(double target) =>
+      List<(int, Rect)>.unmodifiable(<(int, Rect)>[
+        for (final (int boxStart, Rect area) in checkboxTargets(target))
+          (boxStart, _rowAround(boxStart, area)),
+      ]);
+
+  Rect _rowAround(int boxStart, Rect area) {
+    final int breakAt = _source.indexOf('\n', boxStart);
+    final Rect? line = contentRectToLocal(
+      _noteLayout.rangeBounds(
+        MdRange(boxStart, breakAt < 0 ? _source.length : breakAt),
+      ),
+    );
+    return line == null
+        ? area
+        : Rect.fromLTRB(
+            area.left,
+            area.top,
+            math.max(area.right, math.min(line.right, size.width)),
+            area.bottom,
+          );
+  }
+
+  (double, double) checkboxOverhang(double target) {
+    final double half = target / 2;
+    final double height = _noteLayout.size.height;
+    return <double>[
+      for (final AtomicObject atomic in _visibleText.atomics)
+        if (atomic.kind == AtomicKind.checkbox)
+          _noteLayout.rangeBounds(atomic.sourceRange).center.dy,
+    ].fold(
+      (0, 0),
+      ((double, double) reach, double centre) => (
+        math.max(reach.$1, half - centre),
+        math.max(reach.$2, centre + half - height),
+      ),
+    );
+  }
+
+  int? checkboxAt(Offset local, {required double target}) {
+    for (final (int boxStart, Rect area) in checkboxTargets(target)) {
+      if (area.contains(local)) {
+        return boxStart;
+      }
+    }
+    return null;
+  }
+
+  List<SemanticsNode> _checkboxNodes() {
+    final List<(NoteCheckboxSemantics, Rect)> placed = _placedCheckboxes();
+    final List<Rect> areas = _checkboxAreas(<Rect>[
+      for (final (NoteCheckboxSemantics _, Rect rect) in placed) rect,
+    ], _semanticsTarget);
     final List<SemanticsNode> nodes = _semanticsNodes.checkboxes(<int>[
       for (final (NoteCheckboxSemantics box, Rect _) in placed) box.boxStart,
     ]);
@@ -1137,6 +1234,7 @@ class RenderNoteView extends RenderBox
     final ValueChanged<int>? toggle = delegate == null
         ? _onToggleTask
         : delegate.toggleCheckbox;
+    final bool focusable = _readOnly && _onToggleTask != null;
     for (int i = 0; i < placed.length; i++) {
       final (NoteCheckboxSemantics box, Rect _) = placed[i];
       final int boxStart = box.boxStart;
@@ -1147,6 +1245,9 @@ class RenderNoteView extends RenderBox
         ..textDirection = _textDirection;
       if (toggle != null) {
         config.onTap = () => toggle(boxStart);
+      }
+      if (focusable) {
+        config.isFocused = boxStart == _focusedCheckbox;
       }
       nodes[i]
         ..updateWith(config: config)

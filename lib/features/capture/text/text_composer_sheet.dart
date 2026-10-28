@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:field_notes/design/focus/keyboard_focus_builder.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
@@ -18,6 +19,7 @@ import 'package:field_notes/features/note_engine/note_engine.dart'
 import 'package:field_notes/features/notes/photos/photo_import.dart';
 
 import 'composer_footer.dart';
+import 'composer_header_layout.dart';
 import 'editor/format_bar.dart';
 import 'editor/note_editor.dart';
 
@@ -46,6 +48,7 @@ const double _headerTargetInset =
     (kMinInteractiveDimension - _exitPillHeight) / 2;
 const double _exitPillStartPadding = 8;
 const double _exitPillEndPadding = 12;
+const double _exitPillVerticalPadding = 4;
 const BorderRadius _exitPillBorderRadius = BorderRadius.all(
   Radius.circular(10),
 );
@@ -75,6 +78,7 @@ const double _pageHorizontalPadding = 38;
 const double _pageEndGap = 12;
 const double _scrollbarThickness = 9;
 const double _errorGap = 8;
+const double _editorRingOutset = 2;
 const double _chipVerticalPadding = 10;
 const double _composerChromeHeight = 104;
 const int _minimumWritingLines = 4;
@@ -187,7 +191,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           children: <Widget>[
             _header(
               context,
-              middle: roomy ? _titleBlock() : formatBar,
+              middle: roomy ? null : formatBar,
               below: roomy && sidebar ? formatBar : null,
             ),
             DashedDivider(
@@ -270,7 +274,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
 
   Widget _header(
     BuildContext context, {
-    required Widget middle,
+    required Widget? middle,
     Widget? below,
   }) {
     return Padding(
@@ -281,25 +285,30 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              _exitPill(),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: _headerTargetInset,
-                  ),
-                  child: middle,
-                ),
-              ),
-              _saveButton(context),
-            ],
-          ),
+          if (middle == null)
+            ComposerHeaderLayout(
+              leading: _exitPill(),
+              title: _headerMiddle(_titleBlock()),
+              trailing: _saveButton(context),
+            )
+          else
+            Row(
+              children: <Widget>[
+                _exitPill(),
+                Expanded(child: _headerMiddle(middle)),
+                _saveButton(context),
+              ],
+            ),
           ?below,
         ],
       ),
     );
   }
+
+  Widget _headerMiddle(Widget child) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: _headerTargetInset),
+    child: child,
+  );
 
   Widget _headerAction({
     required String label,
@@ -346,10 +355,16 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
       hoverSurface: FocusRingSurface.light,
       child: Container(
         key: composerCloseKey,
-        height: _onPhone(context) ? _phoneHeaderButtonHeight : _exitPillHeight,
+        constraints: BoxConstraints(
+          minHeight: _onPhone(context)
+              ? _phoneHeaderButtonHeight
+              : _exitPillHeight,
+        ),
         padding: const EdgeInsets.only(
           left: _exitPillStartPadding,
           right: _exitPillEndPadding,
+          top: _exitPillVerticalPadding,
+          bottom: _exitPillVerticalPadding,
         ),
         decoration: BoxDecoration(
           color: colors.cardWarm,
@@ -393,16 +408,12 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           if (kicker.isNotEmpty)
             Text(
               kicker,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: textStyles.stampAccent.copyWith(
                 color: context.colors.accentInk,
               ),
             ),
           Text(
             widget.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: textStyles.headlineSerif.copyWith(
               fontSize: 22,
               height: _titleLineHeight,
@@ -446,9 +457,20 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
                   padding: const EdgeInsets.symmetric(
                     horizontal: _phoneSaveHorizontalPadding,
                   ),
-                  child: SizedBox(
-                    height: _phoneHeaderButtonHeight,
-                    child: Center(widthFactor: 1, child: label),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: _phoneHeaderButtonHeight,
+                    ),
+                    child: Center(
+                      widthFactor: 1,
+                      heightFactor: 1,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: _exitPillVerticalPadding,
+                        ),
+                        child: label,
+                      ),
+                    ),
                   ),
                 )
               : Padding(
@@ -568,7 +590,12 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             padding: _pageMargins(constraints.maxHeight),
             child: NoteColumn(
               maxEm: composerMeasureEm,
-              child: _page(bottomInset: _pageEndInset(footer: footer)),
+              child: _page(
+                bottomInset: _pageEndInset(
+                  MediaQuery.textScalerOf(context),
+                  footer: footer,
+                ),
+              ),
             ),
           ),
         );
@@ -577,6 +604,13 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Widget _page({required double bottomInset}) {
+    return _EditorFocusOutline(
+      focusNode: _focusNode,
+      child: _editorView(bottomInset: bottomInset),
+    );
+  }
+
+  Widget _editorView({required double bottomInset}) {
     return noteEditorFor(
       NoteEditorConfig(
         controller: _controller,
@@ -588,6 +622,47 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         bottomInset: bottomInset,
         spellCheckEnabled: widget.spellCheckEnabled,
         photoMediaImporter: widget.photoMediaImporter,
+      ),
+    );
+  }
+}
+
+class _EditorFocusOutline extends StatelessWidget {
+  const _EditorFocusOutline({required this.focusNode, required this.child});
+
+  final FocusNode focusNode;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    const FocusRingSurface surface = FocusRingSurface.light;
+    return KeyboardFocusBuilder(
+      focusNode: focusNode,
+      builder: (BuildContext context, bool shown) => Stack(
+        fit: StackFit.passthrough,
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          child,
+          if (shown)
+            Positioned.fill(
+              left: -_editorRingOutset,
+              top: -_editorRingOutset,
+              right: -_editorRingOutset,
+              bottom: -_editorRingOutset,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  key: focusRingKey,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: surface.colorIn(context.colors),
+                      width: surface.width,
+                    ),
+                    borderRadius: Shapes.buttonBorderRadius,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -605,8 +680,8 @@ EdgeInsets _pageMargins(double surfaceHeight) {
   );
 }
 
-double _pageEndInset({required bool footer}) =>
-    (footer ? composerFooterHeight : 0) + _pageEndGap;
+double _pageEndInset(TextScaler scaler, {required bool footer}) =>
+    (footer ? scaler.scale(composerFooterHeight) : 0) + _pageEndGap;
 
 class _CloseGlyphPainter extends CustomPainter {
   const _CloseGlyphPainter({required this.color});

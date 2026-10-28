@@ -116,7 +116,14 @@ void main() {
       find.widgetWithText(SettingsActionButton, 'Export…'),
       findsOneWidget,
     );
-    expect(find.byType(StickerButton), findsNothing);
+    expect(
+      find.descendant(
+        of: find.widgetWithText(SettingsActionButton, 'Delete all…'),
+        matching: find.byType(StickerButton),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(StickerButton), findsOneWidget);
 
     await tester.tap(find.text('Export…'));
     await tester.pump();

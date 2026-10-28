@@ -15,6 +15,11 @@ const double photoCaptionFieldTarget = 48;
 
 final RegExp _forbidden = RegExp(r'[\]\r\n]');
 
+final StrutStyle _captionStrut = StrutStyle.fromTextStyle(
+  NoteTypography.caption,
+  forceStrutHeight: true,
+);
+
 double photoCaptionLineHeight(TextScaler scaler) {
   final TextPainter painter = TextPainter(
     text: const TextSpan(text: 'Ag', style: NoteTypography.caption),
@@ -45,6 +50,7 @@ class PhotoCaptionField extends StatefulWidget {
     required this.onCommit,
     required this.onCancel,
     this.reach = EdgeInsets.zero,
+    this.focusNode,
   });
 
   final String caption;
@@ -53,6 +59,7 @@ class PhotoCaptionField extends StatefulWidget {
   final ValueChanged<String> onCommit;
   final VoidCallback onCancel;
   final EdgeInsets reach;
+  final FocusNode? focusNode;
 
   @override
   State<PhotoCaptionField> createState() => _PhotoCaptionFieldState();
@@ -65,8 +72,12 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
           baseOffset: 0,
           extentOffset: widget.caption.length,
         );
-  final FocusNode _focus = FocusNode(debugLabel: photoCaptionFieldHint);
+  late final FocusNode? _ownFocus = widget.focusNode == null
+      ? FocusNode(debugLabel: photoCaptionFieldHint)
+      : null;
   bool _settled = false;
+
+  FocusNode get _focus => widget.focusNode ?? _ownFocus!;
 
   @override
   void initState() {
@@ -77,7 +88,7 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
   @override
   void dispose() {
     _controller.dispose();
-    _focus.dispose();
+    _ownFocus?.dispose();
     super.dispose();
   }
 
@@ -163,6 +174,7 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
           focusNode: _focus,
           maxLines: 1,
           style: textStyles.captionSans,
+          strutStyle: _captionStrut,
           textAlign: TextAlign.center,
           cursorColor: context.colors.accentInk,
           keyboardType: TextInputType.text,
@@ -182,6 +194,7 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
                     color: context.colors.placeholder,
                   ),
                 ),
+                strutStyle: _captionStrut,
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

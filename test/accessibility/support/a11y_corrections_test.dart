@@ -16,7 +16,7 @@ A11yState _planted(
   List<A11yStatefulControl> stateful = const <A11yStatefulControl>[],
 }) => A11yState(
   id: 'planted',
-  pump: (WidgetTester tester) => tester.pumpWidget(
+  pump: (WidgetTester tester, A11yVariant variant) => tester.pumpWidget(
     MaterialApp(
       home: Material(
         child: Center(
@@ -134,7 +134,7 @@ void main() {
         tester,
         A11yState(
           id: 'edges',
-          pump: (WidgetTester tester) => tester.pumpWidget(
+          pump: (WidgetTester tester, A11yVariant variant) => tester.pumpWidget(
             MaterialApp(
               home: Material(
                 child: Stack(
@@ -254,7 +254,7 @@ void main() {
       tester,
       A11yState(
         id: 'thrower',
-        pump: (WidgetTester tester) => tester.pumpWidget(
+        pump: (WidgetTester tester, A11yVariant variant) => tester.pumpWidget(
           MaterialApp(
             home: Material(
               child: Column(

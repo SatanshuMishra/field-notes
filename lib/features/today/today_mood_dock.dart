@@ -181,14 +181,10 @@ class _MoodDockCard extends StatelessWidget {
                       children: <Widget>[
                         Text(
                           title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: _titleStyle.copyWith(color: colors.ink),
                         ),
                         Text(
                           subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: (current == null ? _hintStyle : _bloomStyle)
                               .copyWith(color: colors.muted),
                         ),
@@ -262,12 +258,17 @@ class _DockButton extends StatelessWidget {
       shape: HoverShape.pill,
       borderRadius: _buttonRadius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => SizedBox(
-        height: todayMoodDockButtonHitHeight,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
+        constraints: const BoxConstraints(
+          minHeight: todayMoodDockButtonHitHeight,
+        ),
         child: Center(
           widthFactor: 1,
-          child: SizedBox(
-            height: todayMoodDockButtonHeight,
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: todayMoodDockButtonHeight,
+            ),
             child: DecoratedBox(
               decoration: decoration,
               child: HoverFill(
@@ -279,6 +280,7 @@ class _DockButton extends StatelessWidget {
                   padding: padding,
                   child: Center(
                     widthFactor: 1,
+                    heightFactor: 1,
                     child: Text(
                       label,
                       style: _buttonStyle.copyWith(color: foreground),

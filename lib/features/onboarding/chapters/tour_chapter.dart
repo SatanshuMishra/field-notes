@@ -360,8 +360,7 @@ class _SidebarTour extends StatelessWidget {
               _sidebarMargin,
               _sidebarBottom,
             ),
-            child: Align(
-              alignment: Alignment.topCenter,
+            child: SingleChildScrollView(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.topCenter,
@@ -457,8 +456,7 @@ class _BottomBarTour extends StatelessWidget {
                     area.maxWidth - 2 * _bottomBarSide,
                   );
                   return Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
+                    child: SingleChildScrollView(
                       child: SizedBox(
                         width: width,
                         child: Column(
@@ -752,7 +750,7 @@ class _HeaderReplica extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     final bool streakOn = highlighted == _bottomBarStreakNumber;
     final bool gearOn = highlighted == _bottomBarGearNumber;
-    return ExcludeSemantics(
+    return _Picture(
       child: Container(
         height: _headerHeight,
         padding: _headerPadding,
@@ -825,7 +823,7 @@ class _BarReplica extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ExcludeSemantics(
+    return _Picture(
       child: Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
@@ -860,6 +858,19 @@ class _BarReplica extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _Picture extends StatelessWidget {
+  const _Picture({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: MediaQuery.withNoTextScaling(child: child),
     );
   }
 }
@@ -905,11 +916,12 @@ class TourBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool sidebar = layout == ShellLayout.sidebar;
-    final double size = sidebar ? _badgeSidebar : _badgeBottomBar;
-    final Color fill = switch ((inMiniature, highlighted)) {
-      (true, false) || (false, true) => Palette.coral,
-      (true, true) || (false, false) => context.colors.sage,
-    };
+    final double size = MediaQuery.textScalerOf(
+      context,
+    ).scale(sidebar ? _badgeSidebar : _badgeBottomBar);
+    final bool coral = inMiniature != highlighted;
+    final Color fill = coral ? Palette.coral : context.colors.sage;
+    final Color numeral = coral ? Palette.onAccent : context.colors.cardLight;
     return AnimatedContainer(
       duration: _fade(context),
       width: size,
@@ -928,7 +940,7 @@ class TourBadge extends StatelessWidget {
           fontSize: sidebar ? _badgeFontSidebar : _badgeFontBottomBar,
           fontWeight: FontWeight.w600,
           height: 1,
-          color: Palette.onAccent,
+          color: numeral,
         ),
       ),
     );
@@ -957,7 +969,7 @@ class _SidebarMiniature extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return ExcludeSemantics(
+    return _Picture(
       child: Container(
         width: _miniatureWidth,
         height: _miniatureHeight,

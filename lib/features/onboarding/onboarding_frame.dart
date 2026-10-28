@@ -3,8 +3,10 @@ import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/appearance_toggle.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/format/text_extent.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
@@ -101,9 +103,8 @@ const double _phoneSkipHeight = 44;
 const double _phoneSkipRight = 8;
 const double _phoneSkipPadding = 12;
 const double _phoneSkipAlpha = 0.8;
-const double _phoneToggle = 44;
-const double _phoneToggleTop = 2;
-const double _phoneToggleLeft = 8;
+const double _phoneToggle = _target;
+const double _phoneToggleLeft = 6;
 const double _toastWidth = 270;
 const double _toastLift = 86;
 const double _toastRadius = 18;
@@ -125,6 +126,7 @@ const double _macToggleTarget = _target;
 const double _macToggleLeft = 18;
 
 const Color _cream = Palette.creamOnSoil;
+const Color _toastInk = Palette.onAccent;
 const Color _barScene = Color.fromRGBO(28, 22, 16, 0.38);
 const Cubic _cueCurve = Cubic(0.5, 0, 0.3, 1);
 const double _cueArrive = 0.7;
@@ -307,13 +309,29 @@ const BoxDecoration _glow = BoxDecoration(
 
 @immutable
 class _Look {
-  const _Look({required this.dark, required this.soil, required this.meadow});
+  const _Look({
+    required this.dark,
+    required this.soil,
+    required this.meadow,
+    required this.garden,
+  });
 
   final bool dark;
   final bool soil;
   final bool meadow;
+  final bool garden;
 
   bool get cream => dark || soil || meadow;
+
+  bool get sceneAbove => !dark && meadow;
+
+  bool get sceneBelow => !dark && (meadow || garden);
+
+  FocusRingSurface get ringAbove =>
+      dark || meadow ? FocusRingSurface.dark : FocusRingSurface.light;
+
+  FocusRingSurface get ringBelow =>
+      dark || meadow || garden ? FocusRingSurface.dark : FocusRingSurface.light;
 
   GlassTone get glass => dark || meadow ? GlassTone.scene : GlassTone.paper;
 }
@@ -498,6 +516,9 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
         (chapter == OnboardingChapter.opening ||
             chapter == OnboardingChapter.day),
     meadow: chapter == OnboardingChapter.year,
+    garden:
+        chapter == OnboardingChapter.opening ||
+        chapter == OnboardingChapter.day,
   );
 
   @override
@@ -657,19 +678,20 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
       Positioned(
         left: 0,
         right: 0,
-        top: status + _phoneTopGap,
-        height: _phoneTopRow,
+        top: status + _phoneTopGap - (_target - _phoneTopRow) / 2,
+        height: _target,
         child: Center(child: _InOrder(_Region.progress, child: progress)),
       ),
       if (chapter.isStory)
         Positioned(
-          top: status + _phoneTopGap,
+          top: status + _phoneTopGap - (_target - _phoneSkipHeight) / 2,
           right: _phoneSkipRight,
-          height: _phoneSkipHeight,
+          height: _target,
           child: _InOrder(
             _Region.skip,
             child: _PhoneSkip(
               ink: look.dark || look.meadow ? _cream : context.colors.ink,
+              onScene: look.meadow,
               hoverSurface: look.dark || look.meadow
                   ? FocusRingSurface.dark
                   : FocusRingSurface.light,
@@ -678,7 +700,7 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
           ),
         ),
       Positioned(
-        top: status + _phoneToggleTop,
+        top: status,
         left: _phoneToggleLeft,
         width: _phoneToggle,
         height: _phoneToggle,
@@ -689,6 +711,7 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
             tone: look.glass,
             face: _phoneToggle,
             ink: look.meadow ? _cream : null,
+            onScene: look.sceneAbove,
           ),
         ),
       ),
@@ -697,7 +720,6 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
         left: _barSide,
         right: _barSide,
         bottom: _bottomInset + _barLift,
-        height: _barHeight,
         child: _ControlBar(
           look: look,
           back: _InOrder(
@@ -743,6 +765,7 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
             child: _GlassSkip(
               tone: look.glass,
               ink: look.dark || look.meadow ? _cream : context.colors.ink,
+              ring: look.ringAbove,
               onPressed: _controller.skipToSetup,
             ),
           ),
@@ -759,6 +782,7 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
             tone: look.glass,
             face: _macToggle,
             ink: look.meadow ? _cream : null,
+            onScene: look.sceneAbove,
           ),
         ),
       ),
@@ -773,11 +797,17 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
             child: _GlassBack(
               tone: look.glass,
               ink: look.dark || look.meadow ? _cream : context.colors.ink,
+              ring: look.ringBelow,
               onPressed: _back,
             ),
           ),
         ),
-      if (ready) _primary(_primaryLabel(chapter), _controller.next),
+      if (ready)
+        _primary(
+          _primaryLabel(chapter),
+          _controller.next,
+          onScene: look.sceneBelow,
+        ),
     ];
   }
 
@@ -813,29 +843,57 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
     );
   }
 
-  Widget _primary(String label, VoidCallback onPressed) {
+  Widget _primary(
+    String label,
+    VoidCallback onPressed, {
+    bool onScene = false,
+  }) {
     final _ButtonMetrics metrics = _phone ? _bottomBarButton : _sidebarButton;
     return Positioned(
       right: metrics.right,
       bottom: metrics.targetBottom + (_phone ? _bottomInset : 0),
       child: _InOrder(
         _Region.action,
-        child: OnboardingPrimaryButton(
-          key: onboardingPrimaryKey,
-          label: label,
-          onPressed: onPressed,
-          height: metrics.height,
-          borderRadius: BorderRadius.all(Radius.circular(metrics.radius)),
-          padding: EdgeInsets.symmetric(horizontal: metrics.padding),
-          trailing: _arrow,
-          labelStyle: TextStyle(
-            fontFamily: TypographyTokens.sans,
-            fontSize: metrics.labelSize,
-            fontWeight: FontWeight.w600,
-            color: Palette.onAccent,
+        child: _OnScene(
+          shown: onScene,
+          child: OnboardingPrimaryButton(
+            key: onboardingPrimaryKey,
+            label: label,
+            onPressed: onPressed,
+            height: metrics.height,
+            borderRadius: BorderRadius.all(Radius.circular(metrics.radius)),
+            padding: EdgeInsets.symmetric(horizontal: metrics.padding),
+            trailing: _arrow,
+            labelStyle: TextStyle(
+              fontFamily: TypographyTokens.sans,
+              fontSize: metrics.labelSize,
+              fontWeight: FontWeight.w600,
+              color: Palette.onAccent,
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _OnScene extends StatelessWidget {
+  const _OnScene({required this.shown, required this.child});
+
+  final bool shown;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!shown) {
+      return child;
+    }
+    return Theme(
+      data: fieldNotesTheme(
+        platform: Theme.of(context).platform,
+        brightness: Brightness.dark,
+      ),
+      child: child,
     );
   }
 }
@@ -1024,7 +1082,7 @@ class _ToastSlotState extends State<_ToastSlot>
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
               height: 1.35,
-              color: _cream,
+              color: _toastInk,
             ),
           ),
         ),
@@ -1046,18 +1104,19 @@ class _ControlBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget columns = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: _barPadding),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Align(alignment: Alignment.centerLeft, child: back),
-          ),
-          const SizedBox(width: _barGap),
-          cue,
-          const SizedBox(width: _barGap),
-          const Expanded(child: SizedBox.shrink()),
-        ],
+    final Widget columns = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: _barHeight),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: _barPadding),
+        child: Row(
+          children: <Widget>[
+            SizedBox(width: _phoneBack, child: back),
+            const SizedBox(width: _barGap),
+            Expanded(child: Center(child: cue)),
+            const SizedBox(width: _barGap),
+            const SizedBox(width: _phoneBack),
+          ],
+        ),
       ),
     );
     if (!look.meadow) {
@@ -1127,41 +1186,57 @@ class _SwipeCueState extends State<_SwipeCue>
     final Color ink = widget.cream ? _cream : context.colors.ink;
     final Color text = widget.cream ? _cream : FieldNotesColors.light.mutedDeep;
     final String label = widget.label;
+    final TextStyle style = TextStyle(
+      fontFamily: TypographyTokens.sans,
+      fontSize: 12.5,
+      fontWeight: FontWeight.w600,
+      color: text,
+      shadows: widget.cream ? _creamShadow : null,
+    );
     return IgnorePointer(
       child: Semantics(
         container: true,
         label: label.isEmpty ? null : label,
         child: ExcludeSemantics(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              if (widget.track) ...<Widget>[
-                SizedBox(
-                  key: onboardingCueTrackKey,
-                  width: _trackWidth,
-                  height: _cueDot,
-                  child: AnimatedBuilder(
-                    animation: _loop,
-                    builder: (BuildContext context, Widget? _) => CustomPaint(
-                      painter: _CuePainter(ink: ink, progress: _loop.value),
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final bool track =
+                  widget.track &&
+                  singleLineWidth(context, label, style) +
+                          _trackWidth +
+                          _cueGap <=
+                      constraints.maxWidth;
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (track) ...<Widget>[
+                    SizedBox(
+                      key: onboardingCueTrackKey,
+                      width: _trackWidth,
+                      height: _cueDot,
+                      child: AnimatedBuilder(
+                        animation: _loop,
+                        builder: (BuildContext context, Widget? _) =>
+                            CustomPaint(
+                              painter: _CuePainter(
+                                ink: ink,
+                                progress: _loop.value,
+                              ),
+                            ),
+                      ),
+                    ),
+                    const SizedBox(width: _cueGap),
+                  ],
+                  Flexible(
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: style,
                     ),
                   ),
-                ),
-                const SizedBox(width: _cueGap),
-              ],
-              Text(
-                label,
-                maxLines: 1,
-                softWrap: false,
-                style: TextStyle(
-                  fontFamily: TypographyTokens.sans,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: text,
-                  shadows: widget.cream ? _creamShadow : null,
-                ),
-              ),
-            ],
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -1327,11 +1402,13 @@ class _GlassBack extends StatelessWidget {
   const _GlassBack({
     required this.tone,
     required this.ink,
+    required this.ring,
     required this.onPressed,
   });
 
   final GlassTone tone;
   final Color ink;
+  final FocusRingSurface ring;
   final VoidCallback onPressed;
 
   @override
@@ -1342,6 +1419,7 @@ class _GlassBack extends StatelessWidget {
       label: onboardingBackLabel,
       tooltip: onboardingBackTooltip,
       onPressed: onPressed,
+      surface: ring,
       shape: HoverShape.circle,
       borderRadius: round,
       paintsHover: false,
@@ -1371,11 +1449,13 @@ class _GlassToggle extends StatelessWidget {
     required this.tone,
     required this.face,
     required this.ink,
+    required this.onScene,
   });
 
   final GlassTone tone;
   final double face;
   final Color? ink;
+  final bool onScene;
 
   @override
   Widget build(BuildContext context) {
@@ -1393,7 +1473,12 @@ class _GlassToggle extends StatelessWidget {
             ),
           ),
         ),
-        Positioned.fill(child: AppearanceToggle(ink: ink)),
+        Positioned.fill(
+          child: _OnScene(
+            shown: onScene,
+            child: AppearanceToggle(ink: ink),
+          ),
+        ),
       ],
     );
   }
@@ -1402,11 +1487,13 @@ class _GlassToggle extends StatelessWidget {
 class _PhoneSkip extends StatelessWidget {
   const _PhoneSkip({
     required this.ink,
+    required this.onScene,
     required this.hoverSurface,
     required this.onPressed,
   });
 
   final Color ink;
+  final bool onScene;
   final FocusRingSurface hoverSurface;
   final VoidCallback onPressed;
 
@@ -1415,10 +1502,21 @@ class _PhoneSkip extends StatelessWidget {
     const BorderRadius radius = BorderRadius.all(
       Radius.circular(_phoneSkipHeight / 2),
     );
+    final Widget label = Text(
+      onboardingSkipLabel,
+      maxLines: 1,
+      style: TextStyle(
+        fontFamily: TypographyTokens.sans,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: onScene ? ink : ink.withValues(alpha: ink.a * _phoneSkipAlpha),
+      ),
+    );
     return Pressable(
       key: onboardingSkipKey,
       label: onboardingSkipLabel,
       onPressed: onPressed,
+      surface: hoverSurface,
       shape: HoverShape.pill,
       borderRadius: radius,
       paintsHover: false,
@@ -1429,25 +1527,31 @@ class _PhoneSkip extends StatelessWidget {
         shape: HoverShape.pill,
         child: ConstrainedBox(
           constraints: const BoxConstraints(
-            minWidth: _phoneSkipHeight,
-            minHeight: _phoneSkipHeight,
+            minWidth: _target,
+            minHeight: _target,
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _phoneSkipPadding),
-            child: Center(
-              widthFactor: 1,
-              child: Text(
-                onboardingSkipLabel,
-                maxLines: 1,
-                style: TextStyle(
-                  fontFamily: TypographyTokens.sans,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: ink.withValues(alpha: ink.a * _phoneSkipAlpha),
+          child: onScene
+              ? Center(
+                  widthFactor: 1,
+                  heightFactor: 1,
+                  child: GlassSurface(
+                    tone: GlassTone.scene,
+                    borderRadius: radius,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: _phoneSkipPadding,
+                    ),
+                    child: SizedBox(
+                      height: _phoneSkipHeight,
+                      child: Center(widthFactor: 1, child: label),
+                    ),
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: _phoneSkipPadding,
+                  ),
+                  child: Center(widthFactor: 1, child: label),
                 ),
-              ),
-            ),
-          ),
         ),
       ),
     );
@@ -1458,11 +1562,13 @@ class _GlassSkip extends StatelessWidget {
   const _GlassSkip({
     required this.tone,
     required this.ink,
+    required this.ring,
     required this.onPressed,
   });
 
   final GlassTone tone;
   final Color ink;
+  final FocusRingSurface ring;
   final VoidCallback onPressed;
 
   @override
@@ -1472,6 +1578,7 @@ class _GlassSkip extends StatelessWidget {
       key: onboardingSkipKey,
       label: onboardingSkipToSetupLabel,
       onPressed: onPressed,
+      surface: ring,
       shape: HoverShape.pill,
       borderRadius: radius,
       paintsHover: false,
@@ -1576,7 +1683,7 @@ class _ProgressPillState extends State<_ProgressPill> {
     }
   }
 
-  Widget _pill(_MarkMetrics metrics, Color later, {required bool marks}) {
+  Widget _pill(_MarkMetrics metrics, Color later) {
     return GlassSurface(
       tone: widget.look.glass,
       borderRadius: const BorderRadius.all(Radius.circular(_pillRadius)),
@@ -1588,21 +1695,12 @@ class _ProgressPillState extends State<_ProgressPill> {
               in OnboardingChapter.values) ...<Widget>[
             if (chapter.index > 0 && metrics.gap > 0)
               SizedBox(width: metrics.gap),
-            marks
-                ? _ProgressMark(
-                    chapter: chapter,
-                    state: _stateOf(chapter),
-                    mood: _markMood(chapter, widget.mood),
-                    metrics: metrics,
-                    later: later,
-                    onOpen: () => widget.onOpen(chapter),
-                  )
-                : _MarkArt(
-                    state: _stateOf(chapter),
-                    mood: _markMood(chapter, widget.mood),
-                    metrics: metrics,
-                    later: later,
-                  ),
+            _MarkArt(
+              state: _stateOf(chapter),
+              mood: _markMood(chapter, widget.mood),
+              metrics: metrics,
+              later: later,
+            ),
           ],
         ],
       ),
@@ -1615,9 +1713,6 @@ class _ProgressPillState extends State<_ProgressPill> {
     final Color later = widget.look.dark
         ? _cream.withValues(alpha: 0.45)
         : context.colors.ink.withValues(alpha: 0.28);
-    if (widget.layout == ShellLayout.bottomBar) {
-      return _pill(metrics, later, marks: true);
-    }
     const BorderRadius round = BorderRadius.all(Radius.circular(_pillRadius));
     return Semantics(
       container: true,
@@ -1644,7 +1739,7 @@ class _ProgressPillState extends State<_ProgressPill> {
                     borderRadius: round,
                     surface: FocusRingSurface.dark,
                     shape: HoverShape.pill,
-                    child: _pill(metrics, later, marks: false),
+                    child: _pill(metrics, later),
                   ),
                 ),
               ),
@@ -1669,6 +1764,7 @@ class _ProgressPillState extends State<_ProgressPill> {
                   height: _target,
                   child: _HitThrough(
                     child: _MarkTarget(
+                      ring: widget.look.ringAbove,
                       chapter: chapter,
                       state: _stateOf(chapter),
                       metrics: metrics,
@@ -1752,12 +1848,14 @@ class _MarkArt extends StatelessWidget {
 
 class _MarkTarget extends StatelessWidget {
   const _MarkTarget({
+    required this.ring,
     required this.chapter,
     required this.state,
     required this.metrics,
     required this.onOpen,
   });
 
+  final FocusRingSurface ring;
   final OnboardingChapter chapter;
   final _MarkState state;
   final _MarkMetrics metrics;
@@ -1782,6 +1880,7 @@ class _MarkTarget extends StatelessWidget {
           child: past
               ? FocusRing(
                   onPressed: onOpen,
+                  surface: ring,
                   borderRadius: BorderRadius.all(
                     Radius.circular(metrics.slotHeight / 2),
                   ),
@@ -1789,57 +1888,6 @@ class _MarkTarget extends StatelessWidget {
                 )
               : slot,
         ),
-      ),
-    );
-  }
-}
-
-class _ProgressMark extends StatelessWidget {
-  const _ProgressMark({
-    required this.chapter,
-    required this.state,
-    required this.mood,
-    required this.metrics,
-    required this.later,
-    required this.onOpen,
-  });
-
-  final OnboardingChapter chapter;
-  final _MarkState state;
-  final Mood mood;
-  final _MarkMetrics metrics;
-  final Color later;
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget slot = _MarkArt(
-      state: state,
-      mood: mood,
-      metrics: metrics,
-      later: later,
-    );
-    if (state != _MarkState.past) {
-      return Semantics(
-        container: true,
-        selected: state == _MarkState.current ? true : null,
-        label: chapter.progressName,
-        child: slot,
-      );
-    }
-    final BorderRadius round = BorderRadius.all(
-      Radius.circular(metrics.slotHeight / 2),
-    );
-    return Pressable(
-      label: chapter.progressName,
-      onPressed: onOpen,
-      borderRadius: round,
-      paintsHover: false,
-      builder: (BuildContext context, bool hovered) => HoverFill(
-        hovered: hovered,
-        borderRadius: round,
-        surface: FocusRingSurface.dark,
-        child: slot,
       ),
     );
   }

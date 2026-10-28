@@ -63,7 +63,7 @@ final class GlassColors {
   );
 
   static const GlassColors toast = GlassColors(
-    tint: Color.fromRGBO(40, 30, 22, 0.62),
+    tint: Color.fromRGBO(40, 30, 22, 0.78),
     border: Color.fromRGBO(255, 250, 240, 0.22),
     highlight: Color.fromRGBO(255, 255, 255, 0.16),
     pill: Color.fromRGBO(255, 250, 240, 0.24),

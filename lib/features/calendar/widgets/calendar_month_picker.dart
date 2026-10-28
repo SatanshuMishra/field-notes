@@ -1,5 +1,8 @@
-import 'package:flutter/widgets.dart';
+import 'dart:math' as math;
 
+import 'package:flutter/material.dart';
+
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
@@ -29,6 +32,10 @@ const BorderRadius _actionRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusXs),
 );
 const Duration _popDuration = Duration(milliseconds: 140);
+double _pointerMinTargetOn(TargetPlatform platform) =>
+    platform == TargetPlatform.macOS || platform == TargetPlatform.windows
+    ? minTargetOn(platform)
+    : 0;
 
 const TextStyle _yearStyle = TextStyle(
   fontFamily: TypographyTokens.serif,
@@ -69,6 +76,10 @@ class CalendarMonthPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
+    final double arrowSize = math.max(
+      _yearArrowSize,
+      _pointerMinTargetOn(Theme.of(context).platform),
+    );
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: 1),
       duration: _popDuration,
@@ -114,7 +125,7 @@ class CalendarMonthPicker extends StatelessWidget {
                         direction: ChevronDirection.previous,
                         semanticLabel: 'Previous year',
                         onPressed: onPreviousYear,
-                        size: _yearArrowSize,
+                        size: arrowSize,
                         glyphSize: 13,
                         alignment: Alignment.centerLeft,
                       ),
@@ -129,7 +140,7 @@ class CalendarMonthPicker extends StatelessWidget {
                         direction: ChevronDirection.next,
                         semanticLabel: 'Next year',
                         onPressed: onNextYear,
-                        size: _yearArrowSize,
+                        size: arrowSize,
                         glyphSize: 13,
                         alignment: Alignment.centerRight,
                       ),
@@ -226,15 +237,23 @@ class _MonthTile extends StatelessWidget {
       surface: isDisplayed ? FocusRingSurface.dark : FocusRingSurface.light,
       borderRadius: _monthBorderRadius,
       position: DecorationPosition.background,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: _monthStyle.copyWith(
-            color: isDisplayed
-                ? Palette.onAccent
-                : (isCurrent ? colors.accentInk : colors.ink),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: _pointerMinTargetOn(Theme.of(context).platform),
+        ),
+        child: Center(
+          heightFactor: 1,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: _monthStyle.copyWith(
+                color: isDisplayed
+                    ? Palette.onAccent
+                    : (isCurrent ? colors.accentInk : colors.ink),
+              ),
+            ),
           ),
         ),
       ),
@@ -277,9 +296,18 @@ class _PickerAction extends StatelessWidget {
         label: label,
         onPressed: onPressed,
         borderRadius: _actionRadius,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Text(label, style: context.textStyles.caption11Sans),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: _pointerMinTargetOn(Theme.of(context).platform),
+          ),
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Text(label, style: context.textStyles.caption11Sans),
+            ),
+          ),
         ),
       ),
     );

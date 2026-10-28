@@ -50,6 +50,7 @@ const double _sidebarPreviewHeight = 62;
 const double _sidebarChoicesGap = 30;
 const double _sidebarChoiceWidth = 104;
 const double _sidebarChoiceHeight = 58;
+const double _sidebarChoiceInset = 8;
 const double _sidebarChoiceGap = 8;
 const double _sidebarHelpGap = 16;
 
@@ -96,7 +97,6 @@ const Offset _previewShadowOffset = Offset(0, 12);
 const double _previewShadowBlur = 26;
 const double _previewShadowSpread = -12;
 const double _offOpacity = 0.35;
-const double _onAccentCaption = 0.88;
 const double _helpLineGap = 8;
 
 const ColorFilter _quiet = ColorFilter.matrix(<double>[
@@ -240,57 +240,52 @@ class _SidebarReminder extends StatelessWidget {
               _sidebarMargin,
               _sidebarBottom,
             ),
-            child: Column(
-              children: <Widget>[
-                Flexible(
-                  child: FittedBox(
+            child: SingleChildScrollView(
+              child: Column(
+                children: <Widget>[
+                  FittedBox(
                     fit: BoxFit.scaleDown,
-                    alignment: Alignment.topCenter,
-                    child: Column(
+                    child: _BigTime(
+                      choice: choice,
+                      size: _sidebarTimeSize,
+                      tracking: _sidebarTimeTracking,
+                    ),
+                  ),
+                  const SizedBox(height: _sidebarTimeGap),
+                  SizedBox(
+                    width: _sidebarPreviewWidth,
+                    child: _Preview(
+                      choice: choice,
+                      height: _sidebarPreviewHeight,
+                      bodySize: 12.5,
+                    ),
+                  ),
+                  const SizedBox(height: _sidebarChoicesGap),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        _BigTime(
-                          choice: choice,
-                          size: _sidebarTimeSize,
-                          tracking: _sidebarTimeTracking,
-                        ),
-                        const SizedBox(height: _sidebarTimeGap),
-                        SizedBox(
-                          width: _sidebarPreviewWidth,
-                          child: _Preview(
-                            choice: choice,
-                            height: _sidebarPreviewHeight,
-                            bodySize: 12.5,
+                        for (final (int index, ReminderChoice option)
+                            in _choices.indexed) ...<Widget>[
+                          if (index > 0)
+                            const SizedBox(width: _sidebarChoiceGap),
+                          _ChoiceButton(
+                            key: reminderChoiceKey(option),
+                            choice: option,
+                            selected: option == choice,
+                            onPressed: () => onChoose(option),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: _sidebarChoicesGap),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      for (final (int index, ReminderChoice option)
-                          in _choices.indexed) ...<Widget>[
-                        if (index > 0) const SizedBox(width: _sidebarChoiceGap),
-                        _ChoiceButton(
-                          key: reminderChoiceKey(option),
-                          choice: option,
-                          selected: option == choice,
-                          onPressed: () => onChoose(option),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (notificationsOff) ...<Widget>[
-                  const SizedBox(height: _sidebarHelpGap),
-                  const _NotificationsHelp(),
+                  if (notificationsOff) ...<Widget>[
+                    const SizedBox(height: _sidebarHelpGap),
+                    const _NotificationsHelp(),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -332,66 +327,55 @@ class _BottomBarReminder extends StatelessWidget {
           Expanded(
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints area) {
-                final double width = math.max(
-                  0.0,
-                  area.maxWidth - 2 * _bottomBarSide,
-                );
-                return Column(
-                  children: <Widget>[
-                    Expanded(
-                      child: Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: SizedBox(
-                            width: width,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: <Widget>[
-                                _BigTime(
-                                  choice: choice,
-                                  size: _bottomBarTimeSize,
-                                ),
-                                const SizedBox(height: _bottomBarTimeGap),
-                                _Preview(
-                                  choice: choice,
-                                  height: _bottomBarPreviewHeight,
-                                  bodySize: 11.5,
-                                ),
-                              ],
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: _bottomBarSide,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: area.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          Expanded(
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: <Widget>[
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: _BigTime(
+                                      choice: choice,
+                                      size: _bottomBarTimeSize,
+                                    ),
+                                  ),
+                                  const SizedBox(height: _bottomBarTimeGap),
+                                  _Preview(
+                                    choice: choice,
+                                    height: _bottomBarPreviewHeight,
+                                    bodySize: 11.5,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    ),
-                    ConstrainedBox(
-                      constraints: BoxConstraints(maxHeight: area.maxHeight),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: SizedBox(
-                          width: width,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: <Widget>[
-                              if (notificationsOff) ...<Widget>[
-                                const _NotificationsHelp(),
-                                const SizedBox(height: _bottomBarHelpGap),
-                              ],
-                              _Rise(
-                                duration: _rowsRise,
-                                delay: _rowsDelay,
-                                child: _ChoiceRows(
-                                  choice: choice,
-                                  onChoose: onChoose,
-                                ),
-                              ),
-                            ],
+                          if (notificationsOff) ...<Widget>[
+                            const _NotificationsHelp(),
+                            const SizedBox(height: _bottomBarHelpGap),
+                          ],
+                          _Rise(
+                            duration: _rowsRise,
+                            delay: _rowsDelay,
+                            child: _ChoiceRows(
+                              choice: choice,
+                              onChoose: onChoose,
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 );
               },
             ),
@@ -541,8 +525,6 @@ class _Preview extends StatelessWidget {
                     Expanded(
                       child: Text(
                         reminderNotificationTitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: TypographyTokens.sans,
                           fontSize: 12,
@@ -567,8 +549,6 @@ class _Preview extends StatelessWidget {
                 const SizedBox(height: 1),
                 Text(
                   _previewBody(choice),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: TypographyTokens.sans,
                     fontSize: bodySize,
@@ -625,8 +605,11 @@ class _ChoiceButton extends StatelessWidget {
           duration: MediaQuery.disableAnimationsOf(context)
               ? Duration.zero
               : _selectFade,
-          width: _sidebarChoiceWidth,
-          constraints: const BoxConstraints(minHeight: _sidebarChoiceHeight),
+          constraints: const BoxConstraints(
+            minWidth: _sidebarChoiceWidth,
+            minHeight: _sidebarChoiceHeight,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: _sidebarChoiceInset),
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected ? Palette.coral : colors.cardWarm,
@@ -662,9 +645,7 @@ class _ChoiceButton extends StatelessWidget {
                     fontFamily: TypographyTokens.sans,
                     fontSize: 10.5,
                     fontWeight: FontWeight.w500,
-                    color: selected
-                        ? Palette.onAccent.withValues(alpha: _onAccentCaption)
-                        : colors.muted,
+                    color: selected ? Palette.onAccent : colors.muted,
                   ),
                 ),
               ],
@@ -765,8 +746,6 @@ class _ChoiceRow extends StatelessWidget {
                     children: <Widget>[
                       Text(
                         label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: TypographyTokens.sans,
                           fontSize: 14,
@@ -778,8 +757,6 @@ class _ChoiceRow extends StatelessWidget {
                       const SizedBox(height: 1),
                       Text(
                         caption,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: TypographyTokens.sans,
                           fontSize: 11.5,

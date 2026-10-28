@@ -1,0 +1,2 @@
+focus-visible | s7-sync-error-unreachable | Invite code | <root> # measured: 10.32:1 by token arithmetic
+focus-visible | s7-sync-error-unreachable | Server address | <root> # measured: 10.32:1 by token arithmetic

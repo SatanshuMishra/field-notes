@@ -1,0 +1,36 @@
+focus-visible | d5-reader-menu-sidebar | Copy | <root> # Flutter's own control
+focus-visible | d5-reader-menu-sidebar | Select All | <root> # Flutter's own control
+keyboard | d11-mood-picker-sidebar | Dismiss mood picker | <root> # Flutter's own control
+keyboard | d13-change-mood-dialog-sidebar | Dismiss | <root> # Flutter's own control
+keyboard | d14-delete-entry-dialog-sidebar | Dismiss | <root> # Flutter's own control
+keyboard | d16-day-past-mood-sidebar | Dismiss day detail | <root> # Flutter's own control
+keyboard | d7-day-with-entries-sidebar | Dismiss day detail | <root> # Flutter's own control
+keyboard | d8-day-empty-sidebar | Dismiss day detail | <root> # Flutter's own control
+missing-role | d11-mood-picker-sidebar | Dismiss mood picker | <root> # Flutter's own control
+missing-role | d11-mood-picker-sidebar@2x | Dismiss mood picker | <root> # Flutter's own control
+missing-role | d13-change-mood-dialog-sidebar | Dismiss | <root> # Flutter's own control
+missing-role | d13-change-mood-dialog-sidebar@2x | Dismiss | <root> # Flutter's own control
+missing-role | d14-delete-entry-dialog-sidebar | Dismiss | <root> # Flutter's own control
+missing-role | d14-delete-entry-dialog-sidebar@2x | Dismiss | <root> # Flutter's own control
+missing-role | d16-day-past-mood-sidebar | Dismiss day detail | <root> # Flutter's own control
+missing-role | d16-day-past-mood-sidebar@2x | Dismiss day detail | <root> # Flutter's own control
+missing-role | d7-day-with-entries-sidebar | Dismiss day detail | <root> # Flutter's own control
+missing-role | d7-day-with-entries-sidebar@2x | Dismiss day detail | <root> # Flutter's own control
+missing-role | d8-day-empty-sidebar | Dismiss day detail | <root> # Flutter's own control
+missing-role | d8-day-empty-sidebar@2x | Dismiss day detail | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar | Copy | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar | Select All | <root> # Flutter's own control
+text-contrast | d11-mood-picker-sidebar | tap to plant today's bloom | <root> # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar | Change | Feeling Calm / Lavender · today's bloom # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar | Feeling Calm | <root> # measured: 8.58:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar | Lavender · today's bloom | <root> # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar@2x | Change | Feeling Calm / Lavender · today's bloom # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar@2x | Feeling Calm | <root> # measured: 8.58:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar@2x | Lavender · today's bloom | <root> # measured: 5.76:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | 9:30 AM | Friday, September 18 / Morning note # measured: 6.53:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | Close | Friday, September 18 / Morning note # measured: 9.41:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | Friday, September 18 | <root> # measured: 6.53:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | Morning note | <root> # measured: 9.73:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar@2x | 9:30 AM | Friday, September 18 / Morning note # measured: 6.53:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar@2x | Close | Friday, September 18 / Morning note # measured: 9.41:1 by token arithmetic
+truncated-text | d5-reader-menu-sidebar@2x | Select All | <root> # Flutter's own control

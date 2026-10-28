@@ -155,7 +155,7 @@ const List<_VideoCase> _videoCases = <_VideoCase>[
     supportsPause: false,
     asking: false,
     resumable: true,
-    hint: 'space start · esc leave',
+    hint: 'space try again · esc leave',
   ),
   (
     name: 'idle',

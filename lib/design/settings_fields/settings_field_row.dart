@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/format/text_extent.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
@@ -98,34 +99,50 @@ class SettingsFieldRow extends StatelessWidget {
         : ExcludeFocus(child: IgnorePointer(child: control));
     final Widget row = switch (layout) {
       ShellLayout.sidebar => LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) => Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Expanded(child: text),
-            const SizedBox(width: _sidebarControlGap),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: constraints.maxWidth / 2),
-              child: slot,
-            ),
-          ],
-        ),
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double controlWidth = constraints.maxWidth / 2;
+          if (_splitsAWord(
+            context,
+            labelStyle,
+            constraints.maxWidth - _sidebarControlGap - controlWidth,
+          )) {
+            return _stacked(text, slot);
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Expanded(child: text),
+              const SizedBox(width: _sidebarControlGap),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: controlWidth),
+                child: slot,
+              ),
+            ],
+          );
+        },
       ),
       ShellLayout.bottomBar => LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) => Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Expanded(child: text),
-            const SizedBox(width: _phoneControlGap),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth:
-                    math.max(0, constraints.maxWidth - _phoneControlGap) *
-                    _phoneControlShare,
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double shared = math.max(
+            0,
+            constraints.maxWidth - _phoneControlGap,
+          );
+          final double controlWidth = shared * _phoneControlShare;
+          if (_splitsAWord(context, labelStyle, shared - controlWidth)) {
+            return _stacked(text, slot);
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Expanded(child: text),
+              const SizedBox(width: _phoneControlGap),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: controlWidth),
+                child: slot,
               ),
-              child: slot,
-            ),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     };
     if (onPressed == null) {
@@ -146,6 +163,29 @@ class SettingsFieldRow extends StatelessWidget {
       ),
     );
   }
+
+  Widget _stacked(Widget text, Widget slot) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        text,
+        const SizedBox(height: _belowGap),
+        slot,
+      ],
+    );
+  }
+
+  bool _splitsAWord(BuildContext context, TextStyle labelStyle, double room) {
+    final String? description = this.description;
+    return _widestWord(context, labelStyle, label) > room ||
+        (description != null &&
+            _widestWord(context, context.textStyles.captionSans, description) >
+                room);
+  }
+
+  double _widestWord(BuildContext context, TextStyle style, String text) =>
+      widestWordWidth(context, text, style);
 
   Widget _labelLine(BuildContext context, TextStyle style) {
     final Widget text = Text(label, style: style);

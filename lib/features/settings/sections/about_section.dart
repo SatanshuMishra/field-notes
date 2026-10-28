@@ -1,3 +1,4 @@
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/data/links/link_opener.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
@@ -114,6 +115,7 @@ const EdgeInsets _phoneLabelPadding = EdgeInsets.symmetric(horizontal: 2);
 const double _phoneAuthorNameSize = 15;
 const double _phoneDescriptionHeight = 1.5;
 const double _phoneButtonGap = 8;
+const double _phoneButtonLabelPadding = 8;
 const double _phoneButtonRadius = 14;
 const double _phoneButtonLabelSize = 14;
 const double _phoneUpdateLabelSize = 15;
@@ -345,28 +347,32 @@ class AboutSection extends ConsumerWidget {
     required _AboutActions actions,
   }) {
     final Widget control = switch (status) {
-      UpdateIdle() ||
-      UpdateCurrent() ||
-      UpdateCheckFailed() => SettingsActionButton(
-        label: checkForUpdatesLabel,
-        onPressed: actions.check,
+      UpdateIdle() || UpdateCurrent() || UpdateCheckFailed() => MinTarget(
+        child: SettingsActionButton(
+          label: checkForUpdatesLabel,
+          onPressed: actions.check,
+        ),
       ),
       UpdateChecking() => const _CheckingPill(),
       UpdateAvailable() => Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Flexible(
-            child: SettingsActionButton(
-              label: readChangelogLabel,
-              onPressed: actions.openNew,
+            child: MinTarget(
+              child: SettingsActionButton(
+                label: readChangelogLabel,
+                onPressed: actions.openNew,
+              ),
             ),
           ),
           const SizedBox(width: _desktopPillGap),
           Flexible(
-            child: SettingsActionButton(
-              label: updateNowLabel,
-              tone: SettingsActionTone.primary,
-              onPressed: actions.openNew,
+            child: MinTarget(
+              child: SettingsActionButton(
+                label: updateNowLabel,
+                tone: SettingsActionTone.primary,
+                onPressed: actions.openNew,
+              ),
             ),
           ),
         ],
@@ -417,9 +423,11 @@ class AboutSection extends ConsumerWidget {
                   description: version == null
                       ? null
                       : releaseNotesDescription(version),
-                  control: SettingsActionButton(
-                    label: readNotesLabel,
-                    onPressed: actions.openInstalled,
+                  control: MinTarget(
+                    child: SettingsActionButton(
+                      label: readNotesLabel,
+                      onPressed: actions.openInstalled,
+                    ),
                   ),
                 ),
               ],
@@ -434,16 +442,20 @@ class AboutSection extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
                       Flexible(
-                        child: SettingsActionButton(
-                          label: aboutWebsiteLabel,
-                          onPressed: () => _open(aboutWebsiteLink),
+                        child: MinTarget(
+                          child: SettingsActionButton(
+                            label: aboutWebsiteLabel,
+                            onPressed: () => _open(aboutWebsiteLink),
+                          ),
                         ),
                       ),
                       const SizedBox(width: _desktopPillGap),
                       Flexible(
-                        child: SettingsActionButton(
-                          label: aboutGitHubLabel,
-                          onPressed: () => _open(aboutGitHubLink),
+                        child: MinTarget(
+                          child: SettingsActionButton(
+                            label: aboutGitHubLabel,
+                            onPressed: () => _open(aboutGitHubLink),
+                          ),
                         ),
                       ),
                     ],
@@ -945,8 +957,7 @@ class _PhoneButton extends StatelessWidget {
     );
     final Widget text = Text(
       label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
       style: context.textStyles.buttonSans.copyWith(
         fontSize: _phoneUpdateLabelSize,
         color: primary ? Palette.onAccent : colors.ink,
@@ -959,7 +970,7 @@ class _PhoneButton extends StatelessWidget {
       borderRadius: radius,
       paintsHover: false,
       builder: (BuildContext context, bool hovered) => Container(
-        height: height,
+        constraints: BoxConstraints(minHeight: height),
         decoration: BoxDecoration(
           color: primary ? Palette.coral : colors.cardBright,
           border: Border.all(color: colors.line, width: Shapes.outlineWidth),
@@ -972,7 +983,10 @@ class _PhoneButton extends StatelessWidget {
           borderRadius: radius,
           position: DecorationPosition.background,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _phoneButtonGap),
+            padding: const EdgeInsets.symmetric(
+              horizontal: _phoneButtonGap,
+              vertical: _phoneButtonLabelPadding,
+            ),
             child: Center(
               child: pulsing
                   ? Row(
@@ -1065,7 +1079,9 @@ class _PhoneLinkButton extends StatelessWidget {
       borderRadius: radius,
       paintsHover: false,
       builder: (BuildContext context, bool hovered) => Container(
-        height: aboutPhoneLinkButtonHeight,
+        constraints: const BoxConstraints(
+          minHeight: aboutPhoneLinkButtonHeight,
+        ),
         decoration: BoxDecoration(
           color: colors.cardBright,
           border: Border.all(color: colors.line, width: Shapes.outlineWidth),
@@ -1075,15 +1091,20 @@ class _PhoneLinkButton extends StatelessWidget {
           hovered: hovered,
           borderRadius: radius,
           position: DecorationPosition.background,
-          child: Center(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.textStyles.labelSans.copyWith(
-                fontSize: _phoneButtonLabelSize,
-                fontWeight: FontWeight.w600,
-                color: colors.ink,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: _phoneButtonGap,
+              vertical: _phoneButtonLabelPadding,
+            ),
+            child: Center(
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: context.textStyles.labelSans.copyWith(
+                  fontSize: _phoneButtonLabelSize,
+                  fontWeight: FontWeight.w600,
+                  color: colors.ink,
+                ),
               ),
             ),
           ),

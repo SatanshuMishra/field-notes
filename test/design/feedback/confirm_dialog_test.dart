@@ -102,7 +102,7 @@ void main() {
     await openAndClose(() => tester.sendKeyEvent(LogicalKeyboardKey.escape));
   }, variant: _bothPlatforms);
 
-  testWidgets('a destructive confirm paints its button in the danger colour',
+  testWidgets('a destructive confirm draws its button in the danger ink',
       (WidgetTester tester) async {
     await tester.pumpWidget(const _Harness(danger: true));
     await tester.tap(find.text('Open'));
@@ -114,7 +114,12 @@ void main() {
         matching: faceBoxes(),
       ),
     );
-    expect((dangerBox.decoration as BoxDecoration).color, Palette.danger);
+    final BoxDecoration dangerFace = dangerBox.decoration as BoxDecoration;
+    expect(dangerFace.color, isNull);
+    expect(
+      (dangerFace.border! as Border).top.color,
+      FieldNotesColors.light.dangerInk,
+    );
 
     await tester.tap(find.byKey(confirmDialogCancelKey));
     await tester.pumpAndSettle();

@@ -15,7 +15,6 @@ const double scrubberHandleRadius = 7.0;
 const double _shadowAlpha = 0.45;
 const double _shadowBlur = 3;
 const Offset _shadowOffset = Offset(0, 1);
-const double _focusGap = 2;
 const Duration scrubberKeyboardStep = Duration(seconds: 5);
 const String videoScrubberLabel = 'Video position';
 const BorderRadius _scrubberHoverRadius = BorderRadius.all(
@@ -332,13 +331,16 @@ class _ScrubberPainter extends CustomPainter {
       Paint()..color = Palette.mediaInk,
     );
     if (focused) {
-      canvas.drawCircle(
-        handle,
-        scrubberHandleRadius + _focusGap + FocusRingSurface.dark.width / 2,
+      final double ring = FocusRingSurface.dark.width;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          (Offset.zero & size).deflate(ring / 2),
+          Radius.circular(size.height / 2),
+        ),
         Paint()
           ..color = FocusRingSurface.dark.color
           ..style = PaintingStyle.stroke
-          ..strokeWidth = FocusRingSurface.dark.width,
+          ..strokeWidth = ring,
       );
     }
   }

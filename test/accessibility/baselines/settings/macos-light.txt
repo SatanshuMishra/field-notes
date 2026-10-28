@@ -1,0 +1,99 @@
+flutter-text-contrast | b2-settings-spell-unavailable | Light | <root> # measured: 4.59:1 by token arithmetic
+flutter-text-contrast | b2-settings-spell-unavailable | Medium | <root> # measured: 4.59:1 by token arithmetic
+flutter-text-contrast | b2-settings-spell-unavailable | Sunday | <root> # measured: 10.32:1 by token arithmetic
+flutter-text-contrast | b4-select-open | Light | <root> # measured: 4.59:1 by token arithmetic
+flutter-text-contrast | b4-select-open | Medium | <root> # measured: 4.59:1 by token arithmetic
+flutter-text-contrast | b4-select-open | Sunday | <root> # measured: 10.32:1 by token arithmetic
+flutter-text-contrast | b7-settings-journal | Light | <root> # measured: 4.59:1 by token arithmetic
+flutter-text-contrast | b7-settings-journal | Medium | <root> # measured: 4.59:1 by token arithmetic
+flutter-text-contrast | b7-settings-journal | Sunday | <root> # measured: 10.32:1 by token arithmetic
+keyboard | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
+keyboard | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b14-sync-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
+missing-role | b5-delete-all-dialog | Dismiss | <root> # Flutter's own control
+missing-role | b5-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
+text-contrast | b14-sync-delete-all-dialog | About | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Data | <root> # measured: 6.02:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Data | <root> #2 # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Delete all | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Erase every entry, photo, and mood on this device. | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Export | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Export… | <root> # measured: 4.50:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Journal | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Open | <root> # measured: 4.50:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Privacy policy | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Reclaim space | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Reclaim space | <root> #2 # measured: 4.50:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Reminders & sound | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Remove photo files no entry or draft still refers to. | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Save a zip of every entry and photo. | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Sync & storage | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | Voice | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # measured: 4.51:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | erase | <root> # measured: 4.52:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | settings | <root> # measured: 4.50:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog | your journal | <root> # measured: 4.52:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | About | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Data | <root> # measured: 6.02:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Data | <root> #2 # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Delete all | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Erase every entry, photo, and mood on this device. | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Export | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Export… | <root> # measured: 4.50:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Journal | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Open | <root> # measured: 4.50:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Privacy policy | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Reclaim space | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Reclaim space | <root> #2 # measured: 4.50:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Reminders & sound | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Remove photo files no entry or draft still refers to. | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Save a zip of every entry and photo. | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Sync & storage | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | Voice | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # measured: 4.51:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | erase | <root> # measured: 4.52:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | settings | <root> # measured: 4.50:1 by token arithmetic
+text-contrast | b14-sync-delete-all-dialog@2x | your journal | <root> # measured: 4.52:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | About | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Data | <root> # measured: 6.02:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Data | <root> #2 # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Delete all | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Erase every entry, photo, and mood on this device. | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Export | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Export… | <root> # measured: 4.50:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Journal | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Open | <root> # measured: 4.50:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Privacy policy | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Reclaim space | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Reclaim space | <root> #2 # measured: 4.50:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Reminders & sound | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Remove photo files no entry or draft still refers to. | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Save a zip of every entry and photo. | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Sync & storage | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | Voice | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # measured: 4.51:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | erase | <root> # measured: 4.52:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | settings | <root> # measured: 4.50:1 by token arithmetic
+text-contrast | b5-delete-all-dialog | your journal | <root> # measured: 4.52:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | About | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Data | <root> # measured: 6.02:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Data | <root> #2 # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Delete all | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Erase every entry, photo, and mood on this device. | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Export | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Export… | <root> # measured: 4.50:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Journal | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Open | <root> # measured: 4.50:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Privacy policy | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Reclaim space | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Reclaim space | <root> #2 # measured: 4.50:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Reminders & sound | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Remove photo files no entry or draft still refers to. | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Save a zip of every entry and photo. | <root> # measured: 4.51:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Sync & storage | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | Voice | <root> # measured: 6.71:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | What Field Notes keeps, what the sync server sees, and ho... | Privacy policy / What Field Notes keeps, what the sync server sees, and how to delete it. # measured: 4.51:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | erase | <root> # measured: 4.52:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | settings | <root> # measured: 4.50:1 by token arithmetic
+text-contrast | b5-delete-all-dialog@2x | your journal | <root> # measured: 4.52:1 by token arithmetic

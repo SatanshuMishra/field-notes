@@ -9,6 +9,7 @@ import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/features/calendar/model/calendar_month.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
+import 'package:field_notes/features/onboarding/label_and_value.dart';
 import 'package:field_notes/features/onboarding/onboarding_swipe.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -77,6 +78,7 @@ const BorderRadius _boxRadius = BorderRadius.all(Radius.circular(14));
 const double _pastOpacity = 0.45;
 const double _laterOpacity = 0.65;
 const double _todayBorder = 2;
+const double _numberInsetFloor = 2 * _todayBorder;
 const double _cardBorder = 2;
 const double _glowSpread = 6;
 const double _glowAlpha = 0.28;
@@ -298,8 +300,8 @@ class _CellMetrics {
       width: width,
       height: height,
       radius: radius,
-      numberLeft: numberLeft * factor,
-      numberTop: numberTop * factor,
+      numberLeft: math.max(_numberInsetFloor, numberLeft * factor),
+      numberTop: math.max(_numberInsetFloor, numberTop * factor),
       numberSize: math.max(_numberFloor, numberSize * factor),
       art: art * factor,
       artLift: artLift * factor,
@@ -755,32 +757,22 @@ class _BottomBarMonth extends StatelessWidget {
                 sliderReach: _bottomBarSliderReach,
                 onFill: onFill,
                 label: monthSliderLabelBottomBar,
-                top: Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        monthSliderLabelBottomBar,
-                        style: TextStyle(
-                          fontFamily: TypographyTokens.accent,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: colors.ink,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: _bottomBarValueGap),
-                    Text(
-                      plan.fillLabel,
-                      style: TextStyle(
-                        fontFamily: TypographyTokens.accent,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: colors.accentInk,
-                      ),
-                    ),
-                  ],
+                top: LabelAndValue(
+                  gap: _bottomBarValueGap,
+                  label: monthSliderLabelBottomBar,
+                  labelStyle: TextStyle(
+                    fontFamily: TypographyTokens.accent,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: colors.ink,
+                  ),
+                  value: plan.fillLabel,
+                  valueStyle: TextStyle(
+                    fontFamily: TypographyTokens.accent,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: colors.accentInk,
+                  ),
                 ),
               ),
             ),
@@ -964,7 +956,7 @@ class _Letters extends StatelessWidget {
   Widget build(BuildContext context) {
     return ExcludeSemantics(
       child: SizedBox(
-        height: height,
+        height: MediaQuery.textScalerOf(context).scale(height),
         child: Row(
           key: monthLettersKey,
           children: <Widget>[
@@ -1100,16 +1092,49 @@ class _DayCell extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     final BorderRadius radius = BorderRadius.circular(metrics.radius);
     final Widget? art = _art(colors);
+    final double numberBottom =
+        metrics.numberTop +
+        MediaQuery.textScalerOf(context).scale(metrics.numberSize);
     final Widget face = Stack(
       fit: StackFit.expand,
       clipBehavior: Clip.none,
       children: <Widget>[
         if (art != null)
-          Center(
-            child: Padding(
-              padding: EdgeInsets.only(top: metrics.artLift),
-              child: art,
-            ),
+          LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final double size = math.min(
+                metrics.art,
+                math.max(0, constraints.maxHeight - numberBottom),
+              );
+              if (size <= 0 || size < metrics.art / 2) {
+                return const SizedBox.shrink();
+              }
+              final double centredTop =
+                  (constraints.maxHeight - size + metrics.artLift) / 2;
+              return Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  Positioned(
+                    top: math.max(centredTop, numberBottom),
+                    left: 0,
+                    right: 0,
+                    height: size,
+                    child: Center(
+                      child: SizedBox.square(
+                        dimension: size,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: SizedBox.square(
+                            dimension: metrics.art,
+                            child: Center(child: art),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         Positioned(
           left: metrics.numberLeft,
@@ -1135,7 +1160,7 @@ class _DayCell extends StatelessWidget {
           ),
       ],
     );
-    final Widget cell = switch (state) {
+    final Widget frame = switch (state) {
       _DayState.today => _Glow(
         delay: _todayGlowDelay,
         period: _todayGlowPeriod,
@@ -1147,7 +1172,6 @@ class _DayCell extends StatelessWidget {
             border: Border.all(color: Palette.coral, width: _todayBorder),
             borderRadius: radius,
           ),
-          child: face,
         ),
       ),
       _DayState.sample => DecoratedBox(
@@ -1156,33 +1180,37 @@ class _DayCell extends StatelessWidget {
           border: Border.all(color: colors.ink20, width: Shapes.outlineWidth),
           borderRadius: radius,
         ),
-        child: face,
       ),
       _DayState.past => DecoratedBox(
         decoration: BoxDecoration(
           border: Border.all(color: colors.ink08, width: Shapes.outlineWidth),
           borderRadius: radius,
         ),
-        child: face,
       ),
       _DayState.later => CustomPaint(
-        foregroundPainter: DashedBorderPainter(
+        painter: DashedBorderPainter(
           color: colors.ink22,
           radius: metrics.radius,
         ),
-        child: face,
       ),
     };
-    return AnimatedOpacity(
-      opacity: switch (state) {
-        _DayState.past => _pastOpacity,
-        _DayState.later => _laterOpacity,
-        _DayState.today || _DayState.sample => 1,
-      },
-      duration: MediaQuery.disableAnimationsOf(context)
-          ? Duration.zero
-          : _cellFade,
-      child: cell,
+    return Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        AnimatedOpacity(
+          opacity: switch (state) {
+            _DayState.past => _pastOpacity,
+            _DayState.later => _laterOpacity,
+            _DayState.today || _DayState.sample => 1,
+          },
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : _cellFade,
+          child: frame,
+        ),
+        face,
+      ],
     );
   }
 }

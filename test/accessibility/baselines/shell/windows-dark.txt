@@ -1,0 +1,3 @@
+focus-visible | a10-search-no-match-sidebar | Search your days | <root> # measured: 13.37:1 by token arithmetic
+focus-visible | a9-search-results-sidebar | Search your days | <root> # measured: 13.37:1 by token arithmetic
+keyboard | a5-calendar-picker-sidebar | Dismiss month picker | <root> # Flutter's own control

@@ -1,0 +1,7 @@
+flutter-text-contrast | u4-update-error-offline | author | <root> # measured: 9.25:1 by token arithmetic
+flutter-text-contrast | u4-update-error-offline@2x | author | <root> # measured: 9.25:1 by token arithmetic
+missing-role | u1-update-notes-new | Dismiss | <root> # Flutter's own control
+missing-role | u1-update-notes-new@2x | Dismiss | <root> # Flutter's own control
+missing-role | u2-update-notes-installed | Dismiss | <root> # Flutter's own control
+missing-role | u2-update-notes-installed@2x | Dismiss | <root> # Flutter's own control
+text-contrast | u2-update-notes-installed@2x | Close | <root> # measured: 13.37:1 by token arithmetic

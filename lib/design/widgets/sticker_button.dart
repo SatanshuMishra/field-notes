@@ -5,7 +5,22 @@ import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
 
-enum StickerButtonVariant { primary, secondary, danger }
+enum StickerGround { page, media }
+
+enum StickerButtonVariant {
+  primary,
+  secondary,
+  danger;
+
+  Color inkOn(StickerGround ground, FieldNotesColors colors) =>
+      switch ((this, ground)) {
+        (StickerButtonVariant.primary, _) => Palette.onAccent,
+        (StickerButtonVariant.secondary, _) => colors.ink,
+        (StickerButtonVariant.danger, StickerGround.page) => colors.dangerInk,
+        (StickerButtonVariant.danger, StickerGround.media) =>
+          Palette.mediaDangerInk,
+      };
+}
 
 const BorderRadius _controlBorderRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusControl),
@@ -36,6 +51,8 @@ class StickerButton extends StatelessWidget {
     this.padTapTarget = false,
     this.focusSurface = FocusRingSurface.light,
     this.autofocus = false,
+    this.ground = StickerGround.page,
+    this.borderRadius,
   });
 
   final String label;
@@ -46,6 +63,8 @@ class StickerButton extends StatelessWidget {
   final bool padTapTarget;
   final FocusRingSurface focusSurface;
   final bool autofocus;
+  final StickerGround ground;
+  final BorderRadius? borderRadius;
 
   bool get isEnabled => onPressed != null;
 
@@ -54,33 +73,36 @@ class StickerButton extends StatelessWidget {
     final FieldNotesShadows shadows = context.shadows;
     final _StickerButtonStyle style = _StickerButtonStyle.of(
       variant,
+      ground,
       context.colors,
       shadows,
     );
+    final BorderRadius radius = borderRadius ?? style.borderRadius;
     return Pressable(
       label: label,
       onPressed: onPressed,
       autofocus: autofocus,
       surface: focusSurface,
-      borderRadius: style.borderRadius,
+      borderRadius: radius,
       paintsHover: false,
       builder: (BuildContext context, bool hovered) {
         final Widget face = DecoratedBox(
           decoration: BoxDecoration(
             color: style.background,
-            border: shadows.outline,
-            borderRadius: style.borderRadius,
+            border: style.edge,
+            borderRadius: radius,
             boxShadow: style.shadow,
           ),
           child: HoverFill(
             hovered: hovered,
             surface: style.hoverSurface,
-            borderRadius: style.borderRadius,
+            borderRadius: radius,
             position: DecorationPosition.background,
             child: Padding(
               padding: style.padding,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   if (icon != null) ...<Widget>[
                     icon!,
@@ -89,8 +111,7 @@ class StickerButton extends StatelessWidget {
                   Flexible(
                     child: Text(
                       label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
                       style: (labelStyle ?? context.textStyles.buttonSans)
                           .copyWith(color: style.foreground),
                     ),
@@ -123,14 +144,16 @@ class _StickerButtonStyle {
   const _StickerButtonStyle({
     required this.background,
     required this.foreground,
+    required this.edge,
     required this.borderRadius,
     required this.padding,
     required this.shadow,
     required this.hoverSurface,
   });
 
-  final Color background;
+  final Color? background;
   final Color foreground;
+  final Border edge;
   final BorderRadius borderRadius;
   final EdgeInsets padding;
   final List<BoxShadow>? shadow;
@@ -138,14 +161,17 @@ class _StickerButtonStyle {
 
   static _StickerButtonStyle of(
     StickerButtonVariant variant,
+    StickerGround ground,
     FieldNotesColors colors,
     FieldNotesShadows shadows,
   ) {
+    final Color ink = variant.inkOn(ground, colors);
     switch (variant) {
       case StickerButtonVariant.primary:
         return _StickerButtonStyle(
           background: Palette.coral,
-          foreground: Palette.onAccent,
+          foreground: ink,
+          edge: shadows.outline,
           borderRadius: _controlBorderRadius,
           padding: _capturePadding,
           shadow: shadows.emphasis,
@@ -154,7 +180,8 @@ class _StickerButtonStyle {
       case StickerButtonVariant.secondary:
         return _StickerButtonStyle(
           background: colors.cardWarm,
-          foreground: colors.ink,
+          foreground: ink,
+          edge: shadows.outline,
           borderRadius: _controlBorderRadius,
           padding: _capturePadding,
           shadow: null,
@@ -162,12 +189,18 @@ class _StickerButtonStyle {
         );
       case StickerButtonVariant.danger:
         return _StickerButtonStyle(
-          background: Palette.danger,
-          foreground: Palette.onAccent,
+          background: null,
+          foreground: ink,
+          edge: Border.fromBorderSide(
+            BorderSide(color: ink, width: Shapes.outlineWidth),
+          ),
           borderRadius: Shapes.buttonBorderRadius,
           padding: _confirmPadding,
-          shadow: shadows.control,
-          hoverSurface: FocusRingSurface.dark,
+          shadow: null,
+          hoverSurface: switch (ground) {
+            StickerGround.page => FocusRingSurface.light,
+            StickerGround.media => FocusRingSurface.dark,
+          },
         );
     }
   }

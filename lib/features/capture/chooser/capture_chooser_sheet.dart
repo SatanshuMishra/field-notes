@@ -27,7 +27,6 @@ const double _rowIconGap = 12;
 const double _rowPaddingVertical = 13;
 const double _rowPaddingHorizontal = 15;
 const double _rowIconSize = 20;
-const double _rowPrimarySubtitleOpacity = 0.85;
 
 const BorderRadius _rowRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusMd),
@@ -207,9 +206,7 @@ class _CaptureOptionRow extends StatelessWidget {
                       subtitle,
                       style: _isPrimary
                           ? textStyles.caption10Sans.copyWith(
-                              color: Palette.onAccent.withValues(
-                                alpha: _rowPrimarySubtitleOpacity,
-                              ),
+                              color: Palette.onAccent,
                             )
                           : textStyles.caption10Sans,
                     ),

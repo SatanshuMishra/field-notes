@@ -15,7 +15,7 @@ const EdgeInsets _choicePadding = EdgeInsets.symmetric(
   horizontal: 12,
   vertical: 8,
 );
-const double _choiceMinHeight = 44;
+const double _pointerChoiceMinHeight = 44;
 const double _checkSize = 18;
 const double _checkGap = 8;
 const double _descriptionGap = 2;
@@ -24,7 +24,19 @@ const double _highlightAlpha = 0.12;
 const double _choiceRadius = 10;
 const EdgeInsets _choiceInset = EdgeInsets.symmetric(horizontal: 6);
 const double _screenMargin = 16;
-const double _minimumMenuHeight = _choiceMinHeight * 2;
+const int _minimumShownChoices = 2;
+
+bool _touchFirst(TargetPlatform platform) => switch (platform) {
+  TargetPlatform.android ||
+  TargetPlatform.iOS ||
+  TargetPlatform.fuchsia => true,
+  TargetPlatform.macOS ||
+  TargetPlatform.linux ||
+  TargetPlatform.windows => false,
+};
+
+double _choiceMinHeightOn(TargetPlatform platform) =>
+    _touchFirst(platform) ? kMinInteractiveDimension : _pointerChoiceMinHeight;
 
 @immutable
 class AnchoredDropdownChoice<T> {
@@ -82,6 +94,7 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
   final LayerLink _link = LayerLink();
   final Object _ownGroup = Object();
   final FocusNode _menuFocus = FocusNode(debugLabel: 'anchored dropdown');
+  List<FocusNode> _choiceFocus = const <FocusNode>[];
   FocusNode? _returnFocus;
   int _highlighted = 0;
   bool _shown = false;
@@ -90,7 +103,65 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onKeyOutsideMenu);
     _menuFocus.dispose();
+    for (final FocusNode node in _choiceFocus) {
+      node.dispose();
+    }
     super.dispose();
+  }
+
+  List<FocusNode> _choiceFocusFor(int count) {
+    if (_choiceFocus.length < count) {
+      _choiceFocus = <FocusNode>[
+        ..._choiceFocus,
+        for (int index = _choiceFocus.length; index < count; index++)
+          FocusNode(debugLabel: 'anchored dropdown choice $index'),
+      ];
+    }
+    return _choiceFocus;
+  }
+
+  int? _focusedChoice() {
+    final int index = _choiceFocus.indexWhere(
+      (FocusNode node) => node.hasPrimaryFocus,
+    );
+    return index < 0 || index >= widget.choices.length ? null : index;
+  }
+
+  void _focusChoice(int index) {
+    setState(() => _highlighted = index);
+    _choiceFocusFor(widget.choices.length)[index].requestFocus();
+  }
+
+  KeyEventResult _leaveMenu() {
+    final FocusNode? anchor = _returnFocus;
+    _close();
+    if (anchor == null || anchor.context == null || !anchor.canRequestFocus) {
+      return KeyEventResult.ignored;
+    }
+    anchor.nextFocus();
+    return KeyEventResult.handled;
+  }
+
+  KeyEventResult _onTab({required bool backward}) {
+    final int count = widget.choices.length;
+    final int? focused = _focusedChoice();
+    if (count == 0) {
+      _close();
+      return KeyEventResult.ignored;
+    }
+    if (backward) {
+      if (focused == null || focused == 0) {
+        _close();
+        return KeyEventResult.handled;
+      }
+      _focusChoice(focused - 1);
+      return KeyEventResult.handled;
+    }
+    if (focused == count - 1) {
+      return _leaveMenu();
+    }
+    _focusChoice(focused == null ? 0 : focused + 1);
+    return KeyEventResult.handled;
   }
 
   int _currentIndex() {
@@ -152,7 +223,12 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
     if (count == 0) {
       return;
     }
-    setState(() => _highlighted = (_highlighted + step) % count);
+    final int next = (_highlighted + step) % count;
+    if (_focusedChoice() == null) {
+      setState(() => _highlighted = next);
+      return;
+    }
+    _focusChoice(next);
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
@@ -183,8 +259,7 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.tab) {
-      _close();
-      return KeyEventResult.ignored;
+      return _onTab(backward: HardwareKeyboard.instance.isShiftPressed);
     }
     return KeyEventResult.ignored;
   }
@@ -239,35 +314,44 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
       growsRightward ? roomAfterStartEdge : roomBeforeEndEdge,
     );
     final Color ink = widget.ink ?? context.colors.ink;
-    final FocusRingSurface surface = widget.tone == GlassTone.media
+    final bool onMedia = widget.tone == GlassTone.media;
+    final Color descriptionInk = onMedia
+        ? ink.withValues(alpha: _mutedAlpha)
+        : context.colors.inkSoft;
+    final FocusRingSurface surface = onMedia
         ? FocusRingSurface.dark
         : FocusRingSurface.light;
+    final double choiceMinHeight = _choiceMinHeightOn(
+      Theme.of(context).platform,
+    );
+    final List<FocusNode> focusNodes = _choiceFocusFor(choices.length);
     final Widget list = Material(
       type: MaterialType.transparency,
-      child: ExcludeFocus(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              for (int index = 0; index < choices.length; index++)
-                _DropdownChoiceTile(
-                  key: choices[index].key,
-                  label: choices[index].label,
-                  description: choices[index].description,
-                  chosen: choices[index].value == widget.current,
-                  highlighted: index == _highlighted,
-                  ink: ink,
-                  surface: surface,
-                  onHover: () {
-                    if (_highlighted != index) {
-                      setState(() => _highlighted = index);
-                    }
-                  },
-                  onTap: () => _pick(choices[index]),
-                ),
-            ],
-          ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            for (int index = 0; index < choices.length; index++)
+              _DropdownChoiceTile(
+                key: choices[index].key,
+                label: choices[index].label,
+                description: choices[index].description,
+                chosen: choices[index].value == widget.current,
+                highlighted: index == _highlighted,
+                ink: ink,
+                descriptionInk: descriptionInk,
+                surface: surface,
+                minHeight: choiceMinHeight,
+                focusNode: focusNodes[index],
+                onHover: () {
+                  if (_highlighted != index) {
+                    setState(() => _highlighted = index);
+                  }
+                },
+                onTap: () => _pick(choices[index]),
+              ),
+          ],
         ),
       ),
     );
@@ -288,7 +372,10 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
               maxWidth: widget.widensToFitChoices
                   ? widestMenu
                   : double.infinity,
-              maxHeight: math.max(_minimumMenuHeight, below),
+              maxHeight: math.max(
+                choiceMinHeight * _minimumShownChoices,
+                below,
+              ),
             ),
             child: _fittedToChoices(
               GlassSurface(
@@ -346,7 +433,10 @@ class _DropdownChoiceTile extends StatelessWidget {
     required this.chosen,
     required this.highlighted,
     required this.ink,
+    required this.descriptionInk,
     required this.surface,
+    required this.minHeight,
+    required this.focusNode,
     required this.onHover,
     required this.onTap,
   });
@@ -356,7 +446,10 @@ class _DropdownChoiceTile extends StatelessWidget {
   final bool chosen;
   final bool highlighted;
   final Color ink;
+  final Color descriptionInk;
   final FocusRingSurface surface;
+  final double minHeight;
+  final FocusNode focusNode;
   final VoidCallback onHover;
   final VoidCallback onTap;
 
@@ -372,6 +465,7 @@ class _DropdownChoiceTile extends StatelessWidget {
           inMutuallyExclusiveGroup: true,
           label: description == null ? label : '$label\n$description',
           selected: chosen,
+          focusNode: focusNode,
           onPressed: onTap,
           borderRadius: radius,
           surface: surface,
@@ -384,7 +478,7 @@ class _DropdownChoiceTile extends StatelessWidget {
               borderRadius: radius,
             ),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: _choiceMinHeight),
+              constraints: BoxConstraints(minHeight: minHeight),
               child: Padding(
                 padding: _choicePadding,
                 child: Row(
@@ -403,8 +497,6 @@ class _DropdownChoiceTile extends StatelessWidget {
                         children: <Widget>[
                           Text(
                             label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: context.textStyles.bodySans.copyWith(
                               color: ink,
                             ),
@@ -414,7 +506,7 @@ class _DropdownChoiceTile extends StatelessWidget {
                             Text(
                               description,
                               style: context.textStyles.captionSans.copyWith(
-                                color: ink.withValues(alpha: _mutedAlpha),
+                                color: descriptionInk,
                               ),
                             ),
                           ],

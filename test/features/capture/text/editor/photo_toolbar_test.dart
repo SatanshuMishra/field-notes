@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
     show MdPhotoSide, MdPhotoSize;
 import 'package:field_notes/features/capture/text/editor/note_editor.dart';
@@ -222,7 +223,7 @@ void main() {
     const double gap = photoToolbarControlGap;
     for (final double target in <double>[
       photoToolbarTarget,
-      photoToolbarTouchTarget,
+      minTargetOn(TargetPlatform.android),
     ]) {
       final double sizes =
           3 * control(label('S'), target) +
@@ -383,7 +384,8 @@ void main() {
       for (final MapEntry<String, List<_Step>> entry in cases.entries) {
         for (final _Step step in entry.value) {
           for (final int hold in <int>[30, 110, 300]) {
-            final String reason = '${step.control} held $hold ms on '
+            final String reason =
+                '${step.control} held $hold ms on '
                 '${entry.key}';
             final _Harness harness = await _pump(
               tester,
@@ -426,12 +428,7 @@ void main() {
       'below', (WidgetTester tester) async {
     final String full = mdPhotoLine(photoIdA, size: MdPhotoSize.full);
     final String note = '${_lines(12)}\n$full\n${_lines(12)}';
-    final _Harness harness = await _pump(
-      tester,
-      note,
-      width: 560,
-      height: 400,
-    );
+    final _Harness harness = await _pump(tester, note, width: 560, height: 400);
     final NoteEditorDriver driver = NoteEditorDriver(tester);
     harness.focusNode.requestFocus();
     await tester.pump();
@@ -590,9 +587,8 @@ void main() {
     final _Harness harness = await _pump(tester, note);
     harness.focusNode.requestFocus();
     await tester.pump();
-    await NoteEditorDriver(
-      tester,
-    ).setSelection(const TextSelection.collapsed(offset: 1));
+    await NoteEditorDriver(tester)
+        .setSelection(const TextSelection.collapsed(offset: 1));
 
     expect(find.byKey(photoToolbarKey), findsNothing);
 
@@ -690,7 +686,7 @@ void main() {
     (WidgetTester tester) async {
       await _pump(tester, 'one\n$a\ntwo\n$b\nthree', importer: _pickB);
       await _selectPhoto(tester);
-      final double target = photoToolbarTargetFor(defaultTargetPlatform);
+      final double target = minTargetOn(defaultTargetPlatform);
 
       for (final Key key in <Key>[
         for (final MdPhotoSize size in MdPhotoSize.values)
@@ -725,7 +721,7 @@ void main() {
     expect(
       tester.getSize(find.byKey(photoToolbarKey)).height,
       lessThanOrEqualTo(
-        photoToolbarTargetFor(defaultTargetPlatform) + 2 * photoToolbarPadding,
+        minTargetOn(defaultTargetPlatform) + 2 * photoToolbarPadding,
       ),
     );
   });
@@ -1029,10 +1025,7 @@ void main() {
       final double shift = _figure(tester).top - _editor(tester).top - y;
       harness.scroll.jumpTo(harness.scroll.offset + shift);
       await tester.pump();
-      expect(
-        _figure(tester).top - _editor(tester).top,
-        closeTo(y, _tolerance),
-      );
+      expect(_figure(tester).top - _editor(tester).top, closeTo(y, _tolerance));
     }
 
     final double bandTop = _editor(tester).bottom - inset;

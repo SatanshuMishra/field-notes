@@ -1,0 +1,8 @@
+focus-visible | d5-reader-menu-sidebar | Copy | <root> # Flutter's own control
+focus-visible | d5-reader-menu-sidebar | Select all | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar | Copy | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar | Select all | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar@2x | Copy | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar@2x | Select all | <root> # Flutter's own control
+text-contrast | d5-reader-menu-sidebar@2x | Copy | <root> # Flutter's own control
+truncated-text | d5-reader-menu-sidebar@2x | Select all | <root> # Flutter's own control

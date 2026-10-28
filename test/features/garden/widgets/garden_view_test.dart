@@ -3,7 +3,6 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/garden/model/meadow_key_provider.dart';
 import 'package:field_notes/features/garden/model/meadow_view_state.dart';
-import 'package:field_notes/features/garden/scene/meadow_palette.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:field_notes/features/garden/scene/meadow_view.dart';
 import 'package:field_notes/features/garden/sky/sky_location.dart';
@@ -314,7 +313,7 @@ void main() {
   );
 
   testWidgets(
-    "the waiting message takes the caption colour of the scene's sky",
+    'the waiting message sits in meadow text ink on the scrim',
     (WidgetTester tester) async {
       await _pumpPage(
         tester,
@@ -326,20 +325,14 @@ void main() {
       );
       await _grow(tester);
 
-      final MeadowStage stage = _stage(tester);
       final Finder message = find.text(
         'Your meadow is waiting. Every day you journal plants a bloom here.',
       );
-      final Color? colour = tester.widget<Text>(message).style?.color;
-      expect(
-        colour,
-        MeadowPalette.from(
-          sky: stage.sky,
-          morning: stage.morning,
-          heavyShare: 0,
-        ).captionColour,
+      expect(tester.widget<Text>(message).style?.color, meadowTextInk);
+      final DecoratedBox scrim = tester.widget<DecoratedBox>(
+        find.ancestor(of: message, matching: find.byType(DecoratedBox)).first,
       );
-      expect(colour, const Color.fromRGBO(236, 230, 214, 0.85));
+      expect((scrim.decoration as BoxDecoration).color, meadowTextScrim);
       final Rect scene = tester.getRect(find.byType(MeadowStage));
       final Offset centre = tester.getCenter(message);
       expect(scene.contains(centre), isTrue);

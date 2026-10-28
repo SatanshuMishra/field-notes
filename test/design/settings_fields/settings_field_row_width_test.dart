@@ -1,5 +1,7 @@
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'settings_harness.dart';
@@ -115,4 +117,53 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('at twice the text size a label that would split mid-word puts '
+      'its control below it', (WidgetTester tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final double width = switch (defaultTargetPlatform) {
+      TargetPlatform.android => _rowWidth,
+      _ => _desktopRowWidth / 2,
+    };
+    await tester.pumpWidget(
+      settingsHarness(
+        SizedBox(
+          width: width,
+          child: const SettingsFieldRow(
+            label: 'Appearance',
+            description: 'Light, dark, or match your device.',
+            control: SizedBox(key: _wideKey, width: 200, height: 40),
+          ),
+        ),
+      ),
+    );
+
+    final RenderParagraph label = tester.renderObject<RenderParagraph>(
+      find.text('Appearance'),
+    );
+    expect(
+      label
+          .getBoxesForSelection(
+            const TextSelection(baseOffset: 0, extentOffset: 10),
+          )
+          .map((TextBox box) => box.top)
+          .toSet(),
+      hasLength(1),
+    );
+    expect(
+      tester.getRect(find.byKey(_wideKey)).top,
+      greaterThanOrEqualTo(
+        tester
+            .getRect(
+              find.ancestor(
+                of: find.text('Appearance'),
+                matching: find.byType(MergeSemantics),
+              ),
+            )
+            .bottom,
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 }

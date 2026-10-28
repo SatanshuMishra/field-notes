@@ -264,8 +264,10 @@ void main() {
   });
 
   testWidgets(
-    'the denied phase surfaces guidance and the shutter carries the retry',
+    'the denied phase surfaces guidance, shows the shutter unavailable and '
+    'carries the retry on Try again',
     (WidgetTester tester) async {
+      final SemanticsHandle semantics = tester.ensureSemantics();
       int retries = 0;
 
       await tester.pumpWidget(
@@ -284,13 +286,31 @@ void main() {
         find.text('Enable Camera access in System Settings.'),
         findsOneWidget,
       );
-      expect(find.byKey(videoShutterKey), findsOneWidget);
       expect(find.text(stageIdleStatus), findsNothing);
+      expect(
+        tester.getSemantics(find.byKey(videoShutterKey)),
+        isSemantics(hasEnabledState: true, isEnabled: false),
+      );
+      expect(
+        tester
+            .widget<Opacity>(
+              find.descendant(
+                of: find.byKey(videoShutterKey),
+                matching: find.byType(Opacity),
+              ),
+            )
+            .opacity,
+        lessThan(1),
+      );
 
-      await tester.tap(find.byKey(videoShutterKey));
+      await tester.tap(find.byKey(videoShutterKey), warnIfMissed: false);
       await tester.pump();
+      expect(retries, 0);
 
+      await tester.tap(find.byKey(videoTryAgainKey));
+      await tester.pump();
       expect(retries, 1);
+      semantics.dispose();
     },
   );
 

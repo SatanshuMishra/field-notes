@@ -1,3 +1,4 @@
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -71,12 +72,19 @@ class _SearchFieldState extends ConsumerState<SearchField> {
       borderRadius: BorderRadius.circular(Shapes.radiusSm),
       borderSide: BorderSide(color: colors.line, width: Shapes.outlineWidth),
     );
+    final OutlineInputBorder focusedBorder = border.copyWith(
+      borderSide: BorderSide(
+        color: FocusRingSurface.light.colorIn(colors),
+        width: FocusRingSurface.light.width,
+      ),
+    );
     final Widget field = Semantics(
       label: _name,
       child: TextField(
         controller: _controller,
         style: bodySans,
         onChanged: _onChanged,
+        textAlignVertical: TextAlignVertical.center,
         decoration: InputDecoration(
           hint: _hint(context, bodySans),
           prefixIcon: Icon(Icons.search, color: colors.mutedDeep),
@@ -86,12 +94,12 @@ class _SearchFieldState extends ConsumerState<SearchField> {
           filled: true,
           fillColor: colors.cardBright,
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
+            horizontal: _standardTextIndent,
+            vertical: _standardTextInset,
           ),
           border: border,
           enabledBorder: border,
-          focusedBorder: border,
+          focusedBorder: focusedBorder,
         ),
       ),
     );
@@ -166,6 +174,10 @@ class _SearchFieldState extends ConsumerState<SearchField> {
 }
 
 const double _phoneHeight = 52;
+
+const double _standardTextInset = 12;
+
+const double _standardTextIndent = 14;
 
 const double _phoneClearExtent = 44;
 

@@ -1,0 +1,21 @@
+focus-visible | d5-reader-menu-sidebar | Copy | <root> # Flutter's own control
+focus-visible | d5-reader-menu-sidebar | Select all | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar | Copy | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar | Select all | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar@2x | Copy | <root> # Flutter's own control
+small-target | d5-reader-menu-sidebar@2x | Select all | <root> # Flutter's own control
+text-contrast | d11-mood-picker-sidebar | tap to plant today's bloom | <root> # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar | Change | Feeling Calm / Lavender · today's bloom # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar | Feeling Calm | <root> # measured: 8.58:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar | Lavender · today's bloom | <root> # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar@2x | Change | Feeling Calm / Lavender · today's bloom # measured: 5.76:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar@2x | Feeling Calm | <root> # measured: 8.58:1 by token arithmetic
+text-contrast | d13-change-mood-dialog-sidebar@2x | Lavender · today's bloom | <root> # measured: 5.76:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | 9:30 AM | Friday, September 18 / Morning note # measured: 6.53:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | Close | Friday, September 18 / Morning note # measured: 9.41:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | Friday, September 18 | <root> # measured: 6.53:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | Morning note | <root> # measured: 9.73:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar@2x | 9:30 AM | Friday, September 18 / Morning note # measured: 6.53:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar@2x | Close | Friday, September 18 / Morning note # measured: 9.41:1 by token arithmetic
+text-contrast | d5-reader-menu-sidebar@2x | Copy | <root> # Flutter's own control
+truncated-text | d5-reader-menu-sidebar@2x | Select all | <root> # Flutter's own control

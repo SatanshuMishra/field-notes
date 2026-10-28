@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/features/streak/streak.dart';
@@ -43,6 +44,7 @@ const double _headWordmarkInset = 4;
 const double _headWordmarkSize = 22;
 const double _navItemHeight = 40;
 const double _navItemGap = 6;
+const double _navItemPaddingVertical = 4;
 const double _navIconSize = 18;
 const double _navLabelGap = 10;
 const double _streakGap = 12;
@@ -53,6 +55,8 @@ const double _settingsBadgeBorder = 2;
 const double _settingsBadgeOffset = -4;
 
 const double _toggleExtent = 26;
+const double _toggleTargetMac = 28;
+const double _toggleTargetWindows = 40;
 const double _toggleTop = 22;
 const double _toggleOpenInset = 10;
 const double _toggleOverhang = 13;
@@ -84,10 +88,25 @@ const double _syncDotSize = 8;
 const double _syncLineDotSize = 6;
 const double _syncLineDotGap = 6;
 const double _syncAddressGap = 2;
+const double _windowTitleMaxTextScale = 1.5;
 
-double _toggleLeft({required bool collapsed}) => collapsed
-    ? shellSidebarCollapsedWidth + _toggleOverhang - _toggleExtent
-    : shellSidebarOpenWidth - _toggleOpenInset - _toggleExtent;
+double sidebarOpenWidth(TextScaler scaler) =>
+    scaler.scale(shellSidebarOpenWidth);
+
+double _toggleTarget(TargetPlatform platform) =>
+    platform == TargetPlatform.windows
+    ? _toggleTargetWindows
+    : _toggleTargetMac;
+
+double _toggleLeft({
+  required bool collapsed,
+  required double openWidth,
+  required double target,
+}) =>
+    (collapsed
+        ? shellSidebarCollapsedWidth + _toggleOverhang - _toggleExtent
+        : openWidth - _toggleOpenInset - _toggleExtent) -
+    (target - _toggleExtent) / 2;
 
 String settingsSemanticLabel({required bool badged}) => badged
     ? '${ShellDestination.settings.label}$gearBadgeSuffix'
@@ -283,6 +302,8 @@ class _SidebarShellState extends State<SidebarShell> {
 
   Widget _panel(BuildContext context) {
     final bool collapsed = widget.collapsed;
+    final double openWidth = sidebarOpenWidth(MediaQuery.textScalerOf(context));
+    final double target = _toggleTarget(Theme.of(context).platform);
     return FocusTraversalGroup(
       policy: OrderedTraversalPolicy(),
       child: Stack(
@@ -312,10 +333,14 @@ class _SidebarShellState extends State<SidebarShell> {
             AnimatedPositioned(
               duration: shellSidebarResize,
               curve: shellSidebarCurve,
-              top: _toggleTop,
-              left: _toggleLeft(collapsed: collapsed),
-              width: _toggleExtent,
-              height: _toggleExtent,
+              top: _toggleTop - (target - _toggleExtent) / 2,
+              left: _toggleLeft(
+                collapsed: collapsed,
+                openWidth: openWidth,
+                target: target,
+              ),
+              width: target,
+              height: target,
               child: FocusTraversalOrder(
                 order: const NumericFocusOrder(1),
                 child: _SidebarToggle(collapsed: collapsed, onPressed: _toggle),
@@ -350,6 +375,8 @@ class _SidebarShellState extends State<SidebarShell> {
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                textScaler: MediaQuery.textScalerOf(context)
+                    .clamp(maxScaleFactor: _windowTitleMaxTextScale),
                 style: context.textStyles.windowTitleAccent,
               ),
             ),
@@ -364,7 +391,7 @@ class _SidebarShellState extends State<SidebarShell> {
     final bool collapsed = widget.collapsed;
     final double width = collapsed
         ? shellSidebarCollapsedWidth
-        : shellSidebarOpenWidth;
+        : sidebarOpenWidth(MediaQuery.textScalerOf(context));
     return AnimatedContainer(
       key: sidebarRailKey,
       duration: shellSidebarResize,
@@ -416,8 +443,8 @@ class _SidebarShellState extends State<SidebarShell> {
 
   Widget _head(BuildContext context) {
     final bool collapsed = widget.collapsed;
-    return SizedBox(
-      height: _headHeight,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: _headHeight),
       child: Padding(
         padding: EdgeInsets.only(left: collapsed ? 0 : _headWordmarkInset),
         child: Row(
@@ -504,8 +531,8 @@ class _SidebarShellState extends State<SidebarShell> {
       onPressed: () => widget.onSelect(d),
       borderRadius: _navItemRadius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => SizedBox(
-        height: _navItemHeight,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _navItemHeight),
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: isSelected ? Palette.coral : null,
@@ -523,6 +550,7 @@ class _SidebarShellState extends State<SidebarShell> {
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: collapsed ? 0 : _railPaddingHorizontal,
+                vertical: _navItemPaddingVertical,
               ),
               child: Row(
                 mainAxisAlignment: collapsed
@@ -542,9 +570,6 @@ class _SidebarShellState extends State<SidebarShell> {
                     Flexible(
                       child: Text(
                         d.label,
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.ellipsis,
                         style: context.textStyles.navLabelSans.copyWith(
                           color: foreground,
                         ),
@@ -591,27 +616,30 @@ class _SidebarToggle extends StatelessWidget {
         onPressed: onPressed,
         borderRadius: _toggleRadius,
         paintsHover: false,
-        builder: (BuildContext context, bool hovered) => SizedBox.square(
-          dimension: _toggleExtent,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: hovered
-                  ? colors.ink08
-                  : collapsed
-                  ? colors.cardWarm
-                  : Colors.transparent,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: collapsed ? colors.ink25 : Colors.transparent,
-                width: _toggleEdgeWidth,
+        shape: HoverShape.circle,
+        builder: (BuildContext context, bool hovered) => Center(
+          child: SizedBox.square(
+            dimension: _toggleExtent,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: hovered
+                    ? colors.ink08
+                    : collapsed
+                    ? colors.cardWarm
+                    : Colors.transparent,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: collapsed ? colors.ink25 : Colors.transparent,
+                  width: _toggleEdgeWidth,
+                ),
               ),
-            ),
-            child: Center(
-              child: CustomPaint(
-                size: const Size.square(_toggleIconExtent),
-                painter: SidebarChevronPainter(
-                  pointsBack: !collapsed,
-                  color: colors.mutedDeep,
+              child: Center(
+                child: CustomPaint(
+                  size: const Size.square(_toggleIconExtent),
+                  painter: SidebarChevronPainter(
+                    pointsBack: !collapsed,
+                    color: colors.mutedDeep,
+                  ),
                 ),
               ),
             ),
