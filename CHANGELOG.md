@@ -6,6 +6,24 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-27
+
+### Improved
+
+- While a video is still downloading, its caption now sits on a dark backing so you can read it over any picture, and Play shows the download's progress in its place until the video is ready. Screen readers announce the progress as it goes.
+- Grey and coloured text is easier to read in both the light and dark themes, and checkboxes, switches and field outlines stand out more clearly.
+- Delete buttons look the same everywhere: red text with no fill. In a delete confirmation, pressing Enter chooses Cancel, so you can't delete something by accident.
+- On phones, the note, voice and video viewers keep Delete in the top corner, away from Close and the main button at the bottom.
+- To-do checkboxes are easier to tap on Android, and you can tick them from the keyboard on Mac and Windows.
+- With large text turned on, words wrap onto the next line instead of being cut short or overlapping, in Settings, the calendar, the mood picker and the welcome tour.
+- The text over the Meadow, including its header, "Growing your meadow" and the labels in the phone's bottom bar, sits on a soft backing so you can read it at any time of day.
+- While a voice note saves, Keep this shows a spinner and can't be pressed twice. If saving fails, a message next to the recorder says what happened and what to do next.
+
+### Fixed
+
+- Day numbers for days still to come on the calendar are now shown in full colour; only their flowers are faded.
+- In the welcome tour's month, flowers no longer cover the day numbers when you use large text.
+
 ## [1.4.1] - 2026-10-23
 
 ### Improved

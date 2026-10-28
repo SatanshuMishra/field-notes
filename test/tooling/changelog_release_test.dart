@@ -106,6 +106,22 @@ const List<String> _fixed141 = <String>[
   'The Meadow no longer shows mist or a "Mist in the hollow" card for a stretch that wasn\'t heavy, or a "Butterflies" card for a stretch that wasn\'t bright.',
 ];
 
+const List<String> _improved150 = <String>[
+  'While a video is still downloading, its caption now sits on a dark backing so you can read it over any picture, and Play shows the download\'s progress in its place until the video is ready. Screen readers announce the progress as it goes.',
+  'Grey and coloured text is easier to read in both the light and dark themes, and checkboxes, switches and field outlines stand out more clearly.',
+  'Delete buttons look the same everywhere: red text with no fill. In a delete confirmation, pressing Enter chooses Cancel, so you can\'t delete something by accident.',
+  'On phones, the note, voice and video viewers keep Delete in the top corner, away from Close and the main button at the bottom.',
+  'To-do checkboxes are easier to tap on Android, and you can tick them from the keyboard on Mac and Windows.',
+  'With large text turned on, words wrap onto the next line instead of being cut short or overlapping, in Settings, the calendar, the mood picker and the welcome tour.',
+  'The text over the Meadow, including its header, "Growing your meadow" and the labels in the phone\'s bottom bar, sits on a soft backing so you can read it at any time of day.',
+  'While a voice note saves, Keep this shows a spinner and can\'t be pressed twice. If saving fails, a message next to the recorder says what happened and what to do next.',
+];
+
+const List<String> _fixed150 = <String>[
+  'Day numbers for days still to come on the calendar are now shown in full colour; only their flowers are faded.',
+  'In the welcome tour\'s month, flowers no longer cover the day numbers when you use large text.',
+];
+
 const String _plainEnglishRule =
     'Write the entries in plain English for the people who use Field Notes: say clearly what they will notice, and leave out technical detail such as frame rates, graphics memory figures or the names of the app\'s internal parts.';
 
@@ -466,12 +482,6 @@ void main() {
     expect(unreleased, isNonNegative);
     expect(release, greaterThan(unreleased));
     expect(previous, greaterThan(release));
-    expect(
-      lines
-          .sublist(unreleased + 1, release)
-          .every((String line) => line.isEmpty),
-      isTrue,
-    );
 
     final ProcessResult result = Process.runSync('bash', <String>[
       'tool/release/changelog_section.sh',
@@ -512,5 +522,55 @@ void main() {
     expect(lines[4], _plainEnglishRule);
     expect(lines[5], isEmpty);
     expect(lines[6], '## [Unreleased]');
+  });
+
+  test('the release job finds the dated 1.5.0 notes in the changelog', () {
+    final List<String> lines = _changelog().split('\n');
+    final List<String> headings = lines
+        .where((String line) => line.startsWith('## [1.5.0]'))
+        .toList();
+    expect(headings, <String>['## [1.5.0] - 2026-10-27']);
+    final int unreleased = lines.indexOf('## [Unreleased]');
+    final int release = lines.indexOf('## [1.5.0] - 2026-10-27');
+    final int previous = lines.indexOf('## [1.4.1] - 2026-10-23');
+    expect(unreleased, isNonNegative);
+    expect(release, greaterThan(unreleased));
+    expect(previous, greaterThan(release));
+    expect(
+      lines
+          .sublist(unreleased + 1, release)
+          .every((String line) => line.isEmpty),
+      isTrue,
+    );
+
+    final ProcessResult result = Process.runSync('bash', <String>[
+      'tool/release/changelog_section.sh',
+      '1.5.0',
+      'CHANGELOG.md',
+    ]);
+    expect(result.exitCode, 0);
+    expect(
+      result.stdout,
+      '### Improved\n\n'
+      '${_improved150.map((String entry) => '- $entry\n').join()}'
+      '\n### Fixed\n\n'
+      '${_fixed150.map((String entry) => '- $entry\n').join()}',
+    );
+  });
+
+  test('Field Notes 1.5.0 finds its own release notes', () {
+    final ChangelogSection? section = changelogSection(
+      _changelog(),
+      AppVersion.tryParse('1.5.0')!,
+    );
+    expect(section, isNotNull);
+    expect(section!.date, DateTime(2026, 10, 27));
+    expect(section.notes.intro, isEmpty);
+    expect(
+      section.notes.groups.map((ReleaseNoteGroup group) => group.title),
+      <String>['Improved', 'Fixed'],
+    );
+    expect(section.notes.groups[0].items, _improved150);
+    expect(section.notes.groups[1].items, _fixed150);
   });
 }
