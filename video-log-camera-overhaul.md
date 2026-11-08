@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-08T23:08:46.981Z
+Updated: 2026-11-08T23:08:49.309Z
 Next ids: c7 D1 R1 S1
 
 ## Goal
@@ -34,3 +34,5 @@ Apply the spec review's findings, re-render, hand off, then start the drive for 
 
 - Spec record: docs/specs/video-log-camera-overhaul.record.json holds seams, criteria and Steps.
 - Decisions: docs/specs/video-log-camera-overhaul.decisions.md holds the owner's binding answers.
+- Spec: docs/specs/video-log-camera-overhaul.md holds the problem, intent, design, assumptions, risks and test seams.
+- Steps: docs/specs/video-log-camera-overhaul.items.json holds the build tasks.
