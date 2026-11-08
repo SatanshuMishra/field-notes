@@ -1,7 +1,7 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-08T23:32:11.470Z
-Next ids: c7 D3 R5 S1
+Updated: 2026-11-08T23:37:25.570Z
+Next ids: c7 D4 R5 S1
 
 ## Goal
 
@@ -26,8 +26,8 @@ The drive entered build and runs it next.
 
 ## Decisions in force
 
-- D1 hand-off: build the video log and camera overhaul as two stacked pull requests: Build the spec as two stacked pull requests, camera-engine then recorder-screen, unattended, opening them for the owner to merge.
 - D2 repair: plan fail: park: plan: run.zsh exited with code 3: exit 3: refused to start; repair: With five --pr-why lines, pr_facts._problem joins them into one problem line (547 chars, over the 500-char limit). The five whys are now shortened so the joined line is 484 characters. Line count and positions stay the same, and every intent point is kept.
+- D3 hand-off: build the overhaul as two pull requests that share no files: Two pull requests that share no files: camera-engine holds the vendored Android plugin and the Mac plugin, and recorder-screen holds the camera start path, the fill, the transitions and the fading controls; built unattended and opened for the owner to merge.
 
 ## Open risks
 
