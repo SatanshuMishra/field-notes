@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-08T23:38:45.844Z
+Updated: 2026-11-08T23:38:47.379Z
 Next ids: c7 D5 R5 S1
 
 ## Goal
@@ -22,7 +22,7 @@ The owner approved the intent and told the run to work unattended. The spec, rec
 
 ## Next step
 
-The drive entered plan and runs it next.
+The drive entered build and runs it next.
 
 ## Decisions in force
 
