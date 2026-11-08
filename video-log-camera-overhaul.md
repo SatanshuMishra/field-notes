@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-08T23:26:26.499Z
+Updated: 2026-11-08T23:27:49.738Z
 Next ids: c7 D2 R1 S1
 
 ## Goal
@@ -22,7 +22,7 @@ The owner approved the intent and told the run to work unattended. The spec, rec
 
 ## Next step
 
-Apply the spec review's findings, re-render, hand off, then start the drive for the two pull requests (camera-engine, then recorder-screen stacked on it).
+The drive entered plan and runs it next.
 
 ## Decisions in force
 
