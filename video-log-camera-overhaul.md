@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-08T23:29:09.321Z
+Updated: 2026-11-08T23:32:10.189Z
 Next ids: c7 D3 R5 S1
 
 ## Goal
@@ -22,7 +22,7 @@ The owner approved the intent and told the run to work unattended. The spec, rec
 
 ## Next step
 
-The drive parked at plan for the owner: plan: run.zsh exited with code 3: exit 3: refused to start; repair: With five --pr-why lines, pr_facts._problem joins them into one problem line (547 chars, over the 500-char limit). The five whys are now shortened so the joined line is 484 characters. Line count and positions stay the same, and every intent point is kept.; it resumes on pipeline drive event --name resume.
+The drive entered plan and runs it next.
 
 ## Decisions in force
 
