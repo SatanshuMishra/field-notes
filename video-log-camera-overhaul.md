@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-08T22:27:24.606Z
+Updated: 2026-11-08T22:31:24.253Z
 Next ids: c7 D1 R1 S1
 
 ## Goal
@@ -18,7 +18,7 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-Not started.
+Investigating root causes in the capture code and the vendored camera plugins; outside research on Android cropping, macOS effects and recorder design is running. Nothing is built.
 
 ## Next step
 
