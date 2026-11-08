@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-08T22:34:36.267Z
+Updated: 2026-11-08T22:34:59.188Z
 Next ids: c7 D1 R1 S1
 
 ## Goal
@@ -18,7 +18,7 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-Investigating root causes in the capture code and the vendored camera plugins; outside research on Android cropping, macOS effects and recorder design is running. Nothing is built.
+Interview is at the intent round, awaiting the owner's answers; outside research on Android cropping, macOS effects and recorder design is running. Nothing is built. Android's pause is confirmed as CameraX binding VideoCapture at record start; the extra zoom is about 1.6x, of which 1.33x is 16:9 against the 4:3 Photo view and the rest is unverified stabilisation crop; the Mac effects lead is two unused preview layers created on the running session, unproven without the owner's Mac.
 
 ## Next step
 
