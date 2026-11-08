@@ -1,7 +1,7 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-08T23:38:45.542Z
-Next ids: c7 D4 R5 S1
+Updated: 2026-11-08T23:38:45.844Z
+Next ids: c7 D5 R5 S1
 
 ## Goal
 
@@ -28,6 +28,7 @@ The drive entered plan and runs it next.
 
 - D2 repair: plan fail: park: plan: run.zsh exited with code 3: exit 3: refused to start; repair: With five --pr-why lines, pr_facts._problem joins them into one problem line (547 chars, over the 500-char limit). The five whys are now shortened so the joined line is 484 characters. Line count and positions stay the same, and every intent point is kept.
 - D3 hand-off: build the overhaul as two pull requests that share no files: Two pull requests that share no files: camera-engine holds the vendored Android plugin and the Mac plugin, and recorder-screen holds the camera start path, the fill, the transitions and the fading controls; built unattended and opened for the owner to merge.
+- D4 repair: plan fail: correct: Mitosis adds the MSP name to the PR title, so 'feat(video): make the video log one calm continuous moment (camera-engine)' came to 74 characters, over the 72 limit; the shorter subject 'make the video log calm and continuous' fits even with the longest MSP name, recorder-screen (69 characters).
 
 ## Open risks
 
