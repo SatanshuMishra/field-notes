@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-08T22:35:01.138Z
+Updated: 2026-11-08T23:08:46.981Z
 Next ids: c7 D1 R1 S1
 
 ## Goal
@@ -18,11 +18,11 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-Interview is at the intent round, awaiting the owner's answers; outside research on Android cropping, macOS effects and recorder design is running. Nothing is built. Android's pause is confirmed as CameraX binding VideoCapture at record start; the extra zoom is about 1.6x, of which 1.33x is 16:9 against the 4:3 Photo view and the rest is unverified stabilisation crop; the Mac effects lead is two unused preview layers created on the running session, unproven without the owner's Mac.
+The owner approved the intent and told the run to work unattended. The spec, record and Steps are written and pass every scripted check; its one independent review is running. Nothing is built.
 
 ## Next step
 
-Save the owner's answers to the intent round in docs/specs/video-log-camera-overhaul.decisions.md, then ask the first frontier round with mock-ups of the recorder states and layout options.
+Apply the spec review's findings, re-render, hand off, then start the drive for the two pull requests (camera-engine, then recorder-screen stacked on it).
 
 ## Decisions in force
 
