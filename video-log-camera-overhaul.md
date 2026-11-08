@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-08T23:08:49.309Z
+Updated: 2026-11-08T23:20:43.980Z
 Next ids: c7 D1 R1 S1
 
 ## Goal
@@ -18,7 +18,7 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-The owner approved the intent and told the run to work unattended. The spec, record and Steps are written and pass every scripted check; its one independent review is running. Nothing is built.
+The owner approved the intent and told the run to work unattended. The spec, record and Steps are written and passed every scripted check; its one independent review returned nine issues, which are being fixed once. The glossary terms and two decision records are written. Nothing is built.
 
 ## Next step
 
