@@ -1,7 +1,7 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-08T23:27:52.461Z
-Next ids: c7 D2 R1 S1
+Updated: 2026-11-08T23:27:53.121Z
+Next ids: c7 D2 R5 S1
 
 ## Goal
 
@@ -22,13 +22,20 @@ The owner approved the intent and told the run to work unattended. The spec, rec
 
 ## Next step
 
-The drive entered repair and runs it next.
+Follow the unattended drive with pipeline drive status --repo /Users/satanshumishra/Documents/DevLabs/fireplace --slug video-log-camera-overhaul until it pauses at awaiting-merge, then report the two pull requests, every assumption and the unproven criteria 5.8, 5.9, 5.11 and 5.17.
+
+Needs: D1.
 
 ## Decisions in force
 
 - D1 hand-off: build the video log and camera overhaul as two stacked pull requests: Build the spec as two stacked pull requests, camera-engine then recorder-screen, unattended, opening them for the owner to merge.
 
 ## Open risks
+
+- R1 The Mac flash cause is a lead that only the owner's Mac can confirm; if another cause exists the effects still vanish. Bears on c4.
+- R2 Whether stabilisation off closes the remaining zoom on the S24 Ultra, and whether CameraX 1.0 equals Samsung's 1x, is unverified until the phone is held beside its own camera; Samsung's private processing may leave a difference in look. Bears on c3.
+- R3 The blurred live fill has an unmeasured GPU cost and has never run on a real texture on macOS or Windows. Bears on c5.
+- R4 The start delay on macOS and Windows has not been timed on real hardware. Bears on c2.
 
 ## Settled, do not reopen
 
