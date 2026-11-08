@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-08T22:31:24.253Z
+Updated: 2026-11-08T22:34:36.267Z
 Next ids: c7 D1 R1 S1
 
 ## Goal
@@ -22,7 +22,7 @@ Investigating root causes in the capture code and the vendored camera plugins; o
 
 ## Next step
 
-Read lib/features/capture/video and lib/features/capture/immersive, find the root cause of each reported symptom, then run the lighthouse readiness gate and the interphase interview.
+Save the owner's answers to the intent round in docs/specs/video-log-camera-overhaul.decisions.md, then ask the first frontier round with mock-ups of the recorder states and layout options.
 
 ## Decisions in force
 
