@@ -213,19 +213,19 @@ jobs:
 
       - name: Build the tagged release
         if: startsWith(github.ref, 'refs/tags/v')
-        run: flutter build apk --release --build-name ${{ steps.version.outputs.version }} --build-number ${{ github.run_number }} --dart-define=FIELD_NOTES_UPDATE_PUBLIC_KEY=${{ vars.UPDATE_PUBLIC_KEY }} -P fieldNotesSelfUpdate=true
+        run: bash tool/release/retry_through_download_outage.sh flutter build apk --release --build-name ${{ steps.version.outputs.version }} --build-number ${{ github.run_number }} --dart-define=FIELD_NOTES_UPDATE_PUBLIC_KEY=${{ vars.UPDATE_PUBLIC_KEY }} -P fieldNotesSelfUpdate=true
 
       - name: Build the release
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        run: flutter build apk --release
+        run: bash tool/release/retry_through_download_outage.sh flutter build apk --release
 
       - name: Build the tagged bundle
         if: startsWith(github.ref, 'refs/tags/v')
-        run: flutter build appbundle --release --build-name ${{ steps.version.outputs.version }} --build-number ${{ github.run_number }} --dart-define=FIELD_NOTES_UPDATE_PUBLIC_KEY=${{ vars.UPDATE_PUBLIC_KEY }}
+        run: bash tool/release/retry_through_download_outage.sh flutter build appbundle --release --build-name ${{ steps.version.outputs.version }} --build-number ${{ github.run_number }} --dart-define=FIELD_NOTES_UPDATE_PUBLIC_KEY=${{ vars.UPDATE_PUBLIC_KEY }}
 
       - name: Build the bundle
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        run: flutter build appbundle --release
+        run: bash tool/release/retry_through_download_outage.sh flutter build appbundle --release
 
       - name: Name the APK and bundle
         run: |
