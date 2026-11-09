@@ -5,6 +5,7 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
+import 'package:field_notes/features/capture/video/camera_access_reporting.dart';
 import 'package:field_notes/features/capture/video/camera_picker.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
@@ -25,6 +26,16 @@ import 'video_test_support.dart';
 
 enum _Layout { sidebar, bottomBar }
 
+class _RefusableVideoRecorder extends FakeVideoRecorder
+    implements CameraAccessReporting {
+  final StreamController<void> _refusals = StreamController<void>.broadcast();
+
+  void refuse() => _refusals.add(null);
+
+  @override
+  Stream<void> get cameraRefused => _refusals.stream;
+}
+
 const Size _sidebarWindow = Size(1280, 800);
 const Size _bottomBarWindow = Size(360, 740);
 const String _date = '2026-09-28';
@@ -42,6 +53,7 @@ const Color _shutterCore = Color(0xFFDA7185);
 const Duration _fade = Duration(milliseconds: 600);
 const Duration _step = Duration(milliseconds: 50);
 const Duration _midFade = Duration(milliseconds: 300);
+const Duration _crossFade = Duration(milliseconds: 300);
 const Duration _frame = Duration(milliseconds: 16);
 
 class _Harness {
@@ -535,6 +547,7 @@ void main() {
       tester.getSemantics(find.byKey(videoShutterKey)),
       isSemantics(isButton: true, hasEnabledState: true, isEnabled: false),
     );
+    await tester.pump(_fade);
     expect(_shutterOpacity(tester), 0.5);
 
     stopGate.complete();
@@ -553,6 +566,7 @@ void main() {
     recorder.stopGate = stopGate;
     await _pumpApp(tester, layout: _Layout.sidebar, recorder: recorder);
     await _open(tester);
+    await tester.pump(_crossFade);
 
     final List<String> seen = <String>[];
 
@@ -567,6 +581,7 @@ void main() {
     seen.add(_statusText(tester));
 
     await _tapShutter(tester);
+    await tester.pump(_crossFade);
     expect(_statusText(tester), stageCountdownWords);
     expect(
       _statusNode(tester),
@@ -606,6 +621,7 @@ void main() {
 
     await tester.tap(find.byKey(videoSaveCircleKey));
     await tester.pump();
+    await tester.pump(_crossFade);
     expect(_phase(tester), VideoRecorderPhase.saving);
     expect(_statusText(tester), _saving);
     expect(
@@ -643,6 +659,7 @@ void main() {
         voice: voice,
       );
       await _open(tester);
+      await tester.pump(_fade);
 
       expect(_camera(tester), _cameraOn);
       expect(
@@ -675,6 +692,7 @@ void main() {
       await tester.pump();
       expect(_camera(tester), _cameraOn);
       expect(fakeVideoPreview(), findsOneWidget);
+      await tester.pump(_fade);
       expect(find.text(_cameraOffTitle), findsNothing);
       expect(recorder.previewDeviceIds.last, 'built-in-id');
 
@@ -704,6 +722,7 @@ void main() {
       expect(voice.cancelCalls, 1);
 
       await _open(tester);
+      await tester.pump(_fade);
       expect(_camera(tester), _cameraOn);
       expect(fakeVideoPreview(), findsOneWidget);
       await _closeAll(tester);
@@ -714,6 +733,7 @@ void main() {
         recorder: FakeVideoRecorder(),
       );
       await _open(tester);
+      await tester.pump(_fade);
       expect(
         tester.getSemantics(find.byKey(videoCameraKey)),
         isSemantics(label: 'Camera', hasToggledState: true, isToggled: true),
@@ -862,6 +882,34 @@ void main() {
       await _settle(tester);
       await _closeAll(tester);
       semantics.dispose();
+      debugDefaultTargetPlatformOverride = null;
+    },
+  );
+
+  testWidgets(
+    'a camera refused after the recorder opens shows the permission message',
+    (WidgetTester tester) async {
+      final _RefusableVideoRecorder recorder = _RefusableVideoRecorder();
+      await _pumpApp(tester, layout: _Layout.bottomBar, recorder: recorder);
+      await _open(tester);
+      expect(_phase(tester), VideoRecorderPhase.idle);
+
+      recorder.refuse();
+      await tester.pump();
+      await _settle(tester);
+
+      expect(_phase(tester), VideoRecorderPhase.denied);
+      expect(find.text(cameraPermissionMessage), findsOneWidget);
+      expect(fakeVideoPreview(), findsNothing);
+
+      final int listed = recorder.listCalls;
+      await tester.tap(find.byKey(videoTryAgainKey));
+      await tester.pump();
+      await _settle(tester);
+
+      expect(recorder.listCalls, listed + 1);
+      expect(_phase(tester), VideoRecorderPhase.idle);
+      await _closeAll(tester);
       debugDefaultTargetPlatformOverride = null;
     },
   );
@@ -1044,6 +1092,7 @@ void main() {
           recorder: recorder,
         );
         await _open(tester);
+        await tester.pump(_fade);
 
         final bool sidebar = layout == _Layout.sidebar;
         final Finder picker = sidebar
@@ -1094,6 +1143,7 @@ void main() {
         expect(tester.takeException(), isNull, reason: '$layout');
 
         await _tapShutter(tester);
+        await tester.pump(_crossFade);
         expect(picker, findsNothing, reason: '$layout');
         await _tapShutter(tester);
         await _settle(tester);
@@ -1194,6 +1244,35 @@ void main() {
       expect(find.byType(VideoRecorderSheet), findsNothing);
       expect(find.text(_letGoToast), findsOneWidget);
       expect(find.text('Recording discarded'), findsNothing);
+      await _closeAll(tester);
+      debugDefaultTargetPlatformOverride = null;
+    },
+  );
+
+  testWidgets(
+    'a let go answer that arrives after keep going leaves the take running',
+    (WidgetTester tester) async {
+      final FakeVideoRecorder recorder = FakeVideoRecorder(supportsPause: true);
+      await _pumpApp(tester, layout: _Layout.sidebar, recorder: recorder);
+      await _open(tester);
+      await _startNow(tester);
+      expect(_phase(tester), VideoRecorderPhase.recording);
+
+      await tester.tap(find.byKey(videoDiscardCircleKey));
+      await _settle(tester);
+      final LetGoPanel panel = tester.widget<LetGoPanel>(
+        find.byType(LetGoPanel),
+      );
+      await tester.tap(find.byKey(videoKeepGoingKey));
+      await tester.pump();
+      final VideoRecorderPhase afterAnswer = _phase(tester);
+
+      panel.onLetGo();
+      await _settle(tester);
+
+      expect(recorder.cancelCalls, 0);
+      expect(find.byType(VideoRecorderSheet), findsOneWidget);
+      expect(_phase(tester), afterAnswer);
       await _closeAll(tester);
       debugDefaultTargetPlatformOverride = null;
     },

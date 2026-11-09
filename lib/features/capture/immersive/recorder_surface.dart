@@ -127,6 +127,7 @@ class RecorderSurface extends StatelessWidget {
     this.leaveKey = recorderLeaveKey,
     this.glassLeave = false,
     this.feedGestures,
+    this.chromeOpacity = kAlwaysCompleteAnimation,
   });
 
   final String? privacyLine;
@@ -142,6 +143,7 @@ class RecorderSurface extends StatelessWidget {
   final Key leaveKey;
   final bool glassLeave;
   final Widget? feedGestures;
+  final Animation<double> chromeOpacity;
 
   @override
   Widget build(BuildContext context) {
@@ -168,6 +170,7 @@ class _Stage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget? background = surface.background;
+    final Widget? feedGestures = surface.feedGestures;
     return ColoredBox(
       color: recorderStageColor,
       child: Stack(
@@ -175,11 +178,14 @@ class _Stage extends StatelessWidget {
         children: <Widget>[
           if (background != null) ...<Widget>[
             background,
-            const DecoratedBox(decoration: _veil),
+            FadeTransition(
+              opacity: surface.chromeOpacity,
+              child: const DecoratedBox(decoration: _veil),
+            ),
           ],
           if (surface.glow)
             DecoratedBox(decoration: sidebar ? _sidebarGlow : _bottomBarGlow),
-          ?surface.feedGestures,
+          if (feedGestures != null) _quietWhenHidden(feedGestures),
           Column(
             children: <Widget>[
               _band(context),
@@ -204,14 +210,17 @@ class _Stage extends StatelessWidget {
         return Row(
           children: <Widget>[
             Expanded(
-              child: Align(alignment: Alignment.centerLeft, child: _leave()),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _faded(_leave()),
+              ),
             ),
             if (surface.privacyLine case final String line)
               ConstrainedBox(
                 constraints: BoxConstraints(
                   maxWidth: constraints.maxWidth * _privacyShare,
                 ),
-                child: _privacy(line),
+                child: _faded(_privacy(line)),
               ),
             Expanded(
               child: Align(
@@ -253,6 +262,25 @@ class _Stage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _faded(Widget child) {
+    return FadeTransition(
+      opacity: surface.chromeOpacity,
+      child: _quietWhenHidden(child),
+    );
+  }
+
+  Widget _quietWhenHidden(Widget child) {
+    final Animation<double> opacity = surface.chromeOpacity;
+    return AnimatedBuilder(
+      animation: opacity,
+      builder: (BuildContext context, Widget? quiet) => IgnorePointer(
+        ignoring: opacity.value == 0,
+        child: TickerMode(enabled: opacity.value > 0, child: quiet!),
+      ),
+      child: child,
     );
   }
 
@@ -381,7 +409,7 @@ class _Stage extends StatelessWidget {
       children: <Widget>[
         if (centre != null) LayoutId(id: _Slot.centre, child: centre),
         if (question != null)
-          LayoutId(id: _Slot.question, child: _questionFrame(question)),
+          LayoutId(id: _Slot.question, child: _faded(_questionFrame(question))),
         if (status != null)
           LayoutId(
             id: _Slot.status,
@@ -389,10 +417,10 @@ class _Stage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(
                 horizontal: _videoStatusGutter,
               ),
-              child: status,
+              child: _faded(status),
             ),
           ),
-        LayoutId(id: _Slot.actions, child: _actionsFrame()),
+        LayoutId(id: _Slot.actions, child: _faded(_actionsFrame())),
       ],
     );
   }
@@ -414,7 +442,7 @@ class _Stage extends StatelessWidget {
                   ? _sidebarStatusGutter
                   : _bottomBarStatusGutter,
             ),
-            child: status,
+            child: _faded(status),
           ),
       ],
     );

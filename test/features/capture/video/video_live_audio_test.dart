@@ -271,16 +271,15 @@ _Rig _macos(_Bench bench) {
     audioRecorderFactory: () => bench.mic,
     chainRunner: passThroughChain,
   )..useAudioInput('b');
-  CameraMacOSView? view;
+  Widget? view;
   return _Rig(
     name: 'CameraMacosVideoRecorder',
     recorder: _ViewCapturingRecorder(recorder, (Widget? opened) {
-      view = opened as CameraMacOSView?;
+      view = opened;
     }),
     chosenInput: 'b',
     cameraSoundOff: () =>
-        view?.enableAudio == false &&
-        view?.audioBitrate == null &&
+        view != null &&
         bench.macosStarts.isNotEmpty &&
         bench.macosStarts.every(
           (Map<Object?, Object?> start) => start['enableAudio'] == false,

@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:camera/camera.dart' show CameraValue, Optional;
 import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart';
+import 'package:field_notes/features/capture/video/camera_picture_fill.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -204,7 +205,11 @@ void main() {
 
       await _openSession(tester, recorder, screen);
 
-      final Size shown = tester.getSize(find.byKey(_platformPreviewKey));
+      final Finder picture = find.descendant(
+        of: find.byKey(cameraPictureKey),
+        matching: find.byKey(_platformPreviewKey),
+      );
+      final Size shown = tester.getSize(picture);
       expect(shown.width, closeTo(400, 0.01));
       expect(shown.height, closeTo(400 * 1920 / 1080, 0.01));
       final Rect? rect = recorder.previewRectIn(screen);
@@ -212,14 +217,14 @@ void main() {
         rect,
         Rect.fromLTWH(0, (844 - 400 * 1920 / 1080) / 2, 400, 400 * 1920 / 1080),
       );
-      expect(tester.getRect(find.byKey(_platformPreviewKey)), rect);
+      expect(tester.getRect(picture), rect);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await recorder.dispose();
     },
   );
 
-  testWidgets('the camera turns on video stabilisation where it can', (
+  testWidgets('the camera asks for stabilisation once, when it opens', (
     WidgetTester tester,
   ) async {
     final _FakeCameraPlatform platform = _FakeCameraPlatform(
@@ -247,7 +252,6 @@ void main() {
     await tester.runAsync(recorder.start);
 
     expect(platform.stabilised, <VideoStabilizationMode>[
-      VideoStabilizationMode.level1,
       VideoStabilizationMode.level1,
     ]);
     expect(mic.startStreamConfigs, hasLength(1));

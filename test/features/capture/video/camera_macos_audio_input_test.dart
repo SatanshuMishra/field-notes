@@ -136,7 +136,23 @@ class _Output extends AudioOutput {
 CameraMacOSController _suppliedController() =>
     CameraMacOSController(CameraMacOSArguments(size: const Size(1280, 720)));
 
-CameraMacOSView _view(Widget? widget) => widget! as CameraMacOSView;
+Future<CameraMacOSView> _mountedView(
+  WidgetTester tester,
+  Widget? opened,
+) async {
+  await tester.pumpWidget(
+    Directionality(textDirection: TextDirection.ltr, child: opened!),
+  );
+  return tester.widget<CameraMacOSView>(find.byType(CameraMacOSView));
+}
+
+Future<void> _unmountAndDispose(
+  WidgetTester tester,
+  CameraMacosVideoRecorder recorder,
+) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.runAsync(recorder.dispose);
+}
 
 AppSettings _storedInput(String id) =>
     AppSettings.defaults.copyWith(audioInputId: id);
@@ -295,27 +311,33 @@ void main() {
     }
   });
 
-  test('a macOS video take records from the chosen microphone', () async {
+  testWidgets('a macOS video take records from the chosen microphone', (
+    WidgetTester tester,
+  ) async {
     final CameraMacosVideoRecorder recorder = sound.recorder(
       controller: _suppliedController(),
     );
     const AudioInput input = AudioInput(id: 'b', label: 'CORSAIR HS80 MAX');
 
     recorder.useAudioInput(input.id);
-    final CameraMacOSView view = _view(recorder.openSession(_camera));
+    final CameraMacOSView view = await _mountedView(
+      tester,
+      recorder.openSession(_camera),
+    );
 
     expect(view.enableAudio, isFalse);
+    expect(view.audioBitrate, isNull);
     expect(view.deviceId, _camera);
 
-    await recorder.start();
+    await tester.runAsync(recorder.start);
     expect(native.methods, contains('startRecording'));
     expect(sound.streamedInput, 'b');
-    await recorder.dispose();
+    await _unmountAndDispose(tester, recorder);
   });
 
-  test(
+  testWidgets(
     'a macOS video take with no choice records from the system default',
-    () async {
+    (WidgetTester tester) async {
       final CameraMacosVideoRecorder recorder = sound.recorder(
         controller: _suppliedController(),
       );
@@ -325,12 +347,15 @@ void main() {
       );
 
       recorder.useAudioInput(systemDefault.id);
-      final CameraMacOSView view = _view(recorder.openSession(_camera));
-      await recorder.start();
+      final CameraMacOSView view = await _mountedView(
+        tester,
+        recorder.openSession(_camera),
+      );
+      await tester.runAsync(recorder.start);
 
       expect(view.enableAudio, isFalse);
       expect(sound.streamedInput, isNull);
-      await recorder.dispose();
+      await _unmountAndDispose(tester, recorder);
     },
   );
 
@@ -357,8 +382,8 @@ void main() {
     },
   );
 
-  test('changing the input while idle keeps the macOS camera view and records '
-      'from the new input', () async {
+  testWidgets('changing the input while idle keeps the macOS camera view and '
+      'records from the new input', (WidgetTester tester) async {
     final CameraMacosVideoRecorder recorder = sound.recorder(
       controller: _suppliedController(),
     );
@@ -369,11 +394,11 @@ void main() {
     final Widget? onB = recorder.openSession(_camera);
 
     expect(onB, same(onA));
-    expect(_view(onB).enableAudio, isFalse);
+    expect((await _mountedView(tester, onB)).enableAudio, isFalse);
 
-    await recorder.start();
+    await tester.runAsync(recorder.start);
     expect(sound.streamedInput, 'b');
-    await recorder.dispose();
+    await _unmountAndDispose(tester, recorder);
   });
 
   testWidgets(

@@ -266,8 +266,8 @@ void main() {
   });
 
   testWidgets(
-      'a recorder with no live pre-record preview keeps the crosshatch, not an '
-      'empty frame', (WidgetTester tester) async {
+      'a recorder with no live pre-record preview shows the warm stage, not a '
+      'placeholder', (WidgetTester tester) async {
     final FakeVideoRecorder recorder = FakeVideoRecorder(livePreview: false);
     final FakeCaptureService service = FakeCaptureService();
 
@@ -276,7 +276,25 @@ void main() {
     );
     await _open(tester);
 
-    expect(find.byType(CrossHatchPlaceholder), findsWidgets);
+    expect(find.byType(CrossHatchPlaceholder), findsNothing);
+    expect(
+      find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is ColoredBox && widget.color == recorderStageColor,
+      ),
+      findsWidgets,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (Widget widget) =>
+            (widget is ColoredBox && widget.color == const Color(0xFF000000)) ||
+            (widget is DecoratedBox &&
+                widget.decoration is BoxDecoration &&
+                (widget.decoration as BoxDecoration).color ==
+                    const Color(0xFF000000)),
+      ),
+      findsNothing,
+    );
     expect(find.byKey(videoFlipCameraKey), findsOneWidget);
     expect(find.text(stageIdleStatus), findsOneWidget);
     expect(fakeVideoPreview(), findsNothing);
@@ -302,6 +320,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 20));
 
     expect(recorder.startCalls, 1);
+    expect(find.text('Getting the camera ready…'), findsNothing);
+
+    await tester.pump(videoArmingHintDelay);
+
     expect(find.text('Getting the camera ready…'), findsOneWidget);
 
     await tester.tap(find.byKey(videoCloseKey));

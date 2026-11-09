@@ -25,6 +25,8 @@ import 'package:field_notes/features/capture/audio/input_level.dart'
 import 'package:field_notes/features/capture/audio/live_audio_capture.dart';
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/video/audio_input_selectable.dart';
+import 'package:field_notes/features/capture/video/camera_access_reporting.dart';
+import 'package:field_notes/features/capture/video/camera_picture_fill.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/voice/record_voice_recorder.dart'
     show voiceRecordingExtension;
@@ -503,7 +505,8 @@ class _LiveSound {
   }
 }
 
-abstract class _CameraPackageVideoRecorder implements VideoRecorder {
+abstract class _CameraPackageVideoRecorder
+    implements VideoRecorder, CameraAccessReporting {
   _CameraPackageVideoRecorder({
     this._startTimeoutMessage,
     required Future<Directory> Function() temporaryDirectory,
@@ -527,6 +530,7 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
   final _CaptureFolder _folder;
   late final _LiveSound _sound;
   CameraController? _controller;
+  final StreamController<void> _refusals = StreamController<void>.broadcast();
   _CameraSession? _session;
   final Stopwatch _elapsed = clock.stopwatch();
   _OwnedCaptures _owned = const _OwnedCaptures();
@@ -549,6 +553,9 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
 
   @override
   Duration get elapsed => _elapsed.elapsed;
+
+  @override
+  Stream<void> get cameraRefused => _refusals.stream;
 
   @override
   Stream<double> get level => _sound.level;
@@ -591,7 +598,6 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
       _elapsed
         ..reset()
         ..start();
-      await _stabilise(controller);
     } on VideoRecorderException {
       _elapsed.stop();
       await _sound.discard();
@@ -713,6 +719,7 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
   Future<void> dispose() async {
     await release();
     await _sound.dispose();
+    await _refusals.close();
   }
 
   @override
@@ -734,9 +741,18 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
       ),
     );
     _session = session;
-    unawaited(_warmMicrophone());
-    unawaited(_initialise(session, ready));
+    unawaited(_openCameraThenMicrophone(session, ready));
     return session.preview;
+  }
+
+  Future<void> _openCameraThenMicrophone(
+    _CameraSession session,
+    Completer<CameraController> ready,
+  ) async {
+    await _initialise(session, ready);
+    if (identical(_session, session)) {
+      await _warmMicrophone();
+    }
   }
 
   Future<void> _initialise(
@@ -768,10 +784,27 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
       ready.complete(controller);
     } on VideoRecorderException catch (error) {
       ready.completeError(error);
+    } on CameraException catch (error) {
+      ready.completeError(
+        VideoRecorderException(videoStartMessage, cause: error),
+      );
+      if (_cameraRefusalCodes.contains(error.code)) {
+        await _reportRefusal(session);
+      }
     } catch (error) {
       ready.completeError(
         VideoRecorderException(videoStartMessage, cause: error),
       );
+    }
+  }
+
+  Future<void> _reportRefusal(_CameraSession session) async {
+    if (!identical(_session, session)) {
+      return;
+    }
+    await release();
+    if (!_refusals.isClosed) {
+      _refusals.add(null);
     }
   }
 
@@ -830,7 +863,15 @@ class CameraVideoRecorder extends _CameraPackageVideoRecorder
 
   @override
   Widget _preview(CameraController controller) =>
-      Center(child: CameraPreview(controller));
+      ValueListenableBuilder<CameraValue>(
+        valueListenable: controller,
+        builder: (BuildContext context, CameraValue value, Widget? _) =>
+            CameraPictureStage(
+              pictureAspect: previewAspectRatio(value),
+              picture: CameraPreview(controller),
+              ambient: CameraPreview(controller),
+            ),
+      );
 
   @override
   Future<(File, File?)> _claim(File movie, File? still) async => (movie, still);
@@ -1273,11 +1314,10 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
   Future<void> _stabilise(CameraController controller) async {}
 
   @override
-  Widget _preview(CameraController controller) => Center(
-    child: AspectRatio(
-      aspectRatio: controller.value.aspectRatio,
-      child: controller.buildPreview(),
-    ),
+  Widget _preview(CameraController controller) => CameraPictureStage(
+    pictureAspect: controller.value.aspectRatio,
+    picture: controller.buildPreview(),
+    ambient: controller.buildPreview(),
   );
 
   @override
@@ -1592,7 +1632,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     final Completer<CameraMacOSController> ready =
         Completer<CameraMacOSController>();
     _ready = ready;
-    final Widget view = CameraMacOSView(
+    final CameraMacOSView view = CameraMacOSView(
       key: ValueKey<String>(deviceId),
       deviceId: deviceId,
       enableAudio: false,
@@ -1608,17 +1648,22 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
         if (error != null && !ready.isCompleted) {
           ready.completeError(const VideoRecorderException(videoStartMessage));
         }
-        return const ColoredBox(color: Color(0xFF000000));
+        return const SizedBox.shrink();
       },
     );
-    _preview = view;
+    final Widget picture = _MacCameraPicture(
+      key: ObjectKey(ready),
+      view: view,
+      ready: ready.future,
+    );
+    _preview = picture;
     _previewDeviceId = deviceId;
     unawaited(_warmMicrophone());
     final CameraMacOSController? supplied = _suppliedController;
     if (supplied != null) {
       _onControllerReady(ready, supplied);
     }
-    return view;
+    return picture;
   }
 
   void _onControllerReady(
@@ -1884,6 +1929,61 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     await _sound.dispose();
   }
 }
+
+class _MacCameraPicture extends StatefulWidget {
+  const _MacCameraPicture({super.key, required this.view, required this.ready});
+
+  final CameraMacOSView view;
+  final Future<CameraMacOSController> ready;
+
+  @override
+  State<_MacCameraPicture> createState() => _MacCameraPictureState();
+}
+
+class _MacCameraPictureState extends State<_MacCameraPicture> {
+  double _pictureAspect = 16 / 9;
+  bool _ready = false;
+  Widget? _ambient;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(widget.ready.then<void>(_showTexture, onError: _stayEmpty));
+  }
+
+  void _showTexture(CameraMacOSController controller) {
+    final int? textureId = controller.args.textureId;
+    if (!mounted || textureId == null) {
+      return;
+    }
+    final Size size = controller.args.size;
+    setState(() {
+      if (!size.isEmpty && size.width.isFinite && size.height.isFinite) {
+        _pictureAspect = size.width / size.height;
+      }
+      _ready = true;
+      _ambient = Texture(textureId: textureId);
+    });
+  }
+
+  void _stayEmpty(Object error) {
+    debugPrint('The Mac camera picture did not open: $error');
+  }
+
+  @override
+  Widget build(BuildContext context) => CameraPictureStage(
+    pictureAspect: _pictureAspect,
+    picture: widget.view,
+    ambient: _ambient,
+    ready: _ready,
+  );
+}
+
+const Set<String> _cameraRefusalCodes = <String>{
+  'CameraAccessDenied',
+  'CameraAccessDeniedWithoutPrompt',
+  'CameraAccessRestricted',
+};
 
 const double videoHardCapSeconds = 30 * 60;
 const Duration cameraStartTimeout = Duration(seconds: 12);
