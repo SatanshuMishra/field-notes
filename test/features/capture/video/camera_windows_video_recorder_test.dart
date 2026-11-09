@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart';
+import 'package:field_notes/features/capture/video/camera_picture_fill.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -444,13 +445,17 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      final AspectRatio ratio = tester.widget<AspectRatio>(
-        find.ancestor(
-          of: find.byKey(_platformPreviewKey),
-          matching: find.byType(AspectRatio),
+      final CameraPictureStage stage = tester.widget<CameraPictureStage>(
+        find.byType(CameraPictureStage),
+      );
+      expect(stage.pictureAspect, 1280 / 720);
+      final Size shown = tester.getSize(
+        find.descendant(
+          of: find.byKey(cameraPictureKey),
+          matching: find.byKey(_platformPreviewKey),
         ),
       );
-      expect(ratio.aspectRatio, 1280 / 720);
+      expect(shown.width / shown.height, closeTo(1280 / 720, 0.01));
       expect(find.byType(RotatedBox), findsNothing);
 
       await tester.pumpWidget(const SizedBox.shrink());

@@ -42,7 +42,7 @@ Future<Rect> _pumpTopBand(
       ),
     ),
   );
-  await tester.pump(const Duration(milliseconds: 50));
+  await tester.pump(const Duration(milliseconds: 300));
   return tester.getRect(find.byType(VideoRecorderSheet));
 }
 
@@ -236,7 +236,7 @@ void main() {
     expect(calls, 0);
   });
 
-  testWidgets('the arming phase shows the live preview and the arming hint', (
+  testWidgets('the arming phase shows the preview and a late arming hint', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -256,9 +256,15 @@ void main() {
     );
 
     expect(find.byKey(const ValueKey('preview')), findsOneWidget);
-    expect(find.text('Getting the camera ready…'), findsOneWidget);
+    expect(find.text('Getting the camera ready…'), findsNothing);
+    expect(find.text(stageCountdownWords), findsOneWidget);
     expect(find.text(stageRecordingStatus), findsNothing);
     expect(find.byType(Blink), findsNothing);
+
+    await tester.pump(videoArmingHintDelay);
+
+    expect(find.byKey(const ValueKey('preview')), findsOneWidget);
+    expect(find.text('Getting the camera ready…'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

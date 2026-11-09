@@ -152,6 +152,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 150));
     expect(find.text(videoSaveTimeoutMessage), findsNothing);
     await tester.pump(const Duration(seconds: 20));
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(recorder.stopCalls, 1);
     expect(service.requests, isEmpty);

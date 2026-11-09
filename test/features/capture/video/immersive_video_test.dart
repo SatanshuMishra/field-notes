@@ -42,6 +42,7 @@ const Color _shutterCore = Color(0xFFDA7185);
 const Duration _fade = Duration(milliseconds: 600);
 const Duration _step = Duration(milliseconds: 50);
 const Duration _midFade = Duration(milliseconds: 300);
+const Duration _crossFade = Duration(milliseconds: 300);
 const Duration _frame = Duration(milliseconds: 16);
 
 class _Harness {
@@ -553,6 +554,7 @@ void main() {
     recorder.stopGate = stopGate;
     await _pumpApp(tester, layout: _Layout.sidebar, recorder: recorder);
     await _open(tester);
+    await tester.pump(_crossFade);
 
     final List<String> seen = <String>[];
 
@@ -567,6 +569,7 @@ void main() {
     seen.add(_statusText(tester));
 
     await _tapShutter(tester);
+    await tester.pump(_crossFade);
     expect(_statusText(tester), stageCountdownWords);
     expect(
       _statusNode(tester),
@@ -606,6 +609,7 @@ void main() {
 
     await tester.tap(find.byKey(videoSaveCircleKey));
     await tester.pump();
+    await tester.pump(_crossFade);
     expect(_phase(tester), VideoRecorderPhase.saving);
     expect(_statusText(tester), _saving);
     expect(
@@ -1094,6 +1098,7 @@ void main() {
         expect(tester.takeException(), isNull, reason: '$layout');
 
         await _tapShutter(tester);
+        await tester.pump(_crossFade);
         expect(picker, findsNothing, reason: '$layout');
         await _tapShutter(tester);
         await _settle(tester);

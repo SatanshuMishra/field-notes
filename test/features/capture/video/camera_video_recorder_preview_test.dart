@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart';
+import 'package:field_notes/features/capture/video/camera_picture_fill.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -159,7 +160,13 @@ void main() {
 
       expect(platform.initializeCalls, 1);
       expect(platform.startRecordingCalls, 0);
-      expect(find.byKey(_platformPreviewKey), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(cameraPictureKey),
+          matching: find.byKey(_platformPreviewKey),
+        ),
+        findsOneWidget,
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await recorder.dispose();
