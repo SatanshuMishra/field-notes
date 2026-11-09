@@ -24,10 +24,17 @@ countdown ends. Verify each item is still present after any upstream sync.
    `bindToLifecycle` call binds `preview!`, `imageCapture!` and `videoCapture!` together, in the
    one camera session it opens. Upstream binds `preview!`, `imageCapture!` and `imageAnalysis!`
    there and binds `videoCapture` only in `startVideoCapturing`; its comment "Video capture is
-   bound at first use instead of here." is removed. `startVideoCapturing` is unchanged: its
-   unbind of `imageAnalysis!` and its bind of `videoCapture!` return early because neither
-   needs doing, and image streaming still binds `imageAnalysis` when it starts.
+   bound at first use instead of here." is removed. In `startVideoCapturing`, the unbind of
+   `imageAnalysis!` and the bind of `videoCapture!` return early because neither needs doing,
+   and image streaming still binds `imageAnalysis` when it starts.
 
 2. `AndroidCameraCameraX.stopVideoRecording` in `lib/src/android_camera_camerax.dart`: the call
    `_unbindUseCaseFromLifecycle(videoCapture!)` after the recording finalizes is deleted, so
    video capture stays bound for the next take. Upstream unbinds it there.
+
+3. `AndroidCameraCameraX.startVideoCapturing` in `lib/src/android_camera_camerax.dart`: the
+   `setTargetRotation` call runs before every take unless the capture orientation is locked.
+   Upstream also requires `shouldSetDefaultRotation`, because it binds video capture at take
+   start and so picks up the screen's rotation then. With video capture bound when the camera
+   opens, the rotation would otherwise stay at what it was on opening, and a take started after
+   turning the phone would save sideways. Setting the rotation does not rebuild the session.

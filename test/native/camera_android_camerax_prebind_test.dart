@@ -172,10 +172,34 @@ void main() {
     );
   });
 
+  test('every take uses the screen rotation unless the orientation is locked', () {
+    final String source = _readExisting(_pluginSource);
+    final String body = _methodBody(
+      source,
+      'Future<void> startVideoCapturing(',
+    );
+
+    expect(
+      body.replaceAll(RegExp(r'\s+'), ''),
+      contains('if(!captureOrientationLocked){awaitvideoCapture!.setTargetRotation('),
+    );
+    expect(body, isNot(contains('shouldSetDefaultRotation')));
+  });
+
   test('local modifications names the binding change', () {
     final String markdown = _readExisting(_localModifications);
 
     final List<String> items = _numberedDeltaItems(markdown);
+
+    expect(
+      items.where(
+        (String item) =>
+            item.contains('startVideoCapturing') &&
+            item.contains('setTargetRotation'),
+      ),
+      isNotEmpty,
+      reason: 'no delta item names the rotation set before every take',
+    );
 
     expect(
       items.where(
