@@ -3,20 +3,7 @@ import Cocoa
 import CoreAudio
 import FlutterMacOS
 
-private let sidebarWidth: CGFloat = 216
-private let todayRailWidth: CGFloat = 266
-private let seamWidth: CGFloat = 1
-private let todayPanePadding: CGFloat = 24
-private let entryCardPadding: CGFloat = 15
-private let noteBodyFontSize: CGFloat = 16
-private let minimumReadingColumnEm: CGFloat = 19.4
-
-private let minimumContentWidth: CGFloat =
-  sidebarWidth + seamWidth
-  + todayPanePadding + entryCardPadding
-  + minimumReadingColumnEm * noteBodyFontSize
-  + entryCardPadding + todayPanePadding
-  + seamWidth + todayRailWidth
+private let minimumContentWidth: CGFloat = 720
 private let minimumContentHeight: CGFloat = 600
 private let openingWindowWidth: CGFloat = 1200
 private let openingWindowHeight: CGFloat = 800
