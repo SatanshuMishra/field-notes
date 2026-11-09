@@ -1,5 +1,6 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
@@ -22,7 +23,6 @@ const double _pauseBarGap = 3.5;
 const Radius _pauseBarRadius = Radius.circular(1.2);
 
 const double _buttonExtent = 30;
-const double _windowsTargetExtent = 40;
 const double _glyphExtent = 15;
 
 const BorderRadius _buttonRadius = BorderRadius.all(
@@ -74,9 +74,6 @@ const Radius _trashCorner = Radius.circular(1);
 
 const double _lightGlyphLuminance = 0.5;
 
-double _targetExtent(TargetPlatform platform) =>
-    platform == TargetPlatform.windows ? _windowsTargetExtent : _buttonExtent;
-
 class IconStickerButton extends StatelessWidget {
   const IconStickerButton({
     super.key,
@@ -104,12 +101,13 @@ class IconStickerButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Pressable(
       label: semanticLabel,
+      iconOnly: true,
       selected: selected,
       onPressed: onPressed,
       borderRadius: _buttonRadius,
       paintsHover: false,
       builder: (BuildContext context, bool hovered) => SizedBox.square(
-        dimension: _targetExtent(Theme.of(context).platform),
+        dimension: minIconTargetOn(Theme.of(context).platform),
         child: Center(
           child: SizedBox.square(
             dimension: _buttonExtent,
