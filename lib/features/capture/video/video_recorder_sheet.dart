@@ -143,6 +143,15 @@ const Offset _takeTimeShadowOffset = Offset(0, 1);
 const double _sidebarQuestionShadowBlur = 20;
 const double _bottomBarQuestionShadowBlur = 16;
 const Offset _questionShadowOffset = Offset(0, 2);
+const TextStyle _statusOverPicture = TextStyle(
+  shadows: <Shadow>[
+    Shadow(
+      color: _questionShadow,
+      offset: _questionShadowOffset,
+      blurRadius: _bottomBarQuestionShadowBlur,
+    ),
+  ],
+);
 
 const double _deniedMaxWidth = 420;
 const double _deniedGutter = 24;
@@ -644,7 +653,10 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
                     trailing: _trailing(sidebar),
                     question: _question(sidebar),
                     centre: _isDenied ? _deniedPanel() : null,
-                    status: _status(),
+                    status: DefaultTextStyle.merge(
+                      style: _statusOverPicture,
+                      child: _status(),
+                    ),
                     actions: _actions(sidebar),
                     chromeOpacity: _chromeOpacity,
                   ),

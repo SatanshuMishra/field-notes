@@ -130,6 +130,24 @@ Future<void> _change(
 }
 
 void main() {
+  testWidgets(
+    'the status words and the cap hint carry a shadow over the picture',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(_sheet(phase: VideoRecorderPhase.idle));
+      await tester.pump(_pastFade);
+
+      for (final String words in <String>[_readyWords, _capHint]) {
+        final RichText painted = tester.widget<RichText>(
+          find.descendant(
+            of: find.text(words),
+            matching: find.byType(RichText),
+          ),
+        );
+        expect(painted.text.style?.shadows, isNotEmpty, reason: words);
+      }
+    },
+  );
+
   testWidgets('the status words cross-fade from ready to countdown', (
     WidgetTester tester,
   ) async {
