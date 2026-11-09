@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T02:38:40.908Z
+Updated: 2026-11-09T02:45:06.373Z
 Next ids: c7 D5 R5 S1
 
 ## Goal
@@ -18,11 +18,11 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-Both branches are built locally from main at 6683a4e4 on the owner's instruction to use fanout and disregard the pipeline: fix/video-camera-engine is committed and passes its full suite, and the recorder branch fanout/msp-1 holds its review fixes uncommitted while its full suite runs. Nothing is pushed. The token-free watcher is stopped and parked.
+fix/video-camera-engine and feat/video-recorder-screen are committed locally from main at 6683a4e4 and each passes its full suite, built with fanout on the owner's instruction to disregard the pipeline. A scratch merge of both is building for the Android lab emulator. Nothing is pushed. The token-free watcher is stopped and parked.
 
 ## Next step
 
-Commit the recorder branch and rename it, smoke-test both branches together on the Android lab emulator, then open the two pull requests for the owner to merge.
+Smoke-test the merged build on the Android lab emulator, remove the scratch merge, then open the two pull requests for the owner to merge.
 
 ## Decisions in force
 
