@@ -28,6 +28,32 @@ const String _openssl = '/opt/homebrew/opt/openssl@3/bin/openssl';
 const String _publicKeyDefine =
     r'--dart-define=FIELD_NOTES_UPDATE_PUBLIC_KEY=${{ vars.UPDATE_PUBLIC_KEY }}';
 const String _selfUpdate = '-P fieldNotesSelfUpdate=true';
+const String _retryTool = 'tool/release/retry_through_download_outage.sh';
+const String _retry = 'bash $_retryTool ';
+const String _gradleServerFailure =
+    'Exception in thread "main" java.io.IOException: Server returned HTTP '
+    'response code: 504 for URL: https://github.com/gradle/gradle-distributions'
+    '/releases/download/v9.1.0/gradle-9.1.0-all.zip';
+const String _kotlinServerFailure =
+    "> Could not GET 'https://github.com/JetBrains/kotlin/releases/download"
+    "/v2.3.20/kotlin-compiler-embeddable-2.3.20.jar'. Received status code 504 "
+    'from server: Gateway Time-out';
+const String _compileFailure =
+    'Compilation failed; see the compiler error output for details.';
+const String _scriptedBuild = r'''#!/bin/bash
+attempt=$(( $(cat attempts 2>/dev/null || echo 0) + 1 ))
+echo "$attempt" > attempts
+printf '%s\n' "$@" > arguments
+if [[ ! -f "attempt-$attempt.status" ]]; then
+  kill -TERM "$PPID"
+  exit 1
+fi
+cat "attempt-$attempt.output" >&2
+exit "$(cat "attempt-$attempt.status")"
+''';
+const String _recordedWait = r'''#!/bin/bash
+echo "$1" >> waits
+''';
 const String _releaseBody = r'"$RUNNER_TEMP/release-body.md"';
 const String _missingKeyError =
     '::error::Set the UPDATE_SIGNING_KEY secret and the UPDATE_PUBLIC_KEY '
@@ -179,6 +205,45 @@ void _expectInOrder(String script, List<String> needles) {
     expect(at, isNot(-1), reason: 'expected $needle after offset $from');
     from = at + needle.length;
   }
+}
+
+typedef _RetryRun = ({
+  int exitCode,
+  String output,
+  int attempts,
+  List<String> waits,
+  List<String> arguments,
+});
+
+_RetryRun _runThroughRetry(List<(int, String)> outcomes) {
+  final Directory directory = _scratch();
+  _copyTool(_retryTool, directory);
+  final Directory bin = Directory('${directory.path}/bin')..createSync();
+  for (final (int index, (int status, String output)) in outcomes.indexed) {
+    final String attempt = '${directory.path}/attempt-${index + 1}';
+    File('$attempt.output').writeAsStringSync('$output\n');
+    File('$attempt.status').writeAsStringSync('$status');
+  }
+  final File build = File('${bin.path}/scripted-build')
+    ..writeAsStringSync(_scriptedBuild);
+  final File wait = File('${bin.path}/sleep')..writeAsStringSync(_recordedWait);
+  Process.runSync('chmod', <String>['+x', build.path, wait.path]);
+
+  final ProcessResult result = _bash(
+    '${_retry}scripted-build --release "two words"',
+    directory,
+    <String, String>{'PATH': '${bin.path}:/usr/bin:/bin'},
+  );
+  final File waits = File('${directory.path}/waits');
+  return (
+    exitCode: result.exitCode,
+    output: result.stdout as String,
+    attempts: int.parse(
+      File('${directory.path}/attempts').readAsStringSync().trim(),
+    ),
+    waits: waits.existsSync() ? waits.readAsLinesSync() : <String>[],
+    arguments: File('${directory.path}/arguments').readAsLinesSync(),
+  );
 }
 
 void main() {
@@ -340,10 +405,11 @@ void main() {
           ? r'${{ steps.version.outputs.build_name }}'
           : _version;
       final String selfUpdate = target.key == 'android' ? ' $_selfUpdate' : '';
+      final String retry = target.key == 'android' ? _retry : '';
       expect(
         tagged,
         endsWith(
-          'run: flutter build ${target.value} --release '
+          'run: ${retry}flutter build ${target.value} --release '
           '--build-name $buildName --build-number \${{ github.run_number }} '
           '$_publicKeyDefine$selfUpdate',
         ),
@@ -353,7 +419,7 @@ void main() {
       );
       expect(
         untagged,
-        endsWith('run: flutter build ${target.value} --release'),
+        endsWith('run: ${retry}flutter build ${target.value} --release'),
       );
     }
 
@@ -391,7 +457,7 @@ void main() {
     expect(
       bundles.singleWhere((String candidate) => candidate.contains(_tagGuard)),
       endsWith(
-        'run: flutter build appbundle --release '
+        'run: ${_retry}flutter build appbundle --release '
         '--build-name $_version --build-number \${{ github.run_number }} '
         '$_publicKeyDefine',
       ),
@@ -400,7 +466,7 @@ void main() {
       bundles.singleWhere(
         (String candidate) => candidate.contains(_pullRequestGuard),
       ),
-      endsWith('run: flutter build appbundle --release'),
+      endsWith('run: ${_retry}flutter build appbundle --release'),
     );
   });
 
@@ -1118,5 +1184,65 @@ void main() {
     );
     expect(enclosure.group(2), '5000');
     expect(verifier.sumsAreSigned(dmgBytes, enclosure.group(3)!), isTrue);
+  });
+
+  test('an Android build waits out server failures until it finishes', () {
+    final _RetryRun run = _runThroughRetry(<(int, String)>[
+      (1, _gradleServerFailure),
+      (1, _kotlinServerFailure),
+      (0, 'Built app-release.apk'),
+    ]);
+
+    expect(run.exitCode, 0);
+    expect(run.attempts, 3);
+    expect(run.waits, <String>['60', '60']);
+    expect(run.output, contains(_gradleServerFailure));
+    expect(run.output, contains(_kotlinServerFailure));
+    expect(run.output, contains('Built app-release.apk'));
+    expect('::warning::'.allMatches(run.output), hasLength(2));
+  });
+
+  test('a build that succeeds runs once and keeps its arguments', () {
+    final _RetryRun run = _runThroughRetry(<(int, String)>[
+      (0, '$_kotlinServerFailure\nBuilt app-release.apk'),
+    ]);
+
+    expect(run.exitCode, 0);
+    expect(run.attempts, 1);
+    expect(run.waits, isEmpty);
+    expect(run.arguments, <String>['--release', 'two words']);
+  });
+
+  test('a build that fails for any other reason stops with its own status', () {
+    for (final (int status, String output) in <(int, String)>[
+      (3, _compileFailure),
+      (
+        1,
+        "> Could not GET 'https://repo.maven.apache.org/a.jar'. "
+            'Received status code 404 from server: Not Found',
+      ),
+      (
+        1,
+        'Server returned HTTP response code: 403 for URL: '
+            'https://services.gradle.org/a.zip',
+      ),
+    ]) {
+      final _RetryRun run = _runThroughRetry(<(int, String)>[(status, output)]);
+
+      expect(run.exitCode, status, reason: output);
+      expect(run.attempts, 1, reason: output);
+      expect(run.waits, isEmpty, reason: output);
+    }
+  });
+
+  test('a real failure after a server failure stops the build', () {
+    final _RetryRun run = _runThroughRetry(<(int, String)>[
+      (1, _gradleServerFailure),
+      (7, _compileFailure),
+    ]);
+
+    expect(run.exitCode, 7);
+    expect(run.attempts, 2);
+    expect(run.waits, <String>['60']);
   });
 }
