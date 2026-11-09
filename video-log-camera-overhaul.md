@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T04:02:14.778Z
+Updated: 2026-11-09T04:02:17.308Z
 Next ids: c7 D5 R5 S1
 
 ## Goal
@@ -45,3 +45,4 @@ When the recorder branch's full suite passes, analyze both branches, fill the an
 - Steps: docs/specs/video-log-camera-overhaul.items.json holds the build tasks.
 - Watcher: ~/.mitosis/drive_watcher.py holds its code.
 - Build: ~/.mitosis/fireplace/video-log-camera-overhaul/fanout holds the items, worker rules, prompt template, worker script, run state and worktrees.
+- Pull request drafts: pr-engine.json and pr-recorder.json in the session scratchpad hold each pull request's title, body facts and receipts.
