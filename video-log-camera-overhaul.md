@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-08T23:41:10.094Z
+Updated: 2026-11-09T00:00:14.833Z
 Next ids: c7 D5 R5 S1
 
 ## Goal
@@ -18,7 +18,7 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-The owner approved the intent and told the run to work unattended. The spec's nine review issues are fixed, planning passed with two pull requests that share no files (camera-engine and recorder-screen), and the drive is building them on feat/video-log-camera-overhaul. A token-free watcher at ~/.mitosis/drive_watcher.py reports stage changes and restarts a stalled run. Nothing is reviewed or shipped yet.
+The owner approved the intent and told the run to work unattended. The spec's nine review issues are fixed, planning passed with two pull requests that share no files (camera-engine and recorder-screen), and the drive is building them on feat/video-log-camera-overhaul. A token-free watcher at ~/.mitosis/drive_watcher.py reports stage changes, asks a one-shot Claude check when it suspects a stall, stops work only on a confirmed verdict, and leaves notes that wake this session. Nothing is reviewed or shipped yet.
 
 ## Next step
 
