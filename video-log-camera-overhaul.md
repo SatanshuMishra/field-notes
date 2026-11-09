@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T01:40:00.788Z
+Updated: 2026-11-09T01:41:47.533Z
 Next ids: c7 D5 R5 S1
 
 ## Goal
@@ -18,11 +18,11 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-Fanout has finished building from main at 6683a4e4, on the owner's instruction to disregard the pipeline, with camera-engine on fanout/msp-0 and recorder-screen on fanout/msp-1. Nothing is reviewed or pushed. The token-free watcher is stopped and parked.
+Both pull requests are built locally from main at 6683a4e4, with camera-engine on fanout/msp-0 and recorder-screen on fanout/msp-1, on the owner's instruction to use fanout and disregard the pipeline. The full tests and three independent reviews are running; nothing is pushed. The token-free watcher is stopped and parked.
 
 ## Next step
 
-When fanout finishes, read each agent's return, run the full tests, review both diffs, add GLOSSARY.md and ADRs 0008 and 0009 to the first branch, then open the pull requests for the owner to merge.
+Fix the confirmed review findings on each branch, re-run the affected tests, add GLOSSARY.md and ADRs 0008 and 0009 to the first branch, then open the pull requests for the owner to merge.
 
 ## Decisions in force
 
