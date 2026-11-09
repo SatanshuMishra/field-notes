@@ -54,7 +54,7 @@ const String _voiceMediaId = 'voice-1';
 const String _gardenEmptyMessage =
     'Your meadow is waiting. Every day you journal plants a bloom here.';
 const String _searchEmptyMessage =
-    'No days yet. Start journaling and your days appear here.';
+    'Start journaling and your days appear here.';
 const String _searchErrorMessage = 'Your days could not be loaded right now.';
 
 final DateTime _now = DateTime(2026, 9, 25, 9, 30);
