@@ -734,9 +734,18 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
       ),
     );
     _session = session;
-    unawaited(_warmMicrophone());
-    unawaited(_initialise(session, ready));
+    unawaited(_openCameraThenMicrophone(session, ready));
     return session.preview;
+  }
+
+  Future<void> _openCameraThenMicrophone(
+    _CameraSession session,
+    Completer<CameraController> ready,
+  ) async {
+    await _initialise(session, ready);
+    if (identical(_session, session)) {
+      await _warmMicrophone();
+    }
   }
 
   Future<void> _initialise(

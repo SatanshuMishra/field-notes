@@ -34,9 +34,15 @@ const List<CameraDescription> _phoneCameras = <CameraDescription>[
 ];
 
 class _LoggingCameraPlatform extends CameraPlatform {
-  _LoggingCameraPlatform({this.refusesStabilisation = false});
+  _LoggingCameraPlatform({
+    this.refusesStabilisation = false,
+    this.opening,
+    this.openFailure,
+  });
 
   final bool refusesStabilisation;
+  final Completer<void>? opening;
+  final CameraException? openFailure;
   final List<String> calls = <String>[];
   final List<VideoStabilizationMode> stabilised = <VideoStabilizationMode>[];
   final StreamController<CameraInitializedEvent> _initialized =
@@ -87,6 +93,11 @@ class _LoggingCameraPlatform extends CameraPlatform {
     ImageFormatGroup imageFormatGroup = ImageFormatGroup.unknown,
   }) async {
     _log('initializeCamera');
+    await opening?.future;
+    final CameraException? failure = openFailure;
+    if (failure != null) {
+      throw failure;
+    }
     scheduleMicrotask(
       () => _initialized.add(
         const CameraInitializedEvent(
@@ -309,14 +320,24 @@ class _LoggingCameraPlatform extends CameraPlatform {
       _log('setJpegImageQuality');
 }
 
+class _PermissionCountingMicrophone extends FakeMicrophone {
+  int timesAsked = 0;
+
+  @override
+  Future<bool> hasPermission({bool request = true}) async {
+    timesAsked += 1;
+    return true;
+  }
+}
+
 class _Phone {
   _Phone(this.platform, this.root)
-    : mic = FakeMicrophone(),
+    : mic = _PermissionCountingMicrophone(),
       liveAudio = FakeLiveAudio();
 
   final _LoggingCameraPlatform platform;
   final Directory root;
-  final FakeMicrophone mic;
+  final _PermissionCountingMicrophone mic;
   final FakeLiveAudio liveAudio;
 
   CameraVideoRecorder recorder() => CameraVideoRecorder(
@@ -366,12 +387,86 @@ Future<void> _openUntilPictureShows(
   fail('The camera picture never showed.');
 }
 
+Future<void> _settle(WidgetTester tester) async {
+  for (int turn = 0; turn < _settleTurns; turn += 1) {
+    await tester.pump();
+  }
+}
+
+Future<void> _beginOpening(
+  WidgetTester tester,
+  CameraVideoRecorder recorder,
+) async {
+  final devices = await recorder.listDevices();
+  recorder.openSession(devices.first.id);
+  await _settle(tester);
+}
+
 Future<void> _close(WidgetTester tester, CameraVideoRecorder recorder) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.runAsync(recorder.dispose);
 }
 
 void main() {
+  testWidgets('the microphone is asked for only once the camera has opened', (
+    WidgetTester tester,
+  ) async {
+    final Completer<void> opening = Completer<void>();
+    final _Phone phone = _phoneWith(_LoggingCameraPlatform(opening: opening));
+    final CameraVideoRecorder recorder = phone.recorder();
+
+    await _beginOpening(tester, recorder);
+
+    expect(phone.platform.calls, contains('initializeCamera'));
+    expect(phone.mic.timesAsked, 0);
+
+    opening.complete();
+    await _settle(tester);
+
+    expect(phone.mic.timesAsked, 1);
+
+    await _close(tester, recorder);
+  });
+
+  testWidgets('the microphone is still asked for when the camera is refused', (
+    WidgetTester tester,
+  ) async {
+    final _Phone phone = _phoneWith(
+      _LoggingCameraPlatform(
+        openFailure: CameraException(
+          'CameraAccessDenied',
+          'The camera was refused.',
+        ),
+      ),
+    );
+    final CameraVideoRecorder recorder = phone.recorder();
+
+    await _beginOpening(tester, recorder);
+
+    expect(phone.mic.timesAsked, 1);
+
+    await _close(tester, recorder);
+  });
+
+  testWidgets('leaving while the camera opens never asks for the microphone', (
+    WidgetTester tester,
+  ) async {
+    final Completer<void> opening = Completer<void>();
+    final _Phone phone = _phoneWith(_LoggingCameraPlatform(opening: opening));
+    final CameraVideoRecorder recorder = phone.recorder();
+
+    await _beginOpening(tester, recorder);
+    final Future<void> releasing = recorder.release();
+    await _settle(tester);
+    opening.complete();
+    await _settle(tester);
+    await tester.runAsync(() => releasing);
+
+    expect(phone.mic.timesAsked, 0);
+
+    await _close(tester, recorder);
+  });
+
   testWidgets('starting a take makes no camera call but the recording call', (
     WidgetTester tester,
   ) async {
