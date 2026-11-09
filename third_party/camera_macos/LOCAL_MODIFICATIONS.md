@@ -66,3 +66,13 @@ All changes are in `macos/camera_macos/Sources/camera_macos/CameraMacosPlugin.sw
    with `as? String`, so an absent, empty or non-string value records from the system
    default as before. Upstream searches only `.builtInMicrophone` and `.externalUnknown`
    and records without sound when the id is not found.
+
+9. No preview layers on a running session: after `startRunning()`, `initCamera` no longer
+   creates `self.previewLayer` with `AVCaptureVideoPreviewLayer(session:)` nor hands the
+   factory a second `AVCaptureVideoPreviewLayer(session:)` when `useMovieFileOutput` is
+   set. Field Notes draws the camera through a Flutter `Texture` and never shows either
+   layer, and connecting a layer to a running session changes its connections, which is
+   followed by the screen flash that turns off macOS Video Effects (Portrait, Studio
+   Light, Backgrounds). The capture session is configured once, started once, and given
+   nothing afterwards. A re-vendor MUST keep both `AVCaptureVideoPreviewLayer(session:)`
+   calls out of `initCamera`; upstream creates them on every open.
