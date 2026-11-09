@@ -44,6 +44,7 @@ Entry toDomainEntry(db.Entry row) {
     deletedAt: row.deletedAt,
     conflictSourceDevice: row.conflictSourceDevice,
     peaks: decodeVoicePeaks(row.peaks),
+    title: row.title,
   );
 }
 

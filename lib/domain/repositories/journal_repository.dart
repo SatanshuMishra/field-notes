@@ -23,6 +23,7 @@ abstract interface class JournalRepository {
     String? thumbnailMediaId,
     int? durationMs,
     List<double>? peaks,
+    String? title,
   });
 
   Future<Entry?> entryById(String id);
@@ -37,9 +38,12 @@ abstract interface class JournalRepository {
     required String date,
     required String source,
     required List<String> photoMediaIds,
+    String? title,
   });
 
   Future<void> setVoicePeaks(String entryId, List<double> peaks);
+
+  Future<void> setEntryTitle(String entryId, String? title);
 
   Future<void> softDeleteEntry(String id);
 

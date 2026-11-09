@@ -185,6 +185,8 @@ class FakeJournalRepository implements JournalRepository {
   final List<({String id, String textContent})> textUpdates =
       <({String id, String textContent})>[];
   final List<NoteSaveRecord> noteSaves = <NoteSaveRecord>[];
+  final List<({String id, String? title})> titleUpdates =
+      <({String id, String? title})>[];
 
   Object? deleteError;
   Object? updateError;
@@ -238,11 +240,21 @@ class FakeJournalRepository implements JournalRepository {
   }
 
   @override
+  Future<void> setEntryTitle(String entryId, String? title) async {
+    final Object? error = updateError;
+    if (error != null) {
+      throw error;
+    }
+    titleUpdates.add((id: entryId, title: title));
+  }
+
+  @override
   Future<Entry> saveNote({
     String? entryId,
     required String date,
     required String source,
     required List<String> photoMediaIds,
+    String? title,
   }) async {
     final Object? error = saveError;
     if (error != null) {
@@ -267,6 +279,7 @@ class FakeJournalRepository implements JournalRepository {
       textContent: source,
       createdAt: existing?.createdAt ?? 0,
       updatedAt: 1,
+      title: title ?? existing?.title,
     );
   }
 

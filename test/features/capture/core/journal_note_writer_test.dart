@@ -19,6 +19,7 @@ class _FailingSaveRepository implements JournalRepository {
     required String date,
     required String source,
     required List<String> photoMediaIds,
+    String? title,
   }) {
     return Future<Entry>.error(StateError('saveNote failed'));
   }

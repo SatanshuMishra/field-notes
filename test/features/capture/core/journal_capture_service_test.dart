@@ -30,6 +30,7 @@ class _PeaksJournal implements JournalRepository {
     String? thumbnailMediaId,
     int? durationMs,
     List<double>? peaks,
+    String? title,
   }) {
     createdPeaks.add(peaks);
     return _inner.createEntry(
@@ -40,6 +41,7 @@ class _PeaksJournal implements JournalRepository {
       thumbnailMediaId: thumbnailMediaId,
       durationMs: durationMs,
       peaks: peaks,
+      title: title,
     );
   }
 

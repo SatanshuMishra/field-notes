@@ -14,6 +14,7 @@ class Entry {
     this.deletedAt,
     this.conflictSourceDevice,
     this.peaks,
+    this.title,
   });
 
   final String id;
@@ -28,6 +29,7 @@ class Entry {
   final int? deletedAt;
   final String? conflictSourceDevice;
   final List<double>? peaks;
+  final String? title;
 
   bool get isDeleted => deletedAt != null;
 
@@ -47,7 +49,8 @@ class Entry {
           updatedAt == other.updatedAt &&
           deletedAt == other.deletedAt &&
           conflictSourceDevice == other.conflictSourceDevice &&
-          _samePeaks(peaks, other.peaks);
+          _samePeaks(peaks, other.peaks) &&
+          title == other.title;
 
   @override
   int get hashCode => Object.hash(
@@ -63,6 +66,7 @@ class Entry {
     deletedAt,
     conflictSourceDevice,
     peaks == null ? null : Object.hashAll(peaks!),
+    title,
   );
 
   @override
@@ -72,7 +76,8 @@ class Entry {
       'thumbnailMediaId: $thumbnailMediaId, durationMs: $durationMs, '
       'createdAt: $createdAt, updatedAt: $updatedAt, deletedAt: $deletedAt, '
       'conflictSourceDevice: $conflictSourceDevice, '
-      'peaks: ${peaks == null ? null : '${peaks!.length} values'})';
+      'peaks: ${peaks == null ? null : '${peaks!.length} values'}, '
+      'title: $title)';
 }
 
 bool _samePeaks(List<double>? a, List<double>? b) {
