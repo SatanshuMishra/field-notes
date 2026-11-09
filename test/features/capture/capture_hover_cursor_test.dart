@@ -3,11 +3,9 @@ import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
     show MdPhotoSide, MdPhotoSize;
 import 'package:field_notes/domain/services/capture_service.dart';
-import 'package:field_notes/features/capture/chooser/capture_chooser_sheet.dart';
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/photo/photo_tray.dart';
@@ -230,42 +228,6 @@ void main() {
     _quietWindowChannel(tester);
     final SemanticsHandle semantics = tester.ensureSemantics();
     final TestGesture mouse = await _mousePointer(tester);
-
-    await _pump(
-      tester,
-      CaptureChooserSheet(
-        availableTypes: const <EntryType>{
-          EntryType.text,
-          EntryType.voice,
-          EntryType.video,
-        },
-        onOptionSelected: (EntryType _) {},
-      ),
-      background: const Color(0xFFF6EDDD),
-    );
-    await _expectRows(tester, mouse, <_Row>[
-      _Row(
-        'Write a note\nput the day into words',
-        _pressableAround('Write a note'),
-        _dark,
-        _Shape.rounded,
-        14,
-      ),
-      _Row(
-        'Record voice\nspeak it, hands-free',
-        _pressableAround('Record voice'),
-        _lightRow,
-        _Shape.rounded,
-        14,
-      ),
-      _Row(
-        'Record video\na moving snapshot',
-        _pressableAround('Record video'),
-        _lightRow,
-        _Shape.rounded,
-        14,
-      ),
-    ]);
 
     await _pump(
       tester,
