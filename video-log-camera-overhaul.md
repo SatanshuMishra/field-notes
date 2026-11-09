@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T03:33:06.839Z
+Updated: 2026-11-09T04:02:14.778Z
 Next ids: c7 D5 R5 S1
 
 ## Goal
@@ -18,11 +18,11 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-fix/video-camera-engine and feat/video-recorder-screen are committed locally from main at 6683a4e4, built with fanout on the owner's instruction to disregard the pipeline. A scratch merge of both runs as a profile build on the owner's test phone, a Note10+ with serial RF8MA2NA3ZM, which the owner may be handling at the same time. The recorder branch now asks for the camera before the microphone, shows the access screen when the camera is refused, and shadows the status words over the picture. On that phone the preview equals the saved frame at scale 1.00, a take starts about 80 ms after the countdown, and the controls fade in and out without a cut. Nothing is pushed. The token-free watcher is stopped and parked.
+fix/video-camera-engine and feat/video-recorder-screen are committed locally from main at 6683a4e4, built with fanout on the owner's instruction to disregard the pipeline, and merge cleanly with each other. Nothing is pushed. With both merged on the owner's test phone, a Note10+, the preview equals the saved frame at scale 1.00, a take starts about 80 ms after the countdown, the controls fade without a cut, and a refused camera shows the access screen with the camera closed and no microphone prompt. No real macOS or Windows camera has run it, so every criterion stays open. The recorder branch's full suite is running. The token-free watcher is stopped and parked.
 
 ## Next step
 
-Confirm the refusal screen and the status shadow on the phone, restore its settings, rerun the recorder branch's full suite, remove the scratch merge, then open the two pull requests for the owner to merge.
+When the recorder branch's full suite passes, analyze both branches, fill the analyzer and suite rows in the pull request drafts, push both branches and open the two pull requests for the owner to merge.
 
 ## Decisions in force
 
