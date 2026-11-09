@@ -1,7 +1,7 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T06:46:02.687Z
-Next ids: c7 D5 R5 S1
+Updated: 2026-11-09T07:05:55.701Z
+Next ids: c7 D6 R5 S1
 
 ## Goal
 
@@ -27,6 +27,7 @@ The owner chooses whether video stabilisation stays off or goes back on; on need
 ## Decisions in force
 
 - D3 hand-off: build the overhaul as two pull requests that share no files: Two pull requests that share no files: camera-engine holds the vendored Android plugin and the Mac plugin, and recorder-screen holds the camera start path, the fill, the transitions and the fading controls; built unattended and opened for the owner to merge.
+- D5 keep video stabilisation on: The owner chose stabilisation on and waived a Note10+ test of it.
 
 ## Open risks
 
