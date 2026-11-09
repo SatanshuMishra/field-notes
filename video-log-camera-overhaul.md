@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T00:34:08.349Z
+Updated: 2026-11-09T00:44:35.192Z
 Next ids: c7 D5 R5 S1
 
 ## Goal
@@ -18,11 +18,11 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-The owner stopped the mitosis run and told the session to disregard the pipeline and build with fanout directly. Fanout is building both pull requests from main at 6683a4e4, with its plan, rules and worktrees under fanout/ in the run home; nothing is reviewed or pushed. The token-free watcher is stopped and parked.
+Fanout is building both pull requests from main at 6683a4e4 on the owner's instruction to disregard the pipeline; nothing is reviewed or pushed. The token-free watcher is stopped and parked, so this build has no stall detection.
 
 ## Next step
 
-The drive entered build and runs it next.
+When fanout finishes, read each agent's return, run the full tests, review both diffs, add GLOSSARY.md and ADRs 0008 and 0009 to the first branch, then open the pull requests for the owner to merge.
 
 ## Decisions in force
 
