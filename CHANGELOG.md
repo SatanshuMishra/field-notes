@@ -6,6 +6,21 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-09
+
+### Improved
+
+- The video recorder moves smoothly between getting ready, the countdown and recording, and the record button looks different at each step.
+- A few seconds into a recording, everything fades away except the microphone control and a small timer, so you can focus on what you are saying. Tap the screen or press a key to bring the controls back.
+- On Android, recording starts as soon as the countdown ends, without stopping at "Getting the camera ready".
+- On Android, a soft, blurred copy of the picture fills the space around your video instead of black bars, and the whole video stays in view.
+- The words on the recorder have a soft shadow, so they are easier to read over the picture.
+
+### Fixed
+
+- On Android, the first time you open the video recorder it asks for the camera and then the microphone, one at a time, instead of sometimes staying blank.
+- On Android, if you refuse camera access, the recorder shows a screen where you can try again.
+
 ## [1.5.0] - 2026-10-27
 
 ### Improved
