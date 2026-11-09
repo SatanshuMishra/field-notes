@@ -539,7 +539,7 @@ void main() {
   });
 
   testWidgets(
-    'opening the phone camera turns stabilisation off before the picture shows',
+    'opening the phone camera turns stabilisation on before the picture shows',
     (WidgetTester tester) async {
       final _Phone phone = _phoneWith(_LoggingCameraPlatform());
       final CameraVideoRecorder recorder = phone.recorder();
@@ -548,7 +548,7 @@ void main() {
 
       final List<String> calls = phone.platform.calls;
       expect(phone.platform.stabilised, <VideoStabilizationMode>[
-        VideoStabilizationMode.off,
+        VideoStabilizationMode.level1,
       ]);
       expect(
         calls.indexOf('setVideoStabilizationMode'),
@@ -559,7 +559,7 @@ void main() {
     },
   );
 
-  testWidgets('the camera never asks for stabilisation', (
+  testWidgets('starting a take does not ask for stabilisation again', (
     WidgetTester tester,
   ) async {
     final _Phone phone = _phoneWith(_LoggingCameraPlatform());
@@ -569,10 +569,9 @@ void main() {
     await tester.runAsync(recorder.start);
 
     expect(phone.platform.calls, contains('startVideoCapturing'));
-    expect(
-      phone.platform.stabilised,
-      isNot(contains(VideoStabilizationMode.level1)),
-    );
+    expect(phone.platform.stabilised, <VideoStabilizationMode>[
+      VideoStabilizationMode.level1,
+    ]);
 
     await _close(tester, recorder);
   });

@@ -224,7 +224,7 @@ void main() {
     },
   );
 
-  testWidgets('the camera asks for stabilisation off once, when it opens', (
+  testWidgets('the camera asks for stabilisation once, when it opens', (
     WidgetTester tester,
   ) async {
     final _FakeCameraPlatform platform = _FakeCameraPlatform(
@@ -252,7 +252,7 @@ void main() {
     await tester.runAsync(recorder.start);
 
     expect(platform.stabilised, <VideoStabilizationMode>[
-      VideoStabilizationMode.off,
+      VideoStabilizationMode.level1,
     ]);
     expect(mic.startStreamConfigs, hasLength(1));
 

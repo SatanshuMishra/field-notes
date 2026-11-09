@@ -977,7 +977,7 @@ class CameraVideoRecorder extends _CameraPackageVideoRecorder
   @override
   Future<void> _stabilise(CameraController controller) async {
     try {
-      await controller.setVideoStabilizationMode(VideoStabilizationMode.off);
+      await controller.setVideoStabilizationMode(VideoStabilizationMode.level1);
     } on CameraException catch (error) {
       debugPrint('Video stabilisation unavailable: $error');
     }
