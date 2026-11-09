@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T07:36:06.362Z
+Updated: 2026-11-09T07:46:33.428Z
 Next ids: c7 D6 R5 S1
 
 ## Goal
@@ -18,7 +18,7 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-The overhaul is merged into main and tagged v1.6.0, the release job is re-running its Android build after a Gradle download outage, and the run's worktrees, branches and folders are removed. With stabilisation off on the owner's test phone, a Note10+, the preview equals the saved frame at scale 1.00, a take starts about 80 ms after the countdown, the controls fade without a cut, and a refused camera shows the access screen with the camera closed and no microphone prompt. Stabilisation is on in main and has not run on a phone. No real macOS or Windows camera has run it, so every criterion stays open. The token-free watcher is stopped and parked.
+The overhaul is merged into main and tagged v1.6.0, the release job's Android build is blocked by a GitHub outage on the Gradle download and re-runs once that download works, and the run's worktrees, branches and folders are removed. With stabilisation off on the owner's test phone, a Note10+, the preview equals the saved frame at scale 1.00, a take starts about 80 ms after the countdown, the controls fade without a cut, and a refused camera shows the access screen with the camera closed and no microphone prompt. Stabilisation is on in main and has not run on a phone. No real macOS or Windows camera has run it, so every criterion stays open. The token-free watcher is stopped and parked.
 
 ## Next step
 
