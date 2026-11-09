@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T02:37:19.759Z
+Updated: 2026-11-09T02:37:21.797Z
 Next ids: c7 D5 R5 S1
 
 ## Goal
