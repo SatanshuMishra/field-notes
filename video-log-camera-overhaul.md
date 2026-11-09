@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T03:33:03.575Z
+Updated: 2026-11-09T03:33:06.839Z
 Next ids: c7 D5 R5 S1
 
 ## Goal
@@ -31,8 +31,8 @@ Confirm the refusal screen and the status shadow on the phone, restore its setti
 ## Open risks
 
 - R1 The Mac flash cause is a lead that only the owner's Mac can confirm; if another cause exists the effects still vanish. Bears on c4.
-- R2 Whether stabilisation off closes the remaining zoom on the S24 Ultra, and whether CameraX 1.0 equals Samsung's 1x, is unverified until the phone is held beside its own camera; Samsung's private processing may leave a difference in look. Bears on c3.
-- R3 The blurred live fill has an unmeasured GPU cost and has never run on a real texture on macOS or Windows. Bears on c5.
+- R2 On a Note10+ Field Notes equals Samsung's 1x with Samsung's stabiliser off and is wider than Samsung's default, which crops for its stabiliser; the S24 Ultra is unmeasured and Samsung's private processing may leave a difference in look. Bears on c3.
+- R3 The blurred live fill holds the Note10+ within one 30 fps step but has never run on a real texture on macOS or Windows. Bears on c5.
 - R4 The start delay on macOS and Windows has not been timed on real hardware. Bears on c2.
 
 ## Settled, do not reopen
