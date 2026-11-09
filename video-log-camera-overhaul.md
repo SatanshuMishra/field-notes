@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T01:07:33.498Z
+Updated: 2026-11-09T01:40:00.788Z
 Next ids: c7 D5 R5 S1
 
 ## Goal
@@ -18,7 +18,7 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-Fanout is building from main at 6683a4e4 on the owner's instruction to disregard the pipeline. Camera-engine is committed locally on fanout/msp-0; recorder-screen is still building on fanout/msp-1. Nothing is reviewed or pushed. The token-free watcher is stopped and parked, so this build has no stall detection.
+Fanout has finished building from main at 6683a4e4, on the owner's instruction to disregard the pipeline, with camera-engine on fanout/msp-0 and recorder-screen on fanout/msp-1. Nothing is reviewed or pushed. The token-free watcher is stopped and parked.
 
 ## Next step
 
