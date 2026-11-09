@@ -337,64 +337,55 @@ void main() {
       _expectOnlyRingOn(_deleteKey);
     }, variant: _desktop);
 
-    testWidgets(
-      'stays off the note editor while arrows move the caret and Tab indents',
-      (WidgetTester tester) async {
-        const String listNote = '- a\n- b';
-        final FocusNode focus = _focusNode('note');
-        final NoteEditorController controller = NoteEditorController(
-          text: listNote,
-        );
-        final UndoHistoryController undo = UndoHistoryController();
-        final ScrollController scroll = ScrollController();
-        addTearDown(controller.dispose);
-        addTearDown(undo.dispose);
-        addTearDown(scroll.dispose);
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Material(
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: SizedBox(
-                  width: 688,
-                  height: 600,
-                  child: KeyboardFocusBuilder(
-                    focusNode: focus,
-                    builder: (BuildContext context, bool shown) => Stack(
-                      children: <Widget>[
-                        NoteEditorView(
-                          controller: controller,
-                          focusNode: focus,
-                          undoController: undo,
-                          scrollController: scroll,
-                        ),
-                        if (shown) const SizedBox(key: _outlineKey),
-                      ],
-                    ),
+    testWidgets('stays off the note editor while arrows move the caret', (
+      WidgetTester tester,
+    ) async {
+      const String note = 'alpha';
+      final FocusNode focus = _focusNode('note');
+      final NoteEditorController controller = NoteEditorController(text: note);
+      final UndoHistoryController undo = UndoHistoryController();
+      final ScrollController scroll = ScrollController();
+      addTearDown(controller.dispose);
+      addTearDown(undo.dispose);
+      addTearDown(scroll.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Material(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: 688,
+                height: 600,
+                child: KeyboardFocusBuilder(
+                  focusNode: focus,
+                  builder: (BuildContext context, bool shown) => Stack(
+                    children: <Widget>[
+                      NoteEditorView(
+                        controller: controller,
+                        focusNode: focus,
+                        undoController: undo,
+                        scrollController: scroll,
+                      ),
+                      if (shown) const SizedBox(key: _outlineKey),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
-        );
-        focus.requestFocus();
-        await _settle(tester);
-        controller.selection = const TextSelection.collapsed(
-          offset: listNote.length,
-        );
-        await _settle(tester);
-        expect(focus.hasPrimaryFocus, isTrue);
-        expect(_outline, findsNothing);
+        ),
+      );
+      focus.requestFocus();
+      await _settle(tester);
+      controller.selection = const TextSelection.collapsed(offset: note.length);
+      await _settle(tester);
+      expect(focus.hasPrimaryFocus, isTrue);
+      expect(_outline, findsNothing);
 
-        await _press(tester, LogicalKeyboardKey.arrowLeft);
-        expect(_outline, findsNothing);
+      await _press(tester, LogicalKeyboardKey.arrowLeft);
 
-        await _press(tester, LogicalKeyboardKey.tab);
-        expect(controller.text, '- a\n  - b');
-        expect(focus.hasPrimaryFocus, isTrue);
-        expect(_outline, findsNothing);
-      },
-      variant: _desktop,
-    );
+      expect(controller.selection.baseOffset, note.length - 1);
+      expect(_outline, findsNothing);
+    }, variant: _desktop);
   });
 }

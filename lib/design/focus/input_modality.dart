@@ -2,8 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-final Set<LogicalKeyboardKey> _traversalKeys = <LogicalKeyboardKey>{
-  LogicalKeyboardKey.tab,
+final Set<LogicalKeyboardKey> _arrowKeys = <LogicalKeyboardKey>{
   LogicalKeyboardKey.arrowUp,
   LogicalKeyboardKey.arrowDown,
   LogicalKeyboardKey.arrowLeft,
@@ -25,8 +24,15 @@ bool _holdsShortcutModifier(HardwareKeyboard keyboard) =>
     keyboard.isMetaPressed ||
     (keyboard.isControlPressed && !keyboard.isAltPressed);
 
-bool _editsText(BuildContext context) =>
-    Actions.maybeFind<ExtendSelectionByCharacterIntent>(context) != null;
+bool _primaryFocusEditsText() {
+  final BuildContext? context = FocusManager.instance.primaryFocus?.context;
+  return context != null &&
+      Actions.maybeFind<ExtendSelectionByCharacterIntent>(context) != null;
+}
+
+bool _isTraversalKey(LogicalKeyboardKey key) =>
+    key == LogicalKeyboardKey.tab ||
+    (_arrowKeys.contains(key) && !_primaryFocusEditsText());
 
 final class InputModality extends ChangeNotifier {
   InputModality._();
@@ -35,7 +41,6 @@ final class InputModality extends ChangeNotifier {
 
   bool _traversing = false;
   bool _watchingInput = false;
-  FocusNode? _textFocusUnderTraversalKey;
 
   bool get traversing =>
       _traversing ||
@@ -62,45 +67,24 @@ final class InputModality extends ChangeNotifier {
     if (_watchingInput) {
       HardwareKeyboard.instance.addHandler(_onKey);
       GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointer);
-      FocusManager.instance.addListener(_onPrimaryFocusChanged);
     } else {
       HardwareKeyboard.instance.removeHandler(_onKey);
       GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointer);
-      FocusManager.instance.removeListener(_onPrimaryFocusChanged);
       _traversing = false;
-      _textFocusUnderTraversalKey = null;
     }
   }
 
   bool _onKey(KeyEvent event) {
     if (event is KeyUpEvent) {
-      _textFocusUnderTraversalKey = null;
-    } else if (_traversalKeys.contains(event.logicalKey)) {
-      _onTraversalKey();
+      return false;
+    }
+    if (_isTraversalKey(event.logicalKey)) {
+      _setTraversing(true);
     } else if (_printsVisibleCharacter(event.character) &&
         !_holdsShortcutModifier(HardwareKeyboard.instance)) {
       _setTraversing(false);
     }
     return false;
-  }
-
-  void _onTraversalKey() {
-    final FocusNode? focus = FocusManager.instance.primaryFocus;
-    final BuildContext? context = focus?.context;
-    if (context != null && _editsText(context)) {
-      _textFocusUnderTraversalKey = focus;
-    } else {
-      _setTraversing(true);
-    }
-  }
-
-  void _onPrimaryFocusChanged() {
-    final FocusNode? textFocus = _textFocusUnderTraversalKey;
-    if (textFocus != null &&
-        !identical(FocusManager.instance.primaryFocus, textFocus)) {
-      _textFocusUnderTraversalKey = null;
-      _setTraversing(true);
-    }
   }
 
   void _onPointer(PointerEvent event) {
