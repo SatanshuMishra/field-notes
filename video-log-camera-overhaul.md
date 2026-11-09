@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T00:44:35.192Z
+Updated: 2026-11-09T00:44:37.665Z
 Next ids: c7 D5 R5 S1
 
 ## Goal
@@ -43,4 +43,5 @@ When fanout finishes, read each agent's return, run the full tests, review both 
 - Decisions: docs/specs/video-log-camera-overhaul.decisions.md holds the owner's binding answers.
 - Spec: docs/specs/video-log-camera-overhaul.md holds the problem, intent, design, assumptions, risks and test seams.
 - Steps: docs/specs/video-log-camera-overhaul.items.json holds the build tasks.
-- Watcher: ~/.mitosis/drive_watcher.py holds its code; drive/watcher.log in the run home holds what it saw and did.
+- Watcher: ~/.mitosis/drive_watcher.py holds its code.
+- Build: ~/.mitosis/fireplace/video-log-camera-overhaul/fanout holds the items, worker rules, prompt template, worker script, run state and worktrees.
