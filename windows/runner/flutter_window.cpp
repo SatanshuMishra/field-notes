@@ -3,6 +3,13 @@
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "video_frames_bridge.h"
+
+namespace {
+
+std::unique_ptr<VideoFramesBridge> video_frames_bridge;
+
+}
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -37,6 +44,8 @@ bool FlutterWindow::OnCreate() {
       std::make_unique<LiveAudioBridge>(messenger, GetHandle());
   video_join_bridge_ =
       std::make_unique<VideoJoinBridge>(messenger, GetHandle());
+  video_frames_bridge =
+      std::make_unique<VideoFramesBridge>(messenger, GetHandle());
   file_drop_bridge_.Attach(new FileDropBridge(
       messenger, flutter_controller_->view()->GetNativeWindow()));
   file_drop_bridge_.Get()->Register();
@@ -55,6 +64,7 @@ void FlutterWindow::OnDestroy() {
     file_drop_bridge_.Get()->Revoke();
     file_drop_bridge_.Reset();
   }
+  video_frames_bridge = nullptr;
   video_join_bridge_ = nullptr;
   live_audio_bridge_ = nullptr;
   audio_peaks_bridge_ = nullptr;
@@ -90,6 +100,11 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
 
   if (video_join_bridge_ && video_join_bridge_->IsJoinedMessage(message)) {
     video_join_bridge_->CompleteJoin(lparam);
+    return 0;
+  }
+
+  if (video_frames_bridge && video_frames_bridge->IsFrameMessage(message)) {
+    video_frames_bridge->CompleteFrame(lparam);
     return 0;
   }
 
