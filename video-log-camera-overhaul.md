@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T00:11:02.255Z
+Updated: 2026-11-09T00:34:08.349Z
 Next ids: c7 D5 R5 S1
 
 ## Goal
@@ -18,7 +18,7 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-The run is unattended and building both pull requests on feat/video-log-camera-overhaul; nothing is reviewed or shipped. A token-free watcher follows it, asks a one-shot Claude check when it suspects a stall, and stops work only on a confirmed verdict. The driving session waits on the watcher's notes without polling.
+The owner stopped the mitosis run and told the session to disregard the pipeline and build with fanout directly. Fanout is building both pull requests from main at 6683a4e4, with its plan, rules and worktrees under fanout/ in the run home; nothing is reviewed or pushed. The token-free watcher is stopped and parked.
 
 ## Next step
 
