@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T07:06:17.874Z
+Updated: 2026-11-09T07:06:20.167Z
 Next ids: c7 D6 R5 S1
 
 ## Goal
@@ -22,7 +22,7 @@ Pull requests 344 (fix/video-camera-engine) and 345 (feat/video-recorder-screen)
 
 ## Next step
 
-The owner chooses whether video stabilisation stays off or goes back on; on needs the Note10+ plugged in to measure Field Notes against Samsung's default Video view and the preview against the saved frame. The owner then reviews and merges pull requests 344 and 345, and checks the Mac effects and the macOS and Windows cameras on real hardware.
+The owner reviews and merges pull requests 344 and 345, and checks stabilisation on a phone, the Mac effects, and the macOS and Windows cameras on real hardware.
 
 ## Decisions in force
 
