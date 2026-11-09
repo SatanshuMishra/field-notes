@@ -8,7 +8,6 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
-import 'package:field_notes/design/motion/blink.dart';
 import 'package:field_notes/design/motion/motion_tokens.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
@@ -134,8 +133,6 @@ const double _keyboardHintInset = 20;
 const double _sidebarTrailingGap = 8;
 const double _takeDot = 8;
 const double _takeDotGlowAlpha = 0.6;
-const double _takeDotMinOpacity = 0.45;
-const Duration _takeDotBlink = Duration(milliseconds: 1500);
 const double _takeGap = 7;
 const double _takeTrailingGap = 10;
 const double _takeTimeSize = 12;
@@ -343,8 +340,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
     hidden: _chromeHidden,
   );
 
-  bool get _showsTakeIndicator =>
-      _isRecording && (_chromeHidden || !_chrome.isCompleted);
+  bool get _showsTakeIndicator => _chromeHidden || !_chrome.isCompleted;
 
   void _followChrome() {
     final bool canAutoHide = _canAutoHideChrome;
@@ -454,9 +450,33 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
       duration: _fade,
       switchInCurve: Motion.fadeCurve,
       switchOutCurve: Motion.fadeCurve,
+      transitionBuilder: _fadeSlot,
       child: child ?? const SizedBox.shrink(key: _absentSlotKey),
     );
   }
+
+  Widget _collapseSwitch(Widget? child) {
+    return AnimatedSwitcher(
+      duration: _fade,
+      switchInCurve: Motion.fadeCurve,
+      switchOutCurve: Motion.fadeCurve,
+      transitionBuilder: _collapsingFadeSlot,
+      child: child ?? const SizedBox.shrink(key: _absentSlotKey),
+    );
+  }
+
+  static Widget _fadeSlot(Widget child, Animation<double> animation) =>
+      _FadeSlot(animation: animation, child: child);
+
+  static Widget _collapsingFadeSlot(
+    Widget child,
+    Animation<double> animation,
+  ) => SizeTransition(
+    sizeFactor: animation,
+    alignment: Alignment.topCenter,
+    fixedCrossAxisSizeFactor: 1,
+    child: _FadeSlot(animation: animation, child: child),
+  );
 
   VideoRecorderPhase get _phase => widget.phase;
   bool get _isRecording => _phase == VideoRecorderPhase.recording;
@@ -692,7 +712,14 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
                 ? BreathingGlow(diameter: diameter, alpha: _breatheGlowAlpha)
                 : null,
           ),
-          if (cameraOff) _cameraOffCopy(sidebar),
+          _fadeSwitch(
+            cameraOff
+                ? FadeTransition(
+                    opacity: _chromeOpacity,
+                    child: _cameraOffCopy(sidebar),
+                  )
+                : null,
+          ),
         ],
       ),
     );
@@ -722,29 +749,32 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
     );
   }
 
-  Widget? _trailing(bool sidebar) {
+  Widget _trailing(bool sidebar) {
     final bool idle = _phase == VideoRecorderPhase.idle;
     final bool taking = _takingPhases.contains(_phase);
     final bool showsInput = idle || taking;
     final bool picker =
         sidebar && idle && widget.cameraOn && widget.devices.length > 1;
     final VideoCaptureDevice? other = sidebar ? null : _otherCamera;
-    if (!showsInput && !picker && other == null) {
-      return null;
-    }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        if (picker)
+        if (sidebar)
           Flexible(
-            child: Padding(
-              padding: const EdgeInsets.only(right: _sidebarTrailingGap),
-              child: CameraPicker(
-                devices: widget.devices,
-                selectedDeviceId: widget.selectedDeviceId,
-                onChanged: widget.onDeviceChanged,
-                label: widget.cameraLabel,
-              ),
+            child: _fadeSwitch(
+              picker
+                  ? Padding(
+                      padding: const EdgeInsets.only(
+                        right: _sidebarTrailingGap,
+                      ),
+                      child: CameraPicker(
+                        devices: widget.devices,
+                        selectedDeviceId: widget.selectedDeviceId,
+                        onChanged: widget.onDeviceChanged,
+                        label: widget.cameraLabel,
+                      ),
+                    )
+                  : null,
             ),
           ),
         _fadeSwitch(
@@ -773,14 +803,18 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
               : null,
         ),
         if (_showsTakeIndicator) _takeIndicator(),
-        if (showsInput)
-          RecorderInputButton(
-            androidVideo: Theme.of(context).platform == TargetPlatform.android,
-            onVoiceSettings: widget.onVoiceSettings,
-            takeLevels: taking ? widget.levels : null,
-            ringLevels: widget.cameraOn ? widget.levels : null,
-            ringHearing: widget.hearing,
-          ),
+        _fadeSwitch(
+          showsInput
+              ? RecorderInputButton(
+                  androidVideo:
+                      Theme.of(context).platform == TargetPlatform.android,
+                  onVoiceSettings: widget.onVoiceSettings,
+                  takeLevels: taking ? widget.levels : null,
+                  ringLevels: widget.cameraOn ? widget.levels : null,
+                  ringHearing: widget.hearing,
+                )
+              : null,
+        ),
       ],
     );
   }
@@ -794,12 +828,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Blink(
-              minOpacity: _takeDotMinOpacity,
-              duration: _takeDotBlink,
-              animate: !MediaQuery.disableAnimationsOf(context),
-              child: _takeDotFace(context.colors.accentBright),
-            ),
+            _takeDotFace(context.colors.accentBright),
             const SizedBox(width: _takeGap),
             Text(
               formatMediaDuration(widget.elapsed.inMilliseconds),
@@ -879,7 +908,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
           ),
         if (_cannotHear) const CannotHearNotice(),
         if (nudge != null) _note(nudge),
-        if (capHint) _note(widget.capHint),
+        _collapseSwitch(capHint ? _note(widget.capHint) : null),
         if (error != null)
           Padding(
             padding: const EdgeInsets.only(top: _errorGap),
@@ -1118,8 +1147,12 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
       surface: FocusRingSurface.dark,
       shape: HoverShape.circle,
       borderRadius: BorderRadius.all(Radius.circular(size / 2)),
-      child: Opacity(
-        opacity: _shutterOpacity(tap),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(end: _shutterOpacity(tap)),
+        duration: _fade,
+        curve: Motion.fadeCurve,
+        builder: (BuildContext context, double opacity, Widget? face) =>
+            Opacity(opacity: opacity, child: face),
         child: VideoShutterFace(
           form: _shutterForm,
           sidebar: sidebar,
@@ -1143,6 +1176,31 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
         fontWeight: FontWeight.w500,
         letterSpacing: _keyboardHintTracking,
         color: _hintInk,
+      ),
+    );
+  }
+}
+
+class _FadeSlot extends StatelessWidget {
+  const _FadeSlot({required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: animation,
+      child: AnimatedBuilder(
+        animation: animation,
+        builder: (BuildContext context, Widget? content) {
+          final bool leaving = animation.status == AnimationStatus.reverse;
+          return ExcludeFocus(
+            excluding: leaving,
+            child: IgnorePointer(ignoring: leaving, child: content),
+          );
+        },
+        child: child,
       ),
     );
   }

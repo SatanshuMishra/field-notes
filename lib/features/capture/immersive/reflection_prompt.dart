@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
+import 'package:field_notes/design/motion/motion_tokens.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/state/settings_providers.dart';
 
@@ -256,6 +257,9 @@ _Fit? _searchFit(_FitKey key) {
   return readable < _readableQuestion ? null : last;
 }
 
+const Key _shuffleShownKey = ValueKey<String>('reflection-shuffle-shown');
+const Key _shuffleAbsentKey = ValueKey<String>('reflection-shuffle-absent');
+
 class ReflectionPrompt extends ConsumerStatefulWidget {
   const ReflectionPrompt({
     super.key,
@@ -314,9 +318,19 @@ class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
               _fitted(_words(sidebar, fit), constraints),
               SizedBox(
                 height: _shuffleBand,
-                child: widget.phase == StagePhase.idle
-                    ? Center(child: _shuffleButton(sidebar))
-                    : null,
+                child: AnimatedSwitcher(
+                  duration: MediaQuery.disableAnimationsOf(context)
+                      ? Duration.zero
+                      : Motion.fade,
+                  switchInCurve: Motion.fadeCurve,
+                  switchOutCurve: Motion.fadeCurve,
+                  child: widget.phase == StagePhase.idle
+                      ? Center(
+                          key: _shuffleShownKey,
+                          child: _shuffleButton(sidebar),
+                        )
+                      : const SizedBox.shrink(key: _shuffleAbsentKey),
+                ),
               ),
             ],
           );

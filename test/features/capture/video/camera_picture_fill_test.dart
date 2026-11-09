@@ -8,6 +8,7 @@ const double _edgeSlack = 0.5;
 const Color _pictureInk = Color(0xFF6B8F71);
 const Color _ambientInk = Color(0xFF8C6B5A);
 const Color _black = Color(0xFF000000);
+const double _leastBlurSigma = 16;
 
 typedef _Shape = ({double aspect, Size window});
 
@@ -47,6 +48,13 @@ Widget _stage({
       ),
     ),
   );
+}
+
+double _blurSigma(ImageFiltered filtered) {
+  final RegExpMatch? match = RegExp(r'ImageFilter\.blur\(([\d.]+),')
+      .firstMatch(filtered.imageFilter.toString());
+  expect(match, isNotNull, reason: '${filtered.imageFilter}');
+  return double.parse(match!.group(1)!);
 }
 
 double _fadeOf(WidgetTester tester, Finder finder) {
@@ -152,9 +160,38 @@ void main() {
         final String at = '${shape.aspect} in ${shape.window}';
         expect(fill, findsOneWidget, reason: at);
         expect(_covers(tester.getRect(fill), shape.window), isTrue, reason: at);
+        final Finder blur = find.descendant(
+          of: fill,
+          matching: find.byType(ImageFiltered),
+        );
+        expect(blur, findsOneWidget, reason: at);
         expect(
-          find.descendant(of: fill, matching: find.byType(ImageFiltered)),
-          findsWidgets,
+          _blurSigma(tester.widget<ImageFiltered>(blur)),
+          greaterThanOrEqualTo(_leastBlurSigma),
+          reason: at,
+        );
+        expect(
+          find.descendant(
+            of: blur,
+            matching: find.byWidgetPredicate(
+              (Widget widget) =>
+                  widget is ColoredBox && widget.color == _ambientInk,
+            ),
+          ),
+          findsOneWidget,
+          reason: at,
+        );
+        expect(
+          find.descendant(
+            of: fill,
+            matching: find.byWidgetPredicate(
+              (Widget widget) =>
+                  widget is ColoredBox &&
+                  widget.color.a > 0 &&
+                  widget.color.a < 1,
+            ),
+          ),
+          findsOneWidget,
           reason: at,
         );
 

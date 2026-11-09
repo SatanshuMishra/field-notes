@@ -783,7 +783,7 @@ class _VideoComposerConnectorState
   }
 
   Future<void> _letGo() async {
-    if (_closing) {
+    if (_closing || !_asking) {
       return;
     }
     _closing = true;

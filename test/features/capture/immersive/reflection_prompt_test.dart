@@ -407,6 +407,43 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
+  testWidgets('Ask me something else fades away when the breath starts', (
+    WidgetTester tester,
+  ) async {
+    _useWindow(tester, TargetPlatform.macOS);
+    Widget prompt(StagePhase phase) => _prompt(
+      enabled: true,
+      phase: phase,
+      platform: TargetPlatform.macOS,
+      initialIndex: 6,
+    );
+
+    await tester.pumpWidget(prompt(StagePhase.idle));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpWidget(prompt(StagePhase.breathing));
+    await tester.pump(const Duration(milliseconds: 130));
+
+    final double fade = tester
+        .widgetList<FadeTransition>(
+          find.ancestor(
+            of: find.text(_shuffle),
+            matching: find.byType(FadeTransition),
+          ),
+        )
+        .fold<double>(
+          1,
+          (double product, FadeTransition transition) =>
+              product * transition.opacity.value,
+        );
+    expect(fade, greaterThan(0));
+    expect(fade, lessThan(1));
+
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text(_shuffle), findsNothing);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
   testWidgets('breathing hides the shuffle but keeps the question bright', (
     WidgetTester tester,
   ) async {
@@ -693,6 +730,7 @@ void main() {
             slot: slot,
           ),
         );
+        await tester.pump(const Duration(milliseconds: 300));
         expect(find.byKey(reflectionShuffleKey), findsNothing, reason: reason);
         expect(
           tester.getRect(find.byKey(reflectionQuestionKey)),

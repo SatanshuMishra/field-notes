@@ -1,5 +1,7 @@
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/immersive/recorder_chrome.dart';
+import 'package:field_notes/features/capture/immersive/recorder_shortcuts.dart';
+import 'package:field_notes/features/capture/immersive/reflection_prompt.dart';
 import 'package:field_notes/features/capture/video/video_recorder_sheet.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +21,9 @@ const Duration _fade = Duration(milliseconds: 300);
 const Duration _beforeFade = Duration(milliseconds: 400);
 const Duration _midFade = Duration(milliseconds: 130);
 const Duration _longWait = Duration(milliseconds: 9700);
+const Duration _justBeforeHide = Duration(milliseconds: 2500);
+const Duration _heldAfterInput = Duration(milliseconds: 2200);
+const Duration _acrossHide = Duration(milliseconds: 200);
 
 void _useScreen(WidgetTester tester, Size size) {
   tester.view.physicalSize = size;
@@ -55,6 +60,7 @@ VideoRecorderSheet _sheet({
   bool supportsPause = false,
   VoidCallback? onPause,
   bool asking = false,
+  bool cameraOn = true,
   Duration elapsed = Duration.zero,
   String? nudgeMessage,
   String? errorMessage,
@@ -73,6 +79,7 @@ VideoRecorderSheet _sheet({
     onKeepGoing: () {},
     onLetGo: () {},
     asking: asking,
+    cameraOn: cameraOn,
     elapsed: elapsed,
     nudgeMessage: nudgeMessage,
     errorMessage: errorMessage,
@@ -186,13 +193,157 @@ void main() {
 
   testWidgets('the controls fade rather than cut', (WidgetTester tester) async {
     await tester.pumpWidget(_app(_sheet(phase: VideoRecorderPhase.recording)));
-    await tester.pump(recorderChromeHold + _beforeFade);
+    await tester.pump(_justBeforeHide);
+
+    _expectFade(tester, find.byKey(videoShutterKey), 1, 'the shutter');
+
+    await tester.pump(_acrossHide);
     await tester.pump(_midFade);
 
     final double fade = _fadeOf(tester, find.byKey(videoShutterKey));
     expect(fade, greaterThan(0));
     expect(fade, lessThan(1));
   });
+
+  testWidgets('the controls hide a hold after the breath becomes a take', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_app(_sheet(phase: VideoRecorderPhase.breathing)));
+    await tester.pump(_fade);
+
+    await tester.pumpWidget(_app(_sheet(phase: VideoRecorderPhase.recording)));
+    await _pastHold(tester);
+
+    _expectFade(tester, find.byKey(videoShutterKey), 0, 'the shutter');
+  });
+
+  testWidgets('resuming a paused take starts a new hold', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_app(_sheet(phase: VideoRecorderPhase.paused)));
+    await _longHold(tester);
+
+    await tester.pumpWidget(_app(_sheet(phase: VideoRecorderPhase.recording)));
+    await tester.pump(_justBeforeHide);
+
+    _expectFade(tester, find.byKey(videoShutterKey), 1, 'the shutter');
+
+    await tester.pump(_acrossHide);
+    await tester.pump(_fade);
+
+    _expectFade(tester, find.byKey(videoShutterKey), 0, 'the shutter');
+  });
+
+  testWidgets('answering the let go question starts a new hold', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(_sheet(phase: VideoRecorderPhase.recording, asking: true)),
+    );
+    await _longHold(tester);
+
+    await tester.pumpWidget(_app(_sheet(phase: VideoRecorderPhase.recording)));
+    await tester.pump(_midFade);
+    await tester.pump(_justBeforeHide);
+
+    _expectFade(tester, find.byKey(videoShutterKey), 1, 'the shutter');
+
+    await tester.pump(_acrossHide);
+    await tester.pump(_fade);
+
+    _expectFade(tester, find.byKey(videoShutterKey), 0, 'the shutter');
+  });
+
+  testWidgets('the controls come back as a fade after an input', (
+    WidgetTester tester,
+  ) async {
+    _useScreen(tester, _phoneScreen);
+    await tester.pumpWidget(_app(_sheet(phase: VideoRecorderPhase.recording)));
+    await _pastHold(tester);
+
+    await tester.tapAt(_middleOf(tester));
+    await tester.pump();
+    await tester.pump(_midFade);
+
+    final double fade = _fadeOf(tester, find.byKey(videoShutterKey));
+    expect(fade, greaterThan(0));
+    expect(fade, lessThan(1));
+  });
+
+  testWidgets('with reduced motion the controls come back at once', (
+    WidgetTester tester,
+  ) async {
+    _useScreen(tester, _phoneScreen);
+    await tester.pumpWidget(
+      _app(_sheet(phase: VideoRecorderPhase.recording), reduceMotion: true),
+    );
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    _expectFade(tester, find.byKey(videoShutterKey), 0, 'the shutter');
+
+    await tester.tapAt(_middleOf(tester));
+    await tester.pump();
+
+    _expectFade(tester, find.byKey(videoShutterKey), 1, 'the shutter');
+  });
+
+  testWidgets('the recording indicator fades away when a hidden take pauses', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_app(_sheet(phase: VideoRecorderPhase.recording)));
+    await _pastHold(tester);
+    _expectFade(
+      tester,
+      find.byKey(videoTakeIndicatorKey),
+      1,
+      'the recording indicator',
+    );
+
+    await tester.pumpWidget(_app(_sheet(phase: VideoRecorderPhase.paused)));
+    await tester.pump(_midFade);
+
+    final double fade = _fadeOf(tester, find.byKey(videoTakeIndicatorKey));
+    expect(fade, greaterThan(0));
+    expect(fade, lessThan(1));
+
+    await tester.pump(_fade);
+
+    expect(find.byKey(videoTakeIndicatorKey), findsNothing);
+  });
+
+  testWidgets('the camera off words fade with the controls', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(_sheet(phase: VideoRecorderPhase.recording, cameraOn: false)),
+    );
+    await _pastHold(tester);
+
+    _expectFade(
+      tester,
+      find.text(videoCameraOffMessage),
+      0,
+      'the camera off words',
+    );
+  });
+
+  testWidgets(
+    'once the controls are hidden nothing keeps the screen redrawing',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _app(
+          _sheet(
+            phase: VideoRecorderPhase.recording,
+            controls: FakeVideoRecorder(),
+          ),
+        ),
+      );
+      await _pastHold(tester);
+      await tester.pump(const Duration(milliseconds: 16));
+
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    },
+  );
 
   testWidgets('hidden controls cannot be pressed', (WidgetTester tester) async {
     int pauses = 0;
@@ -242,8 +393,19 @@ void main() {
       );
       await _pastHold(tester);
 
-      expect(FocusManager.instance.primaryFocus, isNotNull);
+      final BuildContext? focused = FocusManager.instance.primaryFocus?.context;
+      expect(
+        focused?.findAncestorWidgetOfExactType<RecorderShortcuts>(),
+        isNotNull,
+      );
       _expectFade(tester, find.byKey(videoShutterKey), 0, 'the shutter');
+      _expectFade(
+        tester,
+        find.byKey(videoKeyboardHintKey),
+        0,
+        'the keyboard hint',
+      );
+      _expectFade(tester, find.byType(ReflectionPrompt), 0, 'the question');
     },
     semanticsEnabled: false,
   );
@@ -319,7 +481,11 @@ void main() {
     await tester.tapAt(_middleOf(tester));
     await _afterInput(tester);
     expect(_fadeOf(tester, find.byKey(videoShutterKey)), closeTo(1, 1e-9));
-    await tester.pump(recorderChromeHold + Duration(milliseconds: 100));
+    await tester.pump(_heldAfterInput);
+
+    _expectFade(tester, find.byKey(videoShutterKey), 1, 'the shutter');
+
+    await tester.pump(_acrossHide);
     await tester.pump(_fade);
 
     _expectFade(tester, find.byKey(videoShutterKey), 0, 'the shutter');
@@ -384,6 +550,22 @@ void main() {
         _sheet(
           phase: VideoRecorderPhase.recording,
           hearing: MicrophoneHearing.cannotHear,
+        ),
+      ),
+    );
+    await _longHold(tester);
+
+    _expectFade(tester, find.byKey(videoShutterKey), 1, 'the shutter');
+  });
+
+  testWidgets('the controls stay while the microphone is opening', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        _sheet(
+          phase: VideoRecorderPhase.recording,
+          hearing: MicrophoneHearing.opening,
         ),
       ),
     );

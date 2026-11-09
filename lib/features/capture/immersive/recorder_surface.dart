@@ -276,8 +276,10 @@ class _Stage extends StatelessWidget {
     final Animation<double> opacity = surface.chromeOpacity;
     return AnimatedBuilder(
       animation: opacity,
-      builder: (BuildContext context, Widget? quiet) =>
-          IgnorePointer(ignoring: opacity.value == 0, child: quiet),
+      builder: (BuildContext context, Widget? quiet) => IgnorePointer(
+        ignoring: opacity.value == 0,
+        child: TickerMode(enabled: opacity.value > 0, child: quiet!),
+      ),
       child: child,
     );
   }

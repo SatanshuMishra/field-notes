@@ -1,3 +1,4 @@
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/features/capture/video/video_recorder_sheet.dart';
 import 'package:field_notes/features/capture/video/video_shutter.dart';
 import 'package:flutter/material.dart';
@@ -67,6 +68,17 @@ double _ownFade(Widget widget) {
   return 1;
 }
 
+double _shutterOpacity(WidgetTester tester) => tester
+    .widget<Opacity>(
+      find
+          .descendant(
+            of: find.byKey(videoShutterKey),
+            matching: find.byType(Opacity),
+          )
+          .first,
+    )
+    .opacity;
+
 void _expectMidway(WidgetTester tester, Finder finder, String what) {
   expect(finder, findsOneWidget, reason: what);
   final double fade = _fadeOf(tester, finder);
@@ -112,6 +124,17 @@ void main() {
       await tester.pump();
 
       _expectOnlyForm(VideoShutterForm.pause);
+      expect(
+        tester
+            .widget<IconStickerGlyphIcon>(
+              find.descendant(
+                of: _form(VideoShutterForm.pause),
+                matching: find.byType(IconStickerGlyphIcon),
+              ),
+            )
+            .glyph,
+        IconStickerGlyph.pause,
+      );
 
       await tester.pumpWidget(_sheet(phase: VideoRecorderPhase.recording));
       await tester.pump(_pastFade);
@@ -168,17 +191,10 @@ void main() {
       );
       await tester.pump(_pastFade);
 
-      final List<double> dimmed = <double>[];
-      tester.element(find.byKey(videoShutterKey)).visitAncestorElements((
-        Element ancestor,
-      ) {
-        final Widget widget = ancestor.widget;
-        if (widget is Opacity && widget.opacity < 1) {
-          dimmed.add(widget.opacity);
-        }
-        return true;
-      });
-      expect(dimmed, isEmpty);
+      expect(
+        _fadeOf(tester, _form(VideoShutterForm.countdown)),
+        closeTo(1, 1e-9),
+      );
 
       await tester.tap(find.byKey(videoShutterKey), warnIfMissed: false);
       await tester.pump();
@@ -186,6 +202,31 @@ void main() {
       expect(starts, 0);
     },
   );
+
+  testWidgets('the shutter dims gradually when the take pauses', (
+    WidgetTester tester,
+  ) async {
+    Widget sheet(VideoRecorderPhase phase) => _sheet(
+      phase: phase,
+      supportsPause: true,
+      onPause: () {},
+      onResume: () {},
+    );
+
+    await tester.pumpWidget(sheet(VideoRecorderPhase.recording));
+    await tester.pump(_pastFade);
+    expect(_shutterOpacity(tester), closeTo(1, 1e-9));
+
+    await tester.pumpWidget(sheet(VideoRecorderPhase.paused));
+    await tester.pump(_midFade);
+
+    expect(_shutterOpacity(tester), greaterThan(videoPausedShutterOpacity));
+    expect(_shutterOpacity(tester), lessThan(1));
+
+    await tester.pump(_pastFade);
+
+    expect(_shutterOpacity(tester), closeTo(videoPausedShutterOpacity, 1e-9));
+  });
 
   testWidgets('old and new shutter forms overlap while the phase changes', (
     WidgetTester tester,

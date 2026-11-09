@@ -277,6 +277,24 @@ void main() {
     await _open(tester);
 
     expect(find.byType(CrossHatchPlaceholder), findsNothing);
+    expect(
+      find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is ColoredBox && widget.color == recorderStageColor,
+      ),
+      findsWidgets,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (Widget widget) =>
+            (widget is ColoredBox && widget.color == const Color(0xFF000000)) ||
+            (widget is DecoratedBox &&
+                widget.decoration is BoxDecoration &&
+                (widget.decoration as BoxDecoration).color ==
+                    const Color(0xFF000000)),
+      ),
+      findsNothing,
+    );
     expect(find.byKey(videoFlipCameraKey), findsOneWidget);
     expect(find.text(stageIdleStatus), findsOneWidget);
     expect(fakeVideoPreview(), findsNothing);
