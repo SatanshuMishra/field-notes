@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T08:39:30.318Z
+Updated: 2026-11-09T08:39:31.111Z
 Next ids: c7 D6 R5 S1
 
 ## Goal
@@ -42,5 +42,4 @@ Confirm the v1.6.0 release job published its files. The owner checks stabilisati
 
 - Archive: ~/.mitosis/fireplace/archive/video-log-camera-overhaul holds the spec, decisions, record, Steps, worker rules and build logs.
 - Watcher: ~/.mitosis/drive_watcher.py holds its code.
-- Release job: GitHub Actions run 42578901902 builds and publishes v1.6.0.
-- Release retry: release-retry.sh in the session scratchpad re-runs that job's failed builds once its Gradle and Kotlin downloads work.
+- Release: the v1.6.0 release page on GitHub holds the published files and notes.
