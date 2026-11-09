@@ -122,6 +122,19 @@ const List<String> _fixed150 = <String>[
   'In the welcome tour\'s month, flowers no longer cover the day numbers when you use large text.',
 ];
 
+const List<String> _improved160 = <String>[
+  'The video recorder moves smoothly between getting ready, the countdown and recording, and the record button looks different at each step.',
+  'A few seconds into a recording, everything fades away except the microphone control and a small timer, so you can focus on what you are saying. Tap the screen or press a key to bring the controls back.',
+  'On Android, recording starts as soon as the countdown ends, without stopping at "Getting the camera ready".',
+  'On Android, a soft, blurred copy of the picture fills the space around your video instead of black bars, and the whole video stays in view.',
+  'The words on the recorder have a soft shadow, so they are easier to read over the picture.',
+];
+
+const List<String> _fixed160 = <String>[
+  'On Android, the first time you open the video recorder it asks for the camera and then the microphone, one at a time, instead of sometimes staying blank.',
+  'On Android, if you refuse camera access, the recorder shows a screen where you can try again.',
+];
+
 const String _plainEnglishRule =
     'Write the entries in plain English for the people who use Field Notes: say clearly what they will notice, and leave out technical detail such as frame rates, graphics memory figures or the names of the app\'s internal parts.';
 
@@ -536,12 +549,6 @@ void main() {
     expect(unreleased, isNonNegative);
     expect(release, greaterThan(unreleased));
     expect(previous, greaterThan(release));
-    expect(
-      lines
-          .sublist(unreleased + 1, release)
-          .every((String line) => line.isEmpty),
-      isTrue,
-    );
 
     final ProcessResult result = Process.runSync('bash', <String>[
       'tool/release/changelog_section.sh',
@@ -572,5 +579,55 @@ void main() {
     );
     expect(section.notes.groups[0].items, _improved150);
     expect(section.notes.groups[1].items, _fixed150);
+  });
+
+  test('the release job finds the dated 1.6.0 notes in the changelog', () {
+    final List<String> lines = _changelog().split('\n');
+    final List<String> headings = lines
+        .where((String line) => line.startsWith('## [1.6.0]'))
+        .toList();
+    expect(headings, <String>['## [1.6.0] - 2026-11-09']);
+    final int unreleased = lines.indexOf('## [Unreleased]');
+    final int release = lines.indexOf('## [1.6.0] - 2026-11-09');
+    final int previous = lines.indexOf('## [1.5.0] - 2026-10-27');
+    expect(unreleased, isNonNegative);
+    expect(release, greaterThan(unreleased));
+    expect(previous, greaterThan(release));
+    expect(
+      lines
+          .sublist(unreleased + 1, release)
+          .every((String line) => line.isEmpty),
+      isTrue,
+    );
+
+    final ProcessResult result = Process.runSync('bash', <String>[
+      'tool/release/changelog_section.sh',
+      '1.6.0',
+      'CHANGELOG.md',
+    ]);
+    expect(result.exitCode, 0);
+    expect(
+      result.stdout,
+      '### Improved\n\n'
+      '${_improved160.map((String entry) => '- $entry\n').join()}'
+      '\n### Fixed\n\n'
+      '${_fixed160.map((String entry) => '- $entry\n').join()}',
+    );
+  });
+
+  test('Field Notes 1.6.0 finds its own release notes', () {
+    final ChangelogSection? section = changelogSection(
+      _changelog(),
+      AppVersion.tryParse('1.6.0')!,
+    );
+    expect(section, isNotNull);
+    expect(section!.date, DateTime(2026, 11, 9));
+    expect(section.notes.intro, isEmpty);
+    expect(
+      section.notes.groups.map((ReleaseNoteGroup group) => group.title),
+      <String>['Improved', 'Fixed'],
+    );
+    expect(section.notes.groups[0].items, _improved160);
+    expect(section.notes.groups[1].items, _fixed160);
   });
 }
