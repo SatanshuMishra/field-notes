@@ -24,6 +24,7 @@ import 'package:field_notes/state/settings_section_request.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 
 import 'audio_input_selectable.dart';
+import 'camera_access_reporting.dart';
 import 'camera_selection.dart';
 import 'video_recorder.dart';
 import 'video_recorder_provider.dart';
@@ -83,6 +84,7 @@ class _VideoComposerConnectorState
   Duration _elapsed = Duration.zero;
   Timer? _elapsedTicker;
   Timer? _breathTimer;
+  StreamSubscription<void>? _cameraRefusals;
   final List<Timer> _timers = <Timer>[];
   List<VideoTimelineEvent> _pendingEvents = const <VideoTimelineEvent>[];
   late final VideoRecorder _recorder;
@@ -119,6 +121,9 @@ class _VideoComposerConnectorState
     super.initState();
     _recorder = ref.read(videoRecorderProvider);
     _wakeHold = RecordingWakeHold(ref.read(stayAwakeProvider));
+    if (_recorder case final CameraAccessReporting reporting) {
+      _cameraRefusals = reporting.cameraRefused.listen((_) => _showDenied());
+    }
     if (_recorder is AudioInputSelectable) {
       ref.listenManual<AsyncValue<AppSettings>>(
         appSettingsProvider,
@@ -842,6 +847,7 @@ class _VideoComposerConnectorState
 
   @override
   void dispose() {
+    unawaited(_cameraRefusals?.cancel());
     _cancelBreath();
     _cancelTimers();
     _stopTicker();

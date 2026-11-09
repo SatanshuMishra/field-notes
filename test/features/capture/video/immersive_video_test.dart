@@ -5,6 +5,7 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
+import 'package:field_notes/features/capture/video/camera_access_reporting.dart';
 import 'package:field_notes/features/capture/video/camera_picker.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
@@ -24,6 +25,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'video_test_support.dart';
 
 enum _Layout { sidebar, bottomBar }
+
+class _RefusableVideoRecorder extends FakeVideoRecorder
+    implements CameraAccessReporting {
+  final StreamController<void> _refusals = StreamController<void>.broadcast();
+
+  void refuse() => _refusals.add(null);
+
+  @override
+  Stream<void> get cameraRefused => _refusals.stream;
+}
 
 const Size _sidebarWindow = Size(1280, 800);
 const Size _bottomBarWindow = Size(360, 740);
@@ -871,6 +882,34 @@ void main() {
       await _settle(tester);
       await _closeAll(tester);
       semantics.dispose();
+      debugDefaultTargetPlatformOverride = null;
+    },
+  );
+
+  testWidgets(
+    'a camera refused after the recorder opens shows the permission message',
+    (WidgetTester tester) async {
+      final _RefusableVideoRecorder recorder = _RefusableVideoRecorder();
+      await _pumpApp(tester, layout: _Layout.bottomBar, recorder: recorder);
+      await _open(tester);
+      expect(_phase(tester), VideoRecorderPhase.idle);
+
+      recorder.refuse();
+      await tester.pump();
+      await _settle(tester);
+
+      expect(_phase(tester), VideoRecorderPhase.denied);
+      expect(find.text(cameraPermissionMessage), findsOneWidget);
+      expect(fakeVideoPreview(), findsNothing);
+
+      final int listed = recorder.listCalls;
+      await tester.tap(find.byKey(videoTryAgainKey));
+      await tester.pump();
+      await _settle(tester);
+
+      expect(recorder.listCalls, listed + 1);
+      expect(_phase(tester), VideoRecorderPhase.idle);
+      await _closeAll(tester);
       debugDefaultTargetPlatformOverride = null;
     },
   );

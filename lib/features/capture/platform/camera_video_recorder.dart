@@ -25,6 +25,7 @@ import 'package:field_notes/features/capture/audio/input_level.dart'
 import 'package:field_notes/features/capture/audio/live_audio_capture.dart';
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/video/audio_input_selectable.dart';
+import 'package:field_notes/features/capture/video/camera_access_reporting.dart';
 import 'package:field_notes/features/capture/video/camera_picture_fill.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/voice/record_voice_recorder.dart'
@@ -504,7 +505,8 @@ class _LiveSound {
   }
 }
 
-abstract class _CameraPackageVideoRecorder implements VideoRecorder {
+abstract class _CameraPackageVideoRecorder
+    implements VideoRecorder, CameraAccessReporting {
   _CameraPackageVideoRecorder({
     this._startTimeoutMessage,
     required Future<Directory> Function() temporaryDirectory,
@@ -528,6 +530,7 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
   final _CaptureFolder _folder;
   late final _LiveSound _sound;
   CameraController? _controller;
+  final StreamController<void> _refusals = StreamController<void>.broadcast();
   _CameraSession? _session;
   final Stopwatch _elapsed = clock.stopwatch();
   _OwnedCaptures _owned = const _OwnedCaptures();
@@ -550,6 +553,9 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
 
   @override
   Duration get elapsed => _elapsed.elapsed;
+
+  @override
+  Stream<void> get cameraRefused => _refusals.stream;
 
   @override
   Stream<double> get level => _sound.level;
@@ -713,6 +719,7 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
   Future<void> dispose() async {
     await release();
     await _sound.dispose();
+    await _refusals.close();
   }
 
   @override
@@ -777,10 +784,27 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
       ready.complete(controller);
     } on VideoRecorderException catch (error) {
       ready.completeError(error);
+    } on CameraException catch (error) {
+      ready.completeError(
+        VideoRecorderException(videoStartMessage, cause: error),
+      );
+      if (_cameraRefusalCodes.contains(error.code)) {
+        await _reportRefusal(session);
+      }
     } catch (error) {
       ready.completeError(
         VideoRecorderException(videoStartMessage, cause: error),
       );
+    }
+  }
+
+  Future<void> _reportRefusal(_CameraSession session) async {
+    if (!identical(_session, session)) {
+      return;
+    }
+    await release();
+    if (!_refusals.isClosed) {
+      _refusals.add(null);
     }
   }
 
@@ -1954,6 +1978,12 @@ class _MacCameraPictureState extends State<_MacCameraPicture> {
     ready: _ready,
   );
 }
+
+const Set<String> _cameraRefusalCodes = <String>{
+  'CameraAccessDenied',
+  'CameraAccessDeniedWithoutPrompt',
+  'CameraAccessRestricted',
+};
 
 const double videoHardCapSeconds = 30 * 60;
 const Duration cameraStartTimeout = Duration(seconds: 12);

@@ -428,7 +428,33 @@ void main() {
     await _close(tester, recorder);
   });
 
-  testWidgets('the microphone is still asked for when the camera is refused', (
+  testWidgets('a refused camera is reported and the microphone is left alone', (
+    WidgetTester tester,
+  ) async {
+    final _Phone phone = _phoneWith(
+      _LoggingCameraPlatform(
+        openFailure: CameraException(
+          'CameraAccessDenied',
+          'The camera was refused.',
+        ),
+      ),
+    );
+    final CameraVideoRecorder recorder = phone.recorder();
+    int refusals = 0;
+    final StreamSubscription<void> listening = recorder.cameraRefused.listen(
+      (_) => refusals += 1,
+    );
+    addTearDown(listening.cancel);
+
+    await _beginOpening(tester, recorder);
+
+    expect(refusals, 1);
+    expect(phone.mic.timesAsked, 0);
+
+    await _close(tester, recorder);
+  });
+
+  testWidgets('trying again after a refusal opens the camera afresh', (
     WidgetTester tester,
   ) async {
     final _Phone phone = _phoneWith(
@@ -442,11 +468,41 @@ void main() {
     final CameraVideoRecorder recorder = phone.recorder();
 
     await _beginOpening(tester, recorder);
+    await _beginOpening(tester, recorder);
 
-    expect(phone.mic.timesAsked, 1);
+    expect(
+      phone.platform.calls.where(
+        (String call) => call == 'createCameraWithSettings',
+      ),
+      hasLength(2),
+    );
 
     await _close(tester, recorder);
   });
+
+  testWidgets(
+    'a camera that fails for another reason still warms the microphone',
+    (WidgetTester tester) async {
+      final _Phone phone = _phoneWith(
+        _LoggingCameraPlatform(
+          openFailure: CameraException('CameraError', 'The camera broke.'),
+        ),
+      );
+      final CameraVideoRecorder recorder = phone.recorder();
+      int refusals = 0;
+      final StreamSubscription<void> listening = recorder.cameraRefused.listen(
+        (_) => refusals += 1,
+      );
+      addTearDown(listening.cancel);
+
+      await _beginOpening(tester, recorder);
+
+      expect(refusals, 0);
+      expect(phone.mic.timesAsked, 1);
+
+      await _close(tester, recorder);
+    },
+  );
 
   testWidgets('leaving while the camera opens never asks for the microphone', (
     WidgetTester tester,
