@@ -5,11 +5,102 @@ import 'field_notes_colors.dart';
 import 'palette.dart';
 import 'typography.dart';
 
+const TextStyle _displayRole = TextStyle(
+  fontFamily: TypographyTokens.serif,
+  fontSize: 34,
+  fontWeight: FontWeight.w500,
+  height: 1.05,
+  letterSpacing: -0.34,
+);
+
+const TextStyle _titleRole = TextStyle(
+  fontFamily: TypographyTokens.serif,
+  fontSize: 24,
+  fontWeight: FontWeight.w500,
+  height: 1.2,
+);
+
+const TextStyle _headingRole = TextStyle(
+  fontFamily: TypographyTokens.serif,
+  fontSize: 17,
+  fontWeight: FontWeight.w500,
+  height: 1.3,
+);
+
+const TextStyle _bodyRole = TextStyle(
+  fontFamily: TypographyTokens.serif,
+  fontSize: 15,
+  fontWeight: FontWeight.w400,
+  height: 1.5,
+);
+
+const TextStyle _uiRole = TextStyle(
+  fontFamily: TypographyTokens.sans,
+  fontSize: 14,
+  fontWeight: FontWeight.w500,
+  height: 1.4,
+);
+
+const TextStyle _labelRole = TextStyle(
+  fontFamily: TypographyTokens.sans,
+  fontSize: 13,
+  fontWeight: FontWeight.w600,
+  height: 1.4,
+);
+
+const TextStyle _captionRole = TextStyle(
+  fontFamily: TypographyTokens.sans,
+  fontSize: 12,
+  fontWeight: FontWeight.w400,
+  height: 1.4,
+);
+
+const TextStyle _microRole = TextStyle(
+  fontFamily: TypographyTokens.sans,
+  fontSize: 11,
+  fontWeight: FontWeight.w600,
+  height: 1.3,
+);
+
+const TextStyle _accentRole = TextStyle(
+  fontFamily: TypographyTokens.accent,
+  fontSize: 18,
+  fontWeight: FontWeight.w600,
+  height: 1.15,
+);
+
+const TextStyle _sectionRole = TextStyle(
+  fontFamily: TypographyTokens.accent,
+  fontSize: 19,
+  fontWeight: FontWeight.w600,
+  height: 1.1,
+);
+
 @immutable
 class FieldNotesTextStyles {
   const FieldNotesTextStyles(this.colors);
 
   final FieldNotesColors colors;
+
+  TextStyle get display => _displayRole.copyWith(color: colors.ink);
+
+  TextStyle get title => _titleRole.copyWith(color: colors.ink);
+
+  TextStyle get heading => _headingRole.copyWith(color: colors.ink);
+
+  TextStyle get body => _bodyRole.copyWith(color: colors.ink);
+
+  TextStyle get ui => _uiRole.copyWith(color: colors.ink);
+
+  TextStyle get label => _labelRole.copyWith(color: colors.ink);
+
+  TextStyle get caption => _captionRole.copyWith(color: colors.muted);
+
+  TextStyle get micro => _microRole.copyWith(color: colors.muted);
+
+  TextStyle get accent => _accentRole.copyWith(color: colors.accentInk);
+
+  TextStyle get section => _sectionRole.copyWith(color: colors.sage);
 
   TextStyle get timerSerif =>
       TypographyTokens.timerSerif.copyWith(color: colors.ink);

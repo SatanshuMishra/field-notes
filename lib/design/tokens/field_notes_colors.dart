@@ -47,6 +47,19 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     required this.accentSoft,
     required this.accentTint,
     required this.accentRecord,
+    required this.mediaRail,
+    required this.mediaPlayed,
+    required this.mediaBubble,
+    required this.mediaBubbleInk,
+    required this.mediaCta,
+    required this.mediaCtaInk,
+    required this.mediaCtaHover,
+    required this.viewerRail,
+    required this.viewerWaveform,
+    required this.viewerStage,
+    required this.viewerStageEdge,
+    required this.viewerFadeStart,
+    required this.viewerFadeEnd,
   });
 
   static const FieldNotesColors light = FieldNotesColors(
@@ -93,6 +106,19 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     accentSoft: Color(0xFFD6959E),
     accentTint: Color(0xFFFFD5DB),
     accentRecord: Color(0xFFDA7185),
+    mediaRail: Color(0x3D4A3B2E),
+    mediaPlayed: Color(0xFFA84A5E),
+    mediaBubble: Color(0xFFFFFAF1),
+    mediaBubbleInk: Color(0xFF4A3B2E),
+    mediaCta: Color(0xFF4A3B2E),
+    mediaCtaInk: Color(0xFFFBF3E4),
+    mediaCtaHover: Color(0xFF33271D),
+    viewerRail: Color(0x4D4A3B2E),
+    viewerWaveform: Color(0xFFC4929B),
+    viewerStage: Color(0xFFE6D8BF),
+    viewerStageEdge: Color(0xFFCDBD9F),
+    viewerFadeStart: Color(0x00FBF3E4),
+    viewerFadeEnd: Color(0xF5FBF3E4),
   );
 
   static const FieldNotesColors dark = FieldNotesColors(
@@ -139,6 +165,19 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     accentSoft: Color(0xFFD399A1),
     accentTint: Color(0xFFF6D4D8),
     accentRecord: Color(0xFFC86075),
+    mediaRail: Color(0x38EDE1E1),
+    mediaPlayed: Color(0xFFE3889A),
+    mediaBubble: Color(0xEB0E0B09),
+    mediaBubbleInk: Color(0xFFF3E6D1),
+    mediaCta: Color(0xFFF3E6D1),
+    mediaCtaInk: Color(0xFF1C1713),
+    mediaCtaHover: Color(0xFFFFF4E2),
+    viewerRail: Color(0x52EDE1E1),
+    viewerWaveform: Color(0xFF8C5C63),
+    viewerStage: Color(0xFF1C1713),
+    viewerStageEdge: Color(0xFF0E0B09),
+    viewerFadeStart: Color(0x001C1919),
+    viewerFadeEnd: Color(0xF01C1919),
   );
 
   static FieldNotesColors of(BuildContext context) =>
@@ -187,6 +226,19 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
   final Color accentSoft;
   final Color accentTint;
   final Color accentRecord;
+  final Color mediaRail;
+  final Color mediaPlayed;
+  final Color mediaBubble;
+  final Color mediaBubbleInk;
+  final Color mediaCta;
+  final Color mediaCtaInk;
+  final Color mediaCtaHover;
+  final Color viewerRail;
+  final Color viewerWaveform;
+  final Color viewerStage;
+  final Color viewerStageEdge;
+  final Color viewerFadeStart;
+  final Color viewerFadeEnd;
 
   Color get ink08 => ink.withAlpha(0x14);
   Color get ink12 => ink.withAlpha(0x1F);
@@ -250,6 +302,19 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     Color? accentSoft,
     Color? accentTint,
     Color? accentRecord,
+    Color? mediaRail,
+    Color? mediaPlayed,
+    Color? mediaBubble,
+    Color? mediaBubbleInk,
+    Color? mediaCta,
+    Color? mediaCtaInk,
+    Color? mediaCtaHover,
+    Color? viewerRail,
+    Color? viewerWaveform,
+    Color? viewerStage,
+    Color? viewerStageEdge,
+    Color? viewerFadeStart,
+    Color? viewerFadeEnd,
   }) {
     return FieldNotesColors(
       page: page ?? this.page,
@@ -295,6 +360,19 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
       accentSoft: accentSoft ?? this.accentSoft,
       accentTint: accentTint ?? this.accentTint,
       accentRecord: accentRecord ?? this.accentRecord,
+      mediaRail: mediaRail ?? this.mediaRail,
+      mediaPlayed: mediaPlayed ?? this.mediaPlayed,
+      mediaBubble: mediaBubble ?? this.mediaBubble,
+      mediaBubbleInk: mediaBubbleInk ?? this.mediaBubbleInk,
+      mediaCta: mediaCta ?? this.mediaCta,
+      mediaCtaInk: mediaCtaInk ?? this.mediaCtaInk,
+      mediaCtaHover: mediaCtaHover ?? this.mediaCtaHover,
+      viewerRail: viewerRail ?? this.viewerRail,
+      viewerWaveform: viewerWaveform ?? this.viewerWaveform,
+      viewerStage: viewerStage ?? this.viewerStage,
+      viewerStageEdge: viewerStageEdge ?? this.viewerStageEdge,
+      viewerFadeStart: viewerFadeStart ?? this.viewerFadeStart,
+      viewerFadeEnd: viewerFadeEnd ?? this.viewerFadeEnd,
     );
   }
 
@@ -358,6 +436,19 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
       accentSoft: Color.lerp(accentSoft, other.accentSoft, t)!,
       accentTint: Color.lerp(accentTint, other.accentTint, t)!,
       accentRecord: Color.lerp(accentRecord, other.accentRecord, t)!,
+      mediaRail: Color.lerp(mediaRail, other.mediaRail, t)!,
+      mediaPlayed: Color.lerp(mediaPlayed, other.mediaPlayed, t)!,
+      mediaBubble: Color.lerp(mediaBubble, other.mediaBubble, t)!,
+      mediaBubbleInk: Color.lerp(mediaBubbleInk, other.mediaBubbleInk, t)!,
+      mediaCta: Color.lerp(mediaCta, other.mediaCta, t)!,
+      mediaCtaInk: Color.lerp(mediaCtaInk, other.mediaCtaInk, t)!,
+      mediaCtaHover: Color.lerp(mediaCtaHover, other.mediaCtaHover, t)!,
+      viewerRail: Color.lerp(viewerRail, other.viewerRail, t)!,
+      viewerWaveform: Color.lerp(viewerWaveform, other.viewerWaveform, t)!,
+      viewerStage: Color.lerp(viewerStage, other.viewerStage, t)!,
+      viewerStageEdge: Color.lerp(viewerStageEdge, other.viewerStageEdge, t)!,
+      viewerFadeStart: Color.lerp(viewerFadeStart, other.viewerFadeStart, t)!,
+      viewerFadeEnd: Color.lerp(viewerFadeEnd, other.viewerFadeEnd, t)!,
     );
   }
 
@@ -405,6 +496,19 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     accentSoft,
     accentTint,
     accentRecord,
+    mediaRail,
+    mediaPlayed,
+    mediaBubble,
+    mediaBubbleInk,
+    mediaCta,
+    mediaCtaInk,
+    mediaCtaHover,
+    viewerRail,
+    viewerWaveform,
+    viewerStage,
+    viewerStageEdge,
+    viewerFadeStart,
+    viewerFadeEnd,
   ];
 
   @override
