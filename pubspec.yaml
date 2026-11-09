@@ -129,6 +129,8 @@ dependency_overrides:
     path: third_party/record_macos
   flutter_local_notifications_windows:
     path: third_party/flutter_local_notifications_windows
+  camera_android_camerax:
+    path: third_party/camera_android_camerax
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

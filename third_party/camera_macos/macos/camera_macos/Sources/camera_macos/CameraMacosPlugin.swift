@@ -582,19 +582,7 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
                     self.videoOutputHeight = dimensions.height
                     self.videoOutputWidth = dimensions.width
                     let size = ["width": Double(dimensions.width), "height": Double(dimensions.height)]
-                    
-                    if self.useMovieFileOutput {
-                        if let previewLayer = self.previewLayer, let _ = previewLayer.superlayer {
-                            previewLayer.removeFromSuperlayer()
-                        }
-                        self.previewLayer = AVCaptureVideoPreviewLayer(session: self.captureSession)
-                        self.previewLayer!.videoGravity = .resizeAspectFill
-                        if let factory = self.factory {
-                            factory.frame = CGRect(x: 0, y: 0, width: Int(dimensions.width), height: Int(dimensions.height))
-                            factory.previewLayer = AVCaptureVideoPreviewLayer(session: self.captureSession)
-                        }
-                    }
-                    
+
                     var devices: [Dictionary<String, Any>] = []
                     if let videoDevice = self.videoDevice {
                         devices.append([
