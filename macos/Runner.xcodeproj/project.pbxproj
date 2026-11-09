@@ -34,6 +34,7 @@
 		F1E1D0012EA0000100000006 /* FileDropBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0012EA0000100000005 /* FileDropBridge.swift */; };
 		F1E1D0012EA0000100000008 /* SparkleUpdaterBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0012EA0000100000007 /* SparkleUpdaterBridge.swift */; };
 		F1E1D0012EA000010000000A = {isa = PBXBuildFile; fileRef = F1E1D0012EA0000100000009; };
+		F1E1D0012EA000010000000C = {isa = PBXBuildFile; fileRef = F1E1D0012EA000010000000B; };
 		FEDBDF9E3D3259039777247A /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD5B39C2331B46FD47D3B4DE /* Pods_Runner.framework */; };
 /* End PBXBuildFile section */
 
@@ -100,6 +101,7 @@
 		F1E1D0012EA0000100000005 /* FileDropBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileDropBridge.swift; sourceTree = "<group>"; };
 		F1E1D0012EA0000100000007 /* SparkleUpdaterBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdaterBridge.swift; sourceTree = "<group>"; };
 		F1E1D0012EA0000100000009 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveAudioBridge.swift; sourceTree = "<group>"; };
+		F1E1D0012EA000010000000B = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoFramesBridge.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -196,6 +198,7 @@
 				F1E1D0012EA0000100000005 /* FileDropBridge.swift */,
 				F1E1D0012EA0000100000007 /* SparkleUpdaterBridge.swift */,
 				F1E1D0012EA0000100000009,
+				F1E1D0012EA000010000000B,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -470,6 +473,7 @@
 				F1E1D0012EA0000100000006 /* FileDropBridge.swift in Sources */,
 				F1E1D0012EA0000100000008 /* SparkleUpdaterBridge.swift in Sources */,
 				F1E1D0012EA000010000000A,
+				F1E1D0012EA000010000000C,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
