@@ -22,6 +22,7 @@ import 'window_chrome.dart';
 
 const double shellSidebarOpenWidth = 176;
 const double shellSidebarCollapsedWidth = 68;
+const double shellSidebarOpenMinWindowWidth = 860;
 const Duration shellSidebarResize = Duration(milliseconds: 250);
 const Cubic shellSidebarCurve = Cubic(0.2, 0.8, 0.2, 1);
 
@@ -92,6 +93,9 @@ const double _windowTitleMaxTextScale = 1.5;
 
 double sidebarOpenWidth(TextScaler scaler) =>
     scaler.scale(shellSidebarOpenWidth);
+
+bool windowForcesSidebarRail(double windowWidth) =>
+    windowWidth < shellSidebarOpenMinWindowWidth;
 
 double _toggleTarget(TargetPlatform platform) =>
     platform == TargetPlatform.windows
@@ -166,6 +170,7 @@ class SidebarShell extends StatefulWidget {
     this.soundOn = true,
     this.obscured = false,
     this.collapsed = false,
+    this.railOnly = false,
     this.onCollapsedChanged,
   });
 
@@ -181,6 +186,7 @@ class SidebarShell extends StatefulWidget {
   final bool soundOn;
   final bool obscured;
   final bool collapsed;
+  final bool railOnly;
   final ValueChanged<bool>? onCollapsedChanged;
 
   @override
@@ -203,6 +209,8 @@ class _SidebarShellState extends State<SidebarShell> {
   };
 
   bool get _toggles => widget.onCollapsedChanged != null;
+
+  bool get _collapsed => widget.collapsed || widget.railOnly;
 
   @override
   void initState() {
@@ -247,7 +255,9 @@ class _SidebarShellState extends State<SidebarShell> {
   }
 
   void _toggle() {
-    widget.onCollapsedChanged?.call(!widget.collapsed);
+    if (!widget.railOnly) {
+      widget.onCollapsedChanged?.call(!widget.collapsed);
+    }
   }
 
   @override
@@ -301,7 +311,7 @@ class _SidebarShellState extends State<SidebarShell> {
   }
 
   Widget _panel(BuildContext context) {
-    final bool collapsed = widget.collapsed;
+    final bool collapsed = _collapsed;
     final double openWidth = sidebarOpenWidth(MediaQuery.textScalerOf(context));
     final double target = _toggleTarget(Theme.of(context).platform);
     return FocusTraversalGroup(
@@ -329,7 +339,7 @@ class _SidebarShellState extends State<SidebarShell> {
               ),
             ],
           ),
-          if (_toggles)
+          if (_toggles && !widget.railOnly)
             AnimatedPositioned(
               duration: shellSidebarResize,
               curve: shellSidebarCurve,
@@ -388,7 +398,7 @@ class _SidebarShellState extends State<SidebarShell> {
   }
 
   Widget _rail(BuildContext context) {
-    final bool collapsed = widget.collapsed;
+    final bool collapsed = _collapsed;
     final double width = collapsed
         ? shellSidebarCollapsedWidth
         : sidebarOpenWidth(MediaQuery.textScalerOf(context));
@@ -442,7 +452,7 @@ class _SidebarShellState extends State<SidebarShell> {
   }
 
   Widget _head(BuildContext context) {
-    final bool collapsed = widget.collapsed;
+    final bool collapsed = _collapsed;
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: _headHeight),
       child: Padding(
@@ -497,7 +507,7 @@ class _SidebarShellState extends State<SidebarShell> {
         onPressed: widget.onSound,
       ),
     ];
-    if (widget.collapsed) {
+    if (_collapsed) {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -518,7 +528,7 @@ class _SidebarShellState extends State<SidebarShell> {
 
   Widget _railItem(BuildContext context, ShellDestination d) {
     final FieldNotesShadows shadows = context.shadows;
-    final bool collapsed = widget.collapsed;
+    final bool collapsed = _collapsed;
     final bool isSelected = d == widget.selected;
     final Color foreground = isSelected
         ? Palette.onAccent
