@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T07:06:25.267Z
+Updated: 2026-11-09T07:15:34.254Z
 Next ids: c7 D6 R5 S1
 
 ## Goal
@@ -18,7 +18,7 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-Pull requests 344 (fix/video-camera-engine) and 345 (feat/video-recorder-screen) are open against main, assigned to the owner, built with fanout on the owner's instruction to disregard the pipeline, and merge cleanly with each other. With both merged and stabilisation off on the owner's test phone, a Note10+, the preview equals the saved frame at scale 1.00, a take starts about 80 ms after the countdown, the controls fade without a cut, and a refused camera shows the access screen with the camera closed and no microphone prompt. Pull request 345 now has stabilisation on, which has not run on a phone. No real macOS or Windows camera has run it, so every criterion stays open. The token-free watcher is stopped and parked.
+The overhaul is merged into main, and the run's worktrees, branches and folders are removed. Pull request 346 holds the 1.6.0 release notes and is open for the owner to merge. With stabilisation off on the owner's test phone, a Note10+, the preview equals the saved frame at scale 1.00, a take starts about 80 ms after the countdown, the controls fade without a cut, and a refused camera shows the access screen with the camera closed and no microphone prompt. Stabilisation is on in main and has not run on a phone. No real macOS or Windows camera has run it, so every criterion stays open. The token-free watcher is stopped and parked.
 
 ## Next step
 
