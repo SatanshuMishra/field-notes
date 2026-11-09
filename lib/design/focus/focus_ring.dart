@@ -1,3 +1,4 @@
+import 'package:field_notes/design/focus/input_modality.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -64,9 +65,23 @@ class FocusRing extends StatefulWidget {
 class _FocusRingState extends State<FocusRing> {
   bool _highlighted = false;
 
+  bool get _ringShown => _highlighted && InputModality.instance.traversing;
+
   late final Map<Type, Action<Intent>> _actions = <Type, Action<Intent>>{
     ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: _activate),
   };
+
+  @override
+  void initState() {
+    super.initState();
+    InputModality.instance.addListener(_handleModalityChanged);
+  }
+
+  @override
+  void dispose() {
+    InputModality.instance.removeListener(_handleModalityChanged);
+    super.dispose();
+  }
 
   Object? _activate(ActivateIntent intent) {
     widget.onPressed?.call();
@@ -77,7 +92,18 @@ class _FocusRingState extends State<FocusRing> {
     if (highlighted != _highlighted) {
       setState(() => _highlighted = highlighted);
     }
-    if (highlighted && widget.reach > 0) {
+    _revealShownRing();
+  }
+
+  void _handleModalityChanged() {
+    if (_highlighted) {
+      setState(() {});
+      _revealShownRing();
+    }
+  }
+
+  void _revealShownRing() {
+    if (_ringShown && widget.reach > 0) {
       WidgetsBinding.instance.addPostFrameCallback(_revealRing);
     }
   }
@@ -106,7 +132,7 @@ class _FocusRingState extends State<FocusRing> {
           : MouseCursor.defer,
       onShowFocusHighlight: _handleShowFocusHighlight,
       child: _FocusRingScope(
-        highlighted: _highlighted && widget.enabled,
+        highlighted: _ringShown && widget.enabled,
         surface: widget.surface,
         borderRadius: widget.borderRadius,
         outset: widget.reach,
