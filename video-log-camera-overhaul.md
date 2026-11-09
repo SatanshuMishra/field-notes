@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
-Status: active
-Updated: 2026-11-09T08:39:31.111Z
+Status: parked
+Updated: 2026-11-09T08:39:46.020Z
 Next ids: c7 D6 R5 S1
 
 ## Goal
@@ -22,7 +22,9 @@ The overhaul is released as v1.6.0, and the run's worktrees, branches and folder
 
 ## Next step
 
-Confirm the v1.6.0 release job published its files. The owner checks stabilisation on a phone, the Mac effects, and the macOS and Windows cameras on real hardware.
+The owner tries v1.6.0 with stabilisation on a phone, checks that Mac Video Effects stay on, and runs the macOS and Windows cameras on real hardware, then ticks each criterion that holds.
+
+Needs: R1, R2, R3, R4.
 
 ## Decisions in force
 
