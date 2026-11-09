@@ -12,6 +12,14 @@ _Avoid_: Entry (in user-facing words), post, item
 One recording in progress, from the first press of record until it is kept or discarded.
 _Avoid_: Session, clip
 
+**Recorder chrome**:
+The words and controls of the video recorder that fade away a few seconds into a take and come back on any input.
+_Avoid_: Overlay, HUD, controls layer
+
+**Picture fill**:
+The dim, heavily blurred live copy of the camera picture that fills the window behind the whole recorded frame.
+_Avoid_: Letterbox, bands, background
+
 **Keep**:
 The act that saves a take as a log.
 _Avoid_: Save, finish
