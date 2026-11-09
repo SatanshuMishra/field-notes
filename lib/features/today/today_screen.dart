@@ -26,7 +26,7 @@ const double _railSeamThickness = 1.0;
 const double todayFeedCacheExtent = 600;
 
 const EdgeInsets _stackedPagePadding = EdgeInsets.all(20);
-const EdgeInsets _railPagePadding = EdgeInsets.all(24);
+const EdgeInsets _desktopPagePadding = EdgeInsets.all(24);
 
 const EdgeInsets _syncLinesMargin = EdgeInsets.only(top: 12);
 const double _syncLineGap = 4;
@@ -123,7 +123,11 @@ class TodayScreen extends ConsumerWidget {
     final DateTime now = ref.watch(todayClockProvider)();
     final String date = ref.watch(todayDateProvider);
     final TodayLayout resolved =
-        layout ?? resolveTodayLayout(defaultTargetPlatform);
+        layout ??
+        resolveTodayLayout(
+          defaultTargetPlatform,
+          windowWidth: MediaQuery.sizeOf(context).width,
+        );
 
     switch (resolved) {
       case TodayLayout.stacked:
@@ -149,7 +153,9 @@ class TodayScreen extends ConsumerWidget {
             ),
           ],
         );
+      case TodayLayout.narrowDesktop:
       case TodayLayout.withRail:
+        final bool showsRail = resolved == TodayLayout.withRail;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
@@ -157,19 +163,24 @@ class TodayScreen extends ConsumerWidget {
               child: _scrollView(
                 now: now,
                 date: date,
-                padding: _railPagePadding,
+                padding: _desktopPagePadding,
                 inlineMood: true,
+                headerActions: showsRail
+                    ? const <Widget>[]
+                    : <Widget>[TodayNewLogButton(date: date)],
               ),
             ),
-            DashedDivider(
-              axis: Axis.vertical,
-              thickness: _railSeamThickness,
-              color: context.colors.ink22,
-            ),
-            SizedBox(
-              width: todayRailWidth,
-              child: TodayRightRail(date: date),
-            ),
+            if (showsRail) ...<Widget>[
+              DashedDivider(
+                axis: Axis.vertical,
+                thickness: _railSeamThickness,
+                color: context.colors.ink22,
+              ),
+              SizedBox(
+                width: todayRailWidth,
+                child: TodayRightRail(date: date),
+              ),
+            ],
           ],
         );
     }
@@ -180,6 +191,7 @@ class TodayScreen extends ConsumerWidget {
     required String date,
     required EdgeInsets padding,
     required bool inlineMood,
+    List<Widget> headerActions = const <Widget>[],
   }) {
     return CustomScrollView(
       scrollCacheExtent: const ScrollCacheExtent.pixels(todayFeedCacheExtent),
@@ -192,6 +204,7 @@ class TodayScreen extends ConsumerWidget {
                 child: TodayHeader(
                   greeting: greetingFor(now),
                   longDate: headerDateLabel(now),
+                  actions: headerActions,
                 ),
               ),
               const SliverToBoxAdapter(child: TodaySyncLines()),
