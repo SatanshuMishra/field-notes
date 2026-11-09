@@ -468,6 +468,7 @@ void main() {
       addTearDown(upgraded.close);
 
       expect(await _userVersion(upgraded), 3);
+      expect(await _entryColumns(upgraded), contains('title'));
       expect(await upgraded.select(upgraded.entries).get(), const <Entry>[
         Entry(
           id: 'entry-1',

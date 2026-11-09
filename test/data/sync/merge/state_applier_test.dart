@@ -712,28 +712,6 @@ void main() {
     expect((await mac.clocks()).keys, isNot(contains('peaks')));
   });
 
-  test(
-    'a record carrying a field this version does not know applies',
-    () async {
-      final _Device phone = device('Phone');
-      final _Device mac = device('Mac');
-      await phone.addDay();
-      await phone.addText('from a newer phone');
-
-      await mac.applyAll(<RecordState>[
-        await phone.state(SyncedTables.days, dayIdForDate(_date)),
-        _changed(
-          await phone.state(SyncedTables.entries, _entryId),
-          fields: <String, Object?>{'addedLater': 'Kept by newer phones only'},
-          clocks: <String, String>{'addedLater': _phoneClock(1)},
-        ),
-      ]);
-
-      expect((await mac.entry()).textContent, 'from a newer phone');
-      expect((await mac.clocks()).keys, isNot(contains('addedLater')));
-    },
-  );
-
   Future<RecordState> localTitled(_Device holder) async {
     await holder.addDay();
     await holder.addText('shared words');

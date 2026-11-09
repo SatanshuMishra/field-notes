@@ -140,12 +140,14 @@ class _DayRepository extends FakeJournalRepository {
     required String date,
     required String source,
     required List<String> photoMediaIds,
+    String? title,
   }) async {
     final Entry saved = await super.saveNote(
       entryId: entryId,
       date: date,
       source: source,
       photoMediaIds: photoMediaIds,
+      title: title,
     );
     _publish(<Entry>[
       for (final Entry entry in _current)
