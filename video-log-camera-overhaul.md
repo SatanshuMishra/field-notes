@@ -1,6 +1,6 @@
 # video-log-camera-overhaul: Video log and camera overhaul: transitions, lag, zoom, Mac effects, full-bleed layout, fading controls
 Status: active
-Updated: 2026-11-09T00:02:21.597Z
+Updated: 2026-11-09T00:11:02.255Z
 Next ids: c7 D5 R5 S1
 
 ## Goal
@@ -18,7 +18,7 @@ Make the video log feel seamless on Android, macOS and Windows: smooth ready, co
 
 ## Where things stand
 
-The owner approved the intent and told the run to work unattended. The spec's nine review issues are fixed, planning passed with two pull requests that share no files (camera-engine and recorder-screen), and the drive is building them on feat/video-log-camera-overhaul. A token-free watcher at ~/.mitosis/drive_watcher.py reports stage changes, asks a one-shot Claude check when it suspects a stall, stops work only on a confirmed verdict, and leaves notes that wake this session. Nothing is reviewed or shipped yet.
+The run is unattended and building both pull requests on feat/video-log-camera-overhaul; nothing is reviewed or shipped. A token-free watcher follows it, asks a one-shot Claude check when it suspects a stall, and stops work only on a confirmed verdict. The driving session waits on the watcher's notes without polling.
 
 ## Next step
 
@@ -26,9 +26,7 @@ The drive entered build and runs it next.
 
 ## Decisions in force
 
-- D2 repair: plan fail: park: plan: run.zsh exited with code 3: exit 3: refused to start; repair: With five --pr-why lines, pr_facts._problem joins them into one problem line (547 chars, over the 500-char limit). The five whys are now shortened so the joined line is 484 characters. Line count and positions stay the same, and every intent point is kept.
 - D3 hand-off: build the overhaul as two pull requests that share no files: Two pull requests that share no files: camera-engine holds the vendored Android plugin and the Mac plugin, and recorder-screen holds the camera start path, the fill, the transitions and the fading controls; built unattended and opened for the owner to merge.
-- D4 repair: plan fail: correct: Mitosis adds the MSP name to the PR title, so 'feat(video): make the video log one calm continuous moment (camera-engine)' came to 74 characters, over the 72 limit; the shorter subject 'make the video log calm and continuous' fits even with the longest MSP name, recorder-screen (69 characters).
 
 ## Open risks
 
@@ -45,3 +43,4 @@ The drive entered build and runs it next.
 - Decisions: docs/specs/video-log-camera-overhaul.decisions.md holds the owner's binding answers.
 - Spec: docs/specs/video-log-camera-overhaul.md holds the problem, intent, design, assumptions, risks and test seams.
 - Steps: docs/specs/video-log-camera-overhaul.items.json holds the build tasks.
+- Watcher: ~/.mitosis/drive_watcher.py holds its code; drive/watcher.log in the run home holds what it saw and did.
