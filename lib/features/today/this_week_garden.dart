@@ -2,12 +2,10 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
-import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/features/day_detail/show_day_detail.dart';
 import 'package:field_notes/domain/models/models.dart';
-import 'package:field_notes/state/shell_navigation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'today_date.dart';
 import 'today_week.dart';
@@ -110,23 +108,32 @@ class ThisWeekGarden extends StatelessWidget {
           Text(range, style: textStyles.caption10Sans),
           const SizedBox(height: _rangeGap),
         ],
-        ..._gridRows(),
+        ..._gridRows(_todayDate()),
       ],
     );
   }
 
-  List<Widget> _gridRows() {
+  String? _todayDate() {
+    for (final TodayWeekCell cell in cells) {
+      if (cell.isToday) {
+        return cell.date;
+      }
+    }
+    return null;
+  }
+
+  List<Widget> _gridRows(String? todayDate) {
     final List<Widget> rows = <Widget>[];
     for (int start = 0; start < cells.length; start += _gridColumns) {
       if (rows.isNotEmpty) {
         rows.add(const SizedBox(height: _gridGap));
       }
-      rows.add(_gridRow(start));
+      rows.add(_gridRow(start, todayDate));
     }
     return rows;
   }
 
-  Widget _gridRow(int start) {
+  Widget _gridRow(int start, String? todayDate) {
     final List<Widget> slots = <Widget>[];
     for (int column = 0; column < _gridColumns; column++) {
       if (column > 0) {
@@ -136,7 +143,13 @@ class ThisWeekGarden extends StatelessWidget {
       slots.add(
         Expanded(
           child: index < cells.length
-              ? _WeekCell(cell: cells[index], bloomSize: bloomSize)
+              ? _WeekCell(
+                  cell: cells[index],
+                  bloomSize: bloomSize,
+                  isPast:
+                      todayDate != null &&
+                      cells[index].date.compareTo(todayDate) < 0,
+                )
               : const SizedBox.shrink(),
         ),
       );
@@ -145,26 +158,36 @@ class ThisWeekGarden extends StatelessWidget {
   }
 }
 
-class _WeekCell extends ConsumerWidget {
-  const _WeekCell({required this.cell, required this.bloomSize});
+class _WeekCell extends StatelessWidget {
+  const _WeekCell({
+    required this.cell,
+    required this.bloomSize,
+    required this.isPast,
+  });
 
   final TodayWeekCell cell;
   final double bloomSize;
+  final bool isPast;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final Mood? mood = cell.mood;
-    void openCalendar() {
-      ref
-          .read(shellNavigationProvider.notifier)
-          .select(ShellDestination.calendar);
+    if (!isPast) {
+      return Semantics(
+        container: true,
+        label: mood == null
+            ? '${cell.weekdayLabel}, no mood'
+            : '${cell.weekdayLabel}, ${mood.label}',
+        child: ExcludeSemantics(child: _tile(context, mood)),
+      );
     }
-
+    final DateTime? moment = parseDateKey(cell.date);
+    final String moodName = mood == null ? 'no mood' : mood.label.toLowerCase();
     return Pressable(
-      label: mood == null
-          ? '${cell.weekdayLabel}, no mood'
-          : '${cell.weekdayLabel}, ${mood.label}',
-      onPressed: openCalendar,
+      label: moment == null
+          ? '${cell.weekdayLabel}, $moodName'
+          : 'Open ${headerDateLabel(moment)}, $moodName',
+      onPressed: () => showDayDetail(context, date: cell.date),
       borderRadius: _cellBorderRadius,
       paintsHover: false,
       builder: (BuildContext context, bool hovered) => HoverFill(
