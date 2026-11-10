@@ -7,7 +7,7 @@ private let frameAtMethod = "frameAt"
 private let tallestFrameRatio = 4
 private let frameJpegQuality = 0.8
 private let millisecondsTimescale: CMTimeScale = 1000
-private let frameTimeTolerance = CMTime(value: 1, timescale: 1)
+private let frameTimeTolerance = CMTime.zero
 
 final class VideoFramesBridge {
   private let channel: FlutterMethodChannel
