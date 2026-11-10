@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-10T22:58:05.641Z
+Updated: 2026-11-10T23:01:16.410Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
@@ -15,15 +15,15 @@ Prototype the owner's eight 1.8.0 follow-ups (a to h) on the design canvas, get 
 
 ## Where things stand
 
-Six boards are on the canvas page "1.8 follow-ups" and wait for the owner's approval, with four open questions: what completes a day for the streak (code counts one log, the owner described bloom plus log), whether fill-ins count only until 4 AM the next morning, the sidebar sync status form (own box or in the button row), and whether the voice room follows the light theme.
+Fanout split a to h into ten MSPs (one PR each) from origin/main f454ef02. Seven build agents are running in worktrees: outline-primitive (fix/outlined-surface), modal-video-transport, hover-padding (fix/hover-padding), sync status box plus Sync now feedback (feat/sync-status-box), update-launch-check, page-transitions, streak-late-night. Waiting to start: day-modal-tidy and night-sky stack on fix/outlined-surface; reminder-schedules stacks on feat/streak-late-night.
 
 Root causes found: rounded outlines break where an opaque child is clipped only to the border's outer curve (day modal right pane, day_detail_panel.dart:487-535; five other sites); hover fills hug text because Pressable sizes its fill to its child and rows pad outside it (pressable.dart:116-129).
 
 ## Next step
 
-Write fanout items for a to h from the approved boards, plan with the fanout wrapper, then dispatch one build agent per MSP from origin/main.
+When fix/outlined-surface lands, dispatch day-modal-tidy and night-sky on it; when feat/streak-late-night lands, dispatch reminder-schedules on it; review each finished branch.
 
-Needs: D1, D2, D3, D4, D5, R1.
+Needs: D1, D2, D3, D5, D6, D7, R1.
 
 ## Decisions in force
 
