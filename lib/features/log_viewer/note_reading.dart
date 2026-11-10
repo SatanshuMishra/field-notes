@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/focus/input_modality.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -275,15 +276,19 @@ class _NoteFocusRingState extends State<_NoteFocusRing> {
   void initState() {
     super.initState();
     FocusManager.instance.addHighlightModeListener(_onHighlightModeChanged);
+    InputModality.instance.addListener(_rebuild);
   }
 
   @override
   void dispose() {
     FocusManager.instance.removeHighlightModeListener(_onHighlightModeChanged);
+    InputModality.instance.removeListener(_rebuild);
     super.dispose();
   }
 
-  void _onHighlightModeChanged(FocusHighlightMode mode) {
+  void _onHighlightModeChanged(FocusHighlightMode mode) => _rebuild();
+
+  void _rebuild() {
     if (mounted) {
       setState(() {});
     }
@@ -299,7 +304,8 @@ class _NoteFocusRingState extends State<_NoteFocusRing> {
   Widget build(BuildContext context) {
     final bool ringed =
         _focused &&
-        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional &&
+        InputModality.instance.traversing;
     return Focus(
       canRequestFocus: false,
       skipTraversal: true,
