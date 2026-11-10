@@ -1,6 +1,6 @@
 # post-1-7-0-followups: Post-1.7.0 follow-ups: privacy line, note title focus, note viewer and editor parity, voice button, week garden, overnight Today, day modal
 Status: active
-Updated: 2026-11-10T20:10:39.162Z
+Updated: 2026-11-10T20:10:47.201Z
 Next ids: c4 D1 R2 S1
 
 ## Goal
@@ -15,11 +15,11 @@ Prototype the owner's seven 1.7.0 follow-ups (a to g) on the design canvas, get 
 
 ## Where things stand
 
-Open and assigned: week garden (e) #363; recorders (a for recordings, d) #364; overnight Today (f) #365; day modal (g) #366. The first merged run of all five found one stale test per branch on #363, #364 and the note room; each is fixed and pushed (the recorder date now wraps at 2x text rather than truncating). The note room (b, a for notes, c) is committed on feat/note-room, not pushed. The merged run is repeating on the latest branches.
+All five pull requests are open and wait for the owner's review and merge; they merge cleanly with each other in any order.
 
 ## Next step
 
-When the merged run is green, push feat/note-room and open its pull request from scratchpad fn/fanout/pr-noteroom.json (fill the merged-run result), then tick c3 and remove the scratch integration worktree. Plain gh pr create is refused in this session; open through the GitHub MCP create_pull_request with render's title and body, then assign.
+The owner reviews and merges #363 to #367; nothing else is pending.
 
 ## Decisions in force
 
