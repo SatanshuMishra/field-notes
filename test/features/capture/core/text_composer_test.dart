@@ -6,6 +6,8 @@ import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
+import 'package:field_notes/features/capture/core/journal_note_writer.dart'
+    show titledNoteSource;
 import 'package:field_notes/features/capture/text/composer_footer.dart';
 import 'package:field_notes/features/capture/text/editor/format_bar.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
@@ -529,6 +531,48 @@ void main() {
       expect(result, 'entry-1');
       expect(writer.saves.single.source, 'saved once more');
       expect(drafts.drafts, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'a restored titled draft emptied of its title and words leaves no draft '
+    'and closes without asking',
+    (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      final FakeDraftStore drafts = FakeDraftStore(
+        drafts: <String, String>{
+          'new-2026-07-19': titledNoteSource(title: 'T', body: 'body'),
+        },
+      );
+      String? result = 'unset';
+
+      await tester.pumpWidget(
+        _composerApp(
+          writer: FakeNoteWriter(),
+          drafts: drafts,
+          onResult: (String? id) => result = id,
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      expect(driver.title, 'T');
+      expect(driver.source, 'body');
+
+      await driver.enterText('');
+      await driver.enterTitle('');
+      await tester.pump(draftIdleDebounceForTest);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pumpAndSettle();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+      expect(drafts.drafts, isEmpty);
+
+      await tester.tap(find.byKey(composerCloseKey));
+      await tester.pumpAndSettle();
+
+      expect(find.text(composerDiscardTitle), findsNothing);
+      expect(result, isNull);
+      expect(find.byType(TextComposerSheet), findsNothing);
     },
   );
 
