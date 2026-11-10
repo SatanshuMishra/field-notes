@@ -266,10 +266,9 @@ void main() {
         closeTo(_desktopWindow.width / 2, _tolerance),
       );
       expect(panelRect.height, lessThanOrEqualTo(_desktopWindow.height - 64));
-      final BoxDecoration panelFace =
-          tester.widget<DecoratedBox>(panel).decoration as BoxDecoration;
+      final OutlinedSurface panelFace = tester.widget<OutlinedSurface>(panel);
       expect(panelFace.color?.toARGB32(), colors.cardWarm.toARGB32());
-      expect((panelFace.border! as Border).top.width, 2);
+      expect(panelFace.borderWidth, 2);
       expect(panelFace.borderRadius, BorderRadius.circular(18));
       _expectTile(tester, 48);
       _expectText(
