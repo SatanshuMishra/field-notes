@@ -1,6 +1,6 @@
 # post-1-7-0-followups: Post-1.7.0 follow-ups: privacy line, note title focus, note viewer and editor parity, voice button, week garden, overnight Today, day modal
 Status: active
-Updated: 2026-11-10T18:31:20.746Z
+Updated: 2026-11-10T18:31:23.340Z
 Next ids: c4 D1 R2 S1
 
 ## Goal
@@ -32,4 +32,5 @@ Wait for the owner's approval of the three boards on the canvas's 1.7 follow-ups
 ## Where the details live
 
 - Owner's request: 2026-11-10 message with eight screenshots, items a to g
-- Prototype canvas: https://claude.ai/artifact/6Jhnx5E1BxCPH9DgNu9R1m
+- Prototype canvas: https://claude.ai/artifact/6Jhnx5E1BxCPH9DgNu9R1m (boards NoteRoom, VoiceButton, TodayDay on page followups)
+- Overnight reproduction: test/features/today/today_day_change_test.dart in worktree .claude/worktrees/post-1-7-0, uncommitted
