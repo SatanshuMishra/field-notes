@@ -21,6 +21,7 @@ Day toDomainDay(db.Day row) {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     deletedAt: row.deletedAt,
+    bloomPickedAt: row.bloomPickedAt,
   );
 }
 

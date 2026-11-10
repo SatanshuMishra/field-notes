@@ -12,6 +12,7 @@ abstract final class SyncedTables {
     'createdAt',
     'updatedAt',
     'deletedAt',
+    'bloomPickedAt',
   ];
 
   static const List<String> entryFields = <String>[

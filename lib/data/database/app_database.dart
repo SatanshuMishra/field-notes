@@ -29,7 +29,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.open() : super(openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -38,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
         await migrator.createAll();
       },
       onUpgrade: (migrator, from, to) async {
-        if ((from != 1 && from != 2) || to != 3) {
+        if (from < 1 || from > 3 || to != 4) {
           throw StateError(
             'Field Notes cannot migrate its database from schema version '
             '$from to $to. No changes were applied and your entries are '
@@ -50,7 +50,10 @@ class AppDatabase extends _$AppDatabase {
           if (from == 1) {
             await migrator.addColumn(entries, entries.peaks);
           }
-          await migrator.addColumn(entries, entries.title);
+          if (from <= 2) {
+            await migrator.addColumn(entries, entries.title);
+          }
+          await migrator.addColumn(days, days.bloomPickedAt);
           await customStatement('PRAGMA user_version = $to');
         });
       },

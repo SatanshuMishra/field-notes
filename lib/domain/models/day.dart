@@ -8,6 +8,7 @@ class Day {
     required this.updatedAt,
     this.mood,
     this.deletedAt,
+    this.bloomPickedAt,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class Day {
   final int createdAt;
   final int updatedAt;
   final int? deletedAt;
+  final int? bloomPickedAt;
 
   bool get isDeleted => deletedAt != null;
 
@@ -29,20 +31,23 @@ class Day {
           mood == other.mood &&
           createdAt == other.createdAt &&
           updatedAt == other.updatedAt &&
-          deletedAt == other.deletedAt;
+          deletedAt == other.deletedAt &&
+          bloomPickedAt == other.bloomPickedAt;
 
   @override
   int get hashCode => Object.hash(
-        id,
-        date,
-        mood,
-        createdAt,
-        updatedAt,
-        deletedAt,
-      );
+    id,
+    date,
+    mood,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    bloomPickedAt,
+  );
 
   @override
   String toString() =>
       'Day(id: $id, date: $date, mood: $mood, createdAt: $createdAt, '
-      'updatedAt: $updatedAt, deletedAt: $deletedAt)';
+      'updatedAt: $updatedAt, deletedAt: $deletedAt, '
+      'bloomPickedAt: $bloomPickedAt)';
 }

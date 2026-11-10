@@ -101,6 +101,71 @@ void main() {
       expect(cleared.mood, isNull);
     });
 
+    test('the first bloom picked for a date keeps its time', () async {
+      nowValue = 5000;
+      final first = await repo.setMoodForDate(
+        date: '2026-07-12',
+        mood: Mood.happy,
+      );
+      expect(first.bloomPickedAt, 5000);
+
+      nowValue = 9000;
+      final second = await repo.setMoodForDate(
+        date: '2026-07-12',
+        mood: Mood.sad,
+      );
+
+      expect(second.mood, Mood.sad);
+      expect(second.updatedAt, 9000);
+      expect(second.bloomPickedAt, 5000);
+    });
+
+    test('a bloom picked for an existing day records when', () async {
+      await repo.ensureDayForDate('2026-07-12');
+      expect(
+        (await repo.activeDayForDate('2026-07-12'))!.bloomPickedAt,
+        isNull,
+      );
+
+      nowValue = 7000;
+      await repo.setMoodForDate(date: '2026-07-12', mood: Mood.calm);
+      nowValue = 8000;
+      await repo.setMoodForDate(date: '2026-07-12', mood: null);
+      nowValue = 9000;
+      final picked = await repo.setMoodForDate(
+        date: '2026-07-12',
+        mood: Mood.warm,
+      );
+
+      expect(picked.bloomPickedAt, 7000);
+    });
+
+    test(
+      'a bloom changed on a day from before bloom times stays without one',
+      () async {
+        await db
+            .into(db.days)
+            .insert(
+              DaysCompanion.insert(
+                id: 'day-2026-07-12',
+                date: '2026-07-12',
+                moodId: const Value('calm'),
+                createdAt: 100,
+                updatedAt: 100,
+              ),
+            );
+
+        nowValue = 9000;
+        final changed = await repo.setMoodForDate(
+          date: '2026-07-12',
+          mood: Mood.sad,
+        );
+
+        expect(changed.mood, Mood.sad);
+        expect(changed.bloomPickedAt, isNull);
+      },
+    );
+
     test('setMood updates the mood on an existing day by id', () async {
       final day = await repo.createDay(date: '2026-07-12');
 

@@ -6,6 +6,7 @@ import '../sync/synced_tables.dart';
 import 'day_ids.dart';
 
 const String _moodField = 'moodId';
+const String _bloomPickedField = 'bloomPickedAt';
 const List<String> _reviveFields = <String>[
   _moodField,
   'updatedAt',
@@ -13,6 +14,10 @@ const List<String> _reviveFields = <String>[
 ];
 const List<String> _moodFields = <String>[_moodField, 'updatedAt'];
 const List<String> _deleteFields = <String>['deletedAt', 'updatedAt'];
+
+List<String> _withBloomPick(List<String> fields, int? newBloomPick) {
+  return <String>[...fields, if (newBloomPick != null) _bloomPickedField];
+}
 
 class DaysDao {
   DaysDao(this._db, this._recorder);
@@ -37,7 +42,9 @@ class DaysDao {
         rowId: id,
         fields: <String>[
           for (final String field in SyncedTables.dayFields)
-            if (moodId != null || field != _moodField) field,
+            if (moodId != null ||
+                (field != _moodField && field != _bloomPickedField))
+              field,
         ],
         currentClocks: '{}',
       );
@@ -51,6 +58,7 @@ class DaysDao {
               createdAt: createdAt,
               updatedAt: updatedAt,
               fieldClocks: Value(clocks),
+              bloomPickedAt: Value(moodId == null ? null : updatedAt),
             ),
           );
     });
@@ -78,10 +86,16 @@ class DaysDao {
       if (existing == null) {
         return 0;
       }
+      final int? firstPick =
+          moodId != null &&
+              existing.moodId == null &&
+              existing.bloomPickedAt == null
+          ? updatedAt
+          : null;
       final String clocks = await _recorder.stamp(
         table: SyncedTables.days,
         rowId: id,
-        fields: _moodFields,
+        fields: _withBloomPick(_moodFields, firstPick),
         currentClocks: existing.fieldClocks,
       );
       return (_db.update(_db.days)..where((t) => t.id.equals(id))).write(
@@ -89,6 +103,9 @@ class DaysDao {
           moodId: Value(moodId),
           updatedAt: Value(updatedAt),
           fieldClocks: Value(clocks),
+          bloomPickedAt: firstPick == null
+              ? const Value.absent()
+              : Value(firstPick),
         ),
       );
     });
@@ -148,10 +165,13 @@ class DaysDao {
     required String? moodId,
     required int updatedAt,
   }) async {
+    final int? firstPick = moodId != null && existing.bloomPickedAt == null
+        ? updatedAt
+        : null;
     final String clocks = await _recorder.stamp(
       table: SyncedTables.days,
       rowId: existing.id,
-      fields: _reviveFields,
+      fields: _withBloomPick(_reviveFields, firstPick),
       currentClocks: existing.fieldClocks,
     );
     final List<Day> revived =
@@ -163,6 +183,9 @@ class DaysDao {
             updatedAt: Value(updatedAt),
             deletedAt: const Value(null),
             fieldClocks: Value(clocks),
+            bloomPickedAt: firstPick == null
+                ? const Value.absent()
+                : Value(firstPick),
           ),
         );
     return revived.single;
