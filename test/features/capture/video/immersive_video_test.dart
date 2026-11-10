@@ -1213,6 +1213,24 @@ void main() {
       expect(find.text('Discard this recording?'), findsNothing);
       expect(find.byKey(videoShutterKey), findsNothing);
 
+      await tester.tapAt(const Offset(12, 300));
+      await _settle(tester);
+      expect(find.byType(LetGoPanel), findsNothing);
+      expect(letting.cancelCalls, 0);
+
+      await tester.tap(find.byKey(videoCloseKey));
+      await _settle(tester);
+      expect(find.byType(LetGoPanel), findsOneWidget);
+
+      await tester.tap(find.byKey(videoCloseKey), warnIfMissed: false);
+      await _settle(tester);
+      expect(find.byType(LetGoPanel), findsNothing);
+      expect(letting.cancelCalls, 0);
+
+      await tester.tap(find.byKey(videoCloseKey));
+      await _settle(tester);
+      expect(find.byType(LetGoPanel), findsOneWidget);
+
       await tester.tap(find.text(letGoKeepGoingLabel));
       await _settle(tester);
       expect(find.byType(LetGoPanel), findsNothing);

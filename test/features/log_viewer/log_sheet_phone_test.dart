@@ -371,7 +371,7 @@ void main() {
     await tester.tap(_inSheet(find.byKey(logActionsDeleteKey)));
     await tester.pumpAndSettle();
 
-    expect(find.text('Delete this entry?'), findsOneWidget);
+    expect(find.text('Delete this log?'), findsOneWidget);
     expect(session.repository.deletedEntryIds, isEmpty);
 
     await tester.tap(find.byKey(confirmDialogConfirmKey));

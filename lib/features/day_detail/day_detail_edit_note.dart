@@ -171,6 +171,7 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
           locked: _isSaving,
           onDiscard: _draft.discard,
           popResult: false,
+          editingSavedNote: true,
           onClose: onDone == null ? null : (Object? result) => onDone(false),
           builder: (BuildContext context, VoidCallback requestClose) {
             return TextComposerSheet(

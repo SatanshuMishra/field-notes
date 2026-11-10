@@ -255,7 +255,7 @@ void main() {
       await tester.tapAt(edge);
       await tester.pumpAndSettle();
 
-      expect(find.text('Delete this entry?'), findsOneWidget);
+      expect(find.text('Delete this log?'), findsOneWidget);
       await tester.tap(find.byKey(confirmDialogConfirmKey));
       await tester.pumpAndSettle();
 

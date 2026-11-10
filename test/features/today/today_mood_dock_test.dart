@@ -350,7 +350,15 @@ void main() {
     await tester.tap(find.text('Happy'));
     await tester.pumpAndSettle();
     expect(find.text("Change today's bloom?"), findsOneWidget);
-    await tester.tap(find.text('Change mood'));
+    expect(
+      find.text(
+        'Today becomes ${Mood.happy.flower.label}, ${Mood.happy.label}. '
+        'Your current bloom will be replaced.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Keep this bloom'), findsOneWidget);
+    await tester.tap(find.text('Change bloom'));
     await tester.pumpAndSettle();
 
     expect(journal.moodWrites, hasLength(1));

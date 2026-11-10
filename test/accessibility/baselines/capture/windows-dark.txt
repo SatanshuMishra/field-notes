@@ -38,7 +38,6 @@ small-target | c9-selection-menu@2x | Copy | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Cut | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Paste | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Select all | <root> # Flutter's own control
-text-contrast | c10-discard-dialog-sidebar | Keep this | Ctrl Enter / keep / Esc / leave / 6 words # measured: 14.43:1 by token arithmetic
 text-contrast | c9-selection-menu@2x | Copy | <root> # Flutter's own control
 text-contrast | c9-selection-menu@2x | Paste | <root> # Flutter's own control
 text-contrast | c9-selection-menu@2x | Select all | <root> # Flutter's own control

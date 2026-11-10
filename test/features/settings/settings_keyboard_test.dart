@@ -91,7 +91,7 @@ final List<_SafeButton> _safeButtons = <_SafeButton>[
   _SafeButton(
     'c10-discard-dialog',
     (WidgetTester tester) => _pumpState(tester, 'c10-discard-dialog'),
-    'Keep editing',
+    'Keep going',
   ),
   _SafeButton(
     'c18-discard-recording',
@@ -102,12 +102,12 @@ final List<_SafeButton> _safeButtons = <_SafeButton>[
   _SafeButton(
     'd13-change-mood-dialog',
     (WidgetTester tester) => _pumpState(tester, 'd13-change-mood-dialog'),
-    'Cancel',
+    'Keep this bloom',
   ),
   _SafeButton(
     'd14-delete-entry-dialog',
     (WidgetTester tester) => _pumpState(tester, 'd14-delete-entry-dialog'),
-    'Cancel',
+    'Keep it',
   ),
 ];
 

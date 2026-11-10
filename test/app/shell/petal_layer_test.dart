@@ -496,6 +496,7 @@ Future<void> _expectPetalsBetweenTheShellAndPopUps(
       title: _dialogTitle,
       message: 'This cannot be undone.',
       confirmLabel: 'Delete',
+      cancelLabel: 'Keep it',
     ),
   );
   await _settle(tester);

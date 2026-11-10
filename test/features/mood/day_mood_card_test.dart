@@ -128,7 +128,7 @@ void main() {
 
     expect(find.text("Change this day's bloom?"), findsOneWidget);
 
-    await tester.tap(find.text('Change mood').last);
+    await tester.tap(find.text('Change bloom'));
     await tester.pumpAndSettle();
 
     expect(fake.moodWrites, <({String date, Mood? mood})>[

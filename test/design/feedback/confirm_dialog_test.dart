@@ -35,6 +35,7 @@ class _HarnessState extends State<_Harness> {
                   title: 'Delete this entry?',
                   message: 'This log will be removed. This can’t be undone.',
                   confirmLabel: 'Delete',
+                  cancelLabel: 'Keep it',
                   danger: widget.danger,
                 );
               },
@@ -178,6 +179,7 @@ void main() {
                 title: 'Delete this entry?',
                 message: 'This cannot be undone.',
                 confirmLabel: 'Delete',
+                cancelLabel: 'Keep it',
               ),
               child: const Text('Open'),
             ),

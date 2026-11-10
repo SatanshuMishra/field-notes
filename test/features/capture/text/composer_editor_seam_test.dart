@@ -427,6 +427,12 @@ void main() {
         kind: PointerDeviceKind.mouse,
       );
       await tester.pumpAndSettle();
+      await driver.press(
+        find.byKey(composerDiscardKey),
+        _hold,
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
 
       expect(find.byKey(draftRestoredDiscardKey), findsNothing);
       expect(_view(tester).focusNode.hasPrimaryFocus, isTrue);
