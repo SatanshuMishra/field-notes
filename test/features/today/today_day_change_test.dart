@@ -1,7 +1,6 @@
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/entry_cards/cards/note_body.dart';
-import 'package:field_notes/features/today/today_memory.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/features/today/today_screen.dart';
 import 'package:field_notes/state/state.dart';
