@@ -13,32 +13,18 @@ ProviderContainer _container() {
 }
 
 void main() {
-  test(
-    'picking a past year opens its study and leaving the tab returns to this year',
-    () {
-      final ProviderContainer container = _container();
-      final MeadowViewState view = container.read(
-        meadowViewStateProvider.notifier,
-      );
+  test('picking a past year opens its study and this year closes it', () {
+    final ProviderContainer container = _container();
+    final MeadowViewState view = container.read(
+      meadowViewStateProvider.notifier,
+    );
 
-      view.openYear(2024, currentYear: 2026);
-      expect(container.read(meadowViewStateProvider).studyYear, 2024);
+    view.openYear(2024, currentYear: 2026);
+    expect(container.read(meadowViewStateProvider).studyYear, 2024);
 
-      view.openYear(2026, currentYear: 2026);
-      expect(container.read(meadowViewStateProvider).studyYear, isNull);
-
-      container
-          .read(shellNavigationProvider.notifier)
-          .select(ShellDestination.garden);
-      view.openYear(2024, currentYear: 2026);
-      expect(container.read(meadowViewStateProvider).studyYear, 2024);
-
-      container
-          .read(shellNavigationProvider.notifier)
-          .select(ShellDestination.today);
-      expect(container.read(meadowViewStateProvider), const MeadowView());
-    },
-  );
+    view.openYear(2026, currentYear: 2026);
+    expect(container.read(meadowViewStateProvider).studyYear, isNull);
+  });
 
   test('full screen keeps the year and growth point', () {
     final ProviderContainer container = _container();

@@ -33,7 +33,22 @@ class GardenScreen extends ConsumerStatefulWidget {
 }
 
 class _GardenScreenState extends ConsumerState<GardenScreen> {
+  late final MeadowViewState _view;
   _MeadowYears? _years;
+
+  @override
+  void initState() {
+    super.initState();
+    _view = ref.read(meadowViewStateProvider.notifier);
+  }
+
+  @override
+  void dispose() {
+    if (widget.fullScreen == null) {
+      scheduleMicrotask(_view.backToThisYear);
+    }
+    super.dispose();
+  }
 
   _MeadowYears _yearsOf({
     required List<Day> days,
