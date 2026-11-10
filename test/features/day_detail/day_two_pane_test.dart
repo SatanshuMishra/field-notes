@@ -233,6 +233,9 @@ Finder _inPane(Finder matching) =>
 Finder _inMediaPane(Finder matching) =>
     find.descendant(of: find.byKey(dayMediaPaneKey), matching: matching);
 
+Finder _inWindow(Finder matching) =>
+    find.descendant(of: find.byKey(dayDetailPanelKey), matching: matching);
+
 String _readingId(WidgetTester tester) => tester
     .widget<NoteReadingBody>(_inPane(find.byType(NoteReadingBody)))
     .entry
@@ -334,12 +337,13 @@ void main() {
     final Rect pane = tester.getRect(_pane());
     expect(pane.left, greaterThan(list.right));
     expect(pane.right, closeTo(panel.right - 2, 0.5));
-    final ColoredBox paper = tester.widget<ColoredBox>(
-      find.ancestor(of: _pane(), matching: find.byType(ColoredBox)).first,
+    final OutlinedSurface window = tester.widget<OutlinedSurface>(
+      _inWindow(find.byType(OutlinedSurface)).first,
     );
+    expect(window.color, FieldNotesColors.light.panelTop);
     expect(
-      paper.color.toARGB32(),
-      FieldNotesColors.light.composerPaper.toARGB32(),
+      _inWindow(find.ancestor(of: _pane(), matching: find.byType(ColoredBox))),
+      findsNothing,
     );
     _expectPlaceholder(empty: false);
     expect(_inPane(find.byType(FlowerBloom)), findsOneWidget);
@@ -381,7 +385,7 @@ void main() {
     expect(_inPane(find.byType(LogActionsPill)), findsOneWidget);
     expect(_inPane(find.byKey(logActionsEditKey)), findsOneWidget);
     expect(_inPane(find.byKey(logActionsDeleteKey)), findsOneWidget);
-    expect(_inPane(find.text('2 of 3')), findsOneWidget);
+    expect(_inWindow(find.text('2 of 3')), findsOneWidget);
     expect(find.text(dayNotePanePrompt), findsNothing);
     expect(
       tester.getSize(_inPane(find.byType(NoteReadingBody))).width,
@@ -392,12 +396,12 @@ void main() {
     expect(_outlinesOf(tester, 'note-1'), isEmpty);
     expect(_outlinesOf(tester, 'note-3'), isEmpty);
 
-    await tester.tap(_inPane(find.byKey(logViewerLaterKey)));
+    await tester.tap(_inWindow(find.byKey(logViewerLaterKey)));
     await tester.pumpAndSettle();
 
     expect(_inPane(find.text('Window seat')), findsOneWidget);
     expect(_inPane(find.text('Evening note')), findsNothing);
-    expect(_inPane(find.text('3 of 3')), findsOneWidget);
+    expect(_inWindow(find.text('3 of 3')), findsOneWidget);
     expect(_outlinesOf(tester, 'note-3'), hasLength(1));
     expect(_outlinesOf(tester, 'note-2'), isEmpty);
   }, variant: _mac);
@@ -537,7 +541,7 @@ void main() {
     expect(paused, <Object>[inline]);
 
     playbackFocus.claim(inline, () => paused.add(inline));
-    await tester.tap(_inPane(find.byKey(logViewerLaterKey)));
+    await tester.tap(_inWindow(find.byKey(logViewerLaterKey)));
     await tester.pumpAndSettle();
 
     expect(_readingId(tester), 'note-2');

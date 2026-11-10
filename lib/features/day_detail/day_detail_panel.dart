@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show clampDouble;
-import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -65,6 +64,9 @@ const double dayDetailListMaxWidth = 380;
 const double dayDetailSelectedOutlineWidth = 2.5;
 
 const double _panelBorderWidth = 2;
+const BorderRadius _panelRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusXl),
+);
 const double _paneRuleThickness = 1.5;
 const BorderRadius _selectedOutlineRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusMd),
@@ -90,12 +92,6 @@ const double _sheetPlusGap = 7;
 
 const int _focusScanFrames = 32;
 const double _focusAlignment = 0.1;
-
-Color _panelPaperFor(Brightness brightness, FieldNotesColors colors) =>
-    switch (brightness) {
-      Brightness.light => colors.panelTop,
-      Brightness.dark => colors.composerPaper,
-    };
 
 class DayDetailPanel extends ConsumerStatefulWidget {
   const DayDetailPanel({
@@ -478,63 +474,104 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       ),
     );
     final FieldNotesColors colors = context.colors;
+    final Entry? steppedFrom = resolver != null && entries.length > 1
+        ? selected
+        : null;
 
     return ViewerKeys(
       onLeft: selected == null ? null : () => _stepFrom(selected, -1),
       onRight: selected == null ? null : () => _stepFrom(selected, 1),
       onEscape: selected == null ? _close : _clearSelection,
       child: Center(
-        child: Container(
+        child: SizedBox(
           key: dayDetailPanelKey,
           width: width,
           height: height,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: _panelPaperFor(Theme.of(context).brightness, colors),
-            border: Border.all(color: colors.line, width: _panelBorderWidth),
-            borderRadius: BorderRadius.circular(Shapes.radiusXl),
+          child: OutlinedSurface(
+            color: colors.panelTop,
+            borderColor: colors.line,
+            borderWidth: _panelBorderWidth,
+            borderRadius: _panelRadius,
             boxShadow: Shadows.panelLift,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              SizedBox(
-                key: dayDetailListPaneKey,
-                width: listWidth,
-                child: Column(
+            padding: const EdgeInsets.all(_panelBorderWidth),
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    DayDetailHeader(
-                      date: _date,
-                      today: today,
-                      onClose: _close,
-                      onEarlier: _earlierDay(),
-                      onLater: _laterDay(today),
-                    ),
                     Expanded(
-                      child: _body(
-                        entriesAsync,
-                        entries,
-                        listed,
-                        resolver,
-                        resolverAsync,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          SizedBox(
+                            key: dayDetailListPaneKey,
+                            width: listWidth,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: <Widget>[
+                                DayDetailHeader(
+                                  date: _date,
+                                  today: today,
+                                  onClose: _close,
+                                  onEarlier: _earlierDay(),
+                                  onLater: _laterDay(today),
+                                ),
+                                Expanded(
+                                  child: _body(
+                                    entriesAsync,
+                                    entries,
+                                    listed,
+                                    resolver,
+                                    resolverAsync,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: _paneRuleThickness),
+                          Expanded(
+                            child: _rightPane(
+                              entries,
+                              selected,
+                              resolver,
+                              today,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    if (steppedFrom != null) ...<Widget>[
+                      DashedDivider(
+                        thickness: _paneRuleThickness,
+                        color: colors.ink25,
+                      ),
+                      Padding(
+                        padding: EdgeInsetsDirectional.only(
+                          start: listWidth + _paneRuleThickness,
+                        ),
+                        child: DayStepFooter(
+                          entries: entries,
+                          entry: steppedFrom,
+                          onStep: _stepTo,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-              ),
-              DashedDivider(
-                axis: Axis.vertical,
-                thickness: _paneRuleThickness,
-                color: colors.ink25,
-              ),
-              Expanded(
-                child: ColoredBox(
-                  color: colors.composerPaper,
-                  child: _rightPane(entries, selected, resolver, today),
+                PositionedDirectional(
+                  start: listWidth,
+                  top: 0,
+                  bottom: 0,
+                  width: _paneRuleThickness,
+                  child: DashedDivider(
+                    axis: Axis.vertical,
+                    thickness: _paneRuleThickness,
+                    color: colors.ink25,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
