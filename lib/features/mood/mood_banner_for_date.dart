@@ -140,15 +140,12 @@ class _MoodBannerForDateState extends ConsumerState<MoodBannerForDate> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        if (!_isToday && mood != null)
-          DayMoodCard(mood: mood, onChangeMood: onChangeMood)
-        else
-          MoodBanner(
-            mood: mood,
-            promptText: widget.promptText,
-            onChangeMood: onChangeMood,
-            isToday: _isToday,
-          ),
+        MoodBanner(
+          mood: mood,
+          promptText: widget.promptText,
+          onChangeMood: onChangeMood,
+          isToday: _isToday,
+        ),
         if (dayAsync.hasError) ...<Widget>[
           const SizedBox(height: 8),
           Text("Couldn't load today's mood.", style: errorStyle),

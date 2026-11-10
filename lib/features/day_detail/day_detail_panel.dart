@@ -693,7 +693,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       key: entry.id == widget.focusEntryId ? _focusedTile : null,
       entry: entry,
       resolver: resolver,
-      density: CompactLogDensity.day,
+      density: _sheet ? CompactLogDensity.day : CompactLogDensity.row,
       semanticIndex: semanticIndex,
       audioPlayerFactory: _sheet ? createJustAudioPlayer : null,
       onPlay: _sheet || entry.type == EntryType.text

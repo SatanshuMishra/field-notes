@@ -160,16 +160,10 @@ void main() {
 
     await pumpToday(
       tester,
-      DayMoodCard(mood: Mood.grateful, onChangeMood: () {}),
+      MoodBanner(mood: Mood.grateful, onChangeMood: () {}, isToday: false),
     );
     await _expectRows(tester, mouse, <_Row>[
-      _Row(
-        'day mood card change mood',
-        'Change mood',
-        'Change mood',
-        _pill,
-        11,
-      ),
+      _Row('past day mood banner change pill', 'change', 'change', _pill, 13),
     ]);
 
     await pumpToday(

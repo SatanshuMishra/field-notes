@@ -306,12 +306,12 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Change mood'), findsOneWidget);
+    expect(find.text('change'), findsOneWidget);
     expect(find.text(dayDetailAddNoteLabel), findsOneWidget);
-    _expectOneLine(tester, 'Change mood');
+    _expectOneLine(tester, 'change');
     _expectOneLine(tester, dayDetailAddNoteLabel);
     expect(
-      tester.getRect(find.text('Change mood')).right,
+      tester.getRect(find.text('change')).right,
       lessThanOrEqualTo(list.right),
     );
     expect(

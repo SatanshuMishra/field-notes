@@ -40,7 +40,7 @@ import '../util/duration_format.dart';
 import 'log_actions_pill.dart';
 import 'log_preview.dart';
 
-enum CompactLogDensity { feed, day }
+enum CompactLogDensity { feed, day, row }
 
 const Key compactLogThumbnailKey = ValueKey<String>('compact-log-thumbnail');
 const Key compactLogOpenLabelKey = ValueKey<String>('compact-log-open-label');
@@ -82,6 +82,18 @@ const BorderRadius _playToggleRadius = BorderRadius.all(
 );
 const double _voiceLabelGap = 12;
 const double _voiceLabelMinWidth = 62;
+
+const double _rowLineGap = 2;
+const double _rowChipGap = 6;
+const double _rowWaveHeight = 20;
+const double _rowWaveBarsHeight = 16;
+const double _rowWaveLabelGap = 8;
+const double _rowBadgeInset = 4;
+const double _rowBadgeFontSize = 10;
+const EdgeInsets _rowBadgePadding = EdgeInsets.symmetric(
+  vertical: 2,
+  horizontal: 4,
+);
 
 const double _chipFontSize = 10;
 const double _chipLetterSpacing = 0.8;
@@ -258,12 +270,60 @@ _DensityStyle _dayStyle(FieldNotesColors colors) => _DensityStyle(
   playDiscExtent: 22,
 );
 
+_DensityStyle _rowStyle(FieldNotesColors colors) => _DensityStyle(
+  padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
+  restShadow: <BoxShadow>[
+    BoxShadow(color: colors.shadowTint(0x29), offset: const Offset(1.5, 1.5)),
+  ],
+  hoverShadow: <BoxShadow>[
+    BoxShadow(color: colors.shadowTint(0x38), offset: const Offset(3, 3)),
+  ],
+  tilts: false,
+  risesOnHover: true,
+  titleStyle: TextStyle(
+    fontFamily: TypographyTokens.serif,
+    fontSize: 15.5,
+    fontWeight: FontWeight.w500,
+    height: 1.25,
+    color: colors.ink,
+  ),
+  snippetStyle: TextStyle(
+    fontFamily: TypographyTokens.serif,
+    fontSize: 12.5,
+    fontWeight: FontWeight.w400,
+    height: 1.35,
+    color: colors.mutedDeep,
+  ),
+  thumbnailExtent: 52,
+  thumbnailRadius: const BorderRadius.all(Radius.circular(Shapes.radiusThumb)),
+  thumbnailGap: 10,
+  metaGap: _rowLineGap,
+  metaStyle: TextStyle(
+    fontFamily: TypographyTokens.sans,
+    fontSize: 10.5,
+    fontWeight: FontWeight.w600,
+    color: colors.muted,
+    fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+  ),
+  openLabelStyle: TextStyle(
+    fontFamily: TypographyTokens.sans,
+    fontSize: 11,
+    fontWeight: FontWeight.w600,
+    color: colors.accentInk,
+  ),
+  posterSize: const Size(72, 52),
+  posterRadius: const BorderRadius.all(Radius.circular(8)),
+  playDiscExtent: 24,
+);
+
 _DensityStyle _styleFor(CompactLogDensity density, FieldNotesColors colors) {
   switch (density) {
     case CompactLogDensity.feed:
       return _feedStyle(colors);
     case CompactLogDensity.day:
       return _dayStyle(colors);
+    case CompactLogDensity.row:
+      return _rowStyle(colors);
   }
 }
 
@@ -435,20 +495,22 @@ class _CompactLogCardState extends State<CompactLogCard> {
     final double tilt = style.tilts && !_textEnlarged
         ? _tiltDegrees(widget.entry.id)
         : 0;
-    final Widget content = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        _stampRow(),
-        ..._titleLine(style, preview),
-        SizedBox(
-          height: widget.entry.type == EntryType.text
-              ? _noteTopGap
-              : _mediaTopGap,
-        ),
-        _body(context, style, preview),
-      ],
-    );
+    final Widget content = widget.density == CompactLogDensity.row
+        ? _rowContent(style, preview)
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              _stampRow(),
+              ..._titleLine(style, preview),
+              SizedBox(
+                height: widget.entry.type == EntryType.text
+                    ? _noteTopGap
+                    : _mediaTopGap,
+              ),
+              _body(context, style, preview),
+            ],
+          );
     return LogCardFrame(
       onOpen: widget.onOpen,
       onLongPress: _openMore,
@@ -494,17 +556,20 @@ class _CompactLogCardState extends State<CompactLogCard> {
     return codeUnitSum.isOdd ? _tiltOddDegrees : _tiltEvenDegrees;
   }
 
-  Widget _stampRow() {
-    final String stamp = logStampFor(context, widget.entry.createdAt);
-    final String type = logTypeLabelFor(widget.entry.type);
-    final Widget actions = _PlayerZone(
+  Widget _cardActions({required bool withOpen}) {
+    return _PlayerZone(
       onHover: _setInnerHovered,
       child: LogCardActions(
-        onOpen: widget.onOpen,
+        onOpen: withOpen ? widget.onOpen : null,
         onMore: _openMore,
         moreAnchorKey: _moreKey,
       ),
     );
+  }
+
+  Widget _stampRow() {
+    final String stamp = logStampFor(context, widget.entry.createdAt);
+    final String type = logTypeLabelFor(widget.entry.type);
     switch (widget.density) {
       case CompactLogDensity.feed:
         return Row(
@@ -525,7 +590,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
                 ],
               ),
             ),
-            actions,
+            _cardActions(withOpen: true),
           ],
         );
       case CompactLogDensity.day:
@@ -537,9 +602,153 @@ class _CompactLogCardState extends State<CompactLogCard> {
                 style: _dayStampStyle(context.colors),
               ),
             ),
-            actions,
+            _cardActions(withOpen: true),
           ],
         );
+      case CompactLogDensity.row:
+        return Row(
+          children: <Widget>[
+            if (stamp.isNotEmpty) ...<Widget>[
+              Flexible(
+                child: _boundedText(
+                  stamp,
+                  style: context.textStyles.stampAccent,
+                ),
+              ),
+              const SizedBox(width: _rowChipGap),
+            ],
+            _typeChip(type),
+          ],
+        );
+    }
+  }
+
+  Widget _rowContent(_DensityStyle style, LogPreview preview) {
+    final Widget? lead = _rowLead(style);
+    final String? photo = widget.entry.type == EntryType.text
+        ? preview.firstPhotoReference
+        : null;
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: style.thumbnailExtent),
+      child: Row(
+        children: <Widget>[
+          if (lead != null) ...<Widget>[
+            lead,
+            SizedBox(
+              width: widget.entry.type == EntryType.voice
+                  ? _playToggleSize + style.thumbnailGap - _playToggleTarget
+                  : style.thumbnailGap,
+            ),
+          ],
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[_stampRow(), ..._rowLines(style, preview)],
+            ),
+          ),
+          if (photo != null) ...<Widget>[
+            SizedBox(width: style.thumbnailGap),
+            _thumbnail(style, photo),
+          ],
+          _cardActions(withOpen: false),
+        ],
+      ),
+    );
+  }
+
+  Widget? _rowLead(_DensityStyle style) {
+    final VoidCallback? onPlay = widget.onPlay;
+    switch (widget.entry.type) {
+      case EntryType.text:
+        return null;
+      case EntryType.voice:
+        return onPlay == null
+            ? null
+            : _PlayerZone(
+                onHover: _setInnerHovered,
+                child: _CardPlayToggle(onTap: onPlay),
+              );
+      case EntryType.video:
+        if (onPlay == null) {
+          return _poster(style, hovered: false, badge: true);
+        }
+        return _PlayerZone(
+          onHover: _setInnerHovered,
+          child: Pressable(
+            key: compactLogPlayKey,
+            label: _playLabel,
+            onPressed: onPlay,
+            borderRadius: style.posterRadius,
+            paintsHover: false,
+            builder: (BuildContext context, bool hovered) =>
+                _poster(style, hovered: hovered, badge: true),
+          ),
+        );
+    }
+  }
+
+  String _rowTitle(LogPreview preview) {
+    final ({String? title})? pending = _pendingTitle;
+    return pending == null ? preview.title : pending.title ?? '';
+  }
+
+  List<Widget> _rowLines(_DensityStyle style, LogPreview preview) {
+    final String title = _rowTitle(preview);
+    final String? conflictDevice = widget.entry.type == EntryType.text
+        ? widget.entry.conflictSourceDevice
+        : null;
+    final Widget? detail = _rowDetail(style, preview);
+    return <Widget>[
+      if (_renaming) ...<Widget>[
+        const SizedBox(height: _rowLineGap),
+        _CardTitleField(
+          initial: _savedTitle ?? '',
+          style: style.titleStyle,
+          onSubmit: _saveTitle,
+          onCancel: _cancelRename,
+        ),
+      ] else if (title.isNotEmpty) ...<Widget>[
+        const SizedBox(height: _rowLineGap),
+        _boundedText(title, key: compactLogTitleKey, style: style.titleStyle),
+      ],
+      if (conflictDevice != null) ...<Widget>[
+        SizedBox(height: style.metaGap),
+        ConflictCopyLabel(deviceName: conflictDevice),
+      ],
+      if (detail != null) ...<Widget>[SizedBox(height: style.metaGap), detail],
+    ];
+  }
+
+  Widget? _rowDetail(_DensityStyle style, LogPreview preview) {
+    switch (widget.entry.type) {
+      case EntryType.text:
+        return preview.snippet.isEmpty
+            ? null
+            : _boundedText(preview.snippet, style: style.snippetStyle);
+      case EntryType.voice:
+        return Row(
+          children: <Widget>[
+            Expanded(
+              child: IgnorePointer(
+                child: VoiceWaveform(
+                  peaks: widget.entry.peaks,
+                  active: false,
+                  progress: 0,
+                  height: _rowWaveHeight,
+                  barsHeight: _rowWaveBarsHeight,
+                ),
+              ),
+            ),
+            const SizedBox(width: _rowWaveLabelGap),
+            Text(
+              formatMediaDuration(widget.entry.durationMs),
+              style: style.metaStyle,
+            ),
+          ],
+        );
+      case EntryType.video:
+        return null;
     }
   }
 
@@ -809,8 +1018,13 @@ class _CompactLogCardState extends State<CompactLogCard> {
     );
   }
 
-  Widget _poster(_DensityStyle style, {required bool hovered}) {
+  Widget _poster(
+    _DensityStyle style, {
+    required bool hovered,
+    bool badge = false,
+  }) {
     final double disc = style.playDiscExtent;
+    final int? durationMs = widget.entry.durationMs;
     return SizedBox.fromSize(
       key: compactLogThumbnailKey,
       size: style.posterSize,
@@ -834,6 +1048,16 @@ class _CompactLogCardState extends State<CompactLogCard> {
             borderRadius: BorderRadius.circular(disc / 2),
             child: _posterDisc(disc),
           ),
+          if (badge && durationMs != null)
+            PositionedDirectional(
+              end: _rowBadgeInset,
+              bottom: _rowBadgeInset,
+              child: _DurationBadge(
+                durationMs: durationMs,
+                fontSize: _rowBadgeFontSize,
+                padding: _rowBadgePadding,
+              ),
+            ),
         ],
       ),
     );
@@ -1324,27 +1548,48 @@ class _PosterFace extends StatelessWidget {
           PositionedDirectional(
             end: _posterBadgeInset,
             bottom: _posterBadgeInset,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Palette.mediaBlack.withValues(alpha: _posterBadgeAlpha),
-                borderRadius: _posterBadgeRadius,
-              ),
-              child: Padding(
-                padding: _posterBadgePadding,
-                child: Text(
-                  formatMediaDuration(durationMs),
-                  style: const TextStyle(
-                    fontFamily: TypographyTokens.sans,
-                    fontSize: _posterBadgeFontSize,
-                    fontWeight: FontWeight.w600,
-                    color: Palette.mediaInk,
-                    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
-                  ),
-                ),
-              ),
+            child: _DurationBadge(
+              durationMs: durationMs,
+              fontSize: _posterBadgeFontSize,
+              padding: _posterBadgePadding,
             ),
           ),
       ],
+    );
+  }
+}
+
+class _DurationBadge extends StatelessWidget {
+  const _DurationBadge({
+    required this.durationMs,
+    required this.fontSize,
+    required this.padding,
+  });
+
+  final int? durationMs;
+  final double fontSize;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Palette.mediaBlack.withValues(alpha: _posterBadgeAlpha),
+        borderRadius: _posterBadgeRadius,
+      ),
+      child: Padding(
+        padding: padding,
+        child: Text(
+          formatMediaDuration(durationMs),
+          style: TextStyle(
+            fontFamily: TypographyTokens.sans,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w600,
+            color: Palette.mediaInk,
+            fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+          ),
+        ),
+      ),
     );
   }
 }

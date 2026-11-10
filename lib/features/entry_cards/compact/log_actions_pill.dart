@@ -396,33 +396,36 @@ int _compareLineages(List<Element> first, List<Element> second) {
 class LogCardActions extends StatelessWidget {
   const LogCardActions({
     super.key,
-    required this.onOpen,
+    this.onOpen,
     required this.onMore,
     this.moreAnchorKey,
   });
 
-  final VoidCallback onOpen;
+  final VoidCallback? onOpen;
   final VoidCallback onMore;
   final GlobalKey? moreAnchorKey;
 
   @override
   Widget build(BuildContext context) {
+    final VoidCallback? open = onOpen;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        _CardActionButton(
-          key: logActionsOpenKey,
-          label: logActionsOpenLabel,
-          tooltip: logActionsOpenTooltip,
-          highlighted: LogCardHighlight.of(context),
-          onPressed: onOpen,
-          glyph: (Color color) => _StrokeGlyphIcon(
-            glyph: _StrokeGlyph.open,
-            color: color,
-            size: _cardGlyphExtent,
+        if (open != null) ...<Widget>[
+          _CardActionButton(
+            key: logActionsOpenKey,
+            label: logActionsOpenLabel,
+            tooltip: logActionsOpenTooltip,
+            highlighted: LogCardHighlight.of(context),
+            onPressed: open,
+            glyph: (Color color) => _StrokeGlyphIcon(
+              glyph: _StrokeGlyph.open,
+              color: color,
+              size: _cardGlyphExtent,
+            ),
           ),
-        ),
-        const SizedBox(width: _cardActionGap),
+          const SizedBox(width: _cardActionGap),
+        ],
         KeyedSubtree(
           key: moreAnchorKey,
           child: _CardActionButton(

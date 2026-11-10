@@ -247,9 +247,7 @@ void main() {
       tester,
       entries: <Entry>[_note(), _voice()],
     );
-    await tester.tap(
-      _inCard('voice-1', find.text('9:12 AM · morning · voice')),
-    );
+    await tester.tap(_inCard('voice-1', find.text('9:12 AM · morning')));
     await tester.pumpAndSettle();
     expect(_inPane(find.byType(VoicePlayerView)), findsOneWidget);
 
