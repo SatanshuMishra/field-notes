@@ -462,8 +462,7 @@ class _Stage extends StatelessWidget {
           Flexible(
             child: Text(
               line.date,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: TypographyTokens.sans,
                 fontSize: sidebar ? _sidebarChromeSize : _bottomBarChromeSize,
