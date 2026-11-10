@@ -1,6 +1,8 @@
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const Key _cardKey = ValueKey<String>('card');
@@ -46,6 +48,19 @@ Future<_Taps> _pumpActions(
   );
   await tester.pump();
   return taps;
+}
+
+Color? _pillFill(WidgetTester tester, Key button) {
+  final Iterable<DecoratedBox> faces = tester.widgetList<DecoratedBox>(
+    find.descendant(
+      of: find.byKey(button),
+      matching: find.byType(DecoratedBox),
+    ),
+  );
+  return <Color?>[
+    for (final DecoratedBox face in faces)
+      if (face.decoration case BoxDecoration(:final Color color)) color,
+  ].firstOrNull;
 }
 
 Future<void> _openMenu(WidgetTester tester) async {
@@ -170,6 +185,54 @@ void main() {
     await tester.pump();
     expect(opens, 1);
   });
+
+  testWidgets('a pill button fills after Tab and never after a mouse click', (
+    WidgetTester tester,
+  ) async {
+    int deletes = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: LogActionsPill(onEdit: () {}, onDelete: () => deletes++),
+          ),
+        ),
+      ),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    expect(FocusManager.instance.highlightMode, FocusHighlightMode.traditional);
+
+    final TestGesture mouse = await tester.createGesture(
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouse.addPointer(location: Offset.zero);
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(tester.getCenter(find.byKey(logActionsDeleteKey)));
+    await tester.pump();
+    await mouse.down(tester.getCenter(find.byKey(logActionsDeleteKey)));
+    await mouse.up();
+    await mouse.moveTo(Offset.zero);
+    await tester.pump();
+
+    expect(deletes, 1);
+    expect(_pillFill(tester, logActionsDeleteKey), isNull);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+
+    expect(_pillFill(tester, logActionsEditKey), isNull);
+    expect(_pillFill(tester, logActionsDeleteKey), isNotNull);
+
+    await mouse.down(tester.getCenter(find.byKey(logActionsDeleteKey)));
+    await mouse.up();
+    await mouse.moveTo(Offset.zero);
+    await tester.pump();
+
+    expect(deletes, 2);
+    expect(_pillFill(tester, logActionsDeleteKey), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('the card frame opens on tap and long-presses on hold', (
     WidgetTester tester,

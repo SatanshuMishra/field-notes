@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/focus/keyboard_focus_builder.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/min_target.dart';
@@ -226,33 +227,11 @@ class _LogActionButton extends StatefulWidget {
 
 class _LogActionButtonState extends State<_LogActionButton> {
   final FocusNode _focusNode = FocusNode(debugLabel: 'log action');
-  bool _focused = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode.addListener(_onFocusShift);
-    FocusManager.instance.addHighlightModeListener(_onHighlightMode);
-  }
 
   @override
   void dispose() {
-    FocusManager.instance.removeHighlightModeListener(_onHighlightMode);
-    _focusNode
-      ..removeListener(_onFocusShift)
-      ..dispose();
+    _focusNode.dispose();
     super.dispose();
-  }
-
-  void _onHighlightMode(FocusHighlightMode mode) => _onFocusShift();
-
-  void _onFocusShift() {
-    final bool focused =
-        _focusNode.hasFocus &&
-        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
-    if (mounted && focused != _focused) {
-      setState(() => _focused = focused);
-    }
   }
 
   @override
@@ -272,11 +251,17 @@ class _LogActionButtonState extends State<_LogActionButton> {
           child: Stack(
             fit: StackFit.expand,
             children: <Widget>[
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: hovered || _focused ? _actionHoverFill : null,
-                  borderRadius: _buttonRadius,
-                ),
+              KeyboardFocusBuilder(
+                focusNode: _focusNode,
+                builder: (BuildContext context, bool keyboardFocused) =>
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: hovered || keyboardFocused
+                            ? _actionHoverFill
+                            : null,
+                        borderRadius: _buttonRadius,
+                      ),
+                    ),
               ),
               Center(
                 child: IconStickerGlyphIcon(
