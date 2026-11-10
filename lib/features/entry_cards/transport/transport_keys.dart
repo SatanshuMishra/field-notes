@@ -49,8 +49,8 @@ Map<LogicalKeyboardKey, VoidCallback> transportKeyBindings({
   required VoidCallback? onToggle,
   required ValueChanged<Duration>? onSeekBy,
   required ValueChanged<double>? onSeekToShare,
-  required ValueChanged<double> onVolumeBy,
-  required VoidCallback onMute,
+  required ValueChanged<double>? onVolumeBy,
+  required VoidCallback? onMute,
   required VoidCallback? onFullScreen,
   required ValueChanged<Duration>? onFrameStep,
 }) => Map<LogicalKeyboardKey, VoidCallback>.unmodifiable(
@@ -65,9 +65,11 @@ Map<LogicalKeyboardKey, VoidCallback> transportKeyBindings({
       LogicalKeyboardKey.arrowLeft: () => onSeekBy(-transportNudgeStep),
       LogicalKeyboardKey.arrowRight: () => onSeekBy(transportNudgeStep),
     },
-    LogicalKeyboardKey.arrowUp: () => onVolumeBy(transportVolumeStep),
-    LogicalKeyboardKey.arrowDown: () => onVolumeBy(-transportVolumeStep),
-    LogicalKeyboardKey.keyM: onMute,
+    if (onVolumeBy != null) ...<LogicalKeyboardKey, VoidCallback>{
+      LogicalKeyboardKey.arrowUp: () => onVolumeBy(transportVolumeStep),
+      LogicalKeyboardKey.arrowDown: () => onVolumeBy(-transportVolumeStep),
+    },
+    LogicalKeyboardKey.keyM: ?onMute,
     LogicalKeyboardKey.keyF: ?onFullScreen,
     if (onSeekToShare != null) ...<LogicalKeyboardKey, VoidCallback>{
       LogicalKeyboardKey.home: () => onSeekToShare(0),

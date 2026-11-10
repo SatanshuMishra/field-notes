@@ -827,6 +827,48 @@ void main() {
       expect(find.byKey(transportSpeedKey), findsOneWidget);
     });
 
+    testWidgets('Up, Down and M on a focused voice card leave the volume', (
+      WidgetTester tester,
+    ) async {
+      final PlaybackTuning tuning = PlaybackTuning()..setVolume(0.5);
+      await tester.pumpWidget(
+        _host(
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Transport(
+              kind: TransportKind.voice,
+              mode: TransportMode.card,
+              value: _value(_Calls()),
+              tuning: tuning,
+            ),
+          ),
+          platform: TargetPlatform.android,
+        ),
+      );
+      Focus.of(
+        tester.element(
+          find.descendant(
+            of: find.byKey(transportForward10Key),
+            matching: find.byType(TransportGlyphIcon),
+          ),
+        ),
+      ).requestFocus();
+      await tester.pump();
+
+      for (final LogicalKeyboardKey key in <LogicalKeyboardKey>[
+        LogicalKeyboardKey.arrowDown,
+        LogicalKeyboardKey.arrowDown,
+        LogicalKeyboardKey.arrowUp,
+        LogicalKeyboardKey.keyM,
+      ]) {
+        await tester.sendKeyEvent(key);
+        await tester.pump();
+      }
+
+      expect(tuning.volume, 0.5);
+      expect(tuning.muted, isFalse);
+    });
+
     for (final (String side, double share, int expected, String readout)
         in <(String, double, int, String)>[
           ('left', 0.1, 20, '-10 s'),
