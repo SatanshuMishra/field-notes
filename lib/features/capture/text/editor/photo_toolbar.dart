@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/focus/input_modality.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
@@ -981,11 +982,14 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
         label: widget.label,
         hint: widget.hint,
         child: ExcludeSemantics(
-          child: _face(
-            enabled: false,
-            marked: true,
-            focused: _focused,
-            hovered: false,
+          child: ListenableBuilder(
+            listenable: InputModality.instance,
+            builder: (BuildContext context, Widget? _) => _face(
+              enabled: false,
+              marked: true,
+              focused: _focused && InputModality.instance.traversing,
+              hovered: false,
+            ),
           ),
         ),
       ),
