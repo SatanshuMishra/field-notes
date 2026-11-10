@@ -12,7 +12,7 @@ import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/core/journal_note_writer.dart'
-    show titledNoteSource;
+    show NoteSourceParts, readTitledNoteSource, titledNoteSource;
 import 'package:field_notes/features/capture/core/note_draft_controller.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
@@ -31,8 +31,9 @@ const String editNoteFailedMessage =
 const String editNoteUpdatedMessage = 'Entry updated';
 
 String editNoteTitleFor(Entry entry) {
-  final DateTime createdAt =
-      DateTime.fromMillisecondsSinceEpoch(entry.createdAt).toLocal();
+  final DateTime createdAt = DateTime.fromMillisecondsSinceEpoch(
+    entry.createdAt,
+  ).toLocal();
   return 'Editing ${partOfDayFor(createdAt.hour)} note';
 }
 
@@ -136,22 +137,25 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
 
   Future<NoteSaveResult> _persist(String text) async {
     await _draft.settle();
+    final NoteSourceParts note = readTitledNoteSource(text);
     final NoteWriter writer = await ref.read(noteWriterProvider.future);
     final List<String> photoMediaIds = await notePhotoMediaIds(
-      text,
+      note.body,
       () => ref.read(notePhotoStoreProvider.future),
     );
     return writer.save(
       entryId: widget.entry.id,
       date: widget.date,
-      source: text,
+      source: note.body,
+      title: note.carriesTitle ? note.title : null,
       photoMediaIds: photoMediaIds,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool spellCheck = spellCheckAvailable &&
+    final bool spellCheck =
+        spellCheckAvailable &&
         ref.exists(appSettingsProvider) &&
         ref.watch(spellCheckEnabledProvider);
     return ComposerMediaScope(

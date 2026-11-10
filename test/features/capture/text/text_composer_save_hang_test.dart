@@ -22,6 +22,7 @@ class _HangingNoteWriter implements NoteWriter {
     String? entryId,
     required String date,
     required String source,
+    String? title,
     List<String> photoMediaIds = const <String>[],
     String? draftKey,
   }) {

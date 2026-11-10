@@ -199,6 +199,7 @@ typedef NoteSaveCall = ({
   String? entryId,
   String date,
   String source,
+  String? title,
   List<String> photoMediaIds,
   String? draftKey,
 });
@@ -216,6 +217,7 @@ class FakeNoteWriter implements NoteWriter {
     String? entryId,
     required String date,
     required String source,
+    String? title,
     List<String> photoMediaIds = const <String>[],
     String? draftKey,
   }) async {
@@ -223,6 +225,7 @@ class FakeNoteWriter implements NoteWriter {
       entryId: entryId,
       date: date,
       source: source,
+      title: title,
       photoMediaIds: photoMediaIds,
       draftKey: draftKey,
     ));
@@ -242,6 +245,7 @@ class FakeNoteWriter implements NoteWriter {
         textContent: source,
         createdAt: 0,
         updatedAt: 0,
+        title: title,
       ),
     );
   }

@@ -101,18 +101,19 @@ class JournalNoteWriter implements NoteWriter {
     String? entryId,
     required String date,
     required String source,
+    String? title,
     List<String> photoMediaIds = const <String>[],
     String? draftKey,
   }) async {
     if (!isCaptureDateKey(date)) {
       throw const NoteWriteException(invalidDateMessage);
     }
-    final NoteSourceParts parts = readTitledNoteSource(source);
-    final String text = normaliseNoteSource(parts.body);
+    final String text = normaliseNoteSource(source);
     if (text.isEmpty) {
       throw const NoteWriteException(blankTextMessage);
     }
-    if (!noteFitsSync('${parts.title}$text')) {
+    final String? heading = title?.trim();
+    if (!noteFitsSync('${heading ?? ''}$text')) {
       throw const NoteWriteException(noteTooLongMessage);
     }
 
@@ -123,7 +124,7 @@ class JournalNoteWriter implements NoteWriter {
         date: date,
         source: text,
         photoMediaIds: photoMediaIds,
-        title: parts.carriesTitle ? parts.title : null,
+        title: heading,
       );
     } catch (error) {
       throw NoteWriteException(entryWriteMessage, cause: error);

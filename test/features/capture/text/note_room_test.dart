@@ -258,10 +258,8 @@ void main() {
       await tester.tap(find.text('Keep this'));
       await tester.pumpAndSettle();
 
-      expect(
-        writer.saves.single.source,
-        titledNoteSource(title: 'Tuesday', body: 'went walking'),
-      );
+      expect(writer.saves.single.source, 'went walking');
+      expect(writer.saves.single.title, 'Tuesday');
     });
   });
 
