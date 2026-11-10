@@ -137,6 +137,7 @@ class JournalExportService implements ExportService {
     'id': e.id,
     'dayId': e.dayId,
     'type': e.type,
+    'title': e.title,
     'textContent': e.textContent,
     'mediaId': e.mediaId,
     'thumbnailMediaId': e.thumbnailMediaId,

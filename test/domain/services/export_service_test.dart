@@ -108,6 +108,7 @@ void main() {
             textContent: const Value('hello world'),
             createdAt: 110,
             updatedAt: 110,
+            title: const Value('A greeting'),
           ),
         );
     await db
@@ -164,6 +165,9 @@ void main() {
     expect(voice['type'], 'voice');
     expect(voice['mediaId'], audioId);
     expect(voice['durationMs'], 3000);
+    final note = entries.firstWhere((e) => e['id'] == 'e1');
+    expect(note['title'], 'A greeting');
+    expect(voice, containsPair('title', null));
 
     final photos = (journal['entryPhotos'] as List)
         .cast<Map<String, Object?>>();
