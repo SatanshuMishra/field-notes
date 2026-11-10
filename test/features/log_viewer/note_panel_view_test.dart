@@ -1,11 +1,13 @@
 import 'dart:math';
 
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/focus/focus_ring.dart' show focusRingKey;
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
@@ -292,6 +294,39 @@ RenderNoteView _reader(WidgetTester tester) =>
     );
 
 void main() {
+  testWidgets('a click in the note draws no ring and Tab back to it does', (
+    WidgetTester tester,
+  ) async {
+    _useMac(tester, _wide);
+    await _openPanel(
+      tester,
+      _scene(<String>[], text: _shortNote),
+      name: 'ring',
+    );
+    final Finder note = find.byKey(
+      const ValueKey<String>('log-viewer-content-morning'),
+    );
+    final Finder ring = find.descendant(
+      of: note,
+      matching: find.byKey(focusRingKey),
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.shiftLeft);
+    expect(FocusManager.instance.highlightMode, FocusHighlightMode.traditional);
+    await tester.tap(note, kind: PointerDeviceKind.mouse);
+    await tester.pump();
+
+    expect(ring, findsNothing);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+
+    expect(ring, findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
   testWidgets(
     'the Mac note panel sizes to the note and reads at 68 characters',
     (WidgetTester tester) async {
