@@ -15,10 +15,12 @@ import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
     show composerCloseKey;
 import 'package:field_notes/features/day_detail/day_detail.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/entry_cards/transport/transport_bar.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/log_viewer/note_panel_view.dart';
-import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
+import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
+    show viewerTitleFieldKey;
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
@@ -35,6 +37,7 @@ const double _statusBar = 34;
 const double _gestureBar = 24;
 const String _date = '2026-07-19';
 const String _dayTitle = 'Sunday, July 19';
+const String _roses = 'Roses at dawn';
 
 void _usePhone(WidgetTester tester) {
   tester.view.physicalSize = _phone;
@@ -60,6 +63,7 @@ Entry _entry({
   required String id,
   required int hour,
   EntryType type = EntryType.text,
+  String? title,
   String? textContent,
   String? mediaId,
   int? durationMs,
@@ -68,6 +72,7 @@ Entry _entry({
     id: id,
     dayId: 'day-1',
     type: type,
+    title: title,
     textContent: textContent,
     mediaId: mediaId,
     durationMs: durationMs,
@@ -78,7 +83,12 @@ Entry _entry({
 
 List<Entry> _dayEntries() {
   return <Entry>[
-    _entry(id: 'entry-1', hour: 8, textContent: 'Watered the roses.'),
+    _entry(
+      id: 'entry-1',
+      hour: 8,
+      title: _roses,
+      textContent: 'Watered the roses.',
+    ),
     _entry(id: 'entry-2', hour: 14, textContent: 'Tea under the elm.'),
     _entry(
       id: 'entry-3',
@@ -225,12 +235,13 @@ void main() {
       final Text eyebrow = tester.widget<Text>(_inSheet(find.text(_dayTitle)));
       expect(eyebrow.style!.fontSize, 13);
       expect(eyebrow.maxLines, isNull);
-      final Text heading = tester.widget<Text>(
-        _inSheet(find.text('Morning note')),
+      final Finder title = _inSheet(find.byKey(viewerTitleFieldKey));
+      final EditableText heading = tester.widget<EditableText>(
+        find.descendant(of: title, matching: find.byType(EditableText)),
       );
-      expect(heading.style!.fontSize, 21);
-      expect(heading.style!.height, 1.1);
-      expect(heading.maxLines, isNull);
+      expect(heading.controller.text, _roses);
+      expect(heading.style.fontSize, 21);
+      expect(heading.style.height, 1.1);
       expect(
         _inSheet(
           find.byWidgetPredicate(
@@ -251,9 +262,7 @@ void main() {
       final Rect delete = tester.getRect(
         _inSheet(find.byKey(logActionsDeleteKey)),
       );
-      final Rect headingRect = tester.getRect(
-        _inSheet(find.text('Morning note')),
-      );
+      final Rect headingRect = tester.getRect(title);
       expect(back.height, 48);
       expect(edit.height, 48);
       expect(delete.width, greaterThanOrEqualTo(48));
@@ -299,25 +308,21 @@ void main() {
       ),
       findsOneWidget,
     );
-    final Finder dock = find.byType(ViewerDock);
-    expect(find.descendant(of: dock, matching: find.text('Close')), findsOne);
-    expect(find.text('Back'), findsNothing);
-    expect(find.byKey(logActionsEditKey), findsNothing);
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    final Finder dock = find.byType(TransportDock);
     expect(
-      find.descendant(of: dock, matching: find.byKey(logActionsDeleteKey)),
-      findsNothing,
-    );
-    expect(
-      find.descendant(
-        of: find.byType(ViewerTopBar),
-        matching: find.byKey(logActionsDeleteKey),
-      ),
+      find.descendant(of: dock, matching: find.byKey(transportDockBackKey)),
       findsOneWidget,
     );
-    expect(
-      tester.getRect(find.byKey(logActionsDeleteKey)).bottom,
-      lessThan(tester.getRect(find.byKey(logViewerBackKey)).top),
-    );
+    expect(find.bySemanticsLabel('Close'), findsOneWidget);
+    expect(find.bySemanticsLabel('Back'), findsNothing);
+    expect(find.byKey(logActionsEditKey), findsNothing);
+    expect(find.byKey(logActionsDeleteKey), findsNothing);
+
+    await tester.tap(find.byKey(transportDockMoreKey));
+    await tester.pumpAndSettle();
+    expect(find.byKey(logActionsDeleteKey), findsOneWidget);
+    semantics.dispose();
   });
 
   testWidgets('Back returns and a scrim tap reports closing everything', (
@@ -353,13 +358,21 @@ void main() {
     await tester.tap(find.byKey(logViewerLaterKey));
     await tester.pumpAndSettle();
 
-    expect(_inSheet(find.text('Afternoon note')), findsOneWidget);
+    expect(
+      _inSheet(
+        find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is NoteBody && widget.text == 'Tea under the elm.',
+        ),
+      ),
+      findsOneWidget,
+    );
     expect(_inSheet(find.text('2 of 3')), findsOneWidget);
 
     await tester.tap(find.byKey(logViewerEarlierKey));
     await tester.pumpAndSettle();
 
-    expect(_inSheet(find.text('Morning note')), findsOneWidget);
+    expect(_inSheet(find.text(_roses)), findsOneWidget);
   });
 
   testWidgets('Delete asks first, then deletes the log and leaves', (
@@ -398,7 +411,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(composerTitled('Editing morning note'), findsNothing);
-    expect(_inSheet(find.text('Morning note')), findsOneWidget);
+    expect(_inSheet(find.text(_roses)), findsOneWidget);
     expect(session.outcomes, isEmpty);
   });
 

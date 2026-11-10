@@ -16,13 +16,16 @@ import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
     show composerCloseKey;
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
+import 'package:field_notes/features/entry_cards/cards/voice_waveform.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/entry_cards/transport/transport_bar.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/log_viewer/note_panel_view.dart';
 import 'package:field_notes/features/log_viewer/note_sheet_view.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
-import 'package:field_notes/features/log_viewer/viewer_waveform.dart';
+import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
+    show viewerTitleFieldKey;
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show NoteEditorView;
@@ -41,12 +44,18 @@ import '../entry_cards/support/fake_video_player.dart';
 
 const String _date = '2026-07-19';
 const String _lastWord = 'finale';
+const String _roses = 'Roses at dawn';
 const String _voiceMedia = 'blob-voice';
 const String _videoMedia = 'blob-video';
 
 final TargetPlatformVariant _bothLayouts = TargetPlatformVariant(
   <TargetPlatform>{TargetPlatform.android, TargetPlatform.macOS},
 );
+
+const Set<TargetPlatform> _keyboardPlatforms = <TargetPlatform>{
+  TargetPlatform.macOS,
+  TargetPlatform.windows,
+};
 
 String _longNote() {
   final StringBuffer buffer = StringBuffer('An afternoon by the pond');
@@ -63,6 +72,7 @@ Entry _entry({
   required EntryType type,
   required int hour,
   required int minute,
+  String? title,
   String? textContent,
   String? mediaId,
   int? durationMs,
@@ -71,6 +81,7 @@ Entry _entry({
     id: id,
     dayId: 'day-1',
     type: type,
+    title: title,
     textContent: textContent,
     mediaId: mediaId,
     durationMs: durationMs,
@@ -86,6 +97,7 @@ List<Entry> _dayEntries() {
       type: EntryType.text,
       hour: 8,
       minute: 12,
+      title: _roses,
       textContent: 'Watered the roses.',
     ),
     _entry(
@@ -260,6 +272,8 @@ Finder _inPanel(Finder matching) =>
     find.descendant(of: find.byType(LogViewerPanel), matching: matching);
 
 bool get _sidebar => defaultTargetPlatform == TargetPlatform.macOS;
+
+Key get _exitKey => _sidebar ? logViewerBackKey : transportDockBackKey;
 
 List<Entry> _mixedEntries() {
   return <Entry>[
@@ -458,27 +472,10 @@ void main() {
   ) async {
     await _open(tester, entryId: 'entry-2');
 
-    final Finder title = find.text('Afternoon note');
+    final Finder title = find.text('Sunday, July 19');
     expect(title, findsOneWidget);
     final TextStyle style = DefaultTextStyle.of(tester.element(title)).style;
     expect(style.decoration ?? TextDecoration.none, TextDecoration.none);
-  }, variant: _bothLayouts);
-
-  testWidgets('view mode shows the heading, the meta and the whole note', (
-    WidgetTester tester,
-  ) async {
-    await _open(tester, entryId: 'entry-2');
-
-    expect(find.text('Afternoon note'), findsOneWidget);
-    expect(find.text('Sunday, July 19'), findsOneWidget);
-    expect(
-      find.byWidgetPredicate(
-        (Widget widget) =>
-            widget is Text && (widget.data ?? '').startsWith('2:30 PM'),
-      ),
-      findsOneWidget,
-    );
-    expect(_noteText(_lastWord), findsOneWidget);
   }, variant: _bothLayouts);
 
   testWidgets("Earlier and Later step through the day's logs", (
@@ -486,19 +483,19 @@ void main() {
   ) async {
     await _open(tester);
 
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(find.text(_roses), findsOneWidget);
     expect(find.text('1 of 3'), findsOneWidget);
 
     await tester.tap(find.byKey(logViewerLaterKey));
     await tester.pumpAndSettle();
 
-    expect(find.text('Afternoon note'), findsOneWidget);
+    expect(_noteText(_lastWord), findsOneWidget);
     expect(find.text('2 of 3'), findsOneWidget);
 
     await tester.tap(find.byKey(logViewerEarlierKey));
     await tester.pumpAndSettle();
 
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(find.text(_roses), findsOneWidget);
   }, variant: _bothLayouts);
 
   testWidgets('Edit switches to edit mode without moving the panel', (
@@ -534,7 +531,7 @@ void main() {
 
       expect(session.repository.noteSaves, hasLength(1));
       expect(driver.find, findsNothing);
-      expect(find.text('Afternoon note'), findsOneWidget);
+      expect(find.byKey(viewerTitleFieldKey), findsOneWidget);
       expect(_noteText('a better day'), findsOneWidget);
       expect(find.byKey(logViewerPanelKey), findsOneWidget);
       expect(session.outcomes, isEmpty);
@@ -619,13 +616,13 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
 
-    expect(find.text('Afternoon note'), findsOneWidget);
+    expect(_noteText(_lastWord), findsOneWidget);
     expect(session.outcomes, isEmpty);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
 
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(find.text(_roses), findsOneWidget);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
@@ -652,8 +649,11 @@ void main() {
     await _open(tester, entryId: 'entry-3', exit: LogViewerExit.close);
 
     expect(_inPanel(find.byType(VoicePlayerView)), findsOneWidget);
-    expect(find.text('Close'), findsOneWidget);
-    expect(find.byKey(logActionsDeleteKey), findsOneWidget);
+    expect(find.byKey(_exitKey), findsOneWidget);
+    expect(
+      find.byKey(logActionsDeleteKey),
+      _sidebar ? findsOneWidget : findsNothing,
+    );
     expect(find.byKey(logActionsEditKey), findsNothing);
   }, variant: _bothLayouts);
 
@@ -718,7 +718,7 @@ void main() {
 
   testWidgets('no viewer boxes its media', (WidgetTester tester) async {
     await _openMixed(tester, entryId: 'voice-log');
-    _expectUnboxed(tester, _inPanel(find.byType(ViewerWaveform)));
+    _expectUnboxed(tester, _inPanel(find.byType(VoiceWaveform)));
 
     await _openMixed(tester, entryId: 'video-log');
     _expectUnboxed(tester, _inPanel(find.byKey(videoFrameKey)));
@@ -734,7 +734,7 @@ void main() {
 
     expect(find.byType(VoicePlayerView), findsNothing);
     expect(_inPanel(_noteView()), findsOneWidget);
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(_noteText('Fed the robins.'), findsOneWidget);
     expect(find.text('2 of 3'), findsOneWidget);
 
     await tester.tap(find.byKey(logViewerEarlierKey));
@@ -747,14 +747,15 @@ void main() {
   testWidgets('delete asks first and Back or Close follows the origin', (
     WidgetTester tester,
   ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
     _Mixed session = await _openMixed(
       tester,
       entryId: 'voice-log',
       exit: LogViewerExit.back,
     );
-    expect(find.text(logViewerBackLabel), findsOneWidget);
-    expect(find.text(logViewerCloseLabel), findsNothing);
-    await tester.tap(find.byKey(logViewerBackKey));
+    expect(find.bySemanticsLabel(logViewerBackLabel), findsOneWidget);
+    expect(find.bySemanticsLabel(logViewerCloseLabel), findsNothing);
+    await tester.tap(find.byKey(_exitKey));
     await tester.pumpAndSettle();
     expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.returned]);
     expect(find.byType(LogViewerPanel), findsNothing);
@@ -764,14 +765,18 @@ void main() {
       entryId: 'voice-log',
       exit: LogViewerExit.close,
     );
-    expect(find.text(logViewerCloseLabel), findsOneWidget);
-    expect(find.text(logViewerBackLabel), findsNothing);
-    await tester.tap(find.byKey(logViewerBackKey));
+    expect(find.bySemanticsLabel(logViewerCloseLabel), findsOneWidget);
+    expect(find.bySemanticsLabel(logViewerBackLabel), findsNothing);
+    await tester.tap(find.byKey(_exitKey));
     await tester.pumpAndSettle();
     expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.returned]);
     expect(find.byType(LogViewerPanel), findsNothing);
 
     session = await _openMixed(tester, entryId: 'voice-log');
+    if (!_sidebar) {
+      await tester.tap(find.byKey(transportDockMoreKey));
+      await tester.pumpAndSettle();
+    }
     await tester.tap(find.byKey(logActionsDeleteKey));
     await tester.pumpAndSettle();
 
@@ -786,6 +791,7 @@ void main() {
     expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.deleted]);
     expect(find.byType(LogViewerPanel), findsNothing);
     await _drainToast(tester);
+    semantics.dispose();
   }, variant: _bothLayouts);
 
   testWidgets(
@@ -858,7 +864,7 @@ void main() {
       expect(own.loadCalls, hasLength(1));
       expect(own.disposeCalls, 0);
 
-      await tester.tap(find.byKey(logViewerBackKey));
+      await tester.tap(find.byKey(_exitKey));
       await tester.pumpAndSettle();
 
       expect(find.byType(LogViewerPanel), findsNothing);
@@ -874,16 +880,16 @@ void main() {
   ) async {
     final NoteEditorDriver driver = NoteEditorDriver(tester);
     final _Session session = await _open(tester);
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(find.text(_roses), findsOneWidget);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
-    expect(find.text('Afternoon note'), findsOneWidget);
+    expect(_noteText(_lastWord), findsOneWidget);
     expect(find.text('2 of 3'), findsOneWidget);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(find.text(_roses), findsOneWidget);
     expect(find.text('1 of 3'), findsOneWidget);
 
     await tester.tap(find.byKey(logActionsEditKey));
@@ -900,7 +906,7 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
-    expect(find.text('Afternoon note'), findsOneWidget);
+    expect(_noteText(_lastWord), findsOneWidget);
     expect(find.text('2 of 3'), findsOneWidget);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
@@ -910,7 +916,7 @@ void main() {
     await _drainToast(tester);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
-  testWidgets('arrow keys step across note, voice and video and back', (
+  testWidgets('Page keys step across note, voice and video and back', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(1440, 900);
@@ -926,11 +932,11 @@ void main() {
     expect(_inPanel(find.byType(NotePanelView)), findsOneWidget);
 
     final List<(LogicalKeyboardKey, Type)> steps = <(LogicalKeyboardKey, Type)>[
-      (LogicalKeyboardKey.arrowLeft, VoicePlayerView),
-      (LogicalKeyboardKey.arrowRight, NotePanelView),
-      (LogicalKeyboardKey.arrowRight, VideoViewerView),
-      (LogicalKeyboardKey.arrowLeft, NotePanelView),
-      (LogicalKeyboardKey.arrowLeft, VoicePlayerView),
+      (LogicalKeyboardKey.pageUp, VoicePlayerView),
+      (LogicalKeyboardKey.pageDown, NotePanelView),
+      (LogicalKeyboardKey.pageDown, VideoViewerView),
+      (LogicalKeyboardKey.pageUp, NotePanelView),
+      (LogicalKeyboardKey.pageUp, VoicePlayerView),
     ];
     for (final (LogicalKeyboardKey key, Type view) in steps) {
       await tester.sendKeyEvent(key);
@@ -940,4 +946,51 @@ void main() {
     expect(session.outcomes, isEmpty);
     expect(find.byKey(logViewerPanelKey), findsOneWidget);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('F toggles full screen, but not while typing a title', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = FakeViewPadding.zero;
+    tester.view.viewPadding = FakeViewPadding.zero;
+    addTearDown(tester.view.reset);
+    final _Mixed session = await _openMixed(
+      tester,
+      entryId: 'video-log',
+      theme: fieldNotesTheme(platform: defaultTargetPlatform),
+    );
+    final Finder title = find.byKey(viewerTitleFieldKey);
+    final Finder earlier = find.byKey(logViewerEarlierKey);
+    String fullScreenLabel() => tester
+        .widget<TransportIconButton>(find.byKey(transportFullScreenKey))
+        .label;
+    Future<void> press(LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+    }
+
+    await press(LogicalKeyboardKey.keyF);
+    expect(title.hitTestable(), findsNothing);
+    expect(earlier.hitTestable(), findsNothing);
+    expect(fullScreenLabel(), 'Exit full screen');
+
+    await press(LogicalKeyboardKey.keyF);
+    expect(title.hitTestable(), findsOneWidget);
+    expect(earlier.hitTestable(), findsOneWidget);
+    expect(fullScreenLabel(), 'Full screen');
+
+    await press(LogicalKeyboardKey.keyF);
+    await press(LogicalKeyboardKey.escape);
+    expect(title.hitTestable(), findsOneWidget);
+    expect(fullScreenLabel(), 'Full screen');
+    expect(session.outcomes, isEmpty);
+
+    await tester.tap(title);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.pump();
+    expect(title.hitTestable(), findsOneWidget);
+    expect(fullScreenLabel(), 'Full screen');
+  }, variant: TargetPlatformVariant(_keyboardPlatforms));
 }

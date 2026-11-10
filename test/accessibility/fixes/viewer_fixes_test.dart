@@ -51,7 +51,7 @@ void main() {
   ) async {
     await _idsIn(tester, viewerStates, 'd15-viewer-middle-entry');
     final SemanticsHandle handle = tester.ensureSemantics();
-    for (final String label in <String>['Earlier log', 'Later log']) {
+    for (final String label in <String>['Previous log', 'Next log']) {
       final List<SemanticsNode> nodes = _nodes(
         tester,
         (SemanticsNode node) => node.label == label,

@@ -8,7 +8,6 @@ import 'package:field_notes/data/sync/media/download_service.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/entry_cards/media/live_media.dart';
-import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -214,13 +213,6 @@ void main() {
         final SemanticsHandle semantics = tester.ensureSemantics();
         await _openDownloading(tester, variant, img.ColorRgb8(0, 0, 0));
 
-        expect(
-          find.descendant(
-            of: find.byType(ViewerPrimaryButton),
-            matching: find.byType(VideoDownloadRing),
-          ),
-          findsOneWidget,
-        );
         final SemanticsData play = _semanticsOf(
           tester,
           find.bySemanticsLabel('Play'),

@@ -453,14 +453,14 @@ void main() {
           radius: 10,
         ),
         _Row(
-          'Earlier log',
+          'Previous log',
           find.byKey(logViewerEarlierKey),
           _lightRow,
           _Shape.rounded,
           radius: 12,
         ),
         _Row(
-          'Later log',
+          'Next log',
           find.byKey(logViewerLaterKey),
           _lightRow,
           _Shape.rounded,

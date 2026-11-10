@@ -21,7 +21,7 @@ import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/log_viewer/note_panel_view.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
-import 'package:field_notes/features/log_viewer/viewer_waveform.dart';
+import 'package:field_notes/features/entry_cards/cards/voice_waveform.dart';
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/mood/mood_banner.dart';
 import 'package:field_notes/features/mood/mood_banner_for_date.dart';
@@ -564,7 +564,7 @@ final List<A11yState> viewerStates = <A11yState>[
     ),
     proof: <A11yProof>[
       A11yProof(_inViewer(find.byType(VoicePlayerView))),
-      A11yProof(find.byType(ViewerWaveform)),
+      A11yProof(find.byType(VoiceWaveform)),
     ],
   ),
   A11yState(

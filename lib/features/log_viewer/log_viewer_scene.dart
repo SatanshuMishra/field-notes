@@ -10,6 +10,8 @@ import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
 
 const String _quietLineSeparator = ' · ';
 
+typedef LogViewerRename = Future<bool> Function(String? title);
+
 String entryClockOf(BuildContext context, Entry entry) {
   return formatClock(
     context,
@@ -36,6 +38,9 @@ final class LogViewerScene {
     required this.onLater,
     required this.onDelete,
     required this.onEdit,
+    this.onRename,
+    this.fullScreen = false,
+    this.onFullScreen,
   });
 
   final Entry entry;
@@ -52,6 +57,14 @@ final class LogViewerScene {
   final VoidCallback? onLater;
   final VoidCallback onDelete;
   final VoidCallback? onEdit;
+  final LogViewerRename? onRename;
+  final bool fullScreen;
+  final VoidCallback? onFullScreen;
+
+  VoidCallback get onEscape {
+    final VoidCallback? leaveFullScreen = onFullScreen;
+    return fullScreen && leaveFullScreen != null ? leaveFullScreen : onBack;
+  }
 
   String get exitLabel {
     return switch (exit) {
@@ -70,6 +83,9 @@ final class LogViewerScene {
   String clockOf(BuildContext context) {
     return entryClockOf(context, entry);
   }
+
+  String stamp(BuildContext context) =>
+      '$dayTitle$_quietLineSeparator${clockOf(context)}';
 
   String quietLine(BuildContext context) {
     final String? place = position;

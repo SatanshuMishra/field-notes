@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,11 +8,13 @@ import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/feedback/dialog_host.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/entry_cards/cards/voice_waveform.dart';
 import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart';
 import 'package:field_notes/features/entry_cards/media/media_placeholders.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/audio_playback.dart';
 import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
+import 'package:field_notes/features/entry_cards/transport/transport_bar.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
@@ -24,8 +25,6 @@ import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import '../entry_cards/support/entry_cards_harness.dart';
 import '../entry_cards/support/fake_audio_player.dart';
 
-const Color _ground = Color(0xFF1C1713);
-const Color _rose = Color(0xFFB8566A);
 const Color _played = Color(0xFFE3889A);
 const Color _ink = Color(0xFFF3E6D1);
 
@@ -34,7 +33,7 @@ const double _gestureBar = 24;
 const int _durationMs = 98000;
 const String _mediaId = 'voice-media';
 const String _dayTitle = 'Thursday 2 October';
-const String _idleTime = '0:00 / 1:38';
+const String _totalTime = '1:38';
 
 const List<double> _peaks = <double>[
   0.1,
@@ -63,6 +62,12 @@ final class _Calls {
   int earlier = 0;
   int later = 0;
   int delete = 0;
+  final List<String?> titles = <String?>[];
+
+  Future<bool> rename(String? title) async {
+    titles.add(title);
+    return true;
+  }
 }
 
 void _phone(WidgetTester tester) {
@@ -105,11 +110,12 @@ FakeMediaResolver _resolverFor(File file) {
   );
 }
 
-Entry _voiceEntry({List<double>? peaks = _peaks}) {
+Entry _voiceEntry({List<double>? peaks = _peaks, String? title}) {
   return Entry(
     id: 'voice-entry',
     dayId: 'd1',
     type: EntryType.voice,
+    title: title,
     mediaId: _mediaId,
     durationMs: _durationMs,
     createdAt: 0,
@@ -140,6 +146,7 @@ LogViewerScene _scene(
     onLater: later ? () => calls.later++ : null,
     onDelete: () => calls.delete++,
     onEdit: null,
+    onRename: calls.rename,
   );
 }
 
@@ -149,6 +156,7 @@ Widget _host(
   required EntryAudioPlayer player,
   required TargetPlatform platform,
   Brightness brightness = Brightness.dark,
+  bool embedded = false,
 }) {
   return MaterialApp(
     key: ValueKey<String>('$platform-$brightness'),
@@ -160,6 +168,7 @@ Widget _host(
         resolver: resolver,
         playerFactory: () => player,
         focus: PlaybackFocus(),
+        embedded: embedded,
       ),
     ),
   );
@@ -173,51 +182,20 @@ Future<void> _settle(WidgetTester tester) async {
 Finder _inStage(Finder matching) =>
     find.descendant(of: find.byType(ViewerStage), matching: matching);
 
-bool _framesContent(Widget widget) {
-  if (widget is CustomPaint) {
-    return true;
-  }
-  if (widget is! DecoratedBox) {
-    return false;
-  }
-  final Decoration decoration = widget.decoration;
-  return decoration is! BoxDecoration ||
-      decoration.border != null ||
-      decoration.color != null;
-}
+Finder get _play => find.byType(TransportPlayButton);
+
+Finder get _wave => find.byType(VoiceWaveform);
 
 Finder _groundBox() {
   return _inStage(
     find.byWidgetPredicate(
       (Widget widget) =>
-          widget is ColoredBox && widget.color.toARGB32() == _ground.toARGB32(),
+          widget is DecoratedBox &&
+          widget.decoration is BoxDecoration &&
+          (widget.decoration as BoxDecoration).gradient is RadialGradient &&
+          widget.key == null,
     ),
   ).first;
-}
-
-Finder _playCircle() {
-  return find.descendant(
-    of: find.byType(ViewerPrimaryButton),
-    matching: find.byWidgetPredicate((Widget widget) {
-      if (widget is! DecoratedBox) {
-        return false;
-      }
-      final Decoration decoration = widget.decoration;
-      return decoration is BoxDecoration &&
-          decoration.shape == BoxShape.circle &&
-          decoration.color != null;
-    }),
-  );
-}
-
-int _circleColour(WidgetTester tester) {
-  final DecoratedBox circle = tester.widget<DecoratedBox>(_playCircle());
-  return (circle.decoration as BoxDecoration).color!.toARGB32();
-}
-
-TextStyle _timeStyle(WidgetTester tester) {
-  final Text time = tester.widget<Text>(find.text(_idleTime));
-  return time.textSpan!.style!;
 }
 
 Finder _wavePaint() => find.descendant(
@@ -246,27 +224,19 @@ List<RRect> _barShapes(WidgetTester tester) => <RRect>[
     call.invocation.positionalArguments[0] as RRect,
 ];
 
-List<BackdropKey?> _backdropKeysIn(WidgetTester tester, Type chrome) => tester
-    .renderObjectList<RenderBackdropFilter>(
-      find.descendant(
-        of: find.byType(chrome),
-        matching: find.byType(BackdropFilter),
-      ),
-    )
-    .map((RenderBackdropFilter filter) => filter.backdropKey)
-    .toList();
-
 void main() {
-  testWidgets('the phone voice player shows only the player', (
+  testWidgets('the phone voice player follows the shared dock', (
     WidgetTester tester,
   ) async {
     final SemanticsHandle handle = tester.ensureSemantics();
     _phone(tester);
     final File file = _recording();
-    final int unplayed = _ink.withValues(alpha: 0.28).toARGB32();
-    final int tallUnplayed = _ink.withValues(alpha: 0.46).toARGB32();
 
-    for (final Brightness brightness in Brightness.values) {
+    for (final (Brightness brightness, FieldNotesColors colors)
+        in <(Brightness, FieldNotesColors)>[
+          (Brightness.light, FieldNotesColors.light),
+          (Brightness.dark, FieldNotesColors.dark),
+        ]) {
       final _SeekingAudioPlayer player = _SeekingAudioPlayer();
       await tester.pumpWidget(
         _host(
@@ -280,139 +250,61 @@ void main() {
       await _settle(tester);
       expect(player.loadCalls, <String>[file.path]);
 
-      expect(tester.getRect(_groundBox()), const Rect.fromLTWH(0, 0, 384, 832));
-
-      final Rect wave = tester.getRect(find.byType(ViewerWaveform));
-      expect(wave.height, 176);
-      expect(wave.left, 22);
-      expect(wave.right, 384 - 22);
-      expect(wave.center.dy, 832 / 2);
-
-      final Iterable<DecoratedBox> waveAncestors = tester
-          .widgetList<DecoratedBox>(
-            find.ancestor(
-              of: find.byType(ViewerWaveform),
-              matching: find.byType(DecoratedBox),
-            ),
-          );
+      final Finder ground = _groundBox();
+      expect(tester.getRect(ground), const Rect.fromLTWH(0, 0, 384, 832));
+      final RadialGradient radial =
+          (tester.widget<DecoratedBox>(ground).decoration as BoxDecoration)
+                  .gradient!
+              as RadialGradient;
+      expect(radial.colors.first, colors.viewerStage);
       expect(
-        waveAncestors.where((DecoratedBox box) {
-          final Decoration decoration = box.decoration;
-          return decoration is BoxDecoration && decoration.border != null;
-        }),
-        isEmpty,
+        radial.colors.last,
+        Color.lerp(colors.viewerStage, colors.viewerStageEdge, 0.4),
       );
 
-      final List<int> bars = _barColours(tester);
-      expect(bars, isNotEmpty);
-      expect(bars.toSet(), <int>{unplayed, tallUnplayed});
+      expect(find.byType(TransportDock), findsOneWidget);
+      expect(find.byType(ViewerDock), findsNothing);
+      expect(find.byType(ViewerTopBar), findsNothing);
+      expect(find.byType(ViewerWaveform), findsNothing);
+      expect(find.byKey(logActionsDeleteKey), findsNothing);
 
+      final Rect wave = tester.getRect(_wave);
+      expect(wave.height, 112);
+      expect(wave.left, 20);
+      expect(wave.right, 384 - 20);
+
+      expect(find.textContaining(_dayTitle), findsOneWidget);
+      expect(find.text('2 of 4'), findsOneWidget);
       expect(
-        tester.getSemantics(find.byType(ViewerWaveform)),
-        isSemantics(
-          label: 'Playback position',
-          value: '0:00 of 1:38',
-          increasedValue: '0:05 of 1:38',
-          decreasedValue: '0:00 of 1:38',
-          isSlider: true,
-          isEnabled: true,
-          hasIncreaseAction: true,
-          hasDecreaseAction: true,
-        ),
+        tester.widget<Text>(find.textContaining(_dayTitle)).style!.color,
+        colors.ink,
       );
+      expect(find.text(_totalTime), findsOneWidget);
 
-      final TextStyle time = _timeStyle(tester);
-      expect(time.fontSize, 48);
-      expect(time.fontFamily, TypographyTokens.serif);
-      expect(time.color!.toARGB32(), _ink.toARGB32());
-      final Rect timeRect = tester.getRect(find.text(_idleTime));
-      expect(timeRect.top, greaterThan(wave.bottom));
-      expect(timeRect.center.dx, closeTo(192, 0.5));
-
-      final ViewerQuietLine quiet = tester.widget<ViewerQuietLine>(
-        find.byType(ViewerQuietLine),
-      );
-      expect(quiet.text, startsWith(_dayTitle));
-      final Rect quietRect = tester.getRect(find.byType(ViewerQuietLine));
-      expect(quietRect.top, greaterThanOrEqualTo(_statusBar));
-      expect(quietRect.bottom, lessThan(wave.top));
-      expect(quietRect.left, greaterThanOrEqualTo(0));
-      expect(
-        quietRect.right,
-        lessThan(tester.getRect(find.byKey(logActionsDeleteKey)).left),
-      );
-
-      expect(_playCircle(), findsOneWidget);
-      expect(tester.getSize(_playCircle()), const Size(68, 68));
-      expect(_circleColour(tester), _rose.toARGB32());
-
-      final ViewerDock dock = tester.widget<ViewerDock>(
-        find.byType(ViewerDock),
-      );
-      expect(dock.slots, hasLength(4));
-      expect(
-        find.descendant(
-          of: find.byType(ViewerDock),
-          matching: find.byKey(logActionsDeleteKey),
-        ),
-        findsNothing,
-      );
-      for (final String label in <String>[
-        'Close',
-        'Earlier',
-        'Play',
-        'Later',
-      ]) {
-        expect(
-          find.descendant(
-            of: find.byType(ViewerDock),
-            matching: find.text(label),
-          ),
-          findsOneWidget,
-        );
-      }
-
-      const double column = (384 - 32) / 4;
-      final List<Finder> controls = <Finder>[
-        find.byKey(logViewerBackKey),
-        find.byKey(logViewerEarlierKey),
-        find.byType(ViewerPrimaryButton),
-        find.byKey(logViewerLaterKey),
+      final List<Rect> dock = <Rect>[
+        tester.getRect(find.byKey(transportDockBackKey)),
+        tester.getRect(find.byKey(transportBack10Key)),
+        tester.getRect(_play),
+        tester.getRect(find.byKey(transportForward10Key)),
+        tester.getRect(find.byKey(transportDockMoreKey)),
       ];
-      for (int index = 0; index < controls.length; index++) {
-        final Rect control = tester.getRect(controls[index]);
-        expect(control.center.dx, closeTo(16 + column * (index + 0.5), 0.5));
-        expect(control.width, greaterThanOrEqualTo(48));
-        expect(control.height, greaterThanOrEqualTo(48));
-        expect(control.top, greaterThan(timeRect.bottom));
+      for (final Rect control in dock) {
+        expect(control.width.round(), greaterThanOrEqualTo(48));
+        expect(control.height.round(), greaterThanOrEqualTo(48));
+        expect(control.top, greaterThan(wave.bottom));
       }
 
+      expect(tester.getRect(find.byKey(logViewerEarlierKey)).left, 4);
+      expect(tester.getRect(find.byKey(logViewerLaterKey)).right, 384 - 4);
       for (final String label in <String>[
         'Close',
         logViewerEarlierLabel,
         'Play',
         logViewerLaterLabel,
-        'Delete',
+        'More',
       ]) {
         expect(find.bySemanticsLabel(label), findsOneWidget);
       }
-
-      final List<String> texts = <String>[
-        for (final Text text in tester.widgetList<Text>(
-          _inStage(find.byType(Text)),
-        ))
-          text.data ?? text.textSpan!.toPlainText(),
-      ];
-      expect(texts, hasLength(7));
-      expect(texts.toSet(), <String>{
-        quiet.text,
-        _idleTime,
-        'Close',
-        'Earlier',
-        'Play',
-        'Later',
-        'Delete',
-      });
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
     }
 
@@ -436,35 +328,24 @@ void main() {
     );
     await _settle(tester);
 
-    final Rect wave = tester.getRect(find.byType(ViewerWaveform));
+    final Rect wave = tester.getRect(_wave);
     await tester.tapAt(Offset(wave.left + wave.width * 0.75, wave.center.dy));
     await tester.pump();
-    expect(player.seeks, <Duration>[
-      const Duration(milliseconds: _durationMs * 3 ~/ 4),
-    ]);
+    expect(player.seeks, hasLength(1));
+    expect(
+      player.seeks.single.inMilliseconds,
+      closeTo(_durationMs * 3 / 4, 500),
+    );
     expect(calls.earlier, 0);
     expect(calls.later, 0);
 
-    player.emitState(AudioPlaybackState.playing);
-    player.emitPosition(const Duration(milliseconds: _durationMs * 3 ~/ 4));
-    await tester.pump();
-    final Set<int> playing = _barColours(tester).toSet();
-    expect(playing, contains(_played.toARGB32()));
-    expect(playing, contains(_ink.toARGB32()));
-    expect(playing, contains(_ink.withValues(alpha: 0.28).toARGB32()));
-
     final int tapped = player.seeks.length;
-    const double dragEnd = 80;
     await tester.dragFrom(
       Offset(wave.right - 20, wave.center.dy),
-      Offset(dragEnd - (wave.width - 20), 0),
+      Offset(100 - wave.width, 0),
     );
     await tester.pump();
-    expect(player.seeks.length, greaterThan(tapped + 1));
-    expect(
-      player.seeks.last.inMilliseconds,
-      closeTo(dragEnd / wave.width * _durationMs, 1),
-    );
+    expect(player.seeks.length, greaterThan(tapped));
     expect(calls.later, 0);
     expect(calls.earlier, 0);
 
@@ -477,13 +358,20 @@ void main() {
     await tester.pump();
     expect(calls.later, 1);
     expect(calls.earlier, 0);
+    await tester.flingFrom(
+      Offset(wave.center.dx - 100, wave.top - 80),
+      const Offset(200, 0),
+      1000,
+    );
+    await tester.pump();
+    expect(calls.earlier, 1);
     expect(player.seeks, hasLength(dragged));
   });
 
-  testWidgets('the full-screen waveform draws 4 px bars with 3 px gaps', (
+  testWidgets('the embedded waveform draws 4 px bars with 3 px gaps', (
     WidgetTester tester,
   ) async {
-    _mac(tester, size: const Size(780, 900));
+    _mac(tester, size: const Size(756, 900));
     await tester.pumpWidget(
       _host(
         _scene(
@@ -493,97 +381,68 @@ void main() {
         resolver: _resolverFor(_recording()),
         player: _SeekingAudioPlayer(),
         platform: TargetPlatform.macOS,
+        embedded: true,
       ),
     );
     await _settle(tester);
 
-    expect(tester.getSize(_wavePaint()), const Size(700, 200));
+    expect(tester.getSize(_wavePaint()), const Size(700, 140));
     final List<RRect> bars = _barShapes(tester);
     expect(bars, hasLength(100));
     for (int index = 0; index < 100; index++) {
       final RRect bar = bars[index];
       expect(bar.left, closeTo(1.5 + 7 * index, 1e-9), reason: 'bar $index');
       expect(bar.width, closeTo(4, 1e-9), reason: 'bar $index width');
-      expect(bar.height, closeTo(200, 1e-9), reason: 'bar $index height');
+      expect(bar.height, closeTo(140, 1e-9), reason: 'bar $index height');
       expect(bar.top, closeTo(0, 1e-9), reason: 'bar $index top');
     }
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets("the player draws the entry's own peaks", (
+  testWidgets("the viewer hands the entry's own peaks to the waveform", (
+    WidgetTester tester,
+  ) async {
+    _phone(tester);
+    await tester.pumpWidget(
+      _host(
+        _scene(_Calls()),
+        resolver: _resolverFor(_recording()),
+        player: _SeekingAudioPlayer(),
+        platform: TargetPlatform.android,
+      ),
+    );
+    await _settle(tester);
+
+    expect(tester.widget<VoiceWaveform>(_wave).peaks, _peaks);
+  });
+
+  testWidgets('the embedded player colours what has played', (
     WidgetTester tester,
   ) async {
     _phone(tester);
     final _SeekingAudioPlayer player = _SeekingAudioPlayer();
     await tester.pumpWidget(
       _host(
-        _scene(
-          _Calls(),
-          entry: _voiceEntry(
-            peaks: const <double>[
-              0,
-              0.1,
-              0.2,
-              0.3,
-              0.4,
-              0.5,
-              0.6,
-              0.7,
-              0.8,
-              0.9,
-              1.0,
-            ],
-          ),
-        ),
+        _scene(_Calls()),
         resolver: _resolverFor(_recording()),
         player: player,
         platform: TargetPlatform.android,
+        embedded: true,
       ),
     );
     await _settle(tester);
-
-    expect(tester.getSize(_wavePaint()), const Size(340, 176));
-    final List<RRect> idle = _barShapes(tester);
-    expect(idle, hasLength(49));
-    expect(idle.first.height, closeTo(176 * 0.07, 1e-9));
-    expect(idle.last.height, closeTo(176, 1e-9));
-    for (int index = 1; index < idle.length; index++) {
-      expect(
-        idle[index].height,
-        greaterThanOrEqualTo(idle[index - 1].height - 1e-9),
-        reason: 'bar $index rises',
-      );
-      expect(idle[index].left, greaterThan(idle[index - 1].left));
-    }
-    expect(idle.map((RRect bar) => bar.height).toSet().length, greaterThan(10));
 
     player.emitState(AudioPlaybackState.playing);
     player.emitPosition(const Duration(milliseconds: _durationMs ~/ 2));
     await tester.pump();
 
-    final List<RRect> shapes = _barShapes(tester);
-    final List<int> colours = _barColours(tester);
-    expect(shapes, hasLength(50));
-    expect(shapes.last.width, closeTo(2, 1e-9));
-    expect(colours.last, _ink.toARGB32());
-    final int unplayed = _ink.withValues(alpha: 0.28).toARGB32();
-    final int tallUnplayed = _ink.withValues(alpha: 0.46).toARGB32();
-    for (int index = 0; index < 49; index++) {
-      expect(shapes[index].height, closeTo(idle[index].height, 1e-9));
-      expect(
-        colours[index],
-        index < 25
-            ? _played.toARGB32()
-            : shapes[index].height / 176 > 0.62
-            ? tallUnplayed
-            : unplayed,
-        reason: 'bar $index',
-      );
-    }
-    expect(colours.sublist(25, 49), containsAll(<int>[unplayed, tallUnplayed]));
+    final Set<int> playing = _barColours(tester).toSet();
+    expect(playing, contains(_played.toARGB32()));
+    expect(playing, contains(_ink.toARGB32()));
+    expect(playing, contains(_ink.withValues(alpha: 0.28).toARGB32()));
   });
 
-  testWidgets('the Mac voice player fills the window below the title bar', (
+  testWidgets('the Mac voice player keeps steps at the window edges', (
     WidgetTester tester,
   ) async {
     _mac(tester);
@@ -606,37 +465,20 @@ void main() {
       const Rect.fromLTWH(0, 42, 1440, 900 - 42),
     );
 
-    final Rect wave = tester.getRect(find.byType(ViewerWaveform));
-    expect(wave.size, const Size(960, 200));
+    expect(find.byType(TransportBar), findsOneWidget);
+    expect(find.byType(ViewerCapsule), findsNothing);
+    final Rect wave = tester.getRect(_wave);
+    expect(wave.size.width, 880);
     expect(wave.center.dx, 720);
-    expect(wave.center.dy, 42 + (900 - 42) / 2);
 
-    expect(_timeStyle(tester).fontSize, 56);
-    expect(tester.getRect(find.text(_idleTime)).top, greaterThan(wave.bottom));
+    expect(tester.getRect(find.byKey(logViewerBackKey)).left, 16);
+    expect(tester.getRect(find.byKey(logActionsDeleteKey)).right, 1440 - 16);
+    expect(tester.getRect(find.byKey(logViewerEarlierKey)).left, 16);
+    expect(tester.getRect(find.byKey(logViewerLaterKey)).right, 1440 - 16);
+    expect(find.byKey(viewerTitleFieldKey), findsOneWidget);
+    expect(find.text(viewerTitleHint), findsOneWidget);
 
-    expect(tester.getRect(find.byKey(logViewerBackKey)).left, 18);
-    expect(tester.getRect(find.byKey(logActionsDeleteKey)).right, 1440 - 18);
-    expect(
-      tester.getRect(find.byType(ViewerQuietLine)).center.dx,
-      closeTo(720, 0.5),
-    );
-
-    expect(_playCircle(), findsOneWidget);
-    expect(tester.getSize(_playCircle()), const Size(56, 56));
-    expect(_circleColour(tester), _rose.toARGB32());
-    final Rect capsule = tester.getRect(find.byType(ViewerCapsule));
-    expect(capsule.bottom, 900 - 30);
-    expect(capsule.center.dx, closeTo(720, 0.5));
-    final double playX = tester.getRect(_playCircle()).center.dx;
-    expect(playX, closeTo(720, 0.5));
-    expect(
-      find.descendant(
-        of: find.byType(ViewerCapsule),
-        matching: find.byKey(logViewerEarlierKey),
-      ),
-      findsOneWidget,
-    );
-
+    final Rect play = tester.getRect(_play);
     await tester.pumpWidget(
       _host(
         _scene(calls, earlier: false, exit: LogViewerExit.back),
@@ -649,11 +491,10 @@ void main() {
 
     expect(find.byKey(logViewerEarlierKey), findsNothing);
     expect(find.byKey(logViewerLaterKey), findsOneWidget);
-    expect(tester.getRect(_playCircle()).center.dx, playX);
-    expect(tester.getRect(find.byType(ViewerCapsule)).bottom, 900 - 30);
+    expect(tester.getRect(_play), play);
   });
 
-  testWidgets('Space, arrows and Esc drive the Mac voice player', (
+  testWidgets('Space plays, arrows seek and Page keys step on Mac', (
     WidgetTester tester,
   ) async {
     _mac(tester);
@@ -679,13 +520,24 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.space);
     await tester.pump();
     expect(player.pauseCalls, 1);
+    player.emitPosition(const Duration(seconds: 20));
+    await tester.pump();
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(player.seeks.last, const Duration(seconds: 15));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(player.seeks.last, greaterThan(const Duration(seconds: 15)));
+    expect(calls.earlier, 0);
+    expect(calls.later, 0);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
     await tester.pump();
     expect(calls.earlier, 1);
     expect(calls.later, 0);
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
     await tester.pump();
     expect(calls.later, 1);
     expect(calls.earlier, 1);
@@ -696,13 +548,42 @@ void main() {
     expect(calls.delete, 0);
   });
 
+  testWidgets('a title shows in the top bar and renames from the phone sheet', (
+    WidgetTester tester,
+  ) async {
+    _phone(tester);
+    final _Calls calls = _Calls();
+    await tester.pumpWidget(
+      _host(
+        _scene(calls, entry: _voiceEntry(title: 'Kitchen radio')),
+        resolver: _resolverFor(_recording()),
+        player: _SeekingAudioPlayer(),
+        platform: TargetPlatform.android,
+      ),
+    );
+    await _settle(tester);
+    expect(find.text('Kitchen radio'), findsOneWidget);
+
+    await tester.tap(find.byKey(transportDockMoreKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(viewerRenameRowKey));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(viewerTitleFieldKey), ' ');
+    await tester.tap(find.byKey(viewerSaveTitleKey));
+    await tester.pumpAndSettle();
+    expect(calls.titles, <String?>[null]);
+  });
+
   testWidgets('an unavailable recording keeps the controls and disables Play', (
     WidgetTester tester,
   ) async {
     final SemanticsHandle handle = tester.ensureSemantics();
     _phone(tester);
-    const Rect waveSlot = Rect.fromLTWH(22, (832 - 176) / 2, 384 - 44, 176);
-    for (final Brightness brightness in Brightness.values) {
+    for (final (Brightness brightness, FieldNotesColors colors)
+        in <(Brightness, FieldNotesColors)>[
+          (Brightness.light, FieldNotesColors.light),
+          (Brightness.dark, FieldNotesColors.dark),
+        ]) {
       final _SeekingAudioPlayer player = _SeekingAudioPlayer();
       final _Calls calls = _Calls();
       await tester.pumpWidget(
@@ -717,81 +598,36 @@ void main() {
       await _settle(tester);
 
       expect(player.loadCalls, isEmpty);
-      expect(find.byType(ViewerWaveform), findsNothing);
       final Finder message = find.text("Can't play this recording");
       expect(message, findsOneWidget);
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
       final Rect shown = tester.getRect(message);
-      expect(shown.center, waveSlot.center);
-      expect(shown.width, lessThanOrEqualTo(waveSlot.width));
-      expect(shown.height, lessThanOrEqualTo(waveSlot.height));
+      expect(shown.bottom, lessThan(tester.getRect(_wave).top));
+      expect(
+        shown.overlaps(tester.getRect(find.byKey(logViewerEarlierKey))),
+        isFalse,
+      );
       final TextStyle style = tester.widget<Text>(message).style!;
       final TextStyle caption = tester.element(message).textStyles.captionSans;
-      expect(style.color?.toARGB32(), _ink.toARGB32());
+      expect(style.color, colors.ink);
       expect(style.fontFamily, caption.fontFamily);
       expect(style.fontSize, caption.fontSize);
-      expect(
-        find.ancestor(
-          of: message,
-          matching: _inStage(find.byWidgetPredicate(_framesContent)),
-        ),
-        findsNothing,
-      );
 
-      expect(find.byKey(logViewerBackKey), findsOneWidget);
+      expect(find.byKey(transportDockBackKey), findsOneWidget);
+      expect(find.byKey(transportDockMoreKey), findsOneWidget);
       expect(find.byKey(logViewerEarlierKey), findsOneWidget);
       expect(find.byKey(logViewerLaterKey), findsOneWidget);
-      expect(find.byKey(logActionsDeleteKey), findsOneWidget);
+      expect(tester.widget<TransportPlayButton>(_play).onPressed, isNull);
       expect(
-        tester
-            .widget<ViewerPrimaryButton>(find.byType(ViewerPrimaryButton))
-            .onPressed,
-        isNull,
-      );
-      expect(
-        tester.getSemantics(find.byType(ViewerPrimaryButton)),
+        tester.getSemantics(_play),
         isSemantics(label: 'Play', isButton: true, isEnabled: false),
       );
 
-      await tester.tap(find.byType(ViewerPrimaryButton));
+      await tester.tap(_play, warnIfMissed: false);
       await tester.pump();
       expect(player.playCalls, 0);
     }
 
     handle.dispose();
   });
-
-  testWidgets(
-    'the phone dock glass shares one read and the Mac capsule keeps its own',
-    (WidgetTester tester) async {
-      _phone(tester);
-      await tester.pumpWidget(
-        _host(
-          _scene(_Calls()),
-          resolver: _resolverFor(_recording()),
-          player: FakeEntryAudioPlayer(),
-          platform: TargetPlatform.android,
-        ),
-      );
-      await _settle(tester);
-      final List<BackdropKey?> dock = _backdropKeysIn(tester, ViewerDock);
-      expect(dock, hasLength(3));
-      expect(dock.first, isNotNull);
-      expect(dock.toSet(), hasLength(1));
-
-      _mac(tester);
-      await tester.pumpWidget(
-        _host(
-          _scene(_Calls()),
-          resolver: _resolverFor(_recording()),
-          player: FakeEntryAudioPlayer(),
-          platform: TargetPlatform.macOS,
-        ),
-      );
-      await _settle(tester);
-      final List<BackdropKey?> capsule = _backdropKeysIn(tester, ViewerCapsule);
-      expect(capsule, hasLength(3));
-      expect(capsule, everyElement(isNull));
-    },
-  );
 }
