@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/app/shell/shell_destination.dart';
+import 'package:field_notes/design/feedback/toast.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/app_settings.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
@@ -64,6 +65,7 @@ class _VoiceComposerConnectorState
   Timer? _breath;
   bool _pending = false;
   bool _closing = false;
+  final TextEditingController _title = TextEditingController();
   VoicePeakSampler? _sampler;
   StreamSubscription<double>? _levelFeed;
   late final RecordingWakeHold _wakeHold;
@@ -73,6 +75,7 @@ class _VoiceComposerConnectorState
   @override
   void initState() {
     super.initState();
+    dismissTransientToast();
     _recorder = ref.read(voiceRecorderProvider);
     _wakeHold = RecordingWakeHold(ref.read(stayAwakeProvider));
     if (_recorder is FollowsChosenInput) {
@@ -121,6 +124,7 @@ class _VoiceComposerConnectorState
       unawaited(_recorder.cancel().catchError((Object _) {}));
     }
     unawaited(_recorder.close().catchError((Object _) {}));
+    _title.dispose();
     super.dispose();
   }
 
@@ -325,11 +329,24 @@ class _VoiceComposerConnectorState
     }
     _closing = true;
     _wakeHold.update(live: false);
-    closeImmersiveRecorder<String>(
-      context,
-      result: entryId,
-      toast: voiceSavedToastMessage,
+    final String title = _title.text;
+    final bool named = await nameRecordedLog(
+      ProviderScope.containerOf(context, listen: false),
+      entryId: entryId,
+      title: title,
+      timeout: widget.saveTimeout,
     );
+    if (!mounted) {
+      return;
+    }
+    showRecorderKeptToast(
+      context,
+      message: voiceSavedToastMessage,
+      entryId: entryId,
+      title: title,
+      named: named,
+    );
+    closeImmersiveRecorder<String>(context, result: entryId);
   }
 
   Future<String> _capture(
@@ -479,6 +496,7 @@ class _VoiceComposerConnectorState
       savingText: voiceSavingStatus,
       onVoiceSettings: _openVoiceSettings,
       hearing: _recorder.hearingNow,
+      titleController: _title,
     );
   }
 }

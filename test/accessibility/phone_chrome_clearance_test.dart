@@ -179,7 +179,7 @@ ScrollPosition _positionAround(WidgetTester tester, Finder item) => tester
 
 Future<void> _scrollToEnd(WidgetTester tester, ScrollPosition position) async {
   double reached = -1;
-  while (position.pixels != reached) {
+  while (position.maxScrollExtent != reached) {
     reached = position.maxScrollExtent;
     position.jumpTo(reached);
     await tester.pump();

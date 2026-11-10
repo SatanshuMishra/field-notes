@@ -1050,8 +1050,8 @@ void main() {
         expect(question, findsOneWidget, reason: '$layout');
         expect(find.text(reflectionKicker), findsNothing, reason: '$layout');
         expect(
-          find.text(reflectionShuffleLabel),
-          findsOneWidget,
+          find.text('Ask me something else'),
+          findsNothing,
           reason: '$layout',
         );
         final double gap = layout == _Layout.sidebar ? 34 : 10;

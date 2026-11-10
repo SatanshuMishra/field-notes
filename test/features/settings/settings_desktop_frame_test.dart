@@ -228,8 +228,12 @@ ScrollableState _contentScroll(WidgetTester tester) =>
           .first,
     );
 
-String _title(WidgetTester tester) =>
-    tester.widget<Text>(find.byKey(settingsContentTitleKey)).data!;
+final Finder _titleText = find.descendant(
+  of: find.byKey(settingsContentTitleKey),
+  matching: find.byType(Text),
+);
+
+String _title(WidgetTester tester) => tester.widget<Text>(_titleText).data!;
 
 void main() {
   testWidgets('Windows uses the same settings frame as macOS', (
@@ -237,9 +241,7 @@ void main() {
   ) async {
     await _pumpShell(tester, platform: TargetPlatform.macOS);
     final Map<String, Rect> mac = _frame(tester);
-    final TextStyle? macTitle = tester
-        .widget<Text>(find.byKey(settingsContentTitleKey))
-        .style;
+    final TextStyle? macTitle = tester.widget<Text>(_titleText).style;
 
     await _pumpShell(tester, platform: TargetPlatform.windows);
     expect(_inSettings(find.text('preferences')), findsNothing);
@@ -259,9 +261,7 @@ void main() {
         expect(b.height, closeTo(a.height, _tolerance), reason: part);
       }
     }
-    final TextStyle? windowsTitle = tester
-        .widget<Text>(find.byKey(settingsContentTitleKey))
-        .style;
+    final TextStyle? windowsTitle = tester.widget<Text>(_titleText).style;
     expect(windowsTitle?.fontFamily, macTitle?.fontFamily);
     expect(windowsTitle?.fontSize, 34);
     expect(windowsTitle?.fontWeight, FontWeight.w500);

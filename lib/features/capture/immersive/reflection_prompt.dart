@@ -5,9 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/pressable.dart';
-import 'package:field_notes/design/motion/motion_tokens.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/state/settings_providers.dart';
 
@@ -24,16 +21,13 @@ const List<String> reflectionQuestions = <String>[
 ];
 
 const String reflectionKicker = 'a question, if you want one';
-const String reflectionShuffleLabel = 'Ask me something else';
 
 const Key reflectionQuestionKey = ValueKey<String>('reflection-question');
-const Key reflectionShuffleKey = ValueKey<String>('reflection-shuffle');
 
 const double reflectionUnderwayOpacity = 0.45;
 const Duration reflectionFadeDuration = Duration(milliseconds: 1400);
 
 const Color _questionInk = Color(0xFFF3E6D1);
-const Color _shuffleInk = Color(0xFFB7A58C);
 
 const double _kickerSize = 18;
 const double _sidebarQuestionSize = 38;
@@ -48,14 +42,6 @@ const double _kickerFloor = 12;
 const double _readableQuestion = 12;
 const double _sidebarKickerGap = 10;
 const double _bottomBarKickerGap = 6;
-const double _sidebarShuffleSize = 12;
-const double _bottomBarShuffleSize = 11;
-const double _shuffleBand = 48;
-const EdgeInsets _shufflePadding = EdgeInsets.symmetric(
-  horizontal: 12,
-  vertical: 6,
-);
-const BorderRadius _shuffleRadius = BorderRadius.all(Radius.circular(14));
 const int _balanceSteps = 16;
 const int _fitSteps = 12;
 
@@ -257,9 +243,6 @@ _Fit? _searchFit(_FitKey key) {
   return readable < _readableQuestion ? null : last;
 }
 
-const Key _shuffleShownKey = ValueKey<String>('reflection-shuffle-shown');
-const Key _shuffleAbsentKey = ValueKey<String>('reflection-shuffle-absent');
-
 class ReflectionPrompt extends ConsumerStatefulWidget {
   const ReflectionPrompt({
     super.key,
@@ -277,7 +260,7 @@ class ReflectionPrompt extends ConsumerStatefulWidget {
 }
 
 class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
-  late int _index = _startIndex();
+  late final int _index = _startIndex();
   _FitMemo? _fitMemo;
 
   int _startIndex() {
@@ -285,10 +268,6 @@ class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
     return initial == null
         ? math.Random().nextInt(reflectionQuestions.length)
         : initial % reflectionQuestions.length;
-  }
-
-  void _shuffle() {
-    setState(() => _index = (_index + 1) % reflectionQuestions.length);
   }
 
   @override
@@ -305,35 +284,11 @@ class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
       curve: Curves.ease,
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
-          if (constraints.maxHeight < _shuffleBand) {
-            return const SizedBox.shrink();
-          }
           final _Fit? fit = _fitFor(context, sidebar, constraints);
           if (fit == null) {
             return const SizedBox.shrink();
           }
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              _fitted(_words(sidebar, fit), constraints),
-              SizedBox(
-                height: _shuffleBand,
-                child: AnimatedSwitcher(
-                  duration: MediaQuery.disableAnimationsOf(context)
-                      ? Duration.zero
-                      : Motion.fade,
-                  switchInCurve: Motion.fadeCurve,
-                  switchOutCurve: Motion.fadeCurve,
-                  child: widget.phase == StagePhase.idle
-                      ? Center(
-                          key: _shuffleShownKey,
-                          child: _shuffleButton(sidebar),
-                        )
-                      : const SizedBox.shrink(key: _shuffleAbsentKey),
-                ),
-              ),
-            ],
-          );
+          return _fitted(_words(sidebar, fit), constraints);
         },
       ),
     );
@@ -344,9 +299,7 @@ class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
       return words;
     }
     return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: constraints.maxHeight - _shuffleBand,
-      ),
+      constraints: BoxConstraints(maxHeight: constraints.maxHeight),
       child: FittedBox(
         fit: BoxFit.scaleDown,
         alignment: Alignment.topCenter,
@@ -361,7 +314,7 @@ class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
     BoxConstraints constraints,
   ) {
     final double width = constraints.maxWidth;
-    final double height = constraints.maxHeight - _shuffleBand;
+    final double height = constraints.maxHeight;
     if (!width.isFinite || !height.isFinite) {
       return _unfitted;
     }
@@ -411,38 +364,6 @@ class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
           style: _questionStyle(sidebar, fit.question),
         ),
       ],
-    );
-  }
-
-  Widget _shuffleButton(bool sidebar) {
-    return Pressable(
-      key: reflectionShuffleKey,
-      label: reflectionShuffleLabel,
-      onPressed: _shuffle,
-      surface: FocusRingSurface.dark,
-      borderRadius: _shuffleRadius,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minWidth: _shuffleBand,
-          minHeight: _shuffleBand,
-        ),
-        child: Center(
-          widthFactor: 1,
-          child: Padding(
-            padding: _shufflePadding,
-            child: Text(
-              reflectionShuffleLabel,
-              maxLines: 1,
-              style: TextStyle(
-                fontFamily: TypographyTokens.sans,
-                fontSize: sidebar ? _sidebarShuffleSize : _bottomBarShuffleSize,
-                fontWeight: FontWeight.w500,
-                color: _shuffleInk,
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

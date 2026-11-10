@@ -1,3 +1,4 @@
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
@@ -245,6 +246,7 @@ void main() {
           EntryType.video,
         },
         onOptionSelected: (EntryType _) {},
+        layout: ShellLayout.bottomBar,
       ),
       background: const Color(0xFFF6EDDD),
     );
@@ -353,13 +355,6 @@ void main() {
       ),
       _Row('Flip camera', _pressableIn(_flipKey), _dark, _Shape.circle),
       _Row('Input', _pressableIn(_inputKey), _dark, _Shape.circle),
-      _Row(
-        'Ask me something else',
-        _pressableOn(reflectionShuffleKey),
-        _dark,
-        _Shape.rounded,
-        14,
-      ),
     ]);
 
     await _pump(

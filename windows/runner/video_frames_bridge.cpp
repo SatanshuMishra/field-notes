@@ -39,7 +39,6 @@ constexpr DWORD kVideoStream =
     static_cast<DWORD>(MF_SOURCE_READER_FIRST_VIDEO_STREAM);
 constexpr DWORD kAllStreams = static_cast<DWORD>(MF_SOURCE_READER_ALL_STREAMS);
 constexpr LONGLONG kTicksPerMillisecond = 10000;
-constexpr LONGLONG kFrameToleranceTicks = 10000000;
 constexpr int kMostSamplesRead = 120;
 constexpr UINT32 kBytesPerPixel = 4;
 constexpr int64_t kWidestFrame = 4096;
@@ -94,7 +93,8 @@ bool SeekTo(IMFSourceReader* reader, LONGLONG position) {
 }
 
 ComPtr<IMFSample> SampleNear(IMFSourceReader* reader, LONGLONG position) {
-  ComPtr<IMFSample> nearest;
+  ComPtr<IMFSample> earlier;
+  LONGLONG earlier_timestamp = 0;
   for (int read = 0; read < kMostSamplesRead; ++read) {
     DWORD flags = 0;
     LONGLONG timestamp = 0;
@@ -105,16 +105,20 @@ ComPtr<IMFSample> SampleNear(IMFSourceReader* reader, LONGLONG position) {
       return nullptr;
     }
     if (sample.Get() != nullptr) {
-      nearest = sample;
-      if (timestamp >= position - kFrameToleranceTicks) {
-        return nearest;
+      if (timestamp >= position) {
+        const bool earlier_is_nearer =
+            earlier.Get() != nullptr &&
+            position - earlier_timestamp < timestamp - position;
+        return earlier_is_nearer ? earlier : sample;
       }
+      earlier = sample;
+      earlier_timestamp = timestamp;
     }
     if ((flags & MF_SOURCE_READERF_ENDOFSTREAM) != 0) {
-      return nearest;
+      return earlier;
     }
   }
-  return nearest;
+  return earlier;
 }
 
 WICBitmapTransformOptions UprightTransform(IMFSourceReader* reader) {

@@ -109,8 +109,14 @@ Future<void> _pumpSettings(
   await tester.pumpAndSettle();
 }
 
-String? _contentTitle(WidgetTester tester) =>
-    tester.widget<Text>(find.byKey(settingsContentTitleKey)).data;
+String? _contentTitle(WidgetTester tester) => tester
+    .widget<Text>(
+      find.descendant(
+        of: find.byKey(settingsContentTitleKey),
+        matching: find.byType(Text),
+      ),
+    )
+    .data;
 
 Finder _choice(InputProfile profile) => find.descendant(
   of: find.byKey(inputProfileMenuKey),

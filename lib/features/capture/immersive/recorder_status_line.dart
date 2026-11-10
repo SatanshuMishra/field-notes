@@ -16,6 +16,15 @@ const Color _statusInk = Color(0xFFDCCAB0);
 const Color _timerInk = Color(0xFFB7A58C);
 const Color _pausedDot = Color(0xFFD9B36B);
 const Color _numeralInk = Color(0xFFF3E6D1);
+const Color _takeTimeInk = Color(0xFFF3E6D1);
+const Color _takeTimeShadow = Color(0x73000000);
+
+const double _takeGap = 7;
+const double _takeTrailingGap = 10;
+const double _takeTimeSize = 12;
+const double _takeTimeTracking = 0.08 * _takeTimeSize;
+const double _takeTimeShadowBlur = 8;
+const Offset _takeTimeShadowOffset = Offset(0, 1);
 
 const double _sidebarStatusSize = 21;
 const double _bottomBarStatusSize = 18;
@@ -284,6 +293,46 @@ class _RecorderStatusLineState extends State<RecorderStatusLine>
       );
     }
     return null;
+  }
+}
+
+class RecorderTakeIndicator extends StatelessWidget {
+  const RecorderTakeIndicator({super.key, required this.elapsed});
+
+  final Duration elapsed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: _takeTrailingGap),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          _Dot(color: context.colors.accentBright, glow: true),
+          const SizedBox(width: _takeGap),
+          Text(
+            formatMediaDuration(elapsed.inMilliseconds),
+            maxLines: 1,
+            softWrap: false,
+            style: const TextStyle(
+              fontFamily: TypographyTokens.sans,
+              fontSize: _takeTimeSize,
+              fontWeight: FontWeight.w500,
+              letterSpacing: _takeTimeTracking,
+              fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+              color: _takeTimeInk,
+              shadows: <Shadow>[
+                Shadow(
+                  color: _takeTimeShadow,
+                  offset: _takeTimeShadowOffset,
+                  blurRadius: _takeTimeShadowBlur,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
