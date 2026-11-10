@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/format/clock_format.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart'
     show CaptureMedia;
@@ -14,6 +16,7 @@ import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/core/journal_note_writer.dart'
     show NoteSourceParts, composeNoteSource, readTitledNoteSource;
 import 'package:field_notes/features/capture/core/note_draft_controller.dart';
+import 'package:field_notes/features/capture/core/saved_note_day_line.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/entry_cards/compact/log_preview.dart';
@@ -161,8 +164,16 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
     );
   }
 
+  String _clock(BuildContext context) => formatClock(
+    context,
+    TimeOfDay.fromDateTime(
+      DateTime.fromMillisecondsSinceEpoch(widget.entry.createdAt),
+    ),
+  );
+
   Widget _composer({required bool spellCheck}) {
     final ValueChanged<bool>? onDone = widget.onDone;
+    final DateTime? day = parseDateKey(widget.date);
     return ListenableBuilder(
       listenable: _draft,
       builder: (BuildContext context, Widget? child) {
@@ -178,6 +189,13 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
               controller: _controller,
               title: editNoteTitleFor(widget.entry),
               kicker: _kicker,
+              dayLine: savedNoteDayLine(
+                dayTitle: _kicker,
+                clock: _clock(context),
+              ),
+              compactDayLine: day == null
+                  ? null
+                  : savedNoteShortDayLine(day: day, clock: _clock(context)),
               exit: widget.exit,
               saveLabel: editNoteSaveLabel,
               onSave: _save,

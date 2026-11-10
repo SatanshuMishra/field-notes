@@ -44,7 +44,8 @@ text-contrast | c10-discard-dialog-sidebar | Ctrl Enter | New note, Today · 9:3
 text-contrast | c10-discard-dialog-sidebar | Esc | New note, Today · 9:30 AM # measured: 7.64:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar | Leave | Ctrl Enter / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar | Let it go | Ctrl Enter / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
-text-contrast | c10-discard-dialog-sidebar | Private · only you will read this | Ctrl Enter / keep / Esc / leave / 6 words # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar | Friday, September 18 | Ctrl Enter / keep / Esc / leave / 6 words # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar | today | Ctrl Enter / keep / Esc / leave / 6 words # measured: 5.12:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar | There’s no wrong way to say it. | Ctrl Enter / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar | keep | New note, Today · 9:30 AM # measured: 6.38:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar | leave | New note, Today · 9:30 AM # measured: 6.38:1 by token arithmetic
@@ -54,7 +55,8 @@ text-contrast | c10-discard-dialog-sidebar@2x | Ctrl Enter | New note, Today · 
 text-contrast | c10-discard-dialog-sidebar@2x | Esc | New note, Today · 9:30 AM # measured: 7.64:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | Leave | Ctrl Enter / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | Let it go | Ctrl Enter / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
-text-contrast | c10-discard-dialog-sidebar@2x | Private · only you will read this | Ctrl Enter / keep / Esc / leave / 6 words # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar@2x | Friday, September 18 | Ctrl Enter / keep / Esc / leave / 6 words # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar@2x | today | Ctrl Enter / keep / Esc / leave / 6 words # measured: 5.12:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | There’s no wrong way to say it. | Ctrl Enter / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | keep | New note, Today · 9:30 AM # measured: 6.38:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | leave | New note, Today · 9:30 AM # measured: 6.38:1 by token arithmetic

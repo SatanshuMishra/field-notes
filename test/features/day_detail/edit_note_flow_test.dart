@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -19,6 +20,10 @@ import '../../support/composer_room.dart';
 import 'support/day_detail_harness.dart';
 
 const String _date = '2026-07-02';
+
+final TargetPlatformVariant _bothLayouts = TargetPlatformVariant(
+  <TargetPlatform>{TargetPlatform.android, TargetPlatform.macOS},
+);
 
 Entry _afternoonNote() {
   return Entry(
@@ -279,6 +284,30 @@ void main() {
     );
     expect(find.text('Save changes'), findsOneWidget);
   });
+
+  testWidgets('editing a note names its weekday, date and time in the band', (
+    WidgetTester tester,
+  ) async {
+    final Entry entry = _afternoonNote();
+    await tester.pumpWidget(
+      _app(
+        repository: FakeJournalRepository(entries: <Entry>[entry]),
+        child: _EditTrigger(entry: entry, onResult: (bool? _) {}),
+      ),
+    );
+    await tester.tap(find.text('open editor'));
+    await tester.pumpAndSettle();
+
+    final bool phone = defaultTargetPlatform == TargetPlatform.android;
+    expect(find.text(phone ? 'Thu' : 'Thursday'), findsOneWidget);
+    expect(
+      find.text(phone ? 'Jul 2 · 2:30 PM' : 'July 2 · 2:30 PM'),
+      findsOneWidget,
+    );
+    expect(find.text('adding to'), findsNothing);
+    expect(find.text('Only you will read this'), findsNothing);
+    expect(find.text('Private · only you will read this'), findsNothing);
+  }, variant: _bothLayouts);
 
   testWidgets('Save changes writes the edit and toasts Entry updated', (
     WidgetTester tester,
