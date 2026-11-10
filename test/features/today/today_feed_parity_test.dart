@@ -110,7 +110,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(logViewerPanelKey), findsOneWidget);
-    expect(find.text('Afternoon note'), findsOneWidget);
+    expect(find.text('Afternoon note'), findsNothing);
     expect(find.text('Close'), findsOneWidget);
     expect(find.byType(DayDetailPanel), findsNothing);
   });

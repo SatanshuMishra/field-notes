@@ -1590,27 +1590,14 @@ class _LogBarHeading extends StatelessWidget {
   final Color softInk;
 
   Widget? _title(BuildContext context) {
-    final String? title = _titleOrNull(scene.entry.title);
-    final LogViewerRename? rename = scene.onRename;
-    if (editable && rename != null) {
-      return _ViewerTitleField(
-        key: ValueKey<String>(scene.entry.id),
-        title: title,
-        onRename: rename,
-        hintInk: softInk,
-      );
-    }
-    if (title == null) {
+    if (!ViewerLogTitle.shows(scene, editable: editable)) {
       return null;
     }
-    return Semantics(
-      header: true,
-      child: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: _titleStyle(context),
-      ),
+    return ViewerLogTitle(
+      scene: scene,
+      editable: editable,
+      style: _titleStyle(context),
+      hintInk: softInk,
     );
   }
 
@@ -1661,16 +1648,61 @@ class _LogBarHeading extends StatelessWidget {
   }
 }
 
+class ViewerLogTitle extends StatelessWidget {
+  const ViewerLogTitle({
+    super.key,
+    required this.scene,
+    required this.style,
+    required this.hintInk,
+    this.editable = true,
+  });
+
+  final LogViewerScene scene;
+  final TextStyle style;
+  final Color hintInk;
+  final bool editable;
+
+  static bool shows(LogViewerScene scene, {bool editable = true}) =>
+      (editable && scene.onRename != null) ||
+      _titleOrNull(scene.entry.title) != null;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? title = _titleOrNull(scene.entry.title);
+    final LogViewerRename? rename = scene.onRename;
+    if (editable && rename != null) {
+      return _ViewerTitleField(
+        key: ValueKey<String>(scene.entry.id),
+        title: title,
+        onRename: rename,
+        style: style,
+        hintInk: hintInk,
+      );
+    }
+    return Semantics(
+      header: true,
+      child: Text(
+        title ?? '',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: style,
+      ),
+    );
+  }
+}
+
 class _ViewerTitleField extends StatefulWidget {
   const _ViewerTitleField({
     super.key,
     required this.title,
     required this.onRename,
+    required this.style,
     required this.hintInk,
   });
 
   final String? title;
   final LogViewerRename onRename;
+  final TextStyle style;
   final Color hintInk;
 
   @override
@@ -1753,7 +1785,7 @@ class _ViewerTitleFieldState extends State<_ViewerTitleField> {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    final TextStyle style = _titleStyle(context);
+    final TextStyle style = widget.style;
     final double target = minTargetOn(Theme.of(context).platform);
     return Semantics(
       container: true,

@@ -321,7 +321,7 @@ void main() {
         lessThan(panel.top + 80),
       );
       expect(find.text(_dayTitle), findsOneWidget);
-      expect(find.text('Morning note'), findsOneWidget);
+      expect(find.text('Morning note'), findsNothing);
       expect(find.byType(LogActionsPill), findsOneWidget);
       expect(
         find.descendant(

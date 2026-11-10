@@ -43,6 +43,7 @@ import '../entry_cards/support/fake_video_player.dart';
 
 const String _date = '2026-07-19';
 const String _lastWord = 'finale';
+const String _roses = 'Roses at dawn';
 const String _voiceMedia = 'blob-voice';
 const String _videoMedia = 'blob-video';
 
@@ -65,6 +66,7 @@ Entry _entry({
   required EntryType type,
   required int hour,
   required int minute,
+  String? title,
   String? textContent,
   String? mediaId,
   int? durationMs,
@@ -73,6 +75,7 @@ Entry _entry({
     id: id,
     dayId: 'day-1',
     type: type,
+    title: title,
     textContent: textContent,
     mediaId: mediaId,
     durationMs: durationMs,
@@ -88,6 +91,7 @@ List<Entry> _dayEntries() {
       type: EntryType.text,
       hour: 8,
       minute: 12,
+      title: _roses,
       textContent: 'Watered the roses.',
     ),
     _entry(
@@ -462,18 +466,20 @@ void main() {
   ) async {
     await _open(tester, entryId: 'entry-2');
 
-    final Finder title = find.text('Afternoon note');
+    final Finder title = find.text('Sunday, July 19');
     expect(title, findsOneWidget);
     final TextStyle style = DefaultTextStyle.of(tester.element(title)).style;
     expect(style.decoration ?? TextDecoration.none, TextDecoration.none);
   }, variant: _bothLayouts);
 
-  testWidgets('view mode shows the heading, the meta and the whole note', (
+  testWidgets('a note shows its own title or none and renames in place', (
     WidgetTester tester,
   ) async {
-    await _open(tester, entryId: 'entry-2');
+    final _Session session = await _open(tester, entryId: 'entry-2');
 
-    expect(find.text('Afternoon note'), findsOneWidget);
+    final Finder field = _inPanel(find.byKey(viewerTitleFieldKey));
+    expect(find.text('Afternoon note'), findsNothing);
+    expect(tester.widget<TextField>(field).controller!.text, isEmpty);
     expect(find.text('Sunday, July 19'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
@@ -483,6 +489,22 @@ void main() {
       findsOneWidget,
     );
     expect(_noteText(_lastWord), findsOneWidget);
+
+    await tester.tap(find.byKey(logViewerEarlierKey));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(field).controller!.text, _roses);
+    expect(find.text('Morning note'), findsNothing);
+
+    await tester.tap(field);
+    await tester.pump();
+    await tester.enterText(field, 'Roses and rain');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    expect(session.repository.titleUpdates, <({String id, String? title})>[
+      (id: 'entry-1', title: 'Roses and rain'),
+    ]);
   }, variant: _bothLayouts);
 
   testWidgets("Earlier and Later step through the day's logs", (
@@ -490,19 +512,19 @@ void main() {
   ) async {
     await _open(tester);
 
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(find.text(_roses), findsOneWidget);
     expect(find.text('1 of 3'), findsOneWidget);
 
     await tester.tap(find.byKey(logViewerLaterKey));
     await tester.pumpAndSettle();
 
-    expect(find.text('Afternoon note'), findsOneWidget);
+    expect(_noteText(_lastWord), findsOneWidget);
     expect(find.text('2 of 3'), findsOneWidget);
 
     await tester.tap(find.byKey(logViewerEarlierKey));
     await tester.pumpAndSettle();
 
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(find.text(_roses), findsOneWidget);
   }, variant: _bothLayouts);
 
   testWidgets('Edit switches to edit mode without moving the panel', (
@@ -538,7 +560,7 @@ void main() {
 
       expect(session.repository.noteSaves, hasLength(1));
       expect(driver.find, findsNothing);
-      expect(find.text('Afternoon note'), findsOneWidget);
+      expect(find.byKey(viewerTitleFieldKey), findsOneWidget);
       expect(_noteText('a better day'), findsOneWidget);
       expect(find.byKey(logViewerPanelKey), findsOneWidget);
       expect(session.outcomes, isEmpty);
@@ -625,13 +647,13 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
 
-    expect(find.text('Afternoon note'), findsOneWidget);
+    expect(_noteText(_lastWord), findsOneWidget);
     expect(session.outcomes, isEmpty);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
 
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(find.text(_roses), findsOneWidget);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
@@ -743,7 +765,7 @@ void main() {
 
     expect(find.byType(VoicePlayerView), findsNothing);
     expect(_inPanel(_noteView()), findsOneWidget);
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(_noteText('Fed the robins.'), findsOneWidget);
     expect(find.text('2 of 3'), findsOneWidget);
 
     await tester.tap(find.byKey(logViewerEarlierKey));
@@ -889,16 +911,16 @@ void main() {
   ) async {
     final NoteEditorDriver driver = NoteEditorDriver(tester);
     final _Session session = await _open(tester);
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(find.text(_roses), findsOneWidget);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
-    expect(find.text('Afternoon note'), findsOneWidget);
+    expect(_noteText(_lastWord), findsOneWidget);
     expect(find.text('2 of 3'), findsOneWidget);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(find.text(_roses), findsOneWidget);
     expect(find.text('1 of 3'), findsOneWidget);
 
     await tester.tap(find.byKey(logActionsEditKey));
@@ -915,7 +937,7 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
-    expect(find.text('Afternoon note'), findsOneWidget);
+    expect(_noteText(_lastWord), findsOneWidget);
     expect(find.text('2 of 3'), findsOneWidget);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);

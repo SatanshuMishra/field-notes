@@ -12,14 +12,13 @@ import 'package:field_notes/features/entry_cards/entry_cards.dart'
         MediaResolver,
         logActionsDeleteKey,
         logActionsEditKey,
-        logActionsEditLabel,
-        logPreviewOf;
+        logActionsEditLabel;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show logViewerBackKey, logViewerDeleteLabel;
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
 import 'package:field_notes/features/log_viewer/note_reading.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
-    show ViewerKeys;
+    show ViewerKeys, ViewerLogTitle;
 
 const double _ruleThickness = 1.5;
 const EdgeInsets _headerPadding = EdgeInsets.fromLTRB(18, 6, 18, 10);
@@ -159,13 +158,15 @@ class NoteSheetView extends StatelessWidget {
                         color: colors.accentInk,
                       ),
                     ),
-                    Text(
-                      logPreviewOf(scene.entry).heading,
-                      style: textStyles.headlineSerif.copyWith(
-                        fontSize: _titleSize,
-                        height: _titleLineHeight,
+                    if (ViewerLogTitle.shows(scene))
+                      ViewerLogTitle(
+                        scene: scene,
+                        style: textStyles.headlineSerif.copyWith(
+                          fontSize: _titleSize,
+                          height: _titleLineHeight,
+                        ),
+                        hintInk: colors.inkSoft,
                       ),
-                    ),
                   ],
                 ),
               ),

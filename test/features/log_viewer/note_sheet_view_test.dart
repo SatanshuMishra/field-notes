@@ -32,6 +32,7 @@ const double _gestureBar = 24;
 const double _fullSheet = 832 - 34 - 8;
 const String _date = '2026-07-19';
 const String _dayTitle = 'Sunday, July 19';
+const String _roses = 'Roses at dawn';
 const String _shortNote =
     'Watered the roses.\nTea under the elm.\nRain by evening.';
 const int _longNoteWords = 2000;
@@ -85,12 +86,14 @@ Entry _entry({
   required String id,
   required int hour,
   EntryType type = EntryType.text,
+  String? title,
   String? text,
 }) {
   return Entry(
     id: id,
     dayId: 'day-1',
     type: type,
+    title: title,
     textContent: text,
     mediaId: type == EntryType.text ? null : 'voice-blob',
     durationMs: type == EntryType.text ? null : 65000,
@@ -261,6 +264,7 @@ void main() {
     final Entry morning = _entry(
       id: 'morning',
       hour: 8,
+      title: _roses,
       text: 'Watered the roses.',
     );
     final Entry dawn = _entry(id: 'dawn', hour: 6, type: EntryType.voice);
@@ -290,9 +294,7 @@ void main() {
       FieldNotesColors.light.accentInk.toARGB32(),
     );
     expect(day.style!.fontFamily, TypographyTokens.stampAccent.fontFamily);
-    final Text heading = tester.widget<Text>(
-      _inSheet(find.text('Morning note')),
-    );
+    final Text heading = tester.widget<Text>(_inSheet(find.text(_roses)));
     expect(heading.style!.fontSize, 21);
     expect(
       heading.style!.fontFamily,
@@ -300,9 +302,7 @@ void main() {
     );
     final Rect grabber = tester.getRect(find.byKey(phoneSheetGrabberKey));
     final Rect dayRect = tester.getRect(_inSheet(find.text(_dayTitle)));
-    final Rect headingRect = tester.getRect(
-      _inSheet(find.text('Morning note')),
-    );
+    final Rect headingRect = tester.getRect(_inSheet(find.text(_roses)));
     expect(grabber.bottom, lessThanOrEqualTo(dayRect.top));
     expect(dayRect.bottom, lessThanOrEqualTo(headingRect.top));
 
@@ -370,10 +370,7 @@ void main() {
 
     final double resting = _sheetHeight(tester);
     expect(resting, lessThan(_fullSheet));
-    await tester.drag(
-      _inSheet(find.text('Morning note')),
-      const Offset(0, -120),
-    );
+    await tester.drag(_inSheet(find.text(_roses)), const Offset(0, -120));
     await tester.pumpAndSettle();
     expect(_expanded(tester), isTrue);
     expect(_sheetHeight(tester), _fullSheet);
@@ -383,22 +380,13 @@ void main() {
     expect(_expanded(tester), isFalse);
     expect(_sheetHeight(tester), resting);
 
-    await tester.drag(
-      _inSheet(find.text('Morning note')),
-      const Offset(0, -120),
-    );
+    await tester.drag(_inSheet(find.text(_roses)), const Offset(0, -120));
     await tester.pumpAndSettle();
-    await tester.drag(
-      _inSheet(find.text('Morning note')),
-      const Offset(0, 120),
-    );
+    await tester.drag(_inSheet(find.text(_roses)), const Offset(0, 120));
     await tester.pumpAndSettle();
     expect(_expanded(tester), isFalse);
     expect(find.byType(NoteSheetView), findsOneWidget);
-    await tester.drag(
-      _inSheet(find.text('Morning note')),
-      const Offset(0, 120),
-    );
+    await tester.drag(_inSheet(find.text(_roses)), const Offset(0, 120));
     await tester.pumpAndSettle();
     expect(find.byType(NoteSheetView), findsNothing);
 
