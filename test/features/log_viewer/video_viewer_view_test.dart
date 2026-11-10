@@ -422,17 +422,18 @@ void main() {
     expect(_overlayShown(tester), isFalse);
 
     const Offset video = Offset(192, 416);
+    const Duration pastDoubleTap = Duration(milliseconds: 301);
     await tester.tapAt(video);
-    await tester.pump();
+    await tester.pump(pastDoubleTap);
     expect(_overlayShown(tester), isTrue);
     await tester.tapAt(video);
-    await tester.pump();
+    await tester.pump(pastDoubleTap);
     expect(_overlayShown(tester), isFalse);
     await tester.tapAt(video);
-    await tester.pump();
+    await tester.pump(pastDoubleTap);
     expect(_overlayShown(tester), isTrue);
 
-    await tester.pump(const Duration(milliseconds: 1500));
+    await tester.pump(const Duration(milliseconds: 1200));
     await tester.tap(find.byType(ViewerPrimaryButton));
     await tester.pump();
     expect(player.pauseCalls, 1);
