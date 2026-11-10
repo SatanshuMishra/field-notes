@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/data/media/video_frames.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -738,6 +739,40 @@ void main() {
 
       expect(calls.toggles, 0);
     });
+
+    final Map<String, Finder> ringedControls = <String, Finder>{
+      'volume': find.byKey(transportVolumeKey),
+      'timeline': find.byType(TransportTimeline),
+    };
+    for (final MapEntry<String, Finder> control in ringedControls.entries) {
+      testWidgets(
+        'a mouse press clears the ring Tab drew on the ${control.key}',
+        (WidgetTester tester) async {
+          await tester.pumpWidget(_viewer(_Calls(), tuning: PlaybackTuning()));
+          await tester.pump();
+          final Finder ring = find.descendant(
+            of: control.value,
+            matching: find.byKey(focusRingKey),
+          );
+
+          for (int tabs = 0; tabs < 12 && ring.evaluate().isEmpty; tabs++) {
+            await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+            await tester.pump();
+          }
+          expect(
+            FocusManager.instance.highlightMode,
+            FocusHighlightMode.traditional,
+          );
+          expect(ring, findsOneWidget);
+
+          await tester.tap(control.value, kind: PointerDeviceKind.mouse);
+          await tester.pump();
+
+          expect(ring, findsNothing);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+      );
+    }
   });
 
   group('volume and speed reach the playback controllers', () {

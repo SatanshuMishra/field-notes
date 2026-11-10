@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../design/focus/focus_ring.dart';
+import '../../../design/focus/input_modality.dart';
 import '../../../design/interaction/hover_fill.dart';
 import '../../../design/interaction/hover_style.dart';
 import '../../../design/interaction/min_target.dart';
@@ -598,10 +599,25 @@ class _VolumeSliderState extends State<_VolumeSlider> {
   );
   bool _focused = false;
 
+  bool get _ringed => _focused && InputModality.instance.traversing;
+
+  @override
+  void initState() {
+    super.initState();
+    InputModality.instance.addListener(_onModalityChanged);
+  }
+
   @override
   void dispose() {
+    InputModality.instance.removeListener(_onModalityChanged);
     _pressFocus.dispose();
     super.dispose();
+  }
+
+  void _onModalityChanged() {
+    if (mounted && _focused) {
+      setState(() {});
+    }
   }
 
   void _setFrom(double dx) =>
@@ -653,12 +669,12 @@ class _VolumeSliderState extends State<_VolumeSlider> {
                 width: _volumeTrack,
                 height: _volumeHeight,
                 child: CustomPaint(
-                  key: _focused ? focusRingKey : null,
+                  key: _ringed ? focusRingKey : null,
                   painter: _VolumePainter(
                     level: tuning.audibleVolume,
                     rail: widget.rail,
                     fill: colors.ink,
-                    ring: _focused ? colors.ink : null,
+                    ring: _ringed ? colors.ink : null,
                   ),
                 ),
               ),

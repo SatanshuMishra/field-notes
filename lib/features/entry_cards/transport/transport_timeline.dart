@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../../../design/focus/focus_ring.dart';
+import '../../../design/focus/input_modality.dart';
 import '../../../design/interaction/pressable.dart';
 import '../../../design/motion/motion.dart';
 import '../../../design/tokens/tokens.dart';
@@ -182,10 +183,25 @@ class _TransportTimelineState extends State<TransportTimeline> {
   bool _pointerInside = false;
   bool _focused = false;
 
+  bool get _ringed => _focused && InputModality.instance.traversing;
+
+  @override
+  void initState() {
+    super.initState();
+    InputModality.instance.addListener(_onModalityChanged);
+  }
+
   @override
   void dispose() {
+    InputModality.instance.removeListener(_onModalityChanged);
     _pressFocus.dispose();
     super.dispose();
+  }
+
+  void _onModalityChanged() {
+    if (mounted && _focused) {
+      setState(() {});
+    }
   }
 
   @override
@@ -234,7 +250,7 @@ class _TransportTimelineState extends State<TransportTimeline> {
 
   bool get _enabled => widget.onSeek != null && _total != null;
 
-  bool get _hot => _pointerFraction != null || _focused;
+  bool get _hot => _pointerFraction != null || _ringed;
 
   Duration get _shownPosition {
     final Duration? total = _total;
@@ -447,7 +463,7 @@ class _TransportTimelineState extends State<TransportTimeline> {
             children: <Widget>[
               Positioned.fill(child: _face(context, width)),
               if (pointer != null) _ghost(width * pointer),
-              if (_focused)
+              if (_ringed)
                 Positioned.fill(child: IgnorePointer(child: _ring(context))),
             ],
           ),
