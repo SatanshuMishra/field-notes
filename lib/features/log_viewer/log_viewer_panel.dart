@@ -11,8 +11,7 @@ import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart'
-    show composerPanelKey;
-import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
+    show ComposerShell, composerPanelKey;
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/entry_cards/task_toggle.dart';
@@ -204,26 +203,11 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     });
   }
 
-  void _edit(Entry entry) {
+  void _edit() {
     if (_editing || _left) {
       return;
     }
-    if (_sidebar) {
-      setState(() => _editing = true);
-      return;
-    }
-    unawaited(_editInComposer(entry));
-  }
-
-  Future<void> _editInComposer(Entry entry) async {
     setState(() => _editing = true);
-    final bool? saved = await showEditNote(
-      context,
-      entry: entry,
-      date: widget.date,
-      exit: ComposerExit.back,
-    );
-    _onEditDone(saved ?? false);
   }
 
   void _onNoteExpandedChanged(bool expanded) {
@@ -368,6 +352,9 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
           onPlace: onPlace,
         );
       case EntryType.text:
+        if (_editing) {
+          return _editRoom(scene.entry);
+        }
         return _sidebar
             ? _notePanel(scene, resolver)
             : _noteSheet(scene, resolver);
@@ -400,7 +387,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       onEarlier: earlier == null ? null : _earlier,
       onLater: later == null ? null : _later,
       onDelete: () => _delete(entry),
-      onEdit: entry.type == EntryType.text ? () => _edit(entry) : null,
+      onEdit: entry.type == EntryType.text ? _edit : null,
       onRename: (String? title) => _rename(entry, title),
       fullScreen: offersFullScreen && _fullScreen,
       onFullScreen: offersFullScreen ? _toggleFullScreen : null,
@@ -447,20 +434,22 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   }
 
   Widget _notePanel(LogViewerScene scene, MediaResolver resolver) {
-    final Entry entry = scene.entry;
     return NotePanelView(
       scene: scene,
       resolver: resolver,
-      onToggleTask: _toggleTaskOf(entry),
-      editor: _editing
-          ? EditNoteConnector(
-              key: ValueKey<String>('log-viewer-edit-${entry.id}'),
-              entry: entry,
-              date: widget.date,
-              exit: ComposerExit.back,
-              onDone: _onEditDone,
-            )
-          : null,
+      onToggleTask: _toggleTaskOf(scene.entry),
+    );
+  }
+
+  Widget _editRoom(Entry entry) {
+    return ComposerShell(
+      responsive: true,
+      child: EditNoteConnector(
+        key: ValueKey<String>('log-viewer-edit-${entry.id}'),
+        entry: entry,
+        date: widget.date,
+        onDone: _onEditDone,
+      ),
     );
   }
 }

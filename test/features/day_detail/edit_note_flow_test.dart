@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,11 +8,17 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
+import 'package:field_notes/features/entry_cards/entry_cards.dart'
+    show logActionsEditKey;
+import 'package:field_notes/features/log_viewer/log_viewer.dart';
+import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
+    show LogViewerPanel;
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
@@ -49,6 +58,26 @@ class _EditTrigger extends StatelessWidget {
       onTap: () async =>
           onResult(await showEditNote(context, entry: entry, date: _date)),
       child: const Text('open editor'),
+    );
+  }
+}
+
+class _ViewerTrigger extends StatelessWidget {
+  const _ViewerTrigger();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => unawaited(
+        showLogViewer(
+          context,
+          date: _date,
+          entryId: 'entry-1',
+          exit: LogViewerExit.close,
+        ),
+      ),
+      child: const Text('open viewer'),
     );
   }
 }
@@ -101,6 +130,9 @@ Widget _app({
     overrides: <Override>[
       journalRepositoryProvider.overrideWithValue(repository),
       draftStoreProvider.overrideWith((Ref ref) => drafts ?? FakeDraftStore()),
+      mediaStoreProvider.overrideWith(
+        (Ref ref) async => FakeMediaStore(Directory.systemTemp),
+      ),
       todayClockProvider.overrideWithValue(() => DateTime(2026, 7, 19, 9)),
     ],
     child: dayDetailHarness(child),
@@ -308,6 +340,61 @@ void main() {
     expect(find.text('Only you will read this'), findsNothing);
     expect(find.text('Private · only you will read this'), findsNothing);
   }, variant: _bothLayouts);
+
+  testWidgets(
+    'editing from the note viewer fills the window the way a new note does',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      final Entry entry = Entry(
+        id: 'entry-1',
+        dayId: 'day-1',
+        type: EntryType.text,
+        title: 'Night Cap',
+        textContent: 'a good day',
+        createdAt: DateTime(2026, 7, 2, 14, 30).millisecondsSinceEpoch,
+        updatedAt: 0,
+      );
+      final FakeJournalRepository repository = FakeJournalRepository(
+        entries: <Entry>[entry],
+      );
+      await tester.pumpWidget(
+        _app(repository: repository, child: const _ViewerTrigger()),
+      );
+      await tester.tap(find.text('open viewer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(logActionsEditKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextComposerSheet), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(composerPanelKey)),
+        const Size(1280, 800),
+      );
+      expect(find.text('Back'), findsNothing);
+      expect(
+        tester.widget<Pressable>(find.byKey(composerCloseKey)).label,
+        'Leave',
+      );
+      expect(driver.title, 'Night Cap');
+      expect(driver.source, 'a good day');
+
+      await driver.enterText('a better day');
+      await tester.pump(draftIdleDebounceForTest);
+      await tester.tap(find.text(editNoteSaveLabel));
+      await tester.pumpAndSettle();
+
+      expect(repository.noteSaves.single.source, 'a better day');
+      expect(repository.noteSaveTitles.single, 'Night Cap');
+      expect(find.byType(TextComposerSheet), findsNothing);
+      expect(find.byType(LogViewerPanel), findsOneWidget);
+      await tester.pump(kToastLifetime);
+      await tester.pumpAndSettle();
+    },
+    variant: _bothLayouts,
+  );
 
   testWidgets('Save changes writes the edit and toasts Entry updated', (
     WidgetTester tester,
