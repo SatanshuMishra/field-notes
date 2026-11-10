@@ -153,13 +153,16 @@ _OrbLook _lookOf(WidgetTester tester, VoiceRecorderPhase phase) => (
   savingSweep: tester.any(_inForm(phase, find.byType(CaptureSavingSweep))),
 );
 
-Gradient? _discGradient(WidgetTester tester) {
-  final Decoration decoration = tester
-      .widget<DecoratedBox>(
+Color? _discFill(WidgetTester tester) {
+  return tester
+      .widgetList<DecoratedBox>(
         find.descendant(of: _disc, matching: find.byType(DecoratedBox)),
       )
-      .decoration;
-  return (decoration as BoxDecoration).gradient;
+      .map((DecoratedBox box) => box.decoration)
+      .whereType<BoxDecoration>()
+      .map((BoxDecoration decoration) => decoration.color)
+      .nonNulls
+      .single;
 }
 
 double _sweepFraction(WidgetTester tester) => tester
@@ -192,7 +195,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final Set<_OrbLook> seen = <_OrbLook>{};
-    Gradient? ready;
+    Color? ready;
     for (final VoiceRecorderPhase phase in VoiceRecorderPhase.values) {
       await tester.pumpWidget(_sheet(phase));
       await tester.pump();
@@ -209,8 +212,8 @@ void main() {
       expect(look, _expectedLook[phase], reason: '$phase');
       seen.add(look);
 
-      ready ??= _discGradient(tester);
-      expect(_discGradient(tester), ready, reason: '$phase');
+      ready ??= _discFill(tester);
+      expect(_discFill(tester), ready, reason: '$phase');
     }
 
     expect(seen, hasLength(VoiceRecorderPhase.values.length));

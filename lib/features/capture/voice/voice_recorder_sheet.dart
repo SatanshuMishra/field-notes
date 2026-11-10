@@ -10,6 +10,7 @@ import 'package:field_notes/design/motion/motion_tokens.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/features/capture/audio/cannot_hear_notice.dart';
+import 'package:field_notes/features/capture/core/capture_day_line.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/immersive/capture_button.dart';
@@ -48,8 +49,6 @@ const Key _takeActionsSlotKey = ValueKey<String>('voice-take-actions-slot');
 ValueKey<String> voiceOrbFormKey(CaptureButtonForm form) =>
     ValueKey<String>('voice-orb-form-${form.name}');
 
-const String voiceSidebarPrivacyLine = 'Private · only you will hear this';
-const String voiceBottomBarPrivacyLine = 'Only you will hear this';
 const String voiceSavingStatus = 'Saving your recording…';
 const String voiceKeepLabel = 'Keep this';
 const String voiceStartLabel = 'Start recording';
@@ -75,7 +74,8 @@ const double voiceSavingCoreOpacity = 0.7;
 const double voicePausedCoreOpacity = 0.86;
 const double voiceActionsHeight = 118;
 
-const Color _orbEdge = Color(0x24F3E6D1);
+const Color _orbRing = Color(0xEBF3E6D1);
+const double _orbRingGap = 4;
 const Color _orbShadow = Color(0xBFB8566A);
 const Color _orbGlyphInk = Palette.onAccent;
 const Color _orbCountdownRing = Color(0x5CF3E6D1);
@@ -93,10 +93,6 @@ const double _sidebarLevelReach = 60;
 const double _bottomBarLevelReach = 44;
 const double _sidebarOrbGlyph = 42;
 const double _bottomBarOrbGlyph = 36;
-const Alignment _orbHighlight = Alignment(-0.24, -0.36);
-const double _orbGradientRadius = 0.92;
-const List<double> _orbStops = <double>[0, 0.58, 1];
-const double _orbEdgeWidth = 1;
 const Offset _orbShadowOffset = Offset(0, 26);
 const double _orbShadowBlur = 60;
 const double _orbShadowSpread = -18;
@@ -171,6 +167,7 @@ class VoiceRecorderSheet extends StatefulWidget {
     this.hearing = MicrophoneHearing.hearing,
     this.titleController,
     this.questionIndex,
+    this.dayLine,
   });
 
   final VoiceRecorderPhase phase;
@@ -193,6 +190,7 @@ class VoiceRecorderSheet extends StatefulWidget {
   final MicrophoneHearing hearing;
   final TextEditingController? titleController;
   final int? questionIndex;
+  final CaptureDayLine? dayLine;
 
   @override
   State<VoiceRecorderSheet> createState() => _VoiceRecorderSheetState();
@@ -306,9 +304,7 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet>
         child: holdsChromeWhileFocused(
           child: RecorderSurface(
             leaveKey: voiceCloseKey,
-            privacyLine: sidebar
-                ? voiceSidebarPrivacyLine
-                : voiceBottomBarPrivacyLine,
+            dayLine: widget.dayLine,
             onLeave: _saving || widget.asking ? null : widget.onCancel,
             trailing: _trailing(context, sidebar),
             title: _title(),
@@ -716,27 +712,31 @@ class _OrbDisc extends StatelessWidget {
         builder: (BuildContext context, double opacity, Widget? disc) =>
             Opacity(opacity: opacity, child: disc),
         child: DecoratedBox(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            gradient: RadialGradient(
-              center: _orbHighlight,
-              radius: _orbGradientRadius,
-              colors: <Color>[
-                context.colors.accentBright,
-                Palette.coral,
-                context.colors.accentDeep,
-              ],
-              stops: _orbStops,
-            ),
-            boxShadow: const <BoxShadow>[
+            boxShadow: <BoxShadow>[
               BoxShadow(
                 color: _orbShadow,
                 offset: _orbShadowOffset,
                 blurRadius: _orbShadowBlur,
                 spreadRadius: _orbShadowSpread,
               ),
-              BoxShadow(color: _orbEdge, spreadRadius: _orbEdgeWidth),
             ],
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: _orbRing, width: captureRingWidth),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(_orbRingGap),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: context.colors.accentRecord,
+                ),
+              ),
+            ),
           ),
         ),
       ),

@@ -43,7 +43,7 @@ Future<void> _openOver(
                       context,
                       barrierLabel: 'Dismiss recorder',
                       builder: (BuildContext context) => RecorderSurface(
-                        privacyLine: 'Private · only you will hear this',
+                        dayLine: (lead: 'today', date: 'Monday, November 9'),
                         onLeave: () => Navigator.of(context).pop(),
                       ),
                     ),

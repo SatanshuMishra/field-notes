@@ -11,6 +11,7 @@ import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/domain/settings/app_settings.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
+import 'package:field_notes/features/capture/core/capture_day_line.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/recording_wake_hold.dart';
@@ -20,6 +21,8 @@ import 'package:field_notes/features/capture/voice/voice_composer.dart'
 import 'package:field_notes/features/capture/voice/voice_recorder.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
+import 'package:field_notes/features/today/today_date.dart';
+import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/settings_section_request.dart';
 import 'package:field_notes/state/shell_navigation.dart';
@@ -921,7 +924,16 @@ class _VideoComposerConnectorState
       levels: _cameraOn ? _recorder.level : _voice.level,
       hearing: _cameraOn ? _recorder.hearingNow : _voice.hearingNow,
       titleController: _title,
+      dayLine: _dayLine(),
     );
+  }
+
+  CaptureDayLine? _dayLine() {
+    final DateTime? day = parseDateKey(widget.date);
+    if (day == null) {
+      return null;
+    }
+    return captureDayLine(day: day, today: ref.watch(todayClockProvider)());
   }
 }
 
