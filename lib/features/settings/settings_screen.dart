@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:field_notes/app/shell/bottom_bar_shell.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -41,8 +42,10 @@ const Key settingsContentColumnKey = ValueKey<String>(
 
 const String settingsSidebarKicker = 'settings';
 
+const String _loadFailedTitle = 'Your settings could not be loaded.';
+const String _loadFailedMessage = 'Your logs are safe. Try again in a moment.';
+
 const double settingsContentMaxWidth = 680;
-const double settingsContentTitleSize = 34;
 
 const double _sectionGap = 16;
 const double _desktopGroupGap = 15;
@@ -52,7 +55,7 @@ const double _kickerGap = 6;
 const double _ruleThickness = 1;
 const EdgeInsets _contentPadding = EdgeInsets.fromLTRB(28, 26, 34, 34);
 const EdgeInsets _contentTitlePadding = EdgeInsets.only(top: 17, bottom: 26);
-const double _contentTitleHeight = 1;
+const EdgeInsets _desktopStatePadding = EdgeInsets.all(Spacing.space24);
 
 const double _phoneSideInset = 14;
 const double _phoneHeaderGap = 6;
@@ -240,31 +243,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildLoading() {
-    return const Center(child: CrossHatchPlaceholder(width: 28, height: 28));
-  }
+  Widget _buildLoading() => _buildStateFrame(const StateBlock.loading());
 
   Widget _buildError() {
-    return Center(
-      child: StickerCard(
-        surface: context.colors.cardBright,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(
-              'Your settings could not be loaded.',
-              style: context.textStyles.bodySans,
-            ),
-            const SizedBox(height: 16),
-            StickerButton(
-              label: 'Try again',
-              variant: StickerButtonVariant.secondary,
-              onPressed: () => ref.invalidate(appSettingsProvider),
-            ),
-          ],
-        ),
+    return _buildStateFrame(
+      StateBlock.error(
+        title: _loadFailedTitle,
+        message: _loadFailedMessage,
+        onRetry: () => ref.invalidate(appSettingsProvider),
       ),
     );
+  }
+
+  Widget _buildStateFrame(StateBlock block) {
+    return switch (resolveShellLayout(Theme.of(context).platform)) {
+      ShellLayout.sidebar => Center(
+        child: SingleChildScrollView(
+          padding: _desktopStatePadding,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: settingsContentMaxWidth,
+            ),
+            child: block,
+          ),
+        ),
+      ),
+      ShellLayout.bottomBar => SingleChildScrollView(
+        reverse: true,
+        padding: EdgeInsets.fromLTRB(
+          _phoneSideInset,
+          MediaQuery.paddingOf(context).top + _phoneHeaderGap,
+          _phoneSideInset,
+          MediaQuery.viewPaddingOf(context).bottom +
+              phoneBottomBarZone +
+              _phoneListEndGap,
+        ),
+        child: block,
+      ),
+    };
   }
 
   Widget _buildSections(AppSettings settings) {
@@ -455,17 +471,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: <Widget>[
                 Padding(
                   padding: _contentTitlePadding,
-                  child: Semantics(
-                    header: true,
-                    child: Text(
-                      _tab.label,
-                      key: settingsContentTitleKey,
-                      style: context.textStyles.displaySerif.copyWith(
-                        fontSize: settingsContentTitleSize,
-                        fontWeight: FontWeight.w500,
-                        height: _contentTitleHeight,
-                      ),
-                    ),
+                  child: PageHeader(
+                    key: settingsContentTitleKey,
+                    title: _tab.label,
                   ),
                 ),
                 _buildTabColumn(settings, _tab),

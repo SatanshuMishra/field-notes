@@ -2,6 +2,7 @@ import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/phone_bottom_bar.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/search/search.dart';
 import 'package:field_notes/features/search/search_day_tile.dart';
@@ -25,6 +26,10 @@ final Finder _field = find.byType(SearchField);
 final Finder _tiles = find.byType(SearchDayTile);
 final Finder _title = find.text('Find a day');
 final Finder _eyebrow = find.text('search');
+final Finder _sharedHeaderTitle = find.ancestor(
+  of: _title,
+  matching: find.byType(PageHeader),
+);
 
 List<Day> _days(int count) => <Day>[
   for (int index = 0; index < count; index++)
@@ -77,7 +82,8 @@ void _expectTitleAtTop(WidgetTester tester) {
   final Rect eyebrow = tester.getRect(_eyebrow);
   final Rect title = tester.getRect(_title);
   expect(eyebrow.top, moreOrLessEquals(_headerBottom + 6, epsilon: 0.01));
-  expect(title.top, moreOrLessEquals(eyebrow.bottom, epsilon: 0.01));
+  expect(title.top, moreOrLessEquals(eyebrow.bottom + 1, epsilon: 0.01));
+  expect(_sharedHeaderTitle, findsOneWidget);
 }
 
 void main() {
@@ -151,7 +157,7 @@ void main() {
     expect(_tiles, findsNothing);
     expect(find.text('No days match "zzz".'), findsOneWidget);
     _expectTitleAtTop(tester);
-    final Rect message = tester.getRect(find.byType(EmptyStatePlaceholder));
+    final Rect message = tester.getRect(find.byType(StateBlock));
     final Rect field = tester.getRect(_field);
     expect(field.top - message.bottom, moreOrLessEquals(16, epsilon: 0.01));
     expect(message.left, 14);
@@ -228,11 +234,12 @@ void main() {
       tester.widget<SearchField>(_field).variant,
       SearchFieldVariant.standard,
     );
-    expect(_title, findsNothing);
+    expect(_sharedHeaderTitle, findsOneWidget);
     expect(_tiles, findsNWidgets(2));
     final Rect field = tester.getRect(_field);
     final Rect screen = tester.getRect(find.byType(SearchScreen));
-    expect(field.top - screen.top, 16);
+    expect(tester.getRect(_eyebrow).top - screen.top, 16);
+    expect(field.top - tester.getRect(_title).bottom, 16);
     expect(tester.getRect(_tiles.first).top - field.bottom, 16);
   });
 }

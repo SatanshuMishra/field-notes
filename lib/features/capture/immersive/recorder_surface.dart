@@ -1,16 +1,28 @@
+import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/app/shell/windows_caption_buttons.dart';
+import 'package:field_notes/design/feedback/toast.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/focus/keyboard_focus_builder.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
+import 'package:field_notes/design/motion/motion_tokens.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
+import 'package:field_notes/domain/platform/desktop_platform.dart';
+import 'package:field_notes/features/entry_cards/cards/video_controls_overlay.dart'
+    show canAutoHideVideoControls, videoControlsVisible;
+import 'package:field_notes/state/repository_providers.dart';
 
+import 'recorder_chrome.dart';
 import 'recorder_glass_button.dart';
 import 'stage_phase.dart';
 
@@ -18,8 +30,13 @@ enum RecorderArrangement { voice, video }
 
 const Key recorderLeaveKey = ValueKey<String>('recorder-leave');
 const Key recorderTopBandKey = ValueKey<String>('recorder-top-band');
+const Key recorderTitleFieldKey = ValueKey<String>('recorder-title-field');
 
 const String recorderLeaveLabel = 'Leave';
+const String recorderTitlePlaceholder = 'Add a title';
+const String recorderTitleLabel = 'Title';
+const String recorderTitleFailedMessage =
+    'Could not save your title. Try again.';
 
 const Color recorderStageColor = Palette.mediaGround;
 
@@ -68,6 +85,24 @@ const double _bottomBarActionsGutter = 16;
 const double _voiceActionsFootBottomBar = 26;
 const double _videoActionsFootSidebar = 10;
 const double _videoActionsFootBottomBar = 22;
+
+const Color _titleInk = Color(0xFFF3E6D1);
+const Color _titlePlaceholderOnStage = _chromeInk;
+const Color _titlePlaceholderOverPicture = Color(0xFFE7D9C2);
+const Color _titleCaret = Color(0xFFE3889A);
+const Color _titleShadow = Color(0xB80E0B09);
+const Offset _titleShadowOffset = Offset(0, 1);
+const double _titleShadowBlur = 10;
+const double _sidebarTitleSize = 24;
+const double _bottomBarTitleSize = 20;
+const double _titleLeading = 1.25;
+const double _sidebarTitleHeight = 44;
+const double _bottomBarTitleHeight = _minTapTarget;
+const double _titleGutter = 24;
+const double _titleMaxWidth = 560;
+const double _titleRingOutset = 2;
+const BorderRadius _titleRadius = BorderRadius.all(Radius.circular(8));
+const Duration _titleSaveTimeout = Duration(seconds: 20);
 
 const BoxDecoration _sidebarGlow = BoxDecoration(
   gradient: RadialGradient(
@@ -120,6 +155,7 @@ class RecorderSurface extends StatelessWidget {
     this.glow = true,
     this.background,
     this.trailing,
+    this.title,
     this.question,
     this.centre,
     this.status,
@@ -136,6 +172,7 @@ class RecorderSurface extends StatelessWidget {
   final bool glow;
   final Widget? background;
   final Widget? trailing;
+  final Widget? title;
   final Widget? question;
   final Widget? centre;
   final Widget? status;
@@ -189,6 +226,7 @@ class _Stage extends StatelessWidget {
           Column(
             children: <Widget>[
               _band(context),
+              _titleSlot(),
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.only(
@@ -262,6 +300,25 @@ class _Stage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _titleSlot() {
+    final Widget? title = surface.title;
+    if (title == null) {
+      return const SizedBox.shrink();
+    }
+    return _faded(
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: _titleGutter),
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _titleMaxWidth),
+            child: title,
+          ),
+        ),
+      ),
     );
   }
 
@@ -487,6 +544,494 @@ class _Stage extends StatelessWidget {
       ),
     );
   }
+}
+
+class RecorderFadeSwitch extends StatefulWidget {
+  const RecorderFadeSwitch({super.key, this.child, this.collapsing = false});
+
+  final Widget? child;
+  final bool collapsing;
+
+  @override
+  State<RecorderFadeSwitch> createState() => _RecorderFadeSwitchState();
+}
+
+class _RecorderFadeSwitchState extends State<RecorderFadeSwitch> {
+  int _generation = 0;
+
+  static Widget _fadeSlot(Widget child, Animation<double> animation) =>
+      _FadeSlot(animation: animation, child: child);
+
+  static Widget _collapsingFadeSlot(
+    Widget child,
+    Animation<double> animation,
+  ) => SizeTransition(
+    sizeFactor: animation,
+    alignment: Alignment.topCenter,
+    fixedCrossAxisSizeFactor: 1,
+    child: _FadeSlot(animation: animation, child: child),
+  );
+
+  static bool _holdsSameContent(Widget? before, Widget? after) {
+    if (before == null || after == null) {
+      return before == after;
+    }
+    return Widget.canUpdate(before, after);
+  }
+
+  @override
+  void didUpdateWidget(RecorderFadeSwitch oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_holdsSameContent(oldWidget.child, widget.child)) {
+      _generation += 1;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : Motion.fade,
+      switchInCurve: Motion.fadeCurve,
+      switchOutCurve: Motion.fadeCurve,
+      transitionBuilder: widget.collapsing ? _collapsingFadeSlot : _fadeSlot,
+      child: KeyedSubtree(
+        key: ValueKey<int>(_generation),
+        child: widget.child ?? const SizedBox.shrink(),
+      ),
+    );
+  }
+}
+
+class _FadeSlot extends StatelessWidget {
+  const _FadeSlot({required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: animation,
+      child: AnimatedBuilder(
+        animation: animation,
+        builder: (BuildContext context, Widget? content) {
+          final bool leaving = animation.status == AnimationStatus.reverse;
+          return ExcludeFocus(
+            excluding: leaving,
+            child: IgnorePointer(ignoring: leaving, child: content),
+          );
+        },
+        child: child,
+      ),
+    );
+  }
+}
+
+mixin RecorderChromeFade<T extends StatefulWidget> on State<T>, TickerProvider {
+  late final AnimationController _chrome = AnimationController(
+    vsync: this,
+    duration: Motion.fade,
+    value: 1,
+  );
+  late final CurvedAnimation _chromeOpacity = CurvedAnimation(
+    parent: _chrome,
+    curve: Motion.fadeCurve,
+  );
+  late final Animation<double> _takeIndicatorOpacity = ReverseAnimation(
+    _chromeOpacity,
+  );
+  Timer? _chromeTimer;
+  bool _chromeHidden = false;
+  bool _focusWithin = false;
+  bool _accessibleNavigation = false;
+  bool _autoHideArmed = false;
+
+  bool get chromeControlsEnabled;
+
+  bool get takeIsRunning;
+
+  Animation<double> get chromeOpacity => _chromeOpacity;
+
+  Animation<double> get takeIndicatorOpacity => _takeIndicatorOpacity;
+
+  bool get showsTakeIndicator => _chromeHidden || !_chrome.isCompleted;
+
+  @override
+  void initState() {
+    super.initState();
+    _chrome.addStatusListener(_onChromeStatus);
+    SemanticsBinding.instance.addSemanticsEnabledListener(
+      _onSemanticsEnabledChanged,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _chrome.duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : Motion.fade;
+    _accessibleNavigation = _readAccessibleNavigation();
+    followChrome();
+  }
+
+  @override
+  void dispose() {
+    SemanticsBinding.instance.removeSemanticsEnabledListener(
+      _onSemanticsEnabledChanged,
+    );
+    _chromeTimer?.cancel();
+    _chromeTimer = null;
+    _chrome.removeStatusListener(_onChromeStatus);
+    _chromeOpacity.dispose();
+    _chrome.dispose();
+    super.dispose();
+  }
+
+  bool _readAccessibleNavigation() {
+    final bool navigation = MediaQuery.accessibleNavigationOf(context);
+    if (isDesktopPlatform(Theme.of(context).platform)) {
+      return navigation || SemanticsBinding.instance.semanticsEnabled;
+    }
+    return navigation;
+  }
+
+  void _onSemanticsEnabledChanged() {
+    if (!mounted) {
+      return;
+    }
+    setState(() => _accessibleNavigation = _readAccessibleNavigation());
+    followChrome();
+  }
+
+  void _onChromeStatus(AnimationStatus status) {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  bool get _canAutoHideChrome => canAutoHideVideoControls(
+    controlsEnabled: chromeControlsEnabled,
+    isPlaying: takeIsRunning,
+    focusWithin: _focusWithin,
+    accessibleNavigation: _accessibleNavigation,
+  );
+
+  bool get _chromeVisible => videoControlsVisible(
+    canAutoHide: _canAutoHideChrome,
+    hidden: _chromeHidden,
+  );
+
+  void followChrome() {
+    final bool canAutoHide = _canAutoHideChrome;
+    if (canAutoHide && !_autoHideArmed) {
+      _restartChromeTimer();
+    }
+    if (!canAutoHide) {
+      _chromeTimer?.cancel();
+      _chromeTimer = null;
+      _chromeHidden = false;
+    }
+    _autoHideArmed = canAutoHide;
+    _driveChrome();
+  }
+
+  void _driveChrome() {
+    if (_chromeVisible) {
+      _chrome.forward();
+    } else {
+      _chrome.reverse();
+    }
+  }
+
+  void _restartChromeTimer() {
+    _chromeTimer?.cancel();
+    _chromeTimer = _canAutoHideChrome
+        ? Timer(recorderChromeHold, _hideChrome)
+        : null;
+  }
+
+  void _hideChrome() {
+    _chromeTimer = null;
+    if (!mounted || !_canAutoHideChrome) {
+      return;
+    }
+    setState(() => _chromeHidden = true);
+    _driveChrome();
+  }
+
+  void revealChrome() {
+    if (_chromeHidden) {
+      setState(() => _chromeHidden = false);
+    }
+    _restartChromeTimer();
+    _driveChrome();
+  }
+
+  void _onFocusWithin(bool hasFocus) {
+    if (!mounted || hasFocus == _focusWithin) {
+      return;
+    }
+    setState(() => _focusWithin = hasFocus);
+    followChrome();
+  }
+
+  KeyEventResult _onAnyKey(FocusNode node, KeyEvent event) {
+    revealChrome();
+    return KeyEventResult.ignored;
+  }
+
+  Widget revealsChromeOnActivity({required Widget child}) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (PointerDownEvent _) => revealChrome(),
+      onPointerMove: (PointerMoveEvent _) => revealChrome(),
+      child: MouseRegion(
+        opaque: false,
+        onHover: (PointerHoverEvent _) => revealChrome(),
+        child: Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          includeSemantics: false,
+          onKeyEvent: _onAnyKey,
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  Widget holdsChromeWhileFocused({required Widget child}) {
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      includeSemantics: false,
+      onFocusChange: _onFocusWithin,
+      child: child,
+    );
+  }
+}
+
+class RecorderTitleField extends StatefulWidget {
+  const RecorderTitleField({
+    super.key,
+    required this.controller,
+    this.overPicture = false,
+    this.readOnly = false,
+  });
+
+  final TextEditingController controller;
+  final bool overPicture;
+  final bool readOnly;
+
+  @override
+  State<RecorderTitleField> createState() => _RecorderTitleFieldState();
+}
+
+class _RecorderTitleFieldState extends State<RecorderTitleField> {
+  final FocusNode _focus = FocusNode(debugLabel: 'recorder-title');
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _returnToStage() {
+    _focus.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+  }
+
+  bool get _composing {
+    final TextRange composing = widget.controller.value.composing;
+    return composing.isValid && !composing.isCollapsed;
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event.logicalKey == LogicalKeyboardKey.space) {
+      return KeyEventResult.skipRemainingHandlers;
+    }
+    if (event.logicalKey != LogicalKeyboardKey.escape) {
+      return KeyEventResult.ignored;
+    }
+    if (_composing) {
+      return KeyEventResult.skipRemainingHandlers;
+    }
+    if (event is KeyDownEvent) {
+      _returnToStage();
+    }
+    return KeyEventResult.handled;
+  }
+
+  TextStyle _style(bool sidebar) => TextStyle(
+    fontFamily: TypographyTokens.serif,
+    fontSize: sidebar ? _sidebarTitleSize : _bottomBarTitleSize,
+    fontWeight: FontWeight.w400,
+    height: _titleLeading,
+    color: _titleInk,
+    shadows: widget.overPicture
+        ? const <Shadow>[
+            Shadow(
+              color: _titleShadow,
+              offset: _titleShadowOffset,
+              blurRadius: _titleShadowBlur,
+            ),
+          ]
+        : null,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final bool sidebar = stageLayoutOf(context) == ShellLayout.sidebar;
+    final TextStyle style = _style(sidebar);
+    return Material(
+      type: MaterialType.transparency,
+      child: KeyboardFocusBuilder(
+        focusNode: _focus,
+        builder: (BuildContext context, bool shown) => Stack(
+          fit: StackFit.passthrough,
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            _field(sidebar, style),
+            if (shown) _keyboardRing(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _field(bool sidebar, TextStyle style) {
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      includeSemantics: false,
+      onKeyEvent: _onKey,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: sidebar ? _sidebarTitleHeight : _bottomBarTitleHeight,
+        ),
+        child: Center(
+          heightFactor: 1,
+          child: Semantics(
+            label: recorderTitleLabel,
+            child: TextField(
+              key: recorderTitleFieldKey,
+              controller: widget.controller,
+              focusNode: _focus,
+              readOnly: widget.readOnly,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              textInputAction: TextInputAction.done,
+              textCapitalization: TextCapitalization.sentences,
+              cursorColor: _titleCaret,
+              style: style,
+              decoration: InputDecoration.collapsed(
+                hintText: recorderTitlePlaceholder,
+                hintStyle: style.copyWith(
+                  color: widget.overPicture
+                      ? _titlePlaceholderOverPicture
+                      : _titlePlaceholderOnStage,
+                ),
+              ),
+              onEditingComplete: _returnToStage,
+              onTapOutside: (PointerDownEvent _) => _returnToStage(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _keyboardRing(BuildContext context) {
+    const FocusRingSurface surface = FocusRingSurface.dark;
+    return Positioned.fill(
+      left: -_titleRingOutset,
+      top: -_titleRingOutset,
+      right: -_titleRingOutset,
+      bottom: -_titleRingOutset,
+      child: IgnorePointer(
+        child: CustomPaint(
+          key: focusRingKey,
+          painter: _TitleRingPainter(
+            color: surface.colorIn(context.colors),
+            width: surface.width,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TitleRingPainter extends CustomPainter {
+  const _TitleRingPainter({required this.color, required this.width});
+
+  final Color color;
+  final double width;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Border.all(
+      color: color,
+      width: width,
+    ).paint(canvas, Offset.zero & size, borderRadius: _titleRadius);
+  }
+
+  @override
+  bool hitTest(Offset position) => false;
+
+  @override
+  bool shouldRepaint(_TitleRingPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.width != width;
+}
+
+Future<bool> nameRecordedLog(
+  ProviderContainer scope, {
+  required String entryId,
+  required String title,
+  Duration timeout = _titleSaveTimeout,
+}) async {
+  final String trimmed = title.trim();
+  if (trimmed.isEmpty) {
+    return false;
+  }
+  try {
+    await scope
+        .read(journalRepositoryProvider)
+        .setEntryTitle(entryId, trimmed)
+        .timeout(timeout);
+    return true;
+  } catch (error, stackTrace) {
+    debugPrint('Recorded log title failed: $error\n$stackTrace');
+    return false;
+  }
+}
+
+void showRecorderKeptToast(
+  BuildContext context, {
+  required String message,
+  required String entryId,
+  required String title,
+  required bool named,
+}) {
+  final ProviderContainer scope = ProviderScope.containerOf(
+    context,
+    listen: false,
+  );
+  showTransientToast(
+    context,
+    message,
+    after: ModalRoute.of(context)?.completed,
+    titleOffer: named
+        ? null
+        : ToastTitleOffer(
+            actionLabel: recorderTitlePlaceholder,
+            fieldLabel: recorderTitleLabel,
+            failureMessage: recorderTitleFailedMessage,
+            initialTitle: title.trim(),
+            onTitled: (String title) =>
+                nameRecordedLog(scope, entryId: entryId, title: title),
+          ),
+  );
 }
 
 enum _Slot { centre, question, status, actions }

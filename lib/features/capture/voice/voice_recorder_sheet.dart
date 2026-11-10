@@ -6,11 +6,13 @@ import 'package:field_notes/design/icons/capture_icons.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
+import 'package:field_notes/design/motion/motion_tokens.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/features/capture/audio/cannot_hear_notice.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
+import 'package:field_notes/features/capture/immersive/capture_button.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 
 enum VoiceRecorderPhase {
@@ -38,6 +40,13 @@ const Key voiceErrorKey = ValueKey<String>('voice-error');
 const Key voiceKeyHintKey = ValueKey<String>('voice-key-hint');
 const Key voiceCometsKey = ValueKey<String>('voice-comets');
 const Key voiceSavingSpinnerKey = ValueKey<String>('voice-saving-spinner');
+const Key voiceTakeIndicatorKey = ValueKey<String>('voice-take-indicator');
+
+const Key _letGoSlotKey = ValueKey<String>('voice-let-go-slot');
+const Key _takeActionsSlotKey = ValueKey<String>('voice-take-actions-slot');
+
+ValueKey<String> voiceOrbFormKey(CaptureButtonForm form) =>
+    ValueKey<String>('voice-orb-form-${form.name}');
 
 const String voiceSidebarPrivacyLine = 'Private · only you will hear this';
 const String voiceBottomBarPrivacyLine = 'Only you will hear this';
@@ -47,6 +56,7 @@ const String voiceStartLabel = 'Start recording';
 const String voiceStartNowLabel = 'Start now';
 const String voicePauseLabel = 'Pause recording';
 const String voiceResumeLabel = 'Resume recording';
+const String voiceSavingLabel = 'Saving';
 const String voiceOrbShortcutHint = 'Shortcut: Space';
 
 String voiceKeepShortcutHint(TargetPlatform platform) =>
@@ -59,11 +69,19 @@ const double voiceBottomBarOrbZone = 184;
 const double voiceSidebarOrb = 124;
 const double voiceBottomBarOrb = 100;
 const double voiceSavingOrbOpacity = 0.35;
+const double voiceCountdownCoreScale = 0.56;
+const double voiceSavingCoreScale = 0.3;
+const double voiceSavingCoreOpacity = 0.7;
+const double voicePausedCoreOpacity = 0.86;
 const double voiceActionsHeight = 118;
 
 const Color _orbEdge = Color(0x24F3E6D1);
 const Color _orbShadow = Color(0xBFB8566A);
 const Color _orbGlyphInk = Palette.onAccent;
+const Color _orbCountdownRing = Color(0x5CF3E6D1);
+const Color _orbResumeRing = Color(0x8FF3E6D1);
+const Color _orbSavingRing = Color(0x47F3E6D1);
+const Color _orbSweep = Color(0xFFC86075);
 const Color _keepFill = Color(0xFFF3E6D1);
 const Color _keepInk = Color(0xFF1C1713);
 const Color _keepShadow = Color(0x73F3E6D1);
@@ -130,7 +148,7 @@ Decoration _hoverVeil(
   borderRadius: borderRadius,
 );
 
-class VoiceRecorderSheet extends StatelessWidget {
+class VoiceRecorderSheet extends StatefulWidget {
   const VoiceRecorderSheet({
     super.key,
     required this.phase,
@@ -151,6 +169,8 @@ class VoiceRecorderSheet extends StatelessWidget {
     this.savingText = voiceSavingStatus,
     this.onVoiceSettings,
     this.hearing = MicrophoneHearing.hearing,
+    this.titleController,
+    this.questionIndex,
   });
 
   final VoiceRecorderPhase phase;
@@ -171,20 +191,73 @@ class VoiceRecorderSheet extends StatelessWidget {
   final String savingText;
   final VoidCallback? onVoiceSettings;
   final MicrophoneHearing hearing;
+  final TextEditingController? titleController;
+  final int? questionIndex;
 
-  bool get _saving => phase == VoiceRecorderPhase.saving;
+  @override
+  State<VoiceRecorderSheet> createState() => _VoiceRecorderSheetState();
+}
 
-  bool get _canKeep => phase.isTaking && !asking;
+class _VoiceRecorderSheetState extends State<VoiceRecorderSheet>
+    with TickerProviderStateMixin, RecorderChromeFade<VoiceRecorderSheet> {
+  late final AnimationController _breath = AnimationController(
+    vsync: this,
+    duration: stageBreathDuration,
+  );
+
+  VoiceRecorderPhase get _phase => widget.phase;
+
+  bool get _saving => _phase == VoiceRecorderPhase.saving;
+
+  bool get _canKeep => _phase.isTaking && !widget.asking;
 
   bool get _cannotHear =>
-      phase == VoiceRecorderPhase.idle &&
-      hearing == MicrophoneHearing.cannotHear;
+      _phase == VoiceRecorderPhase.idle &&
+      widget.hearing == MicrophoneHearing.cannotHear;
+
+  @override
+  bool get chromeControlsEnabled =>
+      !widget.asking && widget.hearing == MicrophoneHearing.hearing;
+
+  @override
+  bool get takeIsRunning => _phase == VoiceRecorderPhase.recording;
+
+  @override
+  void initState() {
+    super.initState();
+    _followBreath(null);
+  }
+
+  @override
+  void didUpdateWidget(VoiceRecorderSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _followBreath(oldWidget.phase);
+    followChrome();
+    final String? error = widget.errorMessage;
+    if (error != null && error != oldWidget.errorMessage) {
+      revealChrome();
+    }
+  }
+
+  @override
+  void dispose() {
+    _breath.dispose();
+    super.dispose();
+  }
+
+  void _followBreath(VoiceRecorderPhase? previous) {
+    if (_phase != VoiceRecorderPhase.breathing) {
+      _breath.stop();
+    } else if (previous != VoiceRecorderPhase.breathing) {
+      _breath.forward(from: 0);
+    }
+  }
 
   RecorderPrimaryVerb? get _orbVerb {
-    if (asking || _cannotHear) {
+    if (widget.asking || _cannotHear) {
       return null;
     }
-    return switch (phase) {
+    return switch (_phase) {
       VoiceRecorderPhase.idle ||
       VoiceRecorderPhase.breathing => RecorderPrimaryVerb.start,
       VoiceRecorderPhase.recording => RecorderPrimaryVerb.pause,
@@ -194,26 +267,26 @@ class VoiceRecorderSheet extends StatelessWidget {
   }
 
   VoidCallback? get _orbTap => switch (_orbVerb) {
-    RecorderPrimaryVerb.start || RecorderPrimaryVerb.retry => onStart,
-    RecorderPrimaryVerb.pause => onPause,
-    RecorderPrimaryVerb.resume => onResume,
-    RecorderPrimaryVerb.keep => onStop,
+    RecorderPrimaryVerb.start || RecorderPrimaryVerb.retry => widget.onStart,
+    RecorderPrimaryVerb.pause => widget.onPause,
+    RecorderPrimaryVerb.resume => widget.onResume,
+    RecorderPrimaryVerb.keep => widget.onStop,
     null => null,
   };
 
-  VoidCallback? get _keepKey => _canKeep ? onStop : null;
+  VoidCallback? get _keepKey => _canKeep ? widget.onStop : null;
 
   RecorderLeaveVerb? get _leaveVerb {
     if (_saving) {
       return null;
     }
-    return asking && onDismiss != null
+    return widget.asking && widget.onDismiss != null
         ? RecorderLeaveVerb.keepGoing
         : RecorderLeaveVerb.leave;
   }
 
   VoidCallback? get _leaveKey =>
-      _leaveVerb == null ? null : (onDismiss ?? onCancel);
+      _leaveVerb == null ? null : (widget.onDismiss ?? widget.onCancel);
 
   String _keyHint(BuildContext context) => recorderKeyHint(
     platform: Theme.of(context).platform,
@@ -225,68 +298,110 @@ class VoiceRecorderSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool sidebar = stageLayoutOf(context) == ShellLayout.sidebar;
-    return RecorderShortcuts(
-      onPrimary: _orbTap,
-      onKeep: _keepKey,
-      onLeave: _leaveKey,
-      child: RecorderSurface(
-        leaveKey: voiceCloseKey,
-        privacyLine: sidebar
-            ? voiceSidebarPrivacyLine
-            : voiceBottomBarPrivacyLine,
-        onLeave: _saving || asking ? null : onCancel,
-        trailing: _trailing(context, sidebar),
-        question: ReflectionPrompt(phase: phase.stage, showKicker: true),
-        centre: _OrbZone(
-          phase: phase,
-          sidebar: sidebar,
-          levels: levels,
-          onTap: _orbTap,
+    return revealsChromeOnActivity(
+      child: RecorderShortcuts(
+        onPrimary: _orbTap,
+        onKeep: _keepKey,
+        onLeave: _leaveKey,
+        child: holdsChromeWhileFocused(
+          child: RecorderSurface(
+            leaveKey: voiceCloseKey,
+            privacyLine: sidebar
+                ? voiceSidebarPrivacyLine
+                : voiceBottomBarPrivacyLine,
+            onLeave: _saving || widget.asking ? null : widget.onCancel,
+            trailing: _trailing(context, sidebar),
+            title: _title(),
+            question: ReflectionPrompt(
+              phase: _phase.stage,
+              showKicker: true,
+              initialIndex: widget.questionIndex,
+            ),
+            centre: _OrbZone(
+              phase: _phase,
+              sidebar: sidebar,
+              levels: widget.levels,
+              onTap: _orbTap,
+              breath: _breath,
+            ),
+            status: _status(context),
+            actions: _actions(sidebar),
+            chromeOpacity: chromeOpacity,
+          ),
         ),
-        status: _status(context),
-        actions: _actions(sidebar),
       ),
     );
   }
 
-  Widget? _trailing(BuildContext context, bool sidebar) {
-    final Widget? hint = sidebar ? _KeyHint(text: _keyHint(context)) : null;
-    if (phase == VoiceRecorderPhase.saving) {
-      return hint;
+  Widget? _title() {
+    final TextEditingController? controller = widget.titleController;
+    if (controller == null) {
+      return null;
     }
-    final Widget input = RecorderInputButton(
-      onVoiceSettings: onVoiceSettings,
-      takeLevels: phase == VoiceRecorderPhase.idle ? null : levels,
-    );
-    if (hint == null) {
-      return input;
-    }
+    return RecorderTitleField(controller: controller, readOnly: _saving);
+  }
+
+  Widget _trailing(BuildContext context, bool sidebar) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Flexible(child: hint),
-        const SizedBox(width: _inputGap),
-        input,
+        if (sidebar)
+          Flexible(
+            child: FadeTransition(
+              opacity: chromeOpacity,
+              child: _KeyHint(text: _keyHint(context)),
+            ),
+          ),
+        if (showsTakeIndicator)
+          Flexible(
+            child: FadeTransition(
+              key: voiceTakeIndicatorKey,
+              opacity: takeIndicatorOpacity,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: RecorderTakeIndicator(elapsed: widget.elapsed),
+              ),
+            ),
+          ),
+        RecorderFadeSwitch(
+          child: _saving
+              ? null
+              : Padding(
+                  padding: EdgeInsets.only(left: sidebar ? _inputGap : 0),
+                  child: RecorderInputButton(
+                    onVoiceSettings: widget.onVoiceSettings,
+                    takeLevels: _phase == VoiceRecorderPhase.idle
+                        ? null
+                        : widget.levels,
+                  ),
+                ),
+        ),
       ],
     );
   }
 
   Widget _status(BuildContext context) {
-    final String? errorMessage = this.errorMessage;
+    final String? errorMessage = widget.errorMessage;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        if (!_cannotHear)
-          RecorderStatusLine(
-            phase: phase.stage,
-            elapsed: elapsed,
-            savingText: savingText,
-            inline: false,
-          ),
+        RecorderFadeSwitch(
+          child: _cannotHear
+              ? null
+              : KeyedSubtree(
+                  key: ValueKey<StagePhase>(_phase.stage),
+                  child: RecorderStatusLine(
+                    phase: _phase.stage,
+                    elapsed: widget.elapsed,
+                    savingText: widget.savingText,
+                    inline: false,
+                  ),
+                ),
+        ),
         SoundLostWarning(
           key: soundLostWarningKey,
-          hearing: hearing,
-          taking: phase == VoiceRecorderPhase.recording,
+          hearing: widget.hearing,
+          taking: _phase == VoiceRecorderPhase.recording,
         ),
         if (_cannotHear) const CannotHearNotice(),
         if (errorMessage != null)
@@ -311,20 +426,26 @@ class VoiceRecorderSheet extends StatelessWidget {
 
   Widget _actions(bool sidebar) {
     final Widget? content;
-    if (asking) {
-      content = LetGoPanel(
-        onKeepGoing: onKeepGoing ?? _ignore,
-        onLetGo: onLetGo ?? _ignore,
-        compact: !sidebar,
-        keepGoingKey: voiceKeepGoingKey,
-        letGoKey: letGoKey,
+    if (widget.asking) {
+      content = KeyedSubtree(
+        key: _letGoSlotKey,
+        child: LetGoPanel(
+          onKeepGoing: widget.onKeepGoing ?? _ignore,
+          onLetGo: widget.onLetGo ?? _ignore,
+          compact: !sidebar,
+          keepGoingKey: voiceKeepGoingKey,
+          letGoKey: widget.letGoKey,
+        ),
       );
-    } else if (phase.isTaking || _saving) {
-      content = _TakeActions(
-        sidebar: sidebar,
-        onLetGo: _saving ? null : onDiscard,
-        onKeep: _saving ? null : onStop,
-        saving: _saving,
+    } else if (_phase.isTaking || _saving) {
+      content = KeyedSubtree(
+        key: _takeActionsSlotKey,
+        child: _TakeActions(
+          sidebar: sidebar,
+          onLetGo: _saving ? null : widget.onDiscard,
+          onKeep: _saving ? null : widget.onStop,
+          saving: _saving,
+        ),
       );
     } else {
       content = null;
@@ -332,7 +453,7 @@ class VoiceRecorderSheet extends StatelessWidget {
     return ConstrainedBox(
       key: voiceActionsKey,
       constraints: const BoxConstraints(minHeight: voiceActionsHeight),
-      child: Center(heightFactor: 1, child: content),
+      child: Center(heightFactor: 1, child: RecorderFadeSwitch(child: content)),
     );
   }
 }
@@ -367,12 +488,14 @@ class _OrbZone extends StatelessWidget {
     required this.sidebar,
     required this.levels,
     required this.onTap,
+    required this.breath,
   });
 
   final VoiceRecorderPhase phase;
   final bool sidebar;
   final Stream<double> levels;
   final VoidCallback? onTap;
+  final Animation<double> breath;
 
   VoiceLevelStage? get _cometsStage => switch (phase) {
     VoiceRecorderPhase.breathing => VoiceLevelStage.breathing,
@@ -420,7 +543,7 @@ class _OrbZone extends StatelessWidget {
         clipBehavior: Clip.none,
         children: <Widget>[
           _settleGlow(zone),
-          _Orb(phase: phase, sidebar: sidebar, onTap: onTap),
+          _Orb(phase: phase, sidebar: sidebar, onTap: onTap, breath: breath),
           _comets(),
         ],
       ),
@@ -429,27 +552,90 @@ class _OrbZone extends StatelessWidget {
 }
 
 class _Orb extends StatelessWidget {
-  const _Orb({required this.phase, required this.sidebar, required this.onTap});
+  const _Orb({
+    required this.phase,
+    required this.sidebar,
+    required this.onTap,
+    required this.breath,
+  });
 
   final VoiceRecorderPhase phase;
   final bool sidebar;
   final VoidCallback? onTap;
+  final Animation<double> breath;
 
   String get _label => switch (phase) {
     VoiceRecorderPhase.breathing => voiceStartNowLabel,
     VoiceRecorderPhase.recording => voicePauseLabel,
     VoiceRecorderPhase.paused => voiceResumeLabel,
-    VoiceRecorderPhase.idle || VoiceRecorderPhase.saving => voiceStartLabel,
+    VoiceRecorderPhase.idle => voiceStartLabel,
+    VoiceRecorderPhase.saving => voiceSavingLabel,
   };
 
-  double get _opacity => onTap == null ? voiceSavingOrbOpacity : 1;
+  double get _opacity => onTap == null && phase != VoiceRecorderPhase.saving
+      ? voiceSavingOrbOpacity
+      : 1;
+
+  double get _diameter => sidebar ? voiceSidebarOrb : voiceBottomBarOrb;
+
+  double get _glyphSize => sidebar ? _sidebarOrbGlyph : _bottomBarOrbGlyph;
+
+  Widget _mic() => CaptureIcon(
+    glyph: CaptureGlyph.mic,
+    color: _orbGlyphInk,
+    size: _glyphSize,
+  );
+
+  Widget _ringed(Color ring, {Widget? sweep, Widget? centre}) {
+    return SizedBox.square(
+      dimension: _diameter,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: ring, width: captureRingWidth),
+              ),
+            ),
+          ),
+          if (sweep != null) Positioned.fill(child: sweep),
+          ?centre,
+        ],
+      ),
+    );
+  }
+
+  Widget _core(BuildContext context, CaptureButtonForm form) {
+    return switch (form) {
+      CaptureButtonForm.ready => _mic(),
+      CaptureButtonForm.countdown => _ringed(
+        _orbCountdownRing,
+        sweep: CaptureCountdownSweep(progress: breath, color: _orbSweep),
+      ),
+      CaptureButtonForm.pause || CaptureButtonForm.stop => IconStickerGlyphIcon(
+        glyph: IconStickerGlyph.pause,
+        color: _orbGlyphInk,
+        size: _glyphSize,
+      ),
+      CaptureButtonForm.resume => _ringed(_orbResumeRing, centre: _mic()),
+      CaptureButtonForm.saving => _ringed(
+        _orbSavingRing,
+        sweep: const CaptureSavingSweep(color: _orbSweep),
+      ),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     final VoidCallback? onTap = this.onTap;
     final bool enabled = onTap != null;
-    final double diameter = sidebar ? voiceSidebarOrb : voiceBottomBarOrb;
-    final double glyph = sidebar ? _sidebarOrbGlyph : _bottomBarOrbGlyph;
+    final double diameter = _diameter;
+    final CaptureButtonForm form = captureButtonForm(
+      phase.stage,
+      canPause: true,
+    );
     final BorderRadius radius = BorderRadius.all(Radius.circular(diameter / 2));
     return Pressable(
       key: voiceRecordButtonKey,
@@ -476,43 +662,81 @@ class _Orb extends StatelessWidget {
               shape: HoverShape.circle,
               borderRadius: radius,
             ),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  center: _orbHighlight,
-                  radius: _orbGradientRadius,
-                  colors: <Color>[
-                    context.colors.accentBright,
-                    Palette.coral,
-                    context.colors.accentDeep,
-                  ],
-                  stops: _orbStops,
-                ),
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: _orbShadow,
-                    offset: _orbShadowOffset,
-                    blurRadius: _orbShadowBlur,
-                    spreadRadius: _orbShadowSpread,
-                  ),
-                  BoxShadow(color: _orbEdge, spreadRadius: _orbEdgeWidth),
-                ],
-              ),
-              child: Center(
-                child: phase == VoiceRecorderPhase.recording
-                    ? IconStickerGlyphIcon(
-                        glyph: IconStickerGlyph.pause,
-                        color: _orbGlyphInk,
-                        size: glyph,
-                      )
-                    : CaptureIcon(
-                        glyph: CaptureGlyph.mic,
-                        color: _orbGlyphInk,
-                        size: glyph,
-                      ),
-              ),
+            child: CaptureButtonFace(
+              form: form,
+              diameter: diameter,
+              fade: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : Motion.fade,
+              formKey: voiceOrbFormKey,
+              base: _OrbDisc(form: form),
+              core: _core,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OrbDisc extends StatelessWidget {
+  const _OrbDisc({required this.form});
+
+  final CaptureButtonForm form;
+
+  double get _scale => switch (form) {
+    CaptureButtonForm.countdown => voiceCountdownCoreScale,
+    CaptureButtonForm.saving => voiceSavingCoreScale,
+    CaptureButtonForm.ready ||
+    CaptureButtonForm.pause ||
+    CaptureButtonForm.stop ||
+    CaptureButtonForm.resume => 1,
+  };
+
+  double get _opacity => switch (form) {
+    CaptureButtonForm.resume => voicePausedCoreOpacity,
+    CaptureButtonForm.saving => voiceSavingCoreOpacity,
+    CaptureButtonForm.ready ||
+    CaptureButtonForm.countdown ||
+    CaptureButtonForm.pause ||
+    CaptureButtonForm.stop => 1,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final bool still = MediaQuery.disableAnimationsOf(context);
+    return AnimatedScale(
+      scale: _scale,
+      duration: still ? Duration.zero : Motion.stage,
+      curve: Motion.entranceCurve,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(end: _opacity),
+        duration: still ? Duration.zero : Motion.fade,
+        curve: Motion.fadeCurve,
+        builder: (BuildContext context, double opacity, Widget? disc) =>
+            Opacity(opacity: opacity, child: disc),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              center: _orbHighlight,
+              radius: _orbGradientRadius,
+              colors: <Color>[
+                context.colors.accentBright,
+                Palette.coral,
+                context.colors.accentDeep,
+              ],
+              stops: _orbStops,
+            ),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(
+                color: _orbShadow,
+                offset: _orbShadowOffset,
+                blurRadius: _orbShadowBlur,
+                spreadRadius: _orbShadowSpread,
+              ),
+              BoxShadow(color: _orbEdge, spreadRadius: _orbEdgeWidth),
+            ],
           ),
         ),
       ),

@@ -161,8 +161,10 @@ Future<void> _sendSystemBack(WidgetTester tester) async {
   await tester.pump(_step);
 }
 
+const Duration _pastCrossFade = Duration(milliseconds: 300);
+
 String? _status(WidgetTester tester) =>
-    tester.widget<Text>(find.byKey(recorderStatusTextKey)).data;
+    tester.widget<Text>(find.byKey(recorderStatusTextKey).last).data;
 
 Finder _inOrb(Finder matching) =>
     find.descendant(of: find.byKey(voiceRecordButtonKey), matching: matching);
@@ -190,17 +192,17 @@ void _expectPhase(
   required bool orbEnabled,
   required double opacity,
   required bool pauseGlyph,
+  required bool micGlyph,
   required BreathingGlowMode? glow,
   required VoiceLevelStage? level,
   required bool timer,
 }) {
   expect(_status(tester), status);
   final SemanticsNode statusNode = tester.getSemantics(
-    find.byKey(recorderStatusTextKey),
+    find.byKey(recorderStatusTextKey).last,
   );
   expect(statusNode.label, announced.announcement);
   expect(statusNode.value, announced == StagePhase.breathing ? '' : status);
-  expect(find.bySemanticsLabel(orbLabel), findsOneWidget);
   expect(
     tester.getSemantics(find.byKey(voiceRecordButtonKey)),
     isSemantics(
@@ -214,7 +216,7 @@ void _expectPhase(
   expect(_showsPauseGlyph(tester), pauseGlyph);
   expect(
     _inOrb(find.byType(CaptureIcon)),
-    pauseGlyph ? findsNothing : findsOneWidget,
+    micGlyph ? findsOneWidget : findsNothing,
   );
   expect(_glowMode(tester), glow);
   final Finder field = find.byType(VoiceLevelField);
@@ -423,6 +425,7 @@ void main() {
     expect(_phase(tester), VoiceRecorderPhase.recording);
     expect(rig.recorder.startCalls, 1);
     expect(_status(tester), stageRecordingStatus);
+    await tester.pump(_pastCrossFade);
     expect(
       tester.getSemantics(find.byKey(recorderStatusTextKey)).label,
       'Recording',
@@ -479,7 +482,7 @@ void main() {
     await tester.tap(find.byKey(voiceSavePillKey));
     await tester.pump();
     expect(_phase(tester), VoiceRecorderPhase.saving);
-    expect(_orbOpacity(tester), 0.35);
+    expect(_orbOpacity(tester), 1);
 
     gate.complete();
     await tester.pump();
@@ -542,6 +545,7 @@ void main() {
         orbEnabled: true,
         opacity: 1,
         pauseGlyph: false,
+        micGlyph: true,
         glow: null,
         level: null,
         timer: false,
@@ -550,6 +554,7 @@ void main() {
 
       await tester.tap(find.byKey(voiceRecordButtonKey));
       await tester.pump();
+      await tester.pump(_pastCrossFade);
       _expectPhase(
         tester,
         status: stageCountdownWords,
@@ -558,14 +563,16 @@ void main() {
         orbEnabled: true,
         opacity: 1,
         pauseGlyph: false,
+        micGlyph: false,
         glow: BreathingGlowMode.settle,
         level: VoiceLevelStage.breathing,
         timer: false,
       );
       shown.add(_status(tester));
 
-      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(seconds: 3) - _pastCrossFade);
       await tester.pump();
+      await tester.pump(_pastCrossFade);
       _expectPhase(
         tester,
         status: stageRecordingStatus,
@@ -574,6 +581,7 @@ void main() {
         orbEnabled: true,
         opacity: 1,
         pauseGlyph: true,
+        micGlyph: false,
         glow: null,
         level: VoiceLevelStage.recording,
         timer: true,
@@ -581,6 +589,7 @@ void main() {
       shown.add(_status(tester));
 
       await _tapOrb(tester);
+      await tester.pump(_pastCrossFade);
       _expectPhase(
         tester,
         status: stagePausedStatus,
@@ -589,6 +598,7 @@ void main() {
         orbEnabled: true,
         opacity: 1,
         pauseGlyph: false,
+        micGlyph: true,
         glow: null,
         level: VoiceLevelStage.paused,
         timer: true,
@@ -597,14 +607,16 @@ void main() {
 
       await tester.tap(find.byKey(voiceSavePillKey));
       await tester.pump();
+      await tester.pump(_pastCrossFade);
       _expectPhase(
         tester,
         status: _savingStatus,
         announced: StagePhase.saving,
-        orbLabel: 'Start recording',
+        orbLabel: voiceSavingLabel,
         orbEnabled: false,
-        opacity: 0.35,
+        opacity: 1,
         pauseGlyph: false,
+        micGlyph: false,
         glow: null,
         level: null,
         timer: false,
@@ -677,6 +689,7 @@ void main() {
       await tester.tap(find.byKey(voiceDiscardPillKey));
       await tester.pump();
       await tester.pump(_step);
+      await tester.pump(_pastCrossFade);
 
       expect(rig.recorder.pauseCalls, 1);
       expect(_status(tester), stagePausedStatus);
@@ -702,6 +715,7 @@ void main() {
       await tester.tap(find.text(letGoKeepGoingLabel));
       await tester.pump();
       await tester.pump(_step);
+      await tester.pump(_pastCrossFade);
 
       expect(find.byType(LetGoPanel), findsNothing);
       expect(find.byType(VoiceRecorderSheet), findsOneWidget);
@@ -794,7 +808,7 @@ void main() {
 
       expect(
         tester
-            .widget<RecorderStatusLine>(find.byType(RecorderStatusLine))
+            .widget<RecorderStatusLine>(find.byType(RecorderStatusLine).last)
             .phase,
         StagePhase.saving,
       );
@@ -950,6 +964,7 @@ void main() {
     expect(_status(tester), stagePausedStatus);
 
     await _press(tester, LogicalKeyboardKey.escape);
+    await tester.pump(_pastCrossFade);
     expect(find.byType(LetGoPanel), findsNothing);
     expect(find.byType(VoiceRecorderSheet), findsOneWidget);
     expect(_status(tester), stagePausedStatus);
@@ -1009,10 +1024,12 @@ void main() {
         );
 
         await startVoiceTake(tester);
+        await tester.pump(_pastCrossFade);
         expect(_status(tester), stageRecordingStatus);
         _expectTimerClear(tester);
 
         await _tapOrb(tester);
+        await tester.pump(_pastCrossFade);
         expect(_status(tester), stagePausedStatus);
         _expectTimerClear(tester);
 

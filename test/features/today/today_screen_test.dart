@@ -1,3 +1,4 @@
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
@@ -5,12 +6,14 @@ import 'package:field_notes/features/entry_cards/cards/note_body.dart';
 import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/mood/mood_banner_for_date.dart';
 import 'package:field_notes/features/today/this_week_garden.dart';
+import 'package:field_notes/features/today/today_capture_buttons.dart';
 import 'package:field_notes/features/today/today_layout.dart';
 import 'package:field_notes/features/today/today_memory.dart';
 import 'package:field_notes/features/today/today_mood_dock.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/features/today/today_screen.dart';
 import 'package:field_notes/state/state.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,7 +35,10 @@ CaptureRouteRegistry _allCaptureRoutes() {
   );
 }
 
-List<Override> _overrides({List<Entry>? entries}) {
+List<Override> _overrides({
+  List<Entry>? entries,
+  CaptureRouteRegistry? routes,
+}) {
   return <Override>[
     todayClockProvider.overrideWithValue(() => DateTime(2026, 7, 19, 20)),
     weekStartProvider.overrideWithValue(WeekStart.sunday),
@@ -42,16 +48,12 @@ List<Override> _overrides({List<Entry>? entries}) {
       ]),
     ),
     dayForDateProvider.overrideWith(
-      (Ref ref, String date) => Stream<Day?>.value(
-        todayTestDay(date: date, mood: Mood.calm),
-      ),
+      (Ref ref, String date) =>
+          Stream<Day?>.value(todayTestDay(date: date, mood: Mood.calm)),
     ),
     entriesForDateProvider.overrideWith(
       (Ref ref, String date) => Stream<List<Entry>>.value(
-        entries ??
-            <Entry>[
-              todayTestEntry(textContent: 'morning walk'),
-            ],
+        entries ?? <Entry>[todayTestEntry(textContent: 'morning walk')],
       ),
     ),
     entriesForDayProvider.overrideWith(
@@ -61,15 +63,16 @@ List<Override> _overrides({List<Entry>? entries}) {
       (Ref ref, String entryId) =>
           Stream<List<EntryPhoto>>.value(const <EntryPhoto>[]),
     ),
-    todayMediaResolverProvider
-        .overrideWith((Ref ref) async => const StubMediaResolver()),
+    todayMediaResolverProvider.overrideWith(
+      (Ref ref) async => const StubMediaResolver(),
+    ),
     onThisDayMemoryProvider.overrideWith(
       (Ref ref) async => OnThisDayMemory(
         day: todayTestDay(id: 'day-2025', date: '2025-07-19', mood: Mood.happy),
         yearsAgo: 1,
       ),
     ),
-    captureRoutesProvider.overrideWithValue(_allCaptureRoutes()),
+    captureRoutesProvider.overrideWithValue(routes ?? _allCaptureRoutes()),
   ];
 }
 
@@ -86,8 +89,7 @@ CustomScrollView _feedScrollView(WidgetTester tester) =>
     tester.widget<CustomScrollView>(find.byType(CustomScrollView).first);
 
 void main() {
-  testWidgets(
-      'stacked layout shows greeting, date and feed with the mood card '
+  testWidgets('stacked layout shows greeting, date and feed with the mood card '
       'floating outside the feed', (WidgetTester tester) async {
     await pumpToday(
       tester,
@@ -110,10 +112,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.descendant(
-        of: find.byType(CustomScrollView),
-        matching: dock,
-      ),
+      find.descendant(of: find.byType(CustomScrollView), matching: dock),
       findsNothing,
     );
     expect(
@@ -128,8 +127,9 @@ void main() {
     expect(find.text('on this day'), findsNothing);
   });
 
-  testWidgets('rail layout adds this-week garden, capture buttons and memory',
-      (WidgetTester tester) async {
+  testWidgets('rail layout adds this-week garden, capture buttons and memory', (
+    WidgetTester tester,
+  ) async {
     await pumpToday(
       tester,
       const TodayScreen(layout: TodayLayout.withRail),
@@ -159,41 +159,121 @@ void main() {
     expect(find.text('memory · 1 year ago'), findsOneWidget);
   });
 
-  testWidgets('the last stacked entry scrolls clear of the floating mood card',
-      (WidgetTester tester) async {
+  testWidgets('narrow desktop keeps the inline mood and the feed without the '
+      'column', (WidgetTester tester) async {
     await pumpToday(
       tester,
-      const TodayScreen(layout: TodayLayout.stacked),
-      overrides: _manyEntries(12),
-      surface: todayPhoneSurface,
+      const TodayScreen(layout: TodayLayout.narrowDesktop),
+      overrides: _overrides(),
+      surface: todayDesktopSurface,
     );
 
-    final ScrollableState feed = tester.state<ScrollableState>(
-      find
-          .descendant(
-            of: find.byType(CustomScrollView),
-            matching: find.byType(Scrollable),
-          )
-          .first,
-    );
-    feed.position.jumpTo(feed.position.maxScrollExtent);
-    await tester.pumpAndSettle();
-
-    final Finder last = find.byWidgetPredicate(
-      (Widget w) => w is NoteBody && w.text == 'log number 11',
-    );
-    expect(last, findsOneWidget);
-    final Rect lastCard = tester.getRect(
-      find.ancestor(of: last, matching: find.byType(CompactLogCard)),
-    );
-    expect(
-      lastCard.bottom,
-      lessThanOrEqualTo(tester.getRect(find.byType(TodayMoodDock)).top),
-    );
+    expect(find.text('Good evening'), findsOneWidget);
+    expect(find.byType(MoodBannerForDate), findsOneWidget);
+    expect(find.byType(TodayMoodDock), findsNothing);
+    expect(find.byType(ThisWeekGarden), findsNothing);
+    expect(find.text('capture a moment'), findsNothing);
+    expect(find.text('New log'), findsOneWidget);
   });
 
-  testWidgets('the stacked layout scrolls as a cached CustomScrollView',
-      (WidgetTester tester) async {
+  testWidgets('crossing the column breakpoint keeps the feed where it was', (
+    WidgetTester tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      await pumpToday(
+        tester,
+        const TodayScreen(),
+        overrides: _manyEntries(30),
+        surface: const Size(1360, 780),
+      );
+      expect(find.byType(ThisWeekGarden), findsOneWidget);
+      final ScrollableState before = tester.state<ScrollableState>(
+        find.byType(Scrollable).first,
+      );
+      before.position.jumpTo(400);
+      await tester.pumpAndSettle();
+
+      tester.view.physicalSize = const Size(1100, 780);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ThisWeekGarden), findsNothing);
+      final ScrollableState after = tester.state<ScrollableState>(
+        find.byType(Scrollable).first,
+      );
+      expect(after, same(before));
+      expect(after.position.pixels, 400);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('a capture that fails to open from New log says so', (
+    WidgetTester tester,
+  ) async {
+    await pumpToday(
+      tester,
+      const TodayScreen(layout: TodayLayout.narrowDesktop),
+      overrides: _overrides(
+        routes: CaptureRouteRegistry.empty.withRoute(
+          CaptureRoute(
+            type: EntryType.text,
+            open: (BuildContext context, String date) async =>
+                throw StateError('route failed'),
+          ),
+        ),
+      ),
+      surface: todayDesktopSurface,
+    );
+
+    await tester.tap(find.text('New log'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Write a note'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(captureOpenErrorMessage), findsOneWidget);
+    await tester.pump(kToastLifetime);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+    'the last stacked entry scrolls clear of the floating mood card',
+    (WidgetTester tester) async {
+      await pumpToday(
+        tester,
+        const TodayScreen(layout: TodayLayout.stacked),
+        overrides: _manyEntries(12),
+        surface: todayPhoneSurface,
+      );
+
+      final ScrollableState feed = tester.state<ScrollableState>(
+        find
+            .descendant(
+              of: find.byType(CustomScrollView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      feed.position.jumpTo(feed.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+
+      final Finder last = find.byWidgetPredicate(
+        (Widget w) => w is NoteBody && w.text == 'log number 11',
+      );
+      expect(last, findsOneWidget);
+      final Rect lastCard = tester.getRect(
+        find.ancestor(of: last, matching: find.byType(CompactLogCard)),
+      );
+      expect(
+        lastCard.bottom,
+        lessThanOrEqualTo(tester.getRect(find.byType(TodayMoodDock)).top),
+      );
+    },
+  );
+
+  testWidgets('the stacked layout scrolls as a cached CustomScrollView', (
+    WidgetTester tester,
+  ) async {
     await pumpToday(
       tester,
       const TodayScreen(layout: TodayLayout.stacked),
@@ -207,8 +287,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the rail layout scrolls as a cached CustomScrollView',
-      (WidgetTester tester) async {
+  testWidgets('the rail layout scrolls as a cached CustomScrollView', (
+    WidgetTester tester,
+  ) async {
     await pumpToday(
       tester,
       const TodayScreen(layout: TodayLayout.withRail),
@@ -223,8 +304,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a 50-entry day builds only the cards near the viewport',
-      (WidgetTester tester) async {
+  testWidgets('a 50-entry day builds only the cards near the viewport', (
+    WidgetTester tester,
+  ) async {
     const int entryCount = 50;
 
     for (final TodayLayout layout in TodayLayout.values) {
@@ -232,9 +314,9 @@ void main() {
         tester,
         TodayScreen(layout: layout),
         overrides: _manyEntries(entryCount),
-        surface: layout == TodayLayout.withRail
-            ? todayDesktopSurface
-            : todayPhoneSurface,
+        surface: layout == TodayLayout.stacked
+            ? todayPhoneSurface
+            : todayDesktopSurface,
       );
 
       expect(tester.takeException(), isNull);
@@ -244,9 +326,9 @@ void main() {
     }
   });
 
-  testWidgets(
-      'a 50-entry day sends no accessibility update macOS rejects',
-      (WidgetTester tester) async {
+  testWidgets('a 50-entry day sends no accessibility update macOS rejects', (
+    WidgetTester tester,
+  ) async {
     for (final TodayLayout layout in TodayLayout.values) {
       AxUpdateChecker.instance.reset();
       final SemanticsHandle semantics = tester.ensureSemantics();
@@ -254,12 +336,16 @@ void main() {
         tester,
         TodayScreen(layout: layout),
         overrides: _manyEntries(50),
-        surface: layout == TodayLayout.withRail
-            ? todayDesktopSurface
-            : todayPhoneSurface,
+        surface: layout == TodayLayout.stacked
+            ? todayPhoneSurface
+            : todayDesktopSurface,
       );
       await tester.pumpAndSettle();
-      expect(AxUpdateChecker.instance.updates, greaterThan(0), reason: '$layout');
+      expect(
+        AxUpdateChecker.instance.updates,
+        greaterThan(0),
+        reason: '$layout',
+      );
       expect(AxUpdateChecker.instance.rejections, isEmpty, reason: '$layout');
       semantics.dispose();
       await tester.pumpWidget(const SizedBox.shrink());

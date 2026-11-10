@@ -4,6 +4,7 @@ import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/bottom_bar_shell.dart';
 import 'package:field_notes/app/shell/phone_bottom_bar.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -32,8 +33,8 @@ const double _headerBottom = _statusBar + 48;
 const double _headerGap = 6;
 const double _titleGap = 12;
 const double _sideInset = 14;
-const double _eyebrowSize = 15;
-const double _titleSize = 30;
+const double _eyebrowSize = 16;
+const double _titleSize = 34;
 const double _rowMinHeight = 68;
 const double _pillLift = 86;
 const double _pillHeight = 48;
@@ -88,11 +89,17 @@ class _FakeRecorder extends Fake implements AudioRecorder {
   Future<void> dispose() async {}
 }
 
-List<Override> _overrides() => <Override>[
+Stream<AppSettings> _loadedSettings() =>
+    Stream<AppSettings>.value(AppSettings.defaults);
+
+Stream<AppSettings> _failingSettings() =>
+    Stream<AppSettings>.error(StateError('db gone'));
+
+List<Override> _overrides(
+  Stream<AppSettings> Function() settings,
+) => <Override>[
   ...shellOverrides(),
-  appSettingsProvider.overrideWith(
-    (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
-  ),
+  appSettingsProvider.overrideWith((Ref ref) => settings()),
   audioInputListerProvider.overrideWithValue(() async => const <InputDevice>[]),
   inputLevelRecorderProvider.overrideWithValue(_FakeRecorder.new),
 ];
@@ -101,6 +108,7 @@ Future<void> _pumpPhone(
   WidgetTester tester, {
   Size surface = _phone,
   double textScale = 1,
+  Stream<AppSettings> Function() settings = _loadedSettings,
 }) async {
   tester.view.physicalSize = surface;
   tester.view.devicePixelRatio = 1;
@@ -116,7 +124,7 @@ Future<void> _pumpPhone(
   await tester.pumpWidget(
     ProviderScope(
       key: UniqueKey(),
-      overrides: _overrides(),
+      overrides: _overrides(settings),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: fieldNotesTheme(platform: TargetPlatform.android),
@@ -159,6 +167,23 @@ void _expectHeading(WidgetTester tester, SettingsTab tab, String page) {
 }
 
 void main() {
+  testWidgets('a failed load keeps its retry in reach above the tab bar', (
+    WidgetTester tester,
+  ) async {
+    await _pumpPhone(tester, settings: _failingSettings);
+
+    final Rect block = tester.getRect(find.byType(StateBlock));
+    final Rect tabBar = tester.getRect(find.byType(PhoneBottomBar));
+    final Rect retry = tester.getRect(find.byType(StickerButton));
+    expect(block.left, moreOrLessEquals(_sideInset, epsilon: _tolerance));
+    expect(
+      block.right,
+      moreOrLessEquals(_phone.width - _sideInset, epsilon: _tolerance),
+    );
+    expect(block.bottom, lessThan(tabBar.top));
+    expect(_phone.height - retry.bottom, inInclusiveRange(70, 150));
+  });
+
   testWidgets(
     'phone settings pages start under the header and end clear of the Back pill',
     (WidgetTester tester) async {

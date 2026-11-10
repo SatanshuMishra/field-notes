@@ -135,6 +135,13 @@ Finder _element(Element element) =>
 Finder _inSettings(Finder finder) =>
     find.descendant(of: find.byType(SettingsScreen), matching: finder);
 
+Text _contentTitle(WidgetTester tester) => tester.widget<Text>(
+  find.descendant(
+    of: find.byKey(settingsContentTitleKey),
+    matching: find.byType(Text),
+  ),
+);
+
 void _expectStyle(
   TextStyle? style, {
   required String family,
@@ -309,8 +316,8 @@ void main() {
     expect(ruleRect.bottom, closeTo(area.bottom, _tolerance));
 
     final Finder title = find.byKey(settingsContentTitleKey);
-    expect(tester.widget<Text>(title).data, 'Journal');
-    final TextStyle? titleStyle = tester.widget<Text>(title).style;
+    expect(_contentTitle(tester).data, 'Journal');
+    final TextStyle? titleStyle = _contentTitle(tester).style;
     _expectStyle(
       titleStyle,
       family: TypographyTokens.serif,
@@ -338,10 +345,7 @@ void main() {
 
     await tester.tap(find.byKey(settingsTabKey(SettingsTab.about)));
     await tester.pumpAndSettle();
-    expect(
-      tester.widget<Text>(find.byKey(settingsContentTitleKey)).data,
-      'About',
-    );
+    expect(_contentTitle(tester).data, 'About');
   });
 
   testWidgets(
@@ -355,11 +359,7 @@ void main() {
           await tester.tap(find.byKey(settingsTabKey(tab)));
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull, reason: page);
-          expect(
-            tester.widget<Text>(find.byKey(settingsContentTitleKey)).data,
-            tab.label,
-            reason: page,
-          );
+          expect(_contentTitle(tester).data, tab.label, reason: page);
           final Rect column = tester.getRect(
             find.byKey(settingsContentColumnKey),
           );
@@ -495,10 +495,7 @@ void main() {
     await tester.tap(find.byKey(settingsTabKey(SettingsTab.syncStorage)));
     await tester.pumpAndSettle();
 
-    expect(
-      tester.widget<Text>(find.byKey(settingsContentTitleKey)).data,
-      'Sync & storage',
-    );
+    expect(_contentTitle(tester).data, 'Sync & storage');
     expect(
       find.descendant(
         of: find.byKey(settingsTabContentKey),

@@ -1,8 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
@@ -12,14 +10,11 @@ import 'package:field_notes/design/motion/motion_tokens.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
-import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/features/capture/audio/cannot_hear_notice.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
+import 'package:field_notes/features/capture/immersive/capture_button.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
-import 'package:field_notes/features/entry_cards/cards/video_controls_overlay.dart'
-    show canAutoHideVideoControls, videoControlsVisible;
-import 'package:field_notes/features/entry_cards/util/duration_format.dart';
 
 import 'camera_gestures.dart';
 import 'camera_glyphs.dart';
@@ -96,7 +91,6 @@ const Color _deniedFill = Color(0xB81C1713);
 const Color _deniedEdge = Color(0x24F3E6D1);
 const Color _deniedInk = Color(0xFFDCCAB0);
 const Color _questionShadow = Color(0x73000000);
-const Color _takeTimeInk = Color(0xFFF3E6D1);
 
 const double _disabledOpacity = 0.5;
 const double videoPausedShutterOpacity = 0.55;
@@ -131,14 +125,6 @@ const double _keyboardHintSize = 11;
 const double _keyboardHintTracking = 0.22;
 const double _keyboardHintInset = 20;
 const double _sidebarTrailingGap = 8;
-const double _takeDot = 8;
-const double _takeDotGlowAlpha = 0.6;
-const double _takeGap = 7;
-const double _takeTrailingGap = 10;
-const double _takeTimeSize = 12;
-const double _takeTimeTracking = 0.08 * _takeTimeSize;
-const double _takeTimeShadowBlur = 8;
-const Offset _takeTimeShadowOffset = Offset(0, 1);
 
 const double _sidebarQuestionShadowBlur = 20;
 const double _bottomBarQuestionShadowBlur = 16;
@@ -168,7 +154,6 @@ const EdgeInsets _deniedPadding = EdgeInsets.symmetric(
 const Key _armingHintLineKey = ValueKey<String>('video-arming-hint-line');
 const Key _letGoPanelSlotKey = ValueKey<String>('video-let-go-panel-slot');
 const Key _controlsSlotKey = ValueKey<String>('video-controls-slot');
-const Key _absentSlotKey = ValueKey<String>('video-absent-slot');
 
 class VideoRecorderSheet extends StatefulWidget {
   const VideoRecorderSheet({
@@ -202,6 +187,7 @@ class VideoRecorderSheet extends StatefulWidget {
     this.onVoiceSettings,
     this.levels = const Stream<double>.empty(),
     this.hearing = MicrophoneHearing.hearing,
+    this.titleController,
   });
 
   final VideoRecorderPhase phase;
@@ -233,56 +219,33 @@ class VideoRecorderSheet extends StatefulWidget {
   final VoidCallback? onVoiceSettings;
   final Stream<double> levels;
   final MicrophoneHearing hearing;
+  final TextEditingController? titleController;
 
   @override
   State<VideoRecorderSheet> createState() => _VideoRecorderSheetState();
 }
 
 class _VideoRecorderSheetState extends State<VideoRecorderSheet>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, RecorderChromeFade<VideoRecorderSheet> {
   late final AnimationController _breath = AnimationController(
     vsync: this,
     duration: stageBreathDuration,
   );
   Timer? _hintTimer;
   bool _hintDue = false;
-  late final AnimationController _chrome = AnimationController(
-    vsync: this,
-    duration: Motion.fade,
-    value: 1,
-  );
-  late final CurvedAnimation _chromeOpacity = CurvedAnimation(
-    parent: _chrome,
-    curve: Motion.fadeCurve,
-  );
-  late final Animation<double> _takeIndicatorOpacity = ReverseAnimation(
-    _chromeOpacity,
-  );
-  Timer? _chromeTimer;
-  bool _chromeHidden = false;
-  bool _focusWithin = false;
-  bool _accessibleNavigation = false;
-  bool _autoHideArmed = false;
+
+  @override
+  bool get chromeControlsEnabled =>
+      !_isAsking && widget.hearing == MicrophoneHearing.hearing;
+
+  @override
+  bool get takeIsRunning => _isRecording;
 
   @override
   void initState() {
     super.initState();
     _followBreath(null);
     _followGettingReady(wasGettingReady: false);
-    _chrome.addStatusListener(_onChromeStatus);
-    SemanticsBinding.instance.addSemanticsEnabledListener(
-      _onSemanticsEnabledChanged,
-    );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _chrome.duration = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : Motion.fade;
-    _accessibleNavigation = _readAccessibleNavigation();
-    _followChrome();
   }
 
   @override
@@ -290,125 +253,22 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
     super.didUpdateWidget(oldWidget);
     _followBreath(oldWidget.phase);
     _followGettingReady(wasGettingReady: _gettingReadyIn(oldWidget.phase));
-    _followChrome();
+    followChrome();
     if (_isNewMessage(oldWidget.nudgeMessage, widget.nudgeMessage) ||
         _isNewMessage(oldWidget.errorMessage, widget.errorMessage)) {
-      _revealChrome();
+      revealChrome();
     }
   }
 
   @override
   void dispose() {
-    SemanticsBinding.instance.removeSemanticsEnabledListener(
-      _onSemanticsEnabledChanged,
-    );
-    _chromeTimer?.cancel();
-    _chromeTimer = null;
     _hintTimer?.cancel();
-    _chrome.removeStatusListener(_onChromeStatus);
-    _chromeOpacity.dispose();
-    _chrome.dispose();
     _breath.dispose();
     super.dispose();
   }
 
   static bool _isNewMessage(String? before, String? after) =>
       after != null && after != before;
-
-  bool _readAccessibleNavigation() {
-    final bool navigation = MediaQuery.accessibleNavigationOf(context);
-    if (isDesktopPlatform(Theme.of(context).platform)) {
-      return navigation || SemanticsBinding.instance.semanticsEnabled;
-    }
-    return navigation;
-  }
-
-  void _onSemanticsEnabledChanged() {
-    if (!mounted) {
-      return;
-    }
-    setState(() => _accessibleNavigation = _readAccessibleNavigation());
-    _followChrome();
-  }
-
-  void _onChromeStatus(AnimationStatus status) {
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  bool get _canAutoHideChrome => canAutoHideVideoControls(
-    controlsEnabled: !_isAsking && widget.hearing == MicrophoneHearing.hearing,
-    isPlaying: _isRecording,
-    focusWithin: _focusWithin,
-    accessibleNavigation: _accessibleNavigation,
-  );
-
-  bool get _chromeVisible => videoControlsVisible(
-    canAutoHide: _canAutoHideChrome,
-    hidden: _chromeHidden,
-  );
-
-  bool get _showsTakeIndicator => _chromeHidden || !_chrome.isCompleted;
-
-  void _followChrome() {
-    final bool canAutoHide = _canAutoHideChrome;
-    if (canAutoHide && !_autoHideArmed) {
-      _restartChromeTimer();
-    }
-    if (!canAutoHide) {
-      _chromeTimer?.cancel();
-      _chromeTimer = null;
-      _chromeHidden = false;
-    }
-    _autoHideArmed = canAutoHide;
-    _driveChrome();
-  }
-
-  void _driveChrome() {
-    if (_chromeVisible) {
-      _chrome.forward();
-    } else {
-      _chrome.reverse();
-    }
-  }
-
-  void _restartChromeTimer() {
-    _chromeTimer?.cancel();
-    _chromeTimer = _canAutoHideChrome
-        ? Timer(recorderChromeHold, _hideChrome)
-        : null;
-  }
-
-  void _hideChrome() {
-    _chromeTimer = null;
-    if (!mounted || !_canAutoHideChrome) {
-      return;
-    }
-    setState(() => _chromeHidden = true);
-    _driveChrome();
-  }
-
-  void _revealChrome() {
-    if (_chromeHidden) {
-      setState(() => _chromeHidden = false);
-    }
-    _restartChromeTimer();
-    _driveChrome();
-  }
-
-  void _onFocusWithin(bool hasFocus) {
-    if (!mounted || hasFocus == _focusWithin) {
-      return;
-    }
-    setState(() => _focusWithin = hasFocus);
-    _followChrome();
-  }
-
-  KeyEventResult _onAnyKey(FocusNode node, KeyEvent event) {
-    _revealChrome();
-    return KeyEventResult.ignored;
-  }
 
   void _followBreath(VideoRecorderPhase? previous) {
     switch (_phase) {
@@ -454,38 +314,10 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
   Duration get _fade =>
       MediaQuery.disableAnimationsOf(context) ? Duration.zero : Motion.fade;
 
-  Widget _fadeSwitch(Widget? child) {
-    return AnimatedSwitcher(
-      duration: _fade,
-      switchInCurve: Motion.fadeCurve,
-      switchOutCurve: Motion.fadeCurve,
-      transitionBuilder: _fadeSlot,
-      child: child ?? const SizedBox.shrink(key: _absentSlotKey),
-    );
-  }
+  Widget _fadeSwitch(Widget? child) => RecorderFadeSwitch(child: child);
 
-  Widget _collapseSwitch(Widget? child) {
-    return AnimatedSwitcher(
-      duration: _fade,
-      switchInCurve: Motion.fadeCurve,
-      switchOutCurve: Motion.fadeCurve,
-      transitionBuilder: _collapsingFadeSlot,
-      child: child ?? const SizedBox.shrink(key: _absentSlotKey),
-    );
-  }
-
-  static Widget _fadeSlot(Widget child, Animation<double> animation) =>
-      _FadeSlot(animation: animation, child: child);
-
-  static Widget _collapsingFadeSlot(
-    Widget child,
-    Animation<double> animation,
-  ) => SizeTransition(
-    sizeFactor: animation,
-    alignment: Alignment.topCenter,
-    fixedCrossAxisSizeFactor: 1,
-    child: _FadeSlot(animation: animation, child: child),
-  );
+  Widget _collapseSwitch(Widget? child) =>
+      RecorderFadeSwitch(collapsing: true, child: child);
 
   VideoRecorderPhase get _phase => widget.phase;
   bool get _isRecording => _phase == VideoRecorderPhase.recording;
@@ -618,63 +450,59 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
   @override
   Widget build(BuildContext context) {
     final bool sidebar = stageLayoutOf(context) == ShellLayout.sidebar;
-    return Listener(
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: (PointerDownEvent _) => _revealChrome(),
-      onPointerMove: (PointerMoveEvent _) => _revealChrome(),
-      child: MouseRegion(
-        opaque: false,
-        onHover: (PointerHoverEvent _) => _revealChrome(),
-        child: Focus(
-          canRequestFocus: false,
-          skipTraversal: true,
-          includeSemantics: false,
-          onKeyEvent: _onAnyKey,
-          child: RecorderShortcuts(
-            onPrimary: _primaryKey,
-            onKeep: _keepKey,
-            onLeave: _leaveKey,
-            child: Stack(
-              fit: StackFit.expand,
-              children: <Widget>[
-                Focus(
-                  canRequestFocus: false,
-                  skipTraversal: true,
-                  includeSemantics: false,
-                  onFocusChange: _onFocusWithin,
-                  child: RecorderSurface(
-                    arrangement: RecorderArrangement.video,
-                    onLeave: _isSaving ? null : widget.onLeave,
-                    leaveKey: videoCloseKey,
-                    glassLeave: true,
-                    feedGestures: _gestures(sidebar),
-                    glow: !widget.cameraOn && !_isDenied,
-                    background: _background(sidebar),
-                    trailing: _trailing(sidebar),
-                    question: _question(sidebar),
-                    centre: _isDenied ? _deniedPanel() : null,
-                    status: DefaultTextStyle.merge(
-                      style: _statusOverPicture,
-                      child: _status(),
-                    ),
-                    actions: _actions(sidebar),
-                    chromeOpacity: _chromeOpacity,
-                  ),
+    return revealsChromeOnActivity(
+      child: RecorderShortcuts(
+        onPrimary: _primaryKey,
+        onKeep: _keepKey,
+        onLeave: _leaveKey,
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            holdsChromeWhileFocused(
+              child: RecorderSurface(
+                arrangement: RecorderArrangement.video,
+                onLeave: _isSaving ? null : widget.onLeave,
+                leaveKey: videoCloseKey,
+                glassLeave: true,
+                feedGestures: _gestures(sidebar),
+                glow: !widget.cameraOn && !_isDenied,
+                background: _background(sidebar),
+                trailing: _trailing(sidebar),
+                title: _title(),
+                question: _question(sidebar),
+                centre: _isDenied ? _deniedPanel() : null,
+                status: DefaultTextStyle.merge(
+                  style: _statusOverPicture,
+                  child: _status(),
                 ),
-                if (sidebar)
-                  Positioned(
-                    right: _keyboardHintInset,
-                    bottom: _keyboardHintInset,
-                    child: FadeTransition(
-                      opacity: _chromeOpacity,
-                      child: _keyboardHint(),
-                    ),
-                  ),
-              ],
+                actions: _actions(sidebar),
+                chromeOpacity: chromeOpacity,
+              ),
             ),
-          ),
+            if (sidebar)
+              Positioned(
+                right: _keyboardHintInset,
+                bottom: _keyboardHintInset,
+                child: FadeTransition(
+                  opacity: chromeOpacity,
+                  child: _keyboardHint(),
+                ),
+              ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget? _title() {
+    final TextEditingController? controller = widget.titleController;
+    if (controller == null || _isDenied) {
+      return null;
+    }
+    return RecorderTitleField(
+      controller: controller,
+      overPicture: true,
+      readOnly: _isSaving,
     );
   }
 
@@ -727,7 +555,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
           _fadeSwitch(
             cameraOff
                 ? FadeTransition(
-                    opacity: _chromeOpacity,
+                    opacity: chromeOpacity,
                     child: _cameraOffCopy(sidebar),
                   )
                 : null,
@@ -814,7 +642,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
                 )
               : null,
         ),
-        if (_showsTakeIndicator) _takeIndicator(),
+        if (showsTakeIndicator) _takeIndicator(),
         _fadeSwitch(
           showsInput
               ? RecorderInputButton(
@@ -834,55 +662,8 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
   Widget _takeIndicator() {
     return FadeTransition(
       key: videoTakeIndicatorKey,
-      opacity: _takeIndicatorOpacity,
-      child: Padding(
-        padding: const EdgeInsets.only(right: _takeTrailingGap),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            _takeDotFace(context.colors.accentBright),
-            const SizedBox(width: _takeGap),
-            Text(
-              formatMediaDuration(widget.elapsed.inMilliseconds),
-              maxLines: 1,
-              softWrap: false,
-              style: const TextStyle(
-                fontFamily: TypographyTokens.sans,
-                fontSize: _takeTimeSize,
-                fontWeight: FontWeight.w500,
-                letterSpacing: _takeTimeTracking,
-                fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
-                color: _takeTimeInk,
-                shadows: <Shadow>[
-                  Shadow(
-                    color: _questionShadow,
-                    offset: _takeTimeShadowOffset,
-                    blurRadius: _takeTimeShadowBlur,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _takeDotFace(Color color) {
-    return SizedBox.square(
-      dimension: _takeDot,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: color.withValues(alpha: _takeDotGlowAlpha),
-              blurRadius: _takeDot,
-            ),
-          ],
-        ),
-      ),
+      opacity: takeIndicatorOpacity,
+      child: RecorderTakeIndicator(elapsed: widget.elapsed),
     );
   }
 
@@ -1137,17 +918,9 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
     return _isPaused ? videoPausedShutterOpacity : 1;
   }
 
-  VideoShutterForm get _shutterForm => switch (_phase) {
-    VideoRecorderPhase.preparing ||
-    VideoRecorderPhase.idle ||
-    VideoRecorderPhase.denied ||
-    VideoRecorderPhase.saving => VideoShutterForm.ready,
-    VideoRecorderPhase.breathing ||
-    VideoRecorderPhase.arming => VideoShutterForm.countdown,
-    VideoRecorderPhase.recording =>
-      _canPause ? VideoShutterForm.pause : VideoShutterForm.stop,
-    VideoRecorderPhase.paused => VideoShutterForm.resume,
-  };
+  VideoShutterForm get _shutterForm => _isSaving
+      ? VideoShutterForm.ready
+      : captureButtonForm(_phase.stage, canPause: _canPause);
 
   Widget _shutter(bool sidebar) {
     final VoidCallback? tap = _shutterTap;
@@ -1188,31 +961,6 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
         fontWeight: FontWeight.w500,
         letterSpacing: _keyboardHintTracking,
         color: _hintInk,
-      ),
-    );
-  }
-}
-
-class _FadeSlot extends StatelessWidget {
-  const _FadeSlot({required this.animation, required this.child});
-
-  final Animation<double> animation;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: animation,
-      child: AnimatedBuilder(
-        animation: animation,
-        builder: (BuildContext context, Widget? content) {
-          final bool leaving = animation.status == AnimationStatus.reverse;
-          return ExcludeFocus(
-            excluding: leaving,
-            child: IgnorePointer(ignoring: leaving, child: content),
-          );
-        },
-        child: child,
       ),
     );
   }
