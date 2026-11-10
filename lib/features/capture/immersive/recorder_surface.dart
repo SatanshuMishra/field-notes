@@ -42,6 +42,7 @@ const String recorderTitleFailedMessage =
 const Color recorderStageColor = Palette.mediaGround;
 
 const Color _chromeInk = Color(0xFFB7A58C);
+const Color _dayLineLeadInk = Color(0xFFE692A0);
 const Color _leaveGlyphInk = Color(0xCCFFFFFF);
 const Color _leaveGlyphInkBottomBar = Color(0xBFFFFFFF);
 
@@ -431,6 +432,15 @@ class _Stage extends StatelessWidget {
   }
 
   Widget _dayLine(BuildContext context, CaptureDayLine line) {
+    final List<Shadow>? shadows = surface.background == null
+        ? null
+        : const <Shadow>[
+            Shadow(
+              color: _titleShadow,
+              offset: _titleShadowOffset,
+              blurRadius: _titleShadowBlur,
+            ),
+          ];
     return Semantics(
       container: true,
       child: Row(
@@ -444,7 +454,8 @@ class _Stage extends StatelessWidget {
               fontFamily: TypographyTokens.accent,
               fontSize: sidebar ? _sidebarLeadSize : _bottomBarLeadSize,
               fontWeight: FontWeight.w600,
-              color: context.colors.accentInk,
+              color: _dayLineLeadInk,
+              shadows: shadows,
             ),
           ),
           const SizedBox(width: _dayLineGap),
@@ -458,6 +469,7 @@ class _Stage extends StatelessWidget {
                 fontSize: sidebar ? _sidebarChromeSize : _bottomBarChromeSize,
                 fontWeight: FontWeight.w500,
                 color: _chromeInk,
+                shadows: shadows,
               ),
             ),
           ),
