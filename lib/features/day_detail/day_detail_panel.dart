@@ -14,7 +14,6 @@ import 'package:field_notes/design/icons/nav_icons.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
@@ -57,12 +56,6 @@ const Key dayDetailPanelKey = ValueKey<String>('day-detail-panel');
 const Key dayDetailListPaneKey = ValueKey<String>('day-detail-list-pane');
 const Key daySheetCloseKey = ValueKey<String>('day-sheet-close');
 
-Key daySheetEditKeyFor(String entryId) =>
-    ValueKey<String>('day-sheet-edit-$entryId');
-
-Key daySheetDeleteKeyFor(String entryId) =>
-    ValueKey<String>('day-sheet-delete-$entryId');
-
 const double dayDetailPanelMaxWidth = 1060;
 const double dayDetailPanelMaxHeight = 660;
 const double dayDetailPanelWindowGutter = 48;
@@ -88,15 +81,6 @@ const EdgeInsets _sheetCountPadding = EdgeInsets.fromLTRB(2, 2, 2, 8);
 const double _sheetCountSize = 14;
 const double _sheetCardGap = 8;
 const double _sheetRuleThickness = 1.5;
-const double _sheetActionExtent = 40;
-const double _sheetActionTarget = 48;
-const double _sheetActionGap = 8;
-const double _sheetActionEnd = 12;
-const double _sheetActionReach = (_sheetActionTarget - _sheetActionExtent) / 2;
-const double _sheetActionRise = _sheetActionTarget / 2;
-const double _sheetActionGlyph = 16;
-const double _sheetActionBorderWidth = 1.5;
-const BorderRadius _sheetActionRadius = BorderRadius.all(Radius.circular(10));
 const double _sheetFooterButtonHeight = 48;
 const double _sheetCloseHorizontalPadding = 18;
 const BorderRadius _sheetFooterRadius = BorderRadius.all(Radius.circular(14));
@@ -673,25 +657,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       key: ValueKey<String>(entry.id),
       child: Padding(
         padding: EdgeInsets.only(top: index == 0 ? 0 : _sheetCardGap),
-        child: Stack(
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.only(top: _sheetActionRise),
-              child: _card(entry, resolver),
-            ),
-            PositionedDirectional(
-              top: 0,
-              end: _sheetActionEnd - _sheetActionReach,
-              child: _SheetEntryActions(
-                entryId: entry.id,
-                onEdit: entry.type == EntryType.text
-                    ? () => _edit(entry)
-                    : null,
-                onDelete: () => _delete(entry),
-              ),
-            ),
-          ],
-        ),
+        child: _card(entry, resolver),
       ),
     );
   }
@@ -840,106 +806,6 @@ class _SheetEntryCount extends StatelessWidget {
         dayDetailEntryCountLabel(value),
         style: context.textStyles.stampAccent.copyWith(
           fontSize: _sheetCountSize,
-        ),
-      ),
-    );
-  }
-}
-
-class _SheetEntryActions extends StatelessWidget {
-  const _SheetEntryActions({
-    required this.entryId,
-    required this.onEdit,
-    required this.onDelete,
-  });
-
-  final String entryId;
-  final VoidCallback? onEdit;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    final VoidCallback? edit = onEdit;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        if (edit != null) ...<Widget>[
-          _SheetEntryAction(
-            key: daySheetEditKeyFor(entryId),
-            glyph: IconStickerGlyph.edit,
-            label: logActionsEditLabel,
-            fill: colors.cardBright,
-            edge: colors.line,
-            glyphColor: colors.ink,
-            onPressed: edit,
-          ),
-          const SizedBox(width: _sheetActionGap - 2 * _sheetActionReach),
-        ],
-        _SheetEntryAction(
-          key: daySheetDeleteKeyFor(entryId),
-          glyph: IconStickerGlyph.trash,
-          label: logActionsDeleteLabel,
-          fill: colors.panelTop,
-          edge: _dangerInk(colors),
-          glyphColor: _dangerInk(colors),
-          onPressed: onDelete,
-        ),
-      ],
-    );
-  }
-}
-
-Color _dangerInk(FieldNotesColors colors) =>
-    StickerButtonVariant.danger.inkOn(StickerGround.page, colors);
-
-class _SheetEntryAction extends StatelessWidget {
-  const _SheetEntryAction({
-    super.key,
-    required this.glyph,
-    required this.label,
-    required this.fill,
-    required this.edge,
-    required this.glyphColor,
-    required this.onPressed,
-  });
-
-  final IconStickerGlyph glyph;
-  final String label;
-  final Color fill;
-  final Color edge;
-  final Color glyphColor;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Pressable(
-      label: label,
-      onPressed: onPressed,
-      borderRadius: _sheetActionRadius,
-      paintsHover: false,
-      builder: (BuildContext context, bool hovered) => SizedBox.square(
-        dimension: _sheetActionTarget,
-        child: Center(
-          child: HoverFill(
-            hovered: hovered,
-            borderRadius: _sheetActionRadius,
-            child: Container(
-              width: _sheetActionExtent,
-              height: _sheetActionExtent,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: fill,
-                border: Border.all(color: edge, width: _sheetActionBorderWidth),
-                borderRadius: _sheetActionRadius,
-              ),
-              child: IconStickerGlyphIcon(
-                glyph: glyph,
-                color: glyphColor,
-                size: _sheetActionGlyph,
-              ),
-            ),
-          ),
         ),
       ),
     );

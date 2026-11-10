@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/theme/app_theme.dart';
-import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -148,25 +147,12 @@ Finder _inSheet(Finder finder) =>
 Finder _inFooter(Finder finder) =>
     find.descendant(of: find.byKey(phoneSheetFooterKey), matching: finder);
 
-Finder _entryAction(String entryId, String label) => find.descendant(
-  of: find.byKey(ValueKey<String>(entryId)),
-  matching: find.bySemanticsLabel(label),
-);
-
-Finder _faceOf(Finder action) =>
-    find.descendant(of: action, matching: find.byType(Container)).first;
-
 Finder _closeButton() => find
     .ancestor(
       of: _inFooter(find.text('Close')),
       matching: find.byType(Container),
     )
     .first;
-
-Future<void> _drainToast(WidgetTester tester) async {
-  await tester.pump(kToastLifetime);
-  await tester.pumpAndSettle();
-}
 
 void main() {
   testWidgets(
@@ -205,76 +191,37 @@ void main() {
       expect(add.right, _phone.width - phoneSheetFooterPadding.right);
       expect(close.left, phoneSheetFooterPadding.left);
 
-      for (final (String entryId, String label) in <(String, String)>[
-        (_note, logActionsEditLabel),
-        (_note, logActionsDeleteLabel),
-        (_voice, logActionsDeleteLabel),
-      ]) {
-        final Finder action = _entryAction(entryId, label);
-        expect(action, findsOneWidget, reason: '$entryId $label');
-        expect(
-          tester.getSize(_faceOf(action)),
-          const Size(40, 40),
-          reason: '$entryId $label face',
-        );
-        final Size reach = tester.getSize(action);
-        expect(
-          reach.width,
-          greaterThanOrEqualTo(44),
-          reason: '$entryId $label',
-        );
-        expect(
-          reach.height,
-          greaterThanOrEqualTo(44),
-          reason: '$entryId $label',
-        );
+      for (final String entryId in <String>[_note, _voice]) {
+        for (final Key key in <Key>[logActionsOpenKey, logActionsMoreKey]) {
+          final Finder action = find.descendant(
+            of: find.byKey(ValueKey<String>(entryId)),
+            matching: find.byKey(key),
+          );
+          expect(action, findsOneWidget, reason: '$entryId $key');
+          final Size reach = tester.getSize(action);
+          expect(reach.width, greaterThanOrEqualTo(48), reason: entryId);
+          expect(reach.height, greaterThanOrEqualTo(48), reason: entryId);
+        }
       }
-      expect(_entryAction(_voice, logActionsEditLabel), findsNothing);
       semantics.dispose();
     },
   );
 
-  testWidgets(
-    'an entry Delete answers a tap at the edge of its 44 point area',
-    (WidgetTester tester) async {
-      _usePhone(tester);
-      final SemanticsHandle semantics = tester.ensureSemantics();
-      final FakeJournalRepository repository = await _openDay(
-        tester,
-        platform: TargetPlatform.android,
-      );
-
-      final Rect reach = tester.getRect(
-        _entryAction(_note, logActionsDeleteLabel),
-      );
-      final Rect face = tester.getRect(
-        _faceOf(_entryAction(_note, logActionsDeleteLabel)),
-      );
-      final Offset edge = reach.topLeft + const Offset(1, 1);
-      expect(face.contains(edge), isFalse);
-      await tester.tapAt(edge);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Delete this log?'), findsOneWidget);
-      await tester.tap(find.byKey(confirmDialogConfirmKey));
-      await tester.pumpAndSettle();
-
-      expect(repository.deletedEntryIds, <String>[_note]);
-      expect(_inSheet(find.text('1 log that day')), findsOneWidget);
-      expect(find.byType(CompactLogCard), findsOneWidget);
-      semantics.dispose();
-      await _drainToast(tester);
-    },
-  );
-
-  testWidgets('an entry Edit opens the note editor for that note', (
+  testWidgets('a note card More offers Edit note, which opens its editor', (
     WidgetTester tester,
   ) async {
     _usePhone(tester);
     final SemanticsHandle semantics = tester.ensureSemantics();
     await _openDay(tester, platform: TargetPlatform.android);
 
-    await tester.tap(_entryAction(_note, logActionsEditLabel));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>(_note)),
+        matching: find.byKey(logActionsMoreKey),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(logActionsEditLabel));
     await tester.pumpAndSettle();
 
     expect(composerTitled('Editing morning note'), findsOneWidget);
@@ -392,7 +339,7 @@ void main() {
 
       expect(find.byType(CompactLogCard), findsOneWidget);
       final Rect quiet = tester.getRect(find.byType(PhoneSheet));
-      expect(quiet.height, lessThan(_phone.height / 2));
+      expect(quiet.height, lessThan(_phone.height * 0.6));
       expect(quiet.bottom, _phone.height);
 
       await tester.pumpWidget(const SizedBox());

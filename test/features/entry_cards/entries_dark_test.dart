@@ -76,7 +76,7 @@ void main() {
   testWidgets('compact log card draws its dark colours', (
     WidgetTester tester,
   ) async {
-    final Entry entry = _note(_longNote());
+    final Entry entry = _note('# Peonies\n\n${_longNote()}');
     for (final CompactLogDensity density in CompactLogDensity.values) {
       await pumpThemed(
         tester,
@@ -112,9 +112,9 @@ void main() {
       expect(card.boxShadow!.single.color, _darkCardShadow, reason: '$density');
       expect(card.boxShadow!.single.blurRadius, 0, reason: '$density');
       expect(
-        _textColour(tester, logPreviewOf(entry).lead),
+        _textColour(tester, logPreviewOf(entry).title),
         _darkInk,
-        reason: '$density body text',
+        reason: '$density title',
       );
     }
   });

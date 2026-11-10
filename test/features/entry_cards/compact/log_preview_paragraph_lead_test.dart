@@ -16,8 +16,8 @@ Entry _textEntry(String id, String textContent) {
 }
 
 void main() {
-  group('logPreviewOf card lead paragraph boundary', () {
-    test('a lead without a full stop ends at its paragraph', () {
+  group('logPreviewOf opening paragraph', () {
+    test('a paragraph without a full stop is never promoted to a title', () {
       final Entry entry = _textEntry(
         'e1',
         'Photos from the beach\n\nThe tide was out and the sand was warm.',
@@ -25,8 +25,11 @@ void main() {
 
       final LogPreview preview = logPreviewOf(entry);
 
-      expect(preview.lead, 'Photos from the beach');
-      expect(preview.snippet, 'The tide was out and the sand was warm.');
+      expect(preview.title, isEmpty);
+      expect(
+        preview.snippet,
+        'Photos from the beach The tide was out and the sand was warm.',
+      );
     });
   });
 }

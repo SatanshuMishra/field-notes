@@ -53,6 +53,7 @@ Entry _entry({
   required String id,
   required EntryType type,
   required int hour,
+  String? title,
   String? textContent,
   String? mediaId,
   int? durationMs,
@@ -61,6 +62,7 @@ Entry _entry({
     id: id,
     dayId: 'day-1',
     type: type,
+    title: title,
     textContent: textContent,
     mediaId: mediaId,
     durationMs: durationMs,
@@ -87,6 +89,7 @@ List<Entry> _notes() {
       id: 'note-3',
       type: EntryType.text,
       hour: 19,
+      title: 'Window seat',
       textContent: 'Read by the window.',
     ),
   ];
@@ -226,6 +229,11 @@ Finder _inPane(Finder matching) =>
 Finder _inMediaPane(Finder matching) =>
     find.descendant(of: find.byKey(dayMediaPaneKey), matching: matching);
 
+String _readingId(WidgetTester tester) => tester
+    .widget<NoteReadingBody>(_inPane(find.byType(NoteReadingBody)))
+    .entry
+    .id;
+
 Finder _card(String id) => find.byWidgetPredicate(
   (Widget widget) => widget is CompactLogCard && widget.entry.id == id,
 );
@@ -351,7 +359,7 @@ void main() {
 
     await _tapCard(tester, 'note-2');
 
-    expect(_inPane(find.text('Afternoon note')), findsOneWidget);
+    expect(_inPane(find.text('Afternoon note')), findsNothing);
     final NoteReadingBody body = tester.widget<NoteReadingBody>(
       _inPane(find.byType(NoteReadingBody)),
     );
@@ -383,7 +391,8 @@ void main() {
     await tester.tap(_inPane(find.byKey(logViewerLaterKey)));
     await tester.pumpAndSettle();
 
-    expect(_inPane(find.text('Evening note')), findsOneWidget);
+    expect(_inPane(find.text('Window seat')), findsOneWidget);
+    expect(_inPane(find.text('Evening note')), findsNothing);
     expect(_inPane(find.text('3 of 3')), findsOneWidget);
     expect(_outlinesOf(tester, 'note-3'), hasLength(1));
     expect(_outlinesOf(tester, 'note-2'), isEmpty);
@@ -432,7 +441,7 @@ void main() {
   testWidgets('Esc unwinds photo, note, day', (WidgetTester tester) async {
     await _openDay(tester, entries: _notes(), mood: Mood.calm);
     await _tapCard(tester, 'note-2');
-    expect(_inPane(find.text('Afternoon note')), findsOneWidget);
+    expect(_readingId(tester), 'note-2');
 
     final RenderNoteView reader = tester.renderObject<RenderNoteView>(
       _inPane(find.byType(NoteViewBody)),
@@ -451,7 +460,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(PhotoViewer), findsNothing);
-    expect(_inPane(find.text('Afternoon note')), findsOneWidget);
+    expect(_readingId(tester), 'note-2');
     expect(find.byKey(dayDetailPanelKey), findsOneWidget);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
@@ -479,14 +488,14 @@ void main() {
 
     await _tapCard(tester, 'note-1');
 
-    expect(_inPane(find.text('Morning note')), findsOneWidget);
+    expect(_readingId(tester), 'note-1');
     expect(paused, <Object>[inline]);
 
     playbackFocus.claim(inline, () => paused.add(inline));
     await tester.tap(_inPane(find.byKey(logViewerLaterKey)));
     await tester.pumpAndSettle();
 
-    expect(_inPane(find.text('Afternoon note')), findsOneWidget);
+    expect(_readingId(tester), 'note-2');
     expect(paused, <Object>[inline, inline]);
   }, variant: _mac);
 }

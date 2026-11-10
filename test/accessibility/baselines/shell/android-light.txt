@@ -1,6 +1,28 @@
 flutter-text-contrast | a11-calendar-next-month@2x | This month | explore / October 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 5.08:1 by token arithmetic
+missing-role | a3-card-actions | Dismiss | <root> # Flutter's own control
+missing-role | a3-card-actions@2x | Dismiss | <root> # Flutter's own control
 missing-role | a5-calendar-picker | Dismiss month picker | <root> # Flutter's own control
 missing-role | a5-calendar-picker@2x | Dismiss month picker | <root> # Flutter's own control
+text-contrast | a3-card-actions | 0:00 / 0:42 | <root> # measured: 6.32:1 by token arithmetic
+text-contrast | a3-card-actions | 1 photo | <root> # measured: 6.32:1 by token arithmetic
+text-contrast | a3-card-actions | 1x | Playback speed # measured: 6.32:1 by token arithmetic
+text-contrast | a3-card-actions | 9:30 AM · morning | <root> # measured: 6.33:1 by token arithmetic
+text-contrast | a3-card-actions | 9:30 AM · morning | <root> #2 # measured: 6.33:1 by token arithmetic
+text-contrast | a3-card-actions | 9:30 AM · morning | <root> #3 # measured: 6.33:1 by token arithmetic
+text-contrast | a3-card-actions | 9:30 AM · morning | <root> #4 # measured: 6.33:1 by token arithmetic
+text-contrast | a3-card-actions | NOTE | <root> # measured: 5.46:1 by token arithmetic
+text-contrast | a3-card-actions | NOTE | <root> #2 # measured: 5.46:1 by token arithmetic
+text-contrast | a3-card-actions | NOTE | <root> #3 # measured: 5.46:1 by token arithmetic
+text-contrast | a3-card-actions | Read › | <root> # measured: 6.32:1 by token arithmetic
+text-contrast | a3-card-actions | Read › | <root> #2 # measured: 6.32:1 by token arithmetic
+text-contrast | a3-card-actions | The peonies finally opened along the back fence. I stood ... | 9:30 AM · morning / NOTE / The peonies finally opened along the back fence. I stood there with my coffee for a long while and watched the bees work the blooms, then walked the long way round to the harbour to see the ferry come in under a low grey… / Read › # measured: 6.33:1 by token arithmetic
+text-contrast | a3-card-actions | VOICE | <root> # measured: 5.46:1 by token arithmetic
+text-contrast | a3-card-actions | morning walk | <root> # measured: 9.41:1 by token arithmetic
+text-contrast | a3-card-actions@2x | 1 photo | <root> # measured: 6.32:1 by token arithmetic
+text-contrast | a3-card-actions@2x | NOTE | <root> # measured: 5.46:1 by token arithmetic
+text-contrast | a3-card-actions@2x | NOTE | <root> #2 # measured: 5.46:1 by token arithmetic
+text-contrast | a3-card-actions@2x | NOTE | <root> #3 # measured: 5.46:1 by token arithmetic
+text-contrast | a3-card-actions@2x | Read › | <root> # measured: 6.32:1 by token arithmetic
 text-contrast | a5-calendar-picker | 1 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
 text-contrast | a5-calendar-picker | 10 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic
 text-contrast | a5-calendar-picker | 11 | explore / September 2026 / 3 blooms this month / Sunday / Monday / Tuesday / Wednesday / Thursday / Friday / Saturday # measured: 4.51:1 by token arithmetic

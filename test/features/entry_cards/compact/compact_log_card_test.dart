@@ -151,10 +151,10 @@ void main() {
     await tester.pump();
 
     expect(find.byType(NoteReaderView), findsNothing);
-    expect(find.text(_longLead), findsOneWidget);
+    expect(find.textContaining(_longLead), findsOneWidget);
   });
 
-  testWidgets('a long note card shows its lead, snippet, thumbnail and Read', (
+  testWidgets('a long note card shows its opening, thumbnail and Read', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -171,7 +171,8 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text(_longLead), findsOneWidget);
+    expect(find.byKey(compactLogTitleKey), findsNothing);
+    expect(find.textContaining(_longLead), findsOneWidget);
     expect(find.textContaining('I stood there with my coffee'), findsOneWidget);
     expect(find.byKey(compactLogThumbnailKey), findsOneWidget);
     expect(find.text('Read ›'), findsOneWidget);
@@ -227,7 +228,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.text(_longLead));
+    await tester.tap(find.textContaining(_longLead));
     await tester.pump();
 
     expect(opens, 1);
@@ -305,7 +306,7 @@ void main() {
     expect(opens, 0);
   });
 
-  testWidgets('a video card shows its poster, its part of day and Watch', (
+  testWidgets('a video card shows its poster and Watch and invents no title', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -327,7 +328,8 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('A video from the night'), findsOneWidget);
+    expect(find.textContaining('A video from'), findsNothing);
+    expect(find.byKey(compactLogTitleKey), findsNothing);
     expect(find.text('Watch ›'), findsOneWidget);
     expect(find.text('1:23'), findsOneWidget);
     expect(find.byKey(compactLogThumbnailKey), findsOneWidget);

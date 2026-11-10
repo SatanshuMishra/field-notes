@@ -306,6 +306,7 @@ void main() {
               );
               continue;
             }
+            await tester.pump();
             final Set<Rect> focused = _paintedRects(tester);
             final FocusNode? node = FocusManager.instance.primaryFocus;
             node?.unfocus();

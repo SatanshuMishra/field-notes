@@ -22,7 +22,7 @@ Entry _textEntry(String id, String textContent) {
 final class _Expected {
   const _Expected({
     required this.source,
-    required this.lead,
+    required this.title,
     required this.snippet,
     required this.isLong,
     required this.photoCount,
@@ -31,7 +31,7 @@ final class _Expected {
   });
 
   final String source;
-  final String lead;
+  final String title;
   final String snippet;
   final bool isLong;
   final int photoCount;
@@ -42,7 +42,7 @@ final class _Expected {
 void _expectPreview(_Expected expected) {
   final LogPreview preview = logPreviewOf(_textEntry('e1', expected.source));
   final String reason = expected.source;
-  expect(preview.lead, expected.lead, reason: reason);
+  expect(preview.title, expected.title, reason: reason);
   expect(preview.snippet, expected.snippet, reason: reason);
   expect(preview.isLong, expected.isLong, reason: reason);
   expect(preview.photoCount, expected.photoCount, reason: reason);
@@ -82,7 +82,7 @@ void main() {
         const List<_Expected> unchanged = <_Expected>[
           _Expected(
             source: '# Harbour day\n\nThe fog lifted.',
-            lead: 'Harbour day',
+            title: 'Harbour day',
             snippet: 'The fog lifted.',
             isLong: false,
             photoCount: 0,
@@ -91,8 +91,8 @@ void main() {
           ),
           _Expected(
             source: 'Packed the tent. Left at nine.\n\n- stove\n- matches',
-            lead: 'Packed the tent.',
-            snippet: 'Left at nine. stove matches',
+            title: '',
+            snippet: 'Packed the tent. Left at nine. stove matches',
             isLong: false,
             photoCount: 0,
             firstPhotoReference: null,
@@ -100,8 +100,8 @@ void main() {
           ),
           _Expected(
             source: '> The fog lifted.\n> We sailed at noon.',
-            lead: 'The fog lifted.',
-            snippet: 'We sailed at noon.',
+            title: '',
+            snippet: 'The fog lifted. We sailed at noon.',
             isLong: false,
             photoCount: 0,
             firstPhotoReference: null,
@@ -109,8 +109,8 @@ void main() {
           ),
           _Expected(
             source: 'Hi.\n\n![Low tide](photo/7f3ac91b2d4e "left small")',
-            lead: 'Hi.',
-            snippet: '',
+            title: '',
+            snippet: 'Hi.',
             isLong: true,
             photoCount: 1,
             firstPhotoReference: '7f3ac91b2d4e',
@@ -118,8 +118,8 @@ void main() {
           ),
           _Expected(
             source: '![Low tide](photo/7f3ac91b2d4e)',
-            lead: 'Low tide',
-            snippet: '',
+            title: '',
+            snippet: 'Low tide',
             isLong: true,
             photoCount: 1,
             firstPhotoReference: '7f3ac91b2d4e',
@@ -129,7 +129,7 @@ void main() {
         const List<_Expected> followingTheTree = <_Expected>[
           _Expected(
             source: '# Title #\n\nBody.',
-            lead: 'Title',
+            title: 'Title',
             snippet: 'Body.',
             isLong: false,
             photoCount: 0,
@@ -138,7 +138,7 @@ void main() {
           ),
           _Expected(
             source: '#### Tide table\n\nLow at noon.',
-            lead: 'Tide table',
+            title: 'Tide table',
             snippet: 'Low at noon.',
             isLong: false,
             photoCount: 0,
@@ -147,8 +147,8 @@ void main() {
           ),
           _Expected(
             source: '- [ ] pack the tent',
-            lead: 'pack the tent',
-            snippet: '',
+            title: '',
+            snippet: 'pack the tent',
             isLong: false,
             photoCount: 0,
             firstPhotoReference: null,
@@ -156,8 +156,8 @@ void main() {
           ),
           _Expected(
             source: '<https://harbour.example> was the booking page.',
-            lead: 'https://harbour.example was the booking page.',
-            snippet: '',
+            title: '',
+            snippet: 'https://harbour.example was the booking page.',
             isLong: false,
             photoCount: 0,
             firstPhotoReference: null,
@@ -165,8 +165,8 @@ void main() {
           ),
           _Expected(
             source: '- a\n  ![p](photo/abc123abc123)',
-            lead: 'a !p',
-            snippet: '',
+            title: '',
+            snippet: 'a !p',
             isLong: false,
             photoCount: 0,
             firstPhotoReference: null,
@@ -182,14 +182,15 @@ void main() {
       },
     );
 
-    test('a table leads with its cells, or with its pipes when tables are off',
+    test('a table reads as its cells, or as its pipes when tables are off',
         () {
       final LogPreview preview = logPreviewOf(
         _textEntry('e2', '| Item | Qty |\n| - | - |\n| tent | 1 |'),
       );
 
+      expect(preview.title, isEmpty);
       expect(
-        preview.lead,
+        preview.snippet,
         tablesEnabled
             ? 'Item Qty tent 1'
             : '| Item | Qty | | - | - | | tent | 1 |',

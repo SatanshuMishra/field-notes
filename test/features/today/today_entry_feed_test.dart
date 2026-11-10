@@ -6,6 +6,7 @@ import 'package:field_notes/domain/notes/markdown/markdown.dart'
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/entry_cards/transport/transport.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/note_engine/note_engine.dart'
@@ -105,7 +106,7 @@ List<Override> _videoEntryOverrides({
 }
 
 void main() {
-  testWidgets('a revealed feed pill lies inside every reading-order frame',
+  testWidgets('the feed card actions lie inside every reading-order frame',
       (WidgetTester tester) async {
     final SemanticsHandle semantics = tester.ensureSemantics();
     await pumpToday(
@@ -114,11 +115,15 @@ void main() {
       overrides: _twoNotes(),
     );
 
+    expectInsideEveryReadingFrame(tester, logActionsOpenLabel);
+    expectInsideEveryReadingFrame(tester, logActionsMoreLabel);
     for (int card = 0; card < 2; card += 1) {
       await tester.longPress(find.byType(CompactLogCard).at(card));
       await tester.pumpAndSettle();
       expectInsideEveryReadingFrame(tester, logActionsEditLabel);
-      expectInsideEveryReadingFrame(tester, logActionsDeleteLabel);
+      expectInsideEveryReadingFrame(tester, logMenuDeleteLabel);
+      await tester.tapAt(const Offset(4, 4));
+      await tester.pumpAndSettle();
     }
     semantics.dispose();
   });
@@ -182,6 +187,7 @@ void main() {
     );
     expect(tester.getSize(find.byKey(compactLogThumbnailKey)), const Size(64, 64));
     expect(find.text('morning walk'), findsOneWidget);
+    expect(find.byKey(compactLogTitleKey), findsNothing);
     expect(find.text('1 photo'), findsOneWidget);
   });
 
@@ -206,11 +212,11 @@ void main() {
           matching: find.byType(NoteViewBody),
         ),
       ).width,
-      970,
+      973,
     );
   });
 
-  testWidgets('a video card fills a desktop pane',
+  testWidgets('a video card fills a desktop pane with its poster and Transport',
       (WidgetTester tester) async {
     final LruVideoSlots slots = LruVideoSlots(cap: 1);
     addTearDown(slots.dispose);
@@ -228,13 +234,13 @@ void main() {
     await tester.pump();
 
     expect(find.byType(VideoBody), findsNothing);
-    expect(
-      tester.getSize(find.byKey(compactLogThumbnailKey)),
-      const Size(104, 64),
-    );
-    expect(find.text('Watch ›'), findsOneWidget);
+    expect(find.byType(Transport), findsOneWidget);
+    final Size poster = tester.getSize(find.byKey(compactLogThumbnailKey));
+    expect(poster.width, 216);
+    expect(poster.height, moreOrLessEquals(216 * 9 / 16, epsilon: 0.01));
+    expect(find.text('Watch ›'), findsNothing);
     expect(tester.getSize(find.byType(CompactLogCard)).width, 1000);
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('lets the feed card fill a phone pane edge to edge',
       (WidgetTester tester) async {
@@ -250,7 +256,7 @@ void main() {
     );
 
     expect(tester.getSize(find.byType(CompactLogCard)).width, 420);
-    expect(tester.getSize(find.byType(NoteReaderView)).width, 390);
+    expect(tester.getSize(find.byType(NoteReaderView)).width, 393);
   });
 
   testWidgets('renders an empty state when today has no entries',

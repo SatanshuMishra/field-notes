@@ -16,7 +16,7 @@ Entry _textEntry(String textContent) {
 }
 
 void main() {
-  test('a title followed by one line break leads alone', () {
+  test('a first line followed by a line break is not a title', () {
     final LogPreview preview = logPreviewOf(
       _textEntry(
         'Photos from the beach\n'
@@ -25,10 +25,11 @@ void main() {
       ),
     );
 
-    expect(preview.lead, 'Photos from the beach');
+    expect(preview.title, isEmpty);
     expect(
       preview.snippet,
-      'The tide was out and the sand was warm. We found shells by the rocks.',
+      'Photos from the beach The tide was out and the sand was warm. '
+      'We found shells by the rocks.',
     );
   });
 }

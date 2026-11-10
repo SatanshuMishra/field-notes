@@ -59,19 +59,71 @@ void main() {
       expect(preview.isLong, isFalse);
     });
 
-    test('a long note leads with its first sentence cut at 72 characters', () {
-      final String firstSentence = '${_words(99)}.';
-      const String secondSentence = 'Second thoughts arrived after breakfast.';
+    test(
+      'a note with no heading has no title and keeps its first sentence',
+      () {
+        final String firstSentence = '${_words(99)}.';
+        const String secondSentence =
+            'Second thoughts arrived after breakfast.';
+        final Entry entry = _textEntry(
+          id: 'e2',
+          textContent: '$firstSentence $secondSentence',
+        );
+
+        final LogPreview preview = logPreviewOf(entry);
+
+        expect(preview.title, isEmpty);
+        expect(preview.snippet, '$firstSentence $secondSentence');
+      },
+    );
+
+    test('a long title is cut at 72 characters', () {
       final Entry entry = _textEntry(
-        id: 'e2',
-        textContent: '$firstSentence $secondSentence',
+        id: 'e2b',
+        textContent: '# ${_words(99)}\n\nThe body.',
       );
 
       final LogPreview preview = logPreviewOf(entry);
 
-      expect(preview.lead.length, lessThanOrEqualTo(73));
-      expect(preview.lead, endsWith('…'));
-      expect(preview.snippet, startsWith('Second thoughts'));
+      expect(preview.title.length, lessThanOrEqualTo(73));
+      expect(preview.title, endsWith('…'));
+      expect(preview.snippet, 'The body.');
+    });
+
+    test('a saved title stands above the whole note, heading included', () {
+      const String paragraph = 'The garden was quiet this morning.';
+      final int at = _createdAt(hour: 9, minute: 0);
+      final Entry entry = Entry(
+        id: 'e2c',
+        dayId: 'd1',
+        type: EntryType.text,
+        title: 'Saved name',
+        textContent: '# Lorem ipsum\n\n$paragraph',
+        createdAt: at,
+        updatedAt: at,
+      );
+
+      final LogPreview preview = logPreviewOf(entry);
+
+      expect(preview.title, 'Saved name');
+      expect(preview.snippet, 'Lorem ipsum $paragraph');
+    });
+
+    test('voice and video logs carry only a title they were given', () {
+      final int at = _createdAt(hour: 21, minute: 0);
+      Entry media(EntryType type, String? title) => Entry(
+        id: 'm-$type-$title',
+        dayId: 'd1',
+        type: type,
+        title: title,
+        createdAt: at,
+        updatedAt: at,
+      );
+
+      expect(logPreviewOf(media(EntryType.video, null)).title, isEmpty);
+      expect(logPreviewOf(media(EntryType.voice, '   ')).title, isEmpty);
+      expect(logPreviewOf(media(EntryType.video, ' Pier ')).title, 'Pier');
+      expect(logPreviewOf(media(EntryType.voice, 'Walk')).title, 'Walk');
     });
 
     test('a note with a photo is long however short its text', () {
@@ -98,15 +150,15 @@ void main() {
 
       final LogPreview preview = logPreviewOf(entry);
 
-      expect(preview.lead, 'Lorem ipsum');
+      expect(preview.title, 'Lorem ipsum');
       expect(preview.snippet, paragraph);
     });
 
-    test(
-        'photo captions never reach the lead, the snippet or the word count',
-        () {
-      final String caption =
-          List<String>.generate(80, (int i) => 'caption$i').join(' ');
+    test('photo captions never reach the title, the snippet or the word count', () {
+      final String caption = List<String>.generate(
+        80,
+        (int i) => 'caption$i',
+      ).join(' ');
       const String reference = '2b8e04d9c1a7';
       final Entry entry = _textEntry(
         id: 'e5',
@@ -116,14 +168,16 @@ void main() {
 
       final LogPreview preview = logPreviewOf(entry);
 
-      expect(preview.lead, isNot(contains('caption')));
+      expect(preview.title, isNot(contains('caption')));
       expect(preview.snippet, isNot(contains('caption')));
       expect(preview.meta, isNot(contains('min read')));
     });
 
     test('meta joins read time, photo count and video duration', () {
-      final String words =
-          List<String>.generate(400, (int i) => 'w$i').join(' ');
+      final String words = List<String>.generate(
+        400,
+        (int i) => 'w$i',
+      ).join(' ');
       const String ref1 = '7f3ac91b2d4e';
       const String ref2 = '2b8e04d9c1a7';
       final Entry note = _textEntry(
@@ -144,22 +198,6 @@ void main() {
 
       expect(logPreviewOf(note).meta, '2 min read · 2 photos');
       expect(logPreviewOf(video).meta, '1:38');
-    });
-
-    test('the heading names the part of day and the kind of log', () {
-      final Entry note =
-          _textEntry(id: 'e8', textContent: 'Hi.', hour: 14, minute: 30);
-      final int at = _createdAt(hour: 18, minute: 5);
-      final Entry voice = Entry(
-        id: 'e9',
-        dayId: 'd1',
-        type: EntryType.voice,
-        createdAt: at,
-        updatedAt: at,
-      );
-
-      expect(logPreviewOf(note).heading, 'Afternoon note');
-      expect(logPreviewOf(voice).heading, 'Evening voice log');
     });
   });
 

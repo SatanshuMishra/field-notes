@@ -113,6 +113,12 @@ const List<_AllowedSite> _allowedSites = <_AllowedSite>[
     'swallow',
   ),
   _AllowedSite(
+    'lib/features/entry_cards/compact/compact_log_card.dart',
+    'GestureDetector',
+    'swallow',
+    needle: '_absorbGesture',
+  ),
+  _AllowedSite(
     'lib/features/onboarding/onboarding_frame.dart',
     'Listener',
     'swallow',

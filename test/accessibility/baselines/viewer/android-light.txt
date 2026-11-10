@@ -1,6 +1,3 @@
-flutter-text-contrast | d16-day-past-mood | 9:30 AM · morning · note | <root> # measured: 7.42:1 by token arithmetic
-flutter-text-contrast | d7-day-with-entries | 2:30 PM · afternoon · note | <root> # measured: 7.42:1 by token arithmetic
-flutter-text-contrast | d7-day-with-entries | 9:30 AM · morning · note | <root> # measured: 7.42:1 by token arithmetic
 focus-visible | d5-reader-menu | <unlabelled> | <root> # Flutter's own control
 focus-visible | d5-reader-menu | Copy | <root> # Flutter's own control
 focus-visible | d5-reader-menu | Select all | <root> # Flutter's own control

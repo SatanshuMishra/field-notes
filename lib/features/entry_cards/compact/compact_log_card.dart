@@ -1,22 +1,41 @@
+import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:field_notes/design/feedback/feedback.dart'
+    show showTransientToast;
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
-import 'package:flutter/widgets.dart';
+import 'package:field_notes/domain/repositories/journal_repository.dart';
+import 'package:field_notes/features/today/today_providers.dart'
+    show todayVideoPlayerFactoryProvider;
+import 'package:field_notes/state/state.dart' show journalRepositoryProvider;
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show CustomSemanticsAction;
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'
+    show ProviderContainer, UncontrolledProviderScope;
 
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/widgets.dart';
 import '../../../domain/models/models.dart';
+import '../../../domain/platform/desktop_platform.dart';
 import '../../notes/render/note_photo_block.dart' show NoteMediaScope;
 import '../cards/note_body.dart';
+import '../cards/video_body.dart';
+import '../cards/video_controls_overlay.dart';
 import '../cards/voice_body.dart';
 import '../cards/voice_waveform.dart';
 import '../media/hatched_media_image.dart';
 import '../media/media_placeholders.dart';
 import '../media/media_resolver.dart';
 import '../playback/audio_playback.dart';
+import '../playback/video_playback.dart';
+import '../playback/video_slots.dart';
+import '../playback/video_slots_provider.dart';
+import '../transport/transport.dart';
 import '../util/duration_format.dart';
 import 'log_actions_pill.dart';
 import 'log_preview.dart';
@@ -26,6 +45,14 @@ enum CompactLogDensity { feed, day }
 const Key compactLogThumbnailKey = ValueKey<String>('compact-log-thumbnail');
 const Key compactLogOpenLabelKey = ValueKey<String>('compact-log-open-label');
 const Key compactLogPlayKey = ValueKey<String>('compact-log-play');
+const Key compactLogTitleKey = ValueKey<String>('compact-log-title');
+const Key compactLogTitleFieldKey = ValueKey<String>('compact-log-title-field');
+const Key compactLogPosterKey = ValueKey<String>('compact-log-poster');
+const Key compactLogVideoPlayKey = ValueKey<String>('compact-log-video-play');
+
+const String compactLogTitleFieldLabel = 'Title';
+const String compactLogRenameFailedMessage =
+    "Couldn't save that title. Please try again.";
 
 const String _photoUnavailableLabel = 'Photo unavailable';
 const String _posterUnavailableLabel = 'Poster unavailable';
@@ -35,11 +62,16 @@ const String _playLabel = 'Play';
 const double _tiltOddDegrees = -0.5;
 const double _tiltEvenDegrees = 0.4;
 const double _tiltTextProbe = 1;
-const double _stampGap = 4;
+const double _stampChipGap = 8;
+const double _titleTopGap = 1;
+const double _titleBottomGap = 3;
+const double _noteTopGap = 2;
+const double _mediaTopGap = 6;
 const double _metaLabelGap = 8;
 const double _shortNoteSize = 13.5;
 const double _voiceUnavailableHeight = 64;
 const double _hoverRise = 1;
+const int _longNoteSnippetLines = 3;
 
 const double _playToggleSize = 38;
 const double _playToggleTarget = 48;
@@ -50,7 +82,39 @@ const BorderRadius _playToggleRadius = BorderRadius.all(
 );
 const double _voiceLabelGap = 12;
 const double _voiceLabelMinWidth = 62;
-const double _posterPlayTarget = 44;
+
+const double _chipFontSize = 10;
+const double _chipLetterSpacing = 0.8;
+const EdgeInsets _chipPadding = EdgeInsets.symmetric(
+  vertical: 3,
+  horizontal: 7,
+);
+
+const double _sideBySideMinWidth = 480;
+const double _widePosterMinWidth = 640;
+const double _mediumPosterMinWidth = 540;
+const double _widePosterWidth = 216;
+const double _mediumPosterWidth = 184;
+const double _narrowPosterWidth = 152;
+const double _sideBySideGap = 16;
+const double _stackedGap = 8;
+const double _posterStageMinWidth = 320;
+const double _posterDiscExtent = 48;
+const double _posterGlyphExtent = 24;
+const double _posterDiscAlpha = 0.58;
+const double _posterBadgeAlpha = 0.66;
+const double _posterBadgeInset = 6;
+const double _posterBadgeFontSize = 11;
+const EdgeInsets _posterBadgePadding = EdgeInsets.symmetric(
+  vertical: 3,
+  horizontal: 6,
+);
+const BorderRadius _cardPosterRadius = BorderRadius.all(
+  Radius.circular(Shapes.radius10),
+);
+const BorderRadius _posterBadgeRadius = BorderRadius.all(
+  Radius.circular(Shapes.radius8),
+);
 
 const BorderRadius _cardRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusMd),
@@ -63,6 +127,8 @@ TextStyle _dayStampStyle(FieldNotesColors colors) => TextStyle(
   color: colors.sage,
 );
 
+void _absorbGesture() {}
+
 final class _DensityStyle {
   const _DensityStyle({
     required this.padding,
@@ -70,9 +136,8 @@ final class _DensityStyle {
     required this.hoverShadow,
     required this.tilts,
     required this.risesOnHover,
-    required this.leadStyle,
+    required this.titleStyle,
     required this.snippetStyle,
-    required this.snippetGap,
     required this.thumbnailExtent,
     required this.thumbnailRadius,
     required this.thumbnailGap,
@@ -82,7 +147,6 @@ final class _DensityStyle {
     required this.posterSize,
     required this.posterRadius,
     required this.playDiscExtent,
-    required this.videoTitleStyle,
   });
 
   final EdgeInsets padding;
@@ -90,9 +154,8 @@ final class _DensityStyle {
   final List<BoxShadow> hoverShadow;
   final bool tilts;
   final bool risesOnHover;
-  final TextStyle leadStyle;
+  final TextStyle titleStyle;
   final TextStyle snippetStyle;
-  final double snippetGap;
   final double thumbnailExtent;
   final BorderRadius thumbnailRadius;
   final double thumbnailGap;
@@ -102,11 +165,10 @@ final class _DensityStyle {
   final Size posterSize;
   final BorderRadius posterRadius;
   final double playDiscExtent;
-  final TextStyle videoTitleStyle;
 }
 
 _DensityStyle _feedStyle(FieldNotesColors colors) => _DensityStyle(
-  padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 15),
+  padding: const EdgeInsets.fromLTRB(15, 9, 12, 13),
   restShadow: FieldNotesShadows(colors).cardDefault,
   hoverShadow: <BoxShadow>[
     BoxShadow(
@@ -116,7 +178,7 @@ _DensityStyle _feedStyle(FieldNotesColors colors) => _DensityStyle(
   ],
   tilts: true,
   risesOnHover: false,
-  leadStyle: TextStyle(
+  titleStyle: TextStyle(
     fontFamily: TypographyTokens.serif,
     fontSize: 16.5,
     fontWeight: FontWeight.w500,
@@ -130,7 +192,6 @@ _DensityStyle _feedStyle(FieldNotesColors colors) => _DensityStyle(
     height: 1.5,
     color: colors.mutedDeep,
   ),
-  snippetGap: 4,
   thumbnailExtent: 64,
   thumbnailRadius: const BorderRadius.all(Radius.circular(10)),
   thumbnailGap: 14,
@@ -150,17 +211,10 @@ _DensityStyle _feedStyle(FieldNotesColors colors) => _DensityStyle(
   posterSize: const Size(104, 64),
   posterRadius: const BorderRadius.all(Radius.circular(10)),
   playDiscExtent: 28,
-  videoTitleStyle: TextStyle(
-    fontFamily: TypographyTokens.serif,
-    fontSize: 16,
-    fontWeight: FontWeight.w500,
-    height: 1.3,
-    color: colors.ink,
-  ),
 );
 
 _DensityStyle _dayStyle(FieldNotesColors colors) => _DensityStyle(
-  padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 13),
+  padding: const EdgeInsets.fromLTRB(13, 7, 10, 11),
   restShadow: <BoxShadow>[
     BoxShadow(color: colors.shadowTint(0x29), offset: const Offset(1.5, 1.5)),
   ],
@@ -169,7 +223,7 @@ _DensityStyle _dayStyle(FieldNotesColors colors) => _DensityStyle(
   ],
   tilts: false,
   risesOnHover: true,
-  leadStyle: TextStyle(
+  titleStyle: TextStyle(
     fontFamily: TypographyTokens.serif,
     fontSize: 15.5,
     fontWeight: FontWeight.w500,
@@ -183,7 +237,6 @@ _DensityStyle _dayStyle(FieldNotesColors colors) => _DensityStyle(
     height: 1.5,
     color: colors.mutedDeep,
   ),
-  snippetGap: 3,
   thumbnailExtent: 56,
   thumbnailRadius: const BorderRadius.all(Radius.circular(Shapes.radiusThumb)),
   thumbnailGap: 12,
@@ -203,13 +256,6 @@ _DensityStyle _dayStyle(FieldNotesColors colors) => _DensityStyle(
   posterSize: const Size(84, 52),
   posterRadius: const BorderRadius.all(Radius.circular(8)),
   playDiscExtent: 22,
-  videoTitleStyle: TextStyle(
-    fontFamily: TypographyTokens.serif,
-    fontSize: 15,
-    fontWeight: FontWeight.w500,
-    height: 1.3,
-    color: colors.ink,
-  ),
 );
 
 _DensityStyle _styleFor(CompactLogDensity density, FieldNotesColors colors) {
@@ -254,42 +300,189 @@ class CompactLogCard extends StatefulWidget {
 }
 
 class _CompactLogCardState extends State<CompactLogCard> {
+  final ValueNotifier<bool> _innerHovered = ValueNotifier<bool>(false);
+  final GlobalKey _moreKey = GlobalKey(debugLabel: 'log more');
+  bool _renaming = false;
+  ({String? title})? _pendingTitle;
+
+  late final ProviderContainer? _scope = context
+      .findAncestorWidgetOfExactType<UncontrolledProviderScope>()
+      ?.container;
+
+  @override
+  void didUpdateWidget(CompactLogCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.entry.title != widget.entry.title) {
+      _pendingTitle = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _innerHovered.dispose();
+    super.dispose();
+  }
+
+  void _setInnerHovered(bool hovered) => _innerHovered.value = hovered;
+
+  bool get _textEnlarged =>
+      MediaQuery.textScalerOf(context).scale(_tiltTextProbe) > _tiltTextProbe;
+
+  Text _boundedText(
+    String text, {
+    required TextStyle? style,
+    int lines = 1,
+    Key? key,
+  }) => Text(
+    text,
+    key: key,
+    style: style,
+    maxLines: _textEnlarged ? null : lines,
+    overflow: _textEnlarged ? null : TextOverflow.ellipsis,
+  );
+
+  String? get _savedTitle {
+    final ({String? title})? pending = _pendingTitle;
+    return pending == null ? logOwnTitle(widget.entry) : pending.title;
+  }
+
+  List<LogMenuItem> _menuItems() {
+    final VoidCallback? edit = widget.entry.type == EntryType.text
+        ? widget.onEdit
+        : null;
+    return <LogMenuItem>[
+      if (_scope != null)
+        LogMenuItem(
+          key: logActionsRenameKey,
+          label: _savedTitle == null
+              ? logActionsAddTitleLabel
+              : logActionsRenameLabel,
+          glyph: LogMenuGlyph.title,
+          onSelected: _startRename,
+        ),
+      if (edit != null)
+        LogMenuItem(
+          key: logActionsEditKey,
+          label: logActionsEditLabel,
+          glyph: LogMenuGlyph.edit,
+          onSelected: edit,
+        ),
+      LogMenuItem(
+        key: logActionsDeleteKey,
+        label: logMenuDeleteLabel,
+        glyph: LogMenuGlyph.trash,
+        danger: true,
+        onSelected: widget.onDelete,
+      ),
+    ];
+  }
+
+  void _openMore() {
+    final BuildContext? anchor = _moreKey.currentContext;
+    if (anchor != null) {
+      unawaited(showLogActionsMenu(anchor, items: _menuItems()));
+    }
+  }
+
+  void _startRename() {
+    if (mounted) {
+      setState(() => _renaming = true);
+    }
+  }
+
+  void _cancelRename() {
+    if (mounted) {
+      setState(() => _renaming = false);
+    }
+  }
+
+  Future<void> _saveTitle(String typed) async {
+    if (!mounted) {
+      return;
+    }
+    final String trimmed = typed.trim();
+    final String? title = trimmed.isEmpty ? null : trimmed;
+    final ProviderContainer? scope = _scope;
+    if (scope == null || title == _savedTitle) {
+      _cancelRename();
+      return;
+    }
+    final JournalRepository repository = scope.read(journalRepositoryProvider);
+    final BuildContext toastContext =
+        ModalRoute.of(context)?.subtreeContext ?? context;
+    setState(() {
+      _renaming = false;
+      _pendingTitle = (title: title);
+    });
+    try {
+      await repository.setEntryTitle(widget.entry.id, title);
+    } catch (error, stackTrace) {
+      debugPrint('Log rename failed: $error\n$stackTrace');
+      if (mounted) {
+        setState(() => _pendingTitle = null);
+      }
+      if (toastContext.mounted) {
+        showTransientToast(toastContext, compactLogRenameFailedMessage);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final _DensityStyle style = _styleFor(widget.density, colors);
     final LogPreview preview = logPreviewOf(widget.entry);
-    final bool textEnlarged =
-        MediaQuery.textScalerOf(context).scale(_tiltTextProbe) > _tiltTextProbe;
-    final double tilt = style.tilts && !textEnlarged
+    final double tilt = style.tilts && !_textEnlarged
         ? _tiltDegrees(widget.entry.id)
         : 0;
-    Widget lifted(bool hovered) => Transform.translate(
-      offset: Offset(0, hovered && style.risesOnHover ? -_hoverRise : 0),
-      child: StickerCard(
-        surface: colors.cardWarm,
-        borderRadius: _cardRadius,
-        shadow: hovered ? style.hoverShadow : style.restShadow,
-        padding: style.padding,
-        rotationDegrees: tilt,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            _stamp(),
-            const SizedBox(height: _stampGap),
-            _body(context, style, preview),
-          ],
+    final Widget content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        _stampRow(),
+        ..._titleLine(style, preview),
+        SizedBox(
+          height: widget.entry.type == EntryType.text
+              ? _noteTopGap
+              : _mediaTopGap,
         ),
-      ),
+        _body(context, style, preview),
+      ],
     );
-    return LogActionsReveal(
+    return LogCardFrame(
       onOpen: widget.onOpen,
-      onEdit: widget.entry.type == EntryType.text ? widget.onEdit : null,
-      onDelete: widget.onDelete,
+      onLongPress: _openMore,
+      semanticActions: <CustomSemanticsAction, VoidCallback>{
+        for (final LogMenuItem item in _menuItems())
+          CustomSemanticsAction(label: item.label): item.onSelected,
+      },
       semanticIndex: widget.semanticIndex,
       borderRadius: _cardRadius,
-      builder: (BuildContext context, bool hovered) => lifted(hovered),
+      builder: (BuildContext context, bool hovered) =>
+          ValueListenableBuilder<bool>(
+            valueListenable: _innerHovered,
+            child: content,
+            builder: (BuildContext context, bool inner, Widget? child) {
+              final bool highlighted = hovered && !inner;
+              return LogCardHighlight(
+                active: highlighted,
+                child: Transform.translate(
+                  offset: Offset(
+                    0,
+                    highlighted && style.risesOnHover ? -_hoverRise : 0,
+                  ),
+                  child: StickerCard(
+                    surface: colors.cardWarm,
+                    borderRadius: _cardRadius,
+                    shadow: highlighted ? style.hoverShadow : style.restShadow,
+                    padding: style.padding,
+                    rotationDegrees: tilt,
+                    child: child!,
+                  ),
+                ),
+              );
+            },
+          ),
     );
   }
 
@@ -301,30 +494,51 @@ class _CompactLogCardState extends State<CompactLogCard> {
     return codeUnitSum.isOdd ? _tiltOddDegrees : _tiltEvenDegrees;
   }
 
-  Widget _stamp() {
+  Widget _stampRow() {
     final String stamp = logStampFor(context, widget.entry.createdAt);
     final String type = logTypeLabelFor(widget.entry.type);
+    final Widget actions = _PlayerZone(
+      onHover: _setInnerHovered,
+      child: LogCardActions(
+        onOpen: widget.onOpen,
+        onMore: _openMore,
+        moreAnchorKey: _moreKey,
+      ),
+    );
     switch (widget.density) {
       case CompactLogDensity.feed:
         return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
-            Expanded(
-              child: Text(
-                stamp,
-                style: context.textStyles.stampAccent,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Flexible(
+                    child: _boundedText(
+                      stamp,
+                      style: context.textStyles.stampAccent,
+                    ),
+                  ),
+                  const SizedBox(width: _stampChipGap),
+                  _typeChip(type),
+                ],
               ),
             ),
-            LogActionsCorner(child: _typeChip(type)),
+            actions,
           ],
         );
       case CompactLogDensity.day:
-        return Text(
-          stamp.isEmpty ? type : '$stamp · $type',
-          style: _dayStampStyle(context.colors),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        return Row(
+          children: <Widget>[
+            Expanded(
+              child: _boundedText(
+                stamp.isEmpty ? type : '$stamp · $type',
+                style: _dayStampStyle(context.colors),
+              ),
+            ),
+            actions,
+          ],
         );
     }
   }
@@ -338,13 +552,49 @@ class _CompactLogCardState extends State<CompactLogCard> {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 7),
+        padding: _chipPadding,
         child: Text(
           type.toUpperCase(),
-          style: context.textStyles.chipMicroSans,
+          style: context.textStyles.chipMicroSans.copyWith(
+            fontSize: _chipFontSize,
+            fontWeight: FontWeight.w600,
+            letterSpacing: _chipLetterSpacing,
+          ),
         ),
       ),
     );
+  }
+
+  String _shownTitle(LogPreview preview) {
+    final ({String? title})? pending = _pendingTitle;
+    if (pending != null) {
+      return pending.title ?? '';
+    }
+    final bool shortNote =
+        widget.entry.type == EntryType.text && !preview.isLong;
+    return shortNote ? logOwnTitle(widget.entry) ?? '' : preview.title;
+  }
+
+  List<Widget> _titleLine(_DensityStyle style, LogPreview preview) {
+    if (_renaming) {
+      return <Widget>[
+        _CardTitleField(
+          initial: _savedTitle ?? '',
+          style: style.titleStyle,
+          onSubmit: _saveTitle,
+          onCancel: _cancelRename,
+        ),
+      ];
+    }
+    final String title = _shownTitle(preview);
+    if (title.isEmpty) {
+      return const <Widget>[];
+    }
+    return <Widget>[
+      const SizedBox(height: _titleTopGap),
+      _boundedText(title, key: compactLogTitleKey, style: style.titleStyle),
+      const SizedBox(height: _titleBottomGap),
+    ];
   }
 
   Widget _body(BuildContext context, _DensityStyle style, LogPreview preview) {
@@ -406,17 +656,10 @@ class _CompactLogCardState extends State<CompactLogCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  if (preview.lead.isNotEmpty)
-                    Text(preview.lead, style: style.leadStyle),
-                  if (preview.lead.isNotEmpty && preview.snippet.isNotEmpty)
-                    SizedBox(height: style.snippetGap),
-                  if (preview.snippet.isNotEmpty)
-                    Text(preview.snippet, style: style.snippetStyle),
-                ],
+              child: _boundedText(
+                preview.snippet,
+                style: style.snippetStyle,
+                lines: _longNoteSnippetLines,
               ),
             ),
             if (photo != null) ...<Widget>[
@@ -462,14 +705,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
     return Row(
       children: <Widget>[
         if (preview.meta.isNotEmpty) ...<Widget>[
-          Flexible(
-            child: Text(
-              preview.meta,
-              style: style.metaStyle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+          Flexible(child: _boundedText(preview.meta, style: style.metaStyle)),
           const SizedBox(width: _metaLabelGap),
         ],
         Text(
@@ -485,7 +721,10 @@ class _CompactLogCardState extends State<CompactLogCard> {
     final EntryAudioPlayerFactory? factory = widget.audioPlayerFactory;
     final VoidCallback? onPlay = widget.onPlay;
     if (factory == null && onPlay != null) {
-      return _staticVoice(onPlay);
+      return _PlayerZone(
+        onHover: _setInnerHovered,
+        child: _staticVoice(onPlay),
+      );
     }
     if (factory == null) {
       return const CorruptMediaPlaceholder(
@@ -493,10 +732,13 @@ class _CompactLogCardState extends State<CompactLogCard> {
         height: _voiceUnavailableHeight,
       );
     }
-    return VoiceBody(
-      entry: widget.entry,
-      resolver: widget.resolver,
-      playerFactory: factory,
+    return _PlayerZone(
+      onHover: _setInnerHovered,
+      child: VoiceBody(
+        entry: widget.entry,
+        resolver: widget.resolver,
+        playerFactory: factory,
+      ),
     );
   }
 
@@ -531,32 +773,43 @@ class _CompactLogCardState extends State<CompactLogCard> {
   }
 
   Widget _video(_DensityStyle style, LogPreview preview) {
-    final DateTime at = DateTime.fromMillisecondsSinceEpoch(
-      widget.entry.createdAt,
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            _poster(style),
-            SizedBox(width: style.thumbnailGap),
-            Expanded(
-              child: Text(
-                'A video from the ${partOfDayFor(at.hour)}',
-                style: style.videoTitleStyle,
-              ),
-            ),
-          ],
+    final VoidCallback? onPlay = widget.onPlay;
+    final ProviderContainer? scope = _scope;
+    if (onPlay == null && scope != null) {
+      return _PlayerZone(
+        onHover: _setInnerHovered,
+        child: _CardVideo(
+          entry: widget.entry,
+          resolver: widget.resolver,
+          playerFactory: scope.read(todayVideoPlayerFactoryProvider),
+          slots: scope.read(videoSlotsProvider),
         ),
-        SizedBox(height: style.metaGap),
-        _metaRow(style, preview),
+      );
+    }
+    return Row(
+      children: <Widget>[
+        if (onPlay == null)
+          _poster(style, hovered: false)
+        else
+          _PlayerZone(
+            onHover: _setInnerHovered,
+            child: Pressable(
+              key: compactLogPlayKey,
+              label: _playLabel,
+              onPressed: onPlay,
+              borderRadius: style.posterRadius,
+              paintsHover: false,
+              builder: (BuildContext context, bool hovered) =>
+                  _poster(style, hovered: hovered),
+            ),
+          ),
+        SizedBox(width: style.thumbnailGap),
+        Expanded(child: _metaRow(style, preview)),
       ],
     );
   }
 
-  Widget _poster(_DensityStyle style) {
+  Widget _poster(_DensityStyle style, {required bool hovered}) {
     final double disc = style.playDiscExtent;
     return SizedBox.fromSize(
       key: compactLogThumbnailKey,
@@ -575,15 +828,20 @@ class _CompactLogCardState extends State<CompactLogCard> {
               errorLabel: _posterUnavailableLabel,
             ),
           ),
-          _posterPlay(disc),
+          HoverFill(
+            hovered: hovered,
+            shape: HoverShape.circle,
+            borderRadius: BorderRadius.circular(disc / 2),
+            child: _posterDisc(disc),
+          ),
         ],
       ),
     );
   }
 
-  Widget _posterPlay(double disc) {
+  Widget _posterDisc(double disc) {
     final FieldNotesColors colors = context.colors;
-    final Widget face = SizedBox.square(
+    return SizedBox.square(
       dimension: disc,
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -602,29 +860,491 @@ class _CompactLogCardState extends State<CompactLogCard> {
         ),
       ),
     );
-    final VoidCallback? onPlay = widget.onPlay;
-    if (onPlay == null) {
-      return face;
+  }
+}
+
+class _PlayerZone extends StatelessWidget {
+  const _PlayerZone({required this.onHover, required this.child});
+
+  final ValueChanged<bool> onHover;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.basic,
+      onEnter: (PointerEnterEvent event) => onHover(true),
+      onExit: (PointerExitEvent event) => onHover(false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: _absorbGesture,
+        onLongPress: _absorbGesture,
+        child: child,
+      ),
+    );
+  }
+}
+
+class _CardTitleField extends StatefulWidget {
+  const _CardTitleField({
+    required this.initial,
+    required this.style,
+    required this.onSubmit,
+    required this.onCancel,
+  });
+
+  final String initial;
+  final TextStyle style;
+  final ValueChanged<String> onSubmit;
+  final VoidCallback onCancel;
+
+  @override
+  State<_CardTitleField> createState() => _CardTitleFieldState();
+}
+
+class _CardTitleFieldState extends State<_CardTitleField> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initial)
+        ..selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: widget.initial.length,
+        );
+  final FocusNode _focus = FocusNode(debugLabel: 'log title');
+  final Map<Type, Action<Intent>> _fieldKeepsKeys = <Type, Action<Intent>>{
+    ActivateIntent: DoNothingAction(consumesKey: false),
+  };
+  bool _settled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_onFocusChange);
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      if (mounted) {
+        _focus.requestFocus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _focus
+      ..removeListener(_onFocusChange)
+      ..dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (!_focus.hasFocus) {
+      _commit();
     }
-    final BorderRadius round = BorderRadius.circular(disc / 2);
-    return Pressable(
-      key: compactLogPlayKey,
-      label: _playLabel,
-      onPressed: onPlay,
-      shape: HoverShape.circle,
-      borderRadius: round,
-      paintsHover: false,
-      builder: (BuildContext context, bool hovered) => SizedBox.square(
-        dimension: math.max(disc, _posterPlayTarget),
-        child: Center(
-          child: HoverFill(
-            hovered: hovered,
-            shape: HoverShape.circle,
-            borderRadius: round,
-            child: face,
+  }
+
+  void _commit() {
+    if (_settled) {
+      return;
+    }
+    _settled = true;
+    widget.onSubmit(_controller.text);
+  }
+
+  void _cancel() {
+    if (_settled) {
+      return;
+    }
+    _settled = true;
+    widget.onCancel();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      onTap: _absorbGesture,
+      onLongPress: _absorbGesture,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: minButtonTargetOn(Theme.of(context).platform),
+        ),
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          widthFactor: 1,
+          heightFactor: 1,
+          child: CallbackShortcuts(
+            bindings: <ShortcutActivator, VoidCallback>{
+              const SingleActivator(LogicalKeyboardKey.escape): _cancel,
+            },
+            child: Actions(
+              actions: _fieldKeepsKeys,
+              child: Semantics(
+                label: compactLogTitleFieldLabel,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: TextField(
+                    key: compactLogTitleFieldKey,
+                    controller: _controller,
+                    focusNode: _focus,
+                    style: widget.style,
+                    cursorColor: colors.accentInk,
+                    maxLines: 1,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration.collapsed(
+                      hintText: logActionsAddTitleLabel,
+                      hintStyle: widget.style.copyWith(
+                        color: colors.placeholder,
+                      ),
+                    ),
+                    onSubmitted: (String text) => _commit(),
+                    onTapOutside: (PointerDownEvent event) => _commit(),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CardVideo extends StatefulWidget {
+  const _CardVideo({
+    required this.entry,
+    required this.resolver,
+    required this.playerFactory,
+    required this.slots,
+  });
+
+  final Entry entry;
+  final MediaResolver resolver;
+  final EntryVideoPlayerFactory playerFactory;
+  final VideoSlots slots;
+
+  @override
+  State<_CardVideo> createState() => _CardVideoState();
+}
+
+class _CardVideoState extends State<_CardVideo> {
+  final VideoControlsHandle _handle = VideoControlsHandle();
+  final ValueNotifier<VideoControlsState?> _controls =
+      ValueNotifier<VideoControlsState?>(null);
+  final ValueNotifier<bool> _posterHovered = ValueNotifier<bool>(false);
+  final FocusNode _posterFocus = FocusNode(
+    debugLabel: 'log video poster',
+    skipTraversal: true,
+  );
+  bool _started = false;
+  bool _playOnArrival = false;
+  Duration? _seekOnArrival;
+
+  @override
+  void initState() {
+    super.initState();
+    _handle.addListener(_onControls);
+  }
+
+  @override
+  void dispose() {
+    _handle
+      ..removeListener(_onControls)
+      ..dispose();
+    _controls.dispose();
+    _posterHovered.dispose();
+    _posterFocus.dispose();
+    super.dispose();
+  }
+
+  void _onControls() {
+    final VideoControlsState? state = _handle.state;
+    if (state == null) {
+      return;
+    }
+    _actOnArrival(state);
+    _controls.value = state;
+  }
+
+  void _actOnArrival(VideoControlsState state) {
+    final VoidCallback? start = state.onToggle;
+    if (_playOnArrival && start != null) {
+      _playOnArrival = false;
+      if (!state.isPlaying) {
+        start();
+      }
+    }
+    final Duration? target = _seekOnArrival;
+    final ValueChanged<Duration>? seek = state.onSeek;
+    if (target != null && seek != null) {
+      _seekOnArrival = null;
+      seek(target);
+    }
+  }
+
+  void _requestPlay() {
+    final VoidCallback? toggle = _handle.state?.onToggle;
+    if (toggle != null) {
+      toggle();
+      return;
+    }
+    setState(() {
+      _started = true;
+      _playOnArrival = true;
+    });
+  }
+
+  void _queueSeek(Duration target) {
+    setState(() => _seekOnArrival = target);
+    _requestPlay();
+  }
+
+  Duration? get _declaredTotal {
+    final int? declared = widget.entry.durationMs;
+    return declared == null || declared <= 0
+        ? null
+        : Duration(milliseconds: declared);
+  }
+
+  TransportValue _transportValue(VideoControlsState? state) {
+    return TransportValue(
+      position: _seekOnArrival ?? state?.position ?? Duration.zero,
+      total: state?.total ?? _declaredTotal,
+      isPlaying: state?.isPlaying ?? false,
+      onToggle: state == null
+          ? (_started ? null : _requestPlay)
+          : state.onToggle,
+      onSeek: state?.onSeek ?? _queueSeek,
+      onScrubUpdate: state?.onScrubUpdate,
+      onScrubEnd: state?.onScrubEnd,
+    );
+  }
+
+  double _sidePosterWidth(double available) {
+    if (available >= _widePosterMinWidth) {
+      return _widePosterWidth;
+    }
+    return available >= _mediumPosterMinWidth
+        ? _mediumPosterWidth
+        : _narrowPosterWidth;
+  }
+
+  Widget _cover() {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) => Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          HatchedMediaImage(
+            resolver: widget.resolver,
+            mediaId: widget.entry.thumbnailMediaId,
+            width: constraints.maxWidth,
+            height: constraints.maxHeight,
+            borderRadius: _cardPosterRadius,
+            variant: CrossHatchVariant.video,
+            errorLabel: _posterUnavailableLabel,
+          ),
+          Pressable(
+            key: compactLogPosterKey,
+            label: videoSurfacePointerLabel,
+            focusNode: _posterFocus,
+            onPressed: _requestPlay,
+            paintsHover: false,
+            borderRadius: _cardPosterRadius,
+            placement: FocusRingPlacement.edge,
+            child: const SizedBox.expand(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stage() {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double width = math.max(
+          constraints.maxWidth,
+          _posterStageMinWidth,
+        );
+        return FittedBox(
+          fit: BoxFit.contain,
+          child: SizedBox(
+            width: width,
+            height: width / defaultVideoAspectRatio,
+            child: VideoBody(
+              entry: widget.entry,
+              resolver: widget.resolver,
+              playerFactory: widget.playerFactory,
+              slots: widget.slots,
+              handle: _handle,
+              controlModel: VideoControlModel.pointer,
+              aspectRatio: defaultVideoAspectRatio,
+              controls: (BuildContext context, VideoControlsState state) =>
+                  const SizedBox.shrink(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _poster(VideoControlsState? state) {
+    return MouseRegion(
+      onEnter: (PointerEnterEvent event) => _posterHovered.value = true,
+      onExit: (PointerExitEvent event) => _posterHovered.value = false,
+      child: DecoratedBox(
+        key: compactLogThumbnailKey,
+        decoration: BoxDecoration(
+          borderRadius: _cardPosterRadius,
+          boxShadow: context.shadows.chip,
+        ),
+        child: AspectRatio(
+          aspectRatio: defaultVideoAspectRatio,
+          child: ClipRRect(
+            borderRadius: _cardPosterRadius,
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                if (_started) _stage() else _cover(),
+                IgnorePointer(
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: _posterHovered,
+                    builder:
+                        (BuildContext context, bool hovered, Widget? child) =>
+                            _PosterFace(
+                              playing: state?.isPlaying ?? false,
+                              hovered: hovered,
+                              durationMs: widget.entry.durationMs,
+                            ),
+                  ),
+                ),
+                IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: _cardPosterRadius,
+                      border: context.shadows.outline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool desktop = isDesktopPlatform(Theme.of(context).platform);
+    return ValueListenableBuilder<VideoControlsState?>(
+      valueListenable: _controls,
+      builder:
+          (BuildContext context, VideoControlsState? state, Widget? child) =>
+              LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final double available = constraints.maxWidth;
+                  final bool stacked =
+                      !desktop || available < _sideBySideMinWidth;
+                  return Flex(
+                    direction: stacked ? Axis.vertical : Axis.horizontal,
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: stacked
+                        ? CrossAxisAlignment.stretch
+                        : CrossAxisAlignment.center,
+                    children: <Widget>[
+                      SizedBox(
+                        width: stacked ? null : _sidePosterWidth(available),
+                        child: _poster(state),
+                      ),
+                      SizedBox(
+                        width: stacked ? 0 : _sideBySideGap,
+                        height: stacked ? _stackedGap : 0,
+                      ),
+                      Flexible(
+                        flex: stacked ? 0 : 1,
+                        fit: FlexFit.tight,
+                        child: Transport(
+                          kind: TransportKind.video,
+                          mode: TransportMode.card,
+                          value: _transportValue(state),
+                          mediaPath: state?.mediaPath,
+                          tuning: state?.tuning,
+                          playKey: compactLogVideoPlayKey,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+    );
+  }
+}
+
+class _PosterFace extends StatelessWidget {
+  const _PosterFace({
+    required this.playing,
+    required this.hovered,
+    required this.durationMs,
+  });
+
+  final bool playing;
+  final bool hovered;
+  final int? durationMs;
+
+  @override
+  Widget build(BuildContext context) {
+    if (playing) {
+      return const SizedBox.shrink();
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        Center(
+          child: SizedBox.square(
+            dimension: _posterDiscExtent,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: hovered
+                    ? Palette.coral
+                    : Palette.mediaBlack.withValues(alpha: _posterDiscAlpha),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: PlayPauseGlyph(
+                  playing: false,
+                  color: Palette.mediaInk,
+                  size: _posterGlyphExtent,
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (durationMs != null)
+          PositionedDirectional(
+            end: _posterBadgeInset,
+            bottom: _posterBadgeInset,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Palette.mediaBlack.withValues(alpha: _posterBadgeAlpha),
+                borderRadius: _posterBadgeRadius,
+              ),
+              child: Padding(
+                padding: _posterBadgePadding,
+                child: Text(
+                  formatMediaDuration(durationMs),
+                  style: const TextStyle(
+                    fontFamily: TypographyTokens.sans,
+                    fontSize: _posterBadgeFontSize,
+                    fontWeight: FontWeight.w600,
+                    color: Palette.mediaInk,
+                    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

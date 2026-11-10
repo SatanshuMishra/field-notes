@@ -129,7 +129,7 @@ void main() {
     await tester.pump();
     tester.semantics.customAction(
       reveal,
-      const CustomSemanticsAction(label: 'Delete entry'),
+      const CustomSemanticsAction(label: 'Delete log'),
     );
     await tester.pump();
     expect(counts.edits, 1);

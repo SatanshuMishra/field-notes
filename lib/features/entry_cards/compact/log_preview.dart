@@ -10,8 +10,9 @@ import '../../note_engine/capabilities.dart';
 import '../util/duration_format.dart';
 
 const int _maxEpochMs = 8640000000000000;
-const int _leadLimit = 72;
+const int _titleLimit = 72;
 const int _snippetLimit = 150;
+const int _untitledSnippetLimit = 222;
 const int _minWordsForReadTime = 60;
 const int _wordsPerMinute = 200;
 
@@ -51,49 +52,50 @@ String logTypeLabelFor(EntryType type) {
   }
 }
 
+String? logOwnTitle(Entry entry) {
+  final String title = entry.title?.trim() ?? '';
+  return title.isEmpty ? null : title;
+}
+
 @immutable
 final class LogPreview {
   const LogPreview({
     required this.isLong,
-    required this.lead,
+    required this.title,
     required this.snippet,
     required this.photoCount,
     required this.firstPhotoReference,
     required this.meta,
     required this.openLabel,
-    required this.heading,
   });
 
   final bool isLong;
-  final String lead;
+  final String title;
   final String snippet;
   final int photoCount;
   final String? firstPhotoReference;
   final String meta;
   final String openLabel;
-  final String heading;
 }
 
 LogPreview logPreviewOf(Entry entry) {
-  final String heading = _headingFor(entry);
   switch (entry.type) {
     case EntryType.text:
-      return _textPreview(entry, heading);
+      return _textPreview(entry);
     case EntryType.voice:
       return LogPreview(
         isLong: false,
-        lead: '',
+        title: logOwnTitle(entry) ?? '',
         snippet: '',
         photoCount: 0,
         firstPhotoReference: null,
         meta: '',
         openLabel: '',
-        heading: heading,
       );
     case EntryType.video:
       return LogPreview(
         isLong: false,
-        lead: '',
+        title: logOwnTitle(entry) ?? '',
         snippet: '',
         photoCount: 0,
         firstPhotoReference: null,
@@ -101,24 +103,11 @@ LogPreview logPreviewOf(Entry entry) {
             ? formatMediaDuration(entry.durationMs)
             : '',
         openLabel: 'Watch',
-        heading: heading,
       );
   }
 }
 
-String _headingFor(Entry entry) {
-  final DateTime at = DateTime.fromMillisecondsSinceEpoch(entry.createdAt);
-  final String part = partOfDayFor(at.hour);
-  final String capitalisedPart = part[0].toUpperCase() + part.substring(1);
-  final String kind = switch (entry.type) {
-    EntryType.text => 'note',
-    EntryType.voice => 'voice log',
-    EntryType.video => 'video',
-  };
-  return '$capitalisedPart $kind';
-}
-
-LogPreview _textPreview(Entry entry, String heading) {
+LogPreview _textPreview(Entry entry) {
   final String source = entry.textContent ?? '';
   final MdTree tree = parseNoteTree(source, tables: tablesEnabled);
   final List<NotePhoto> photos = notePhotosOf(tree);
@@ -129,31 +118,26 @@ LogPreview _textPreview(Entry entry, String heading) {
       if (segment.kind != NotePlainKind.photo && segment.text.isNotEmpty)
         segment,
   ];
-  final String fullText =
-      _collapseWhitespace(joinNotePlainSegments(significant));
-  String lead;
-  String snippet;
-  if (significant.isNotEmpty &&
-      significant.first.kind == NotePlainKind.heading) {
-    lead = _collapseWhitespace(significant.first.text);
-    snippet = _collapseWhitespace(joinNotePlainSegments(significant.skip(1)));
-  } else {
-    final int segmentBoundary = significant.isEmpty
-        ? fullText.length
-        : _collapseWhitespace(_leadSpanOf(significant.first)).length;
-    final int? sentenceEnd = _firstSentenceEnd(fullText);
-    final int leadEnd = sentenceEnd == null
-        ? segmentBoundary
-        : (sentenceEnd <= segmentBoundary ? sentenceEnd : segmentBoundary);
-    lead = fullText.substring(0, leadEnd);
-    snippet = fullText.substring(leadEnd).trim();
-  }
-  if (lead.isEmpty && firstPhoto != null) {
-    lead = firstPhoto.caption;
-  }
+  final String fullText = _collapseWhitespace(
+    joinNotePlainSegments(significant),
+  );
+  final String? ownTitle = logOwnTitle(entry);
+  final bool opensWithHeading =
+      significant.isNotEmpty && significant.first.kind == NotePlainKind.heading;
+  final bool headingIsTitle = ownTitle == null && opensWithHeading;
+  final String title =
+      ownTitle ??
+      (headingIsTitle ? _collapseWhitespace(significant.first.text) : '');
+  final String body = headingIsTitle
+      ? _collapseWhitespace(joinNotePlainSegments(significant.skip(1)))
+      : fullText;
+  final String snippet = body.isEmpty && firstPhoto != null
+      ? firstPhoto.caption
+      : body;
   final bool isLong = fullText.length > 220 || photoCount > 0;
-  final List<String> words =
-      fullText.isEmpty ? const <String>[] : fullText.split(' ');
+  final List<String> words = fullText.isEmpty
+      ? const <String>[]
+      : fullText.split(' ');
   final List<String> metaParts = <String>[];
   if (words.length > _minWordsForReadTime) {
     final int minutes = (words.length / _wordsPerMinute).round();
@@ -164,41 +148,20 @@ LogPreview _textPreview(Entry entry, String heading) {
   }
   return LogPreview(
     isLong: isLong,
-    lead: _cutTo(lead, _leadLimit),
-    snippet: _cutTo(snippet, _snippetLimit),
+    title: _cutTo(title, _titleLimit),
+    snippet: _cutTo(
+      snippet,
+      title.isEmpty ? _untitledSnippetLimit : _snippetLimit,
+    ),
     photoCount: photoCount,
     firstPhotoReference: firstPhoto?.reference,
     meta: metaParts.join(' · '),
     openLabel: 'Read',
-    heading: heading,
   );
-}
-
-String _leadSpanOf(NotePlainSegment segment) {
-  if (segment.kind != NotePlainKind.paragraph) {
-    return segment.text;
-  }
-  final String text = segment.text.trimLeft();
-  final int lineBreak = text.indexOf('\n');
-  return lineBreak == -1 ? text : text.substring(0, lineBreak);
 }
 
 String _collapseWhitespace(String text) =>
     text.replaceAll(_whitespaceRun, ' ').trim();
-
-int? _firstSentenceEnd(String text) {
-  for (int i = 0; i < text.length; i++) {
-    final String char = text[i];
-    if (char == '.' || char == '!' || char == '?') {
-      final bool endsHere =
-          i + 1 >= text.length || _whitespaceChar.hasMatch(text[i + 1]);
-      if (endsHere) {
-        return i + 1;
-      }
-    }
-  }
-  return null;
-}
 
 String _cutTo(String text, int limit) {
   if (text.length <= limit) {
@@ -206,7 +169,8 @@ String _cutTo(String text, int limit) {
   }
   final String head = text.substring(0, limit);
   final int lastWhitespace = head.lastIndexOf(_whitespaceChar);
-  final String withoutPartialWord =
-      lastWhitespace == -1 ? head : head.substring(0, lastWhitespace);
+  final String withoutPartialWord = lastWhitespace == -1
+      ? head
+      : head.substring(0, lastWhitespace);
   return '${withoutPartialWord.trim()}…';
 }
