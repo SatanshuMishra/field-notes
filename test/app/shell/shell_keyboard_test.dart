@@ -329,14 +329,11 @@ void main() {
   });
 
   testWidgets(
-    'the viewer keeps its Escape and arrow keys while its Close pill has Tab focus',
+    'the viewer keeps its Escape and arrow keys while its Close button has Tab focus',
     (WidgetTester tester) async {
       await _pumpState(tester, 'd15-viewer-middle-entry');
       _useKeyboardHighlight();
-      final Finder close = find.ancestor(
-        of: find.text('Close'),
-        matching: find.byType(FocusRing),
-      );
+      final Finder close = find.byKey(logViewerBackKey);
 
       for (
         int press = 0;

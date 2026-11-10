@@ -19,7 +19,7 @@ import 'package:field_notes/features/entry_cards/cards/note_body.dart';
 import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
-    show LogViewerPanel;
+    show LogViewerPanel, logViewerBackKey;
 import 'package:field_notes/features/log_viewer/note_reading.dart'
     show NoteReadingBody;
 import 'package:field_notes/features/today/today_providers.dart';
@@ -353,7 +353,7 @@ void main() {
     expect(_dayTitleInPanel(), findsNothing);
     expect(find.byType(DayDetailPanel), findsNothing);
 
-    await tester.tap(find.text('Back'));
+    await tester.tap(find.byKey(logViewerBackKey));
     await tester.pumpAndSettle();
 
     expect(find.byType(LogViewerPanel), findsNothing);
@@ -379,7 +379,7 @@ void main() {
     expect(find.byType(LogViewerPanel), findsNothing);
   }, variant: _macOS);
 
-  testWidgets('a scrim tap in view mode closes the day modal too', (
+  testWidgets('on macOS a scrim tap while reading closes the day modal too', (
     WidgetTester tester,
   ) async {
     await _openDay(tester, entries: _threeNotes());
@@ -398,7 +398,7 @@ void main() {
     expect(reading, findsNothing);
     expect(find.byType(DayDetailPanel, skipOffstage: false), findsNothing);
     expect(find.text('open day'), findsOneWidget);
-  }, variant: _bothLayouts);
+  }, variant: _macOS);
 
   testWidgets('deleting from a pill asks first, then deletes and toasts', (
     WidgetTester tester,

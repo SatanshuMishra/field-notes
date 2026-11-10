@@ -4,6 +4,8 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/note_photos.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
+    show ComposerDayLine;
 import 'package:field_notes/features/entry_cards/transport/transport_bar.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/log_viewer/note_reading.dart';
@@ -214,7 +216,7 @@ void main() {
     }
   });
 
-  group('phone viewers put delete in the top bar', () {
+  group('phone note viewers keep delete in More in the top bar', () {
     for (final _Viewer viewer in <_Viewer>[
       _Viewer.note,
       _Viewer.noteWithPhoto,
@@ -222,18 +224,22 @@ void main() {
       testWidgets('${viewer.name} viewer', (WidgetTester tester) async {
         await _open(tester, viewer);
 
-        final Finder delete = find.byKey(logActionsDeleteKey);
-        expect(delete, findsOneWidget);
-        expect(find.bySemanticsLabel('Delete'), findsOneWidget);
-        final Rect deleteRect = tester.getRect(delete);
+        expect(find.byKey(logActionsDeleteKey), findsNothing);
+        final Rect moreRect = tester.getRect(find.byKey(logActionsMoreKey));
         final Rect closeRect = tester.getRect(find.byKey(logViewerBackKey));
         final Rect contentRect = _rectOf(tester, find.byType(NoteReadingBody));
         final double width =
             tester.view.physicalSize.width / tester.view.devicePixelRatio;
 
-        expect(deleteRect.bottom, lessThanOrEqualTo(contentRect.top));
-        expect(deleteRect.bottom, lessThanOrEqualTo(closeRect.top));
-        expect(deleteRect.right, greaterThan(width * 0.75));
+        expect(moreRect.bottom, lessThanOrEqualTo(contentRect.top));
+        expect(moreRect.center.dy, closeTo(closeRect.center.dy, 1));
+        expect(moreRect.right, greaterThan(width * 0.75));
+
+        await tester.tap(find.byKey(logActionsMoreKey));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(logActionsDeleteKey), findsOneWidget);
+        expect(find.bySemanticsLabel(logMenuDeleteLabel), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
     }
@@ -248,27 +254,20 @@ void main() {
   });
 
   group('phone viewers keep one primary in the bottom row', () {
-    testWidgets('note viewer: edit is the one primary, close is secondary', (
-      WidgetTester tester,
-    ) async {
-      await _open(tester, _Viewer.note);
+    for (final _Viewer viewer in <_Viewer>[
+      _Viewer.note,
+      _Viewer.noteWithPhoto,
+    ]) {
+      testWidgets('${viewer.name} viewer: Close, Edit and More share the '
+          'top bar and none is filled', (WidgetTester tester) async {
+        await _open(tester, viewer);
 
-      final Finder viewerRoot = find.byType(LogViewerPanel);
-      expect(_filledInside(viewerRoot), findsOneWidget);
-      expect(_filledInside(find.byKey(logActionsEditKey)), findsOneWidget);
-      expect(_filledInside(find.byKey(logViewerBackKey)), findsNothing);
-      expect(find.bySemanticsLabel('Edit note'), findsOneWidget);
-      expect(find.bySemanticsLabel('Close'), findsOneWidget);
-    });
-
-    testWidgets('note viewer with a photo gains no second primary', (
-      WidgetTester tester,
-    ) async {
-      await _open(tester, _Viewer.noteWithPhoto);
-
-      expect(_filledInside(find.byType(LogViewerPanel)), findsOneWidget);
-      expect(_filledInside(find.byKey(logActionsEditKey)), findsOneWidget);
-    });
+        expect(_filledInside(find.byType(LogViewerPanel)), findsNothing);
+        expect(find.bySemanticsLabel('Edit note'), findsOneWidget);
+        expect(find.bySemanticsLabel('Close'), findsOneWidget);
+        expect(find.bySemanticsLabel('More'), findsOneWidget);
+      });
+    }
 
     for (final _Viewer viewer in <_Viewer>[_Viewer.voice, _Viewer.video]) {
       testWidgets('${viewer.name} viewer: play is the one primary, '
@@ -314,8 +313,10 @@ void main() {
           if (position.evaluate().isNotEmpty)
             'position': tester.getRect(position),
           if (note) ...<String, Rect>{
-            'delete': tester.getRect(find.byKey(logActionsDeleteKey)),
             'close': tester.getRect(find.byKey(logViewerBackKey)),
+            'day': tester.getRect(find.byType(ComposerDayLine)),
+            'edit': tester.getRect(find.byKey(logActionsEditKey)),
+            'more': tester.getRect(find.byKey(logActionsMoreKey)),
           } else ...<String, Rect>{
             'close': tester.getRect(find.byKey(transportDockBackKey)),
             'more': tester.getRect(find.byKey(transportDockMoreKey)),

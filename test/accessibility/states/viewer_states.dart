@@ -19,7 +19,7 @@ import 'package:field_notes/features/day_detail/show_day_detail.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
-import 'package:field_notes/features/log_viewer/note_panel_view.dart';
+import 'package:field_notes/features/log_viewer/note_reading_room.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
 import 'package:field_notes/features/entry_cards/cards/voice_waveform.dart';
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
@@ -366,11 +366,6 @@ Future<void> _pumpDock(
   await tester.pumpAndSettle();
 }
 
-final Finder _logSheet = find.descendant(
-  of: find.byType(LogViewerPanel),
-  matching: find.byType(PhoneSheet),
-);
-
 Finder _inViewer(Finder matching) =>
     find.descendant(of: find.byType(LogViewerPanel), matching: matching);
 
@@ -379,7 +374,7 @@ final Finder _daySheet = find.descendant(
   matching: find.byType(PhoneSheet),
 );
 
-final Finder _notePanel = _inViewer(find.byType(NotePanelView));
+final Finder _noteRoom = _inViewer(find.byType(NoteReadingRoom));
 
 final Finder _dayPanel = find.descendant(
   of: find.byType(DayDetailPanel),
@@ -464,6 +459,8 @@ Future<void> _pumpChangeMood(WidgetTester tester, A11yVariant variant) async {
 
 Future<void> _pumpDeleteEntry(WidgetTester tester, A11yVariant variant) async {
   await _openViewer(tester, variant, entry: _note(_plainNote));
+  await tester.tap(find.byKey(logActionsMoreKey));
+  await tester.pumpAndSettle();
   await tester.tap(find.byKey(logActionsDeleteKey));
   await tester.pumpAndSettle();
 }
@@ -522,12 +519,12 @@ final List<A11yState> viewerStates = <A11yState>[
     desktopId: 'd1-viewer-todos-sidebar',
     phone: A11yLayoutHalf(
       pump: _pumpTodos,
-      proof: <A11yProof>[A11yProof(_logSheet)],
+      proof: <A11yProof>[A11yProof(_noteRoom)],
       stateful: _todoChecks,
     ),
     desktop: A11yLayoutHalf(
       pump: _pumpTodos,
-      proof: <A11yProof>[A11yProof(_notePanel)],
+      proof: <A11yProof>[A11yProof(_noteRoom)],
       stateful: _todoChecks,
     ),
   ),
@@ -536,11 +533,11 @@ final List<A11yState> viewerStates = <A11yState>[
     desktopId: 'd2-viewer-photo-sidebar',
     phone: A11yLayoutHalf(
       pump: _pumpPhoto,
-      proof: <A11yProof>[A11yProof(_logSheet)],
+      proof: <A11yProof>[A11yProof(_noteRoom)],
     ),
     desktop: A11yLayoutHalf(
       pump: _pumpPhoto,
-      proof: <A11yProof>[A11yProof(_notePanel)],
+      proof: <A11yProof>[A11yProof(_noteRoom)],
     ),
   ),
   A11yState(
@@ -596,11 +593,11 @@ final List<A11yState> viewerStates = <A11yState>[
     desktopId: 'd5-reader-menu-sidebar',
     phone: A11yLayoutHalf(
       pump: _pumpReaderMenu,
-      proof: <A11yProof>[A11yProof(_logSheet), A11yProof(find.text('Copy'))],
+      proof: <A11yProof>[A11yProof(_noteRoom), A11yProof(find.text('Copy'))],
     ),
     desktop: A11yLayoutHalf(
       pump: _pumpReaderMenu,
-      proof: <A11yProof>[A11yProof(_notePanel), A11yProof(find.text('Copy'))],
+      proof: <A11yProof>[A11yProof(_noteRoom), A11yProof(find.text('Copy'))],
     ),
   ),
   ...a11yInBothLayouts(
@@ -609,14 +606,14 @@ final List<A11yState> viewerStates = <A11yState>[
     phone: A11yLayoutHalf(
       pump: _pumpTaskToast,
       proof: <A11yProof>[
-        A11yProof(_logSheet),
+        A11yProof(_noteRoom),
         A11yProof(find.text('Task ticked')),
       ],
     ),
     desktop: A11yLayoutHalf(
       pump: _pumpTaskToast,
       proof: <A11yProof>[
-        A11yProof(_notePanel),
+        A11yProof(_noteRoom),
         A11yProof(find.text('Task ticked')),
       ],
     ),
@@ -739,11 +736,11 @@ final List<A11yState> viewerStates = <A11yState>[
     desktopId: 'd15-viewer-middle-entry-sidebar',
     phone: A11yLayoutHalf(
       pump: _pumpMiddleEntry,
-      proof: <A11yProof>[A11yProof(_logSheet), A11yProof(find.text('2 of 3'))],
+      proof: <A11yProof>[A11yProof(_noteRoom), A11yProof(find.text('2 of 3'))],
     ),
     desktop: A11yLayoutHalf(
       pump: _pumpMiddleEntry,
-      proof: <A11yProof>[A11yProof(_notePanel), A11yProof(find.text('2 of 3'))],
+      proof: <A11yProof>[A11yProof(_noteRoom), A11yProof(find.text('2 of 3'))],
     ),
   ),
   ...a11yInBothLayouts(

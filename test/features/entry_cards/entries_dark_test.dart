@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
@@ -12,8 +13,6 @@ import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
-import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
-    show viewerTitleFieldKey;
 import 'package:field_notes/features/notes/notes_providers.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
@@ -119,7 +118,7 @@ void main() {
     }
   });
 
-  testWidgets('day detail and log viewer panels draw their dark paper', (
+  testWidgets('day detail draws dark paper and the note room its dark stage', (
     WidgetTester tester,
   ) async {
     await pumpThemed(
@@ -173,34 +172,22 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final Color? paper = platform == TargetPlatform.macOS
-          ? (tester
-                        .widget<Container>(
-                          find.descendant(
-                            of: find.byKey(logViewerPanelKey),
-                            matching: find.byKey(composerPanelKey),
-                          ),
-                        )
-                        .decoration!
-                    as BoxDecoration)
-                .color
-          : tester
-                .widget<PhoneSheet>(
-                  find.descendant(
-                    of: find.byKey(logViewerPanelKey),
-                    matching: find.byType(PhoneSheet),
-                  ),
-                )
-                .color;
-      expect(paper, _darkPaper, reason: '$platform');
-      final EditableText title = tester.widget<EditableText>(
+      final ColoredBox room = tester.widget<ColoredBox>(
         find.descendant(
-          of: find.byKey(viewerTitleFieldKey),
-          matching: find.byType(EditableText),
+          of: find.byKey(logViewerPanelKey),
+          matching: find.byKey(composerPanelKey),
         ),
       );
-      expect(title.controller.text, 'Roses at dawn', reason: '$platform');
-      expect(title.style.color, _darkInk, reason: '$platform');
+      expect(
+        room.color,
+        FieldNotesColors.dark.viewerStage,
+        reason: '$platform',
+      );
+      expect(
+        _textColour(tester, 'Roses at dawn'),
+        FieldNotesColors.dark.mediaCta,
+        reason: '$platform',
+      );
     }
   });
 }

@@ -120,7 +120,10 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Afternoon note'), findsNothing);
-    expect(find.text('Close'), findsOneWidget);
+    expect(
+      tester.widget<Pressable>(find.byKey(logViewerBackKey)).label,
+      'Close',
+    );
     expect(find.byType(DayDetailPanel), findsNothing);
   });
 

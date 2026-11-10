@@ -67,7 +67,8 @@ const Key _writingSlotKey = ValueKey<String>('composer-writing-slot');
 
 enum ComposerExit { cancel, back }
 
-const double _compactWidth = 560;
+const double composerCompactWidth = 560;
+const double composerEditorEndInset = 40;
 const double _hintsMinWidth = 640;
 const double _statusFloor = 520;
 const double _footerFloor = 360;
@@ -107,7 +108,6 @@ const double _toolbarBottomPadding = 8;
 const double _editorSidePadding = 8;
 const double _editorWideSidePadding = 16;
 const double _editorTopPadding = 12;
-const double _editorEndInset = 40;
 const double _scrollbarThickness = 9;
 const double _statusMinHeight = 34;
 const double _statusSize = 22;
@@ -484,9 +484,10 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
     final double room = constraints.maxHeight - top - bottom;
     final bool sidebar = stageLayoutOf(context) == ShellLayout.sidebar;
-    final bool compact = !sidebar || constraints.maxWidth < _compactWidth;
+    final bool compact =
+        !sidebar || constraints.maxWidth < composerCompactWidth;
     final bool strip =
-        room < _stripFloor && constraints.maxWidth >= _compactWidth;
+        room < _stripFloor && constraints.maxWidth >= composerCompactWidth;
     final bool keepInBand = !strip && room < _footerFloor;
     final bool short = room < _statusFloor;
     final ComposerFooterRoom footerRoom = short || media.viewInsets.bottom > 0
@@ -523,10 +524,9 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             child: _page(
               context,
               toolbar: !strip && room >= _toolbarFloor,
-              editorSidePadding:
-                  constraints.maxWidth - 2 * _pageSidePadding >= _pageMaxWidth
-                  ? _editorWideSidePadding
-                  : _editorSidePadding,
+              editorSidePadding: composerEditorSidePaddingFor(
+                constraints.maxWidth,
+              ),
             ),
           ),
           if (!strip)
@@ -580,31 +580,17 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     final CaptureDayLine? dayLine = compact
         ? widget.compactDayLine ?? widget.dayLine
         : widget.dayLine;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: _bandHorizontalPadding,
-        vertical: _bandVerticalPadding,
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              _leaveControl(context, iconOnly: compact),
-              if (hints) _hints(context),
-              if (keepInBand) _keepButton(),
-            ],
-          ),
-          if (!keepInBand && dayLine != null)
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: compact ? _compactDayLineReach : _wideDayLineReach,
-              ),
-              child: ComposerDayLine(line: dayLine),
-            ),
-        ],
-      ),
+    return ComposerBand(
+      leading: _leaveControl(context, iconOnly: compact),
+      trailing: hints
+          ? _hints(context)
+          : keepInBand
+          ? _keepButton()
+          : null,
+      centre: keepInBand || dayLine == null
+          ? null
+          : ComposerDayLine(line: dayLine),
+      centreReach: compact ? _compactDayLineReach : _wideDayLineReach,
     );
   }
 
@@ -636,58 +622,13 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Widget _leaveControl(BuildContext context, {required bool iconOnly}) {
-    final ComposerStageInks inks = ComposerStageInks.of(context);
     final bool back = widget.exit == ComposerExit.back;
-    final String label = back ? 'Back' : 'Leave';
-    final TargetPlatform platform = Theme.of(context).platform;
-    final double target = iconOnly
-        ? minIconTargetOn(platform)
-        : minButtonTargetOn(platform);
-    final Widget glyph = back
-        ? SizedBox.square(
-            dimension: _leaveGlyphSize,
-            child: CustomPaint(painter: _BackChevronPainter(color: inks.ink)),
-          )
-        : IconStickerGlyphIcon(
-            glyph: IconStickerGlyph.close,
-            color: inks.ink,
-            size: _leaveGlyphSize,
-          );
-    return TextFieldTapRegion(
-      child: Pressable(
-        key: composerCloseKey,
-        label: label,
-        onPressed: _leaveAction,
-        borderRadius: _fieldRadius,
-        placement: FocusRingPlacement.edge,
-        iconOnly: iconOnly,
-        child: iconOnly
-            ? SizedBox.square(
-                dimension: target,
-                child: Center(child: glyph),
-              )
-            : ConstrainedBox(
-                constraints: BoxConstraints(minHeight: target),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: _leaveHorizontalPadding,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      glyph,
-                      const SizedBox(width: _leaveGap),
-                      Text(
-                        label,
-                        style: context.textStyles.buttonSans.copyWith(
-                          color: inks.ink,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-      ),
+    return ComposerLeaveControl(
+      pressableKey: composerCloseKey,
+      label: back ? 'Back' : 'Leave',
+      back: back,
+      iconOnly: iconOnly,
+      onPressed: _leaveAction,
     );
   }
 
@@ -740,57 +681,37 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
 
   Widget _titleField(BuildContext context, {required bool compact}) {
     final ComposerStageInks inks = ComposerStageInks.of(context);
-    final double fontSize = compact ? _titleCompactSize : _titleSize;
-    final TextStyle style = context.textStyles.headlineSerif.copyWith(
-      fontSize: fontSize,
-      fontWeight: FontWeight.w400,
-      height: _titleLineHeight,
-      color: inks.ink,
-    );
-    final double fieldHeight = <double>[
-      _titleHeight,
-      minIconTargetOn(Theme.of(context).platform),
-      MediaQuery.textScalerOf(context).scale(fontSize) * _titleLineHeight,
-    ].reduce(math.max);
-    return Padding(
+    final TextStyle style = composerTitleStyle(context, compact: compact);
+    return ComposerTitleSlot(
       key: _titleSlotKey,
-      padding: const EdgeInsets.symmetric(horizontal: _titleSidePadding),
-      child: Center(
-        heightFactor: 1,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _titleMaxWidth),
-          child: _StageFieldRing(
-            focusNode: _titleFocusNode,
-            armed: _traversing,
-            child: SizedBox(
-              height: fieldHeight,
-              child: Semantics(
-                label: 'Title',
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: TextField(
-                    key: composerTitleFieldKey,
-                    controller: _titleController,
-                    focusNode: _titleFocusNode,
-                    readOnly: widget.isSaving,
-                    maxLines: 1,
-                    textAlign: TextAlign.center,
-                    textAlignVertical: TextAlignVertical.center,
-                    textInputAction: TextInputAction.next,
-                    textCapitalization: TextCapitalization.sentences,
-                    cursorColor: inks.caret,
-                    style: style,
-                    inputFormatters: <TextInputFormatter>[
-                      FilteringTextInputFormatter.deny(_lineBreaks),
-                    ],
-                    decoration: InputDecoration.collapsed(
-                      hintText: composerTitleHint,
-                      hintStyle: style.copyWith(color: inks.chrome),
-                    ),
-                    onEditingComplete: _focusNode.requestFocus,
-                  ),
-                ),
+      compact: compact,
+      child: _StageFieldRing(
+        focusNode: _titleFocusNode,
+        armed: _traversing,
+        child: Semantics(
+          label: 'Title',
+          child: Material(
+            type: MaterialType.transparency,
+            child: TextField(
+              key: composerTitleFieldKey,
+              controller: _titleController,
+              focusNode: _titleFocusNode,
+              readOnly: widget.isSaving,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              textAlignVertical: TextAlignVertical.center,
+              textInputAction: TextInputAction.next,
+              textCapitalization: TextCapitalization.sentences,
+              cursorColor: inks.caret,
+              style: style,
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.deny(_lineBreaks),
+              ],
+              decoration: InputDecoration.collapsed(
+                hintText: composerTitleHint,
+                hintStyle: style.copyWith(color: inks.chrome),
               ),
+              onEditingComplete: _focusNode.requestFocus,
             ),
           ),
         ),
@@ -803,35 +724,9 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     required bool toolbar,
     required double editorSidePadding,
   }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: _pageSidePadding,
-        vertical: toolbar ? _pageVerticalPadding : 0,
-      ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _pageMaxWidth),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              if (toolbar)
-                _faded(
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      top: _toolbarTopPadding,
-                      bottom: _toolbarBottomPadding,
-                    ),
-                    child: _toolbar(),
-                  ),
-                ),
-              Expanded(
-                key: _writingSlotKey,
-                child: _writingSurface(context, editorSidePadding),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return ComposerPage(
+      toolbar: toolbar ? _faded(_toolbar()) : null,
+      surface: _writingSurface(context, editorSidePadding),
     );
   }
 
@@ -854,35 +749,25 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
       child: _StageFieldRing(
         focusNode: _focusNode,
         armed: _traversing,
-        child: RawScrollbar(
+        child: ComposerScrollbar(
           controller: _scrollController,
-          thickness: _scrollbarThickness,
-          thumbColor: inks.line,
-          radius: const Radius.circular(Shapes.radiusXs),
-          child: NoteColumn(
-            maxEm: composerMeasureEm,
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: editorSidePadding,
-                right: editorSidePadding,
-                top: _editorTopPadding,
-              ),
-              child: noteEditorFor(
-                NoteEditorConfig(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  undoController: _undoController,
-                  scrollController: _scrollController,
-                  hintText: widget.hintText,
-                  hintStyle: context.textStyles.noteBodyPlaceholder.copyWith(
-                    color: inks.chrome,
-                  ),
-                  cursorColor: inks.caret,
-                  photoImporter: widget.onAddPhoto,
-                  bottomInset: _editorEndInset,
-                  spellCheckEnabled: widget.spellCheckEnabled,
-                  photoMediaImporter: widget.photoMediaImporter,
+          child: ComposerWritingColumn(
+            sidePadding: editorSidePadding,
+            child: noteEditorFor(
+              NoteEditorConfig(
+                controller: _controller,
+                focusNode: _focusNode,
+                undoController: _undoController,
+                scrollController: _scrollController,
+                hintText: widget.hintText,
+                hintStyle: context.textStyles.noteBodyPlaceholder.copyWith(
+                  color: inks.chrome,
                 ),
+                cursorColor: inks.caret,
+                photoImporter: widget.onAddPhoto,
+                bottomInset: composerEditorEndInset,
+                spellCheckEnabled: widget.spellCheckEnabled,
+                photoMediaImporter: widget.photoMediaImporter,
               ),
             ),
           ),
@@ -1081,6 +966,247 @@ class ComposerDayLine extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+double composerEditorSidePaddingFor(double width) =>
+    width - 2 * _pageSidePadding >= _pageMaxWidth
+    ? _editorWideSidePadding
+    : _editorSidePadding;
+
+TextStyle composerTitleStyle(BuildContext context, {required bool compact}) =>
+    context.textStyles.headlineSerif.copyWith(
+      fontSize: compact ? _titleCompactSize : _titleSize,
+      fontWeight: FontWeight.w400,
+      height: _titleLineHeight,
+      color: ComposerStageInks.of(context).ink,
+    );
+
+class ComposerBand extends StatelessWidget {
+  const ComposerBand({
+    super.key,
+    required this.leading,
+    required this.centreReach,
+    this.trailing,
+    this.centre,
+  });
+
+  final Widget leading;
+  final double centreReach;
+  final Widget? trailing;
+  final Widget? centre;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget? centre = this.centre;
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: _bandHorizontalPadding,
+        vertical: _bandVerticalPadding,
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[leading, ?trailing],
+          ),
+          if (centre != null)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: centreReach),
+              child: centre,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class ComposerLeaveControl extends StatelessWidget {
+  const ComposerLeaveControl({
+    super.key,
+    required this.pressableKey,
+    required this.label,
+    required this.back,
+    required this.iconOnly,
+    required this.onPressed,
+  });
+
+  final Key pressableKey;
+  final String label;
+  final bool back;
+  final bool iconOnly;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final ComposerStageInks inks = ComposerStageInks.of(context);
+    final TargetPlatform platform = Theme.of(context).platform;
+    final double target = iconOnly
+        ? minIconTargetOn(platform)
+        : minButtonTargetOn(platform);
+    final Widget glyph = back
+        ? SizedBox.square(
+            dimension: _leaveGlyphSize,
+            child: CustomPaint(painter: _BackChevronPainter(color: inks.ink)),
+          )
+        : IconStickerGlyphIcon(
+            glyph: IconStickerGlyph.close,
+            color: inks.ink,
+            size: _leaveGlyphSize,
+          );
+    return TextFieldTapRegion(
+      child: Pressable(
+        key: pressableKey,
+        label: label,
+        onPressed: onPressed,
+        borderRadius: _fieldRadius,
+        placement: FocusRingPlacement.edge,
+        iconOnly: iconOnly,
+        child: iconOnly
+            ? SizedBox.square(
+                dimension: target,
+                child: Center(child: glyph),
+              )
+            : ConstrainedBox(
+                constraints: BoxConstraints(minHeight: target),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: _leaveHorizontalPadding,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      glyph,
+                      const SizedBox(width: _leaveGap),
+                      Text(
+                        label,
+                        style: context.textStyles.buttonSans.copyWith(
+                          color: inks.ink,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+class ComposerTitleSlot extends StatelessWidget {
+  const ComposerTitleSlot({
+    super.key,
+    required this.compact,
+    required this.child,
+  });
+
+  final bool compact;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final double fontSize = compact ? _titleCompactSize : _titleSize;
+    final double height = <double>[
+      _titleHeight,
+      minIconTargetOn(Theme.of(context).platform),
+      MediaQuery.textScalerOf(context).scale(fontSize) * _titleLineHeight,
+    ].reduce(math.max);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: _titleSidePadding),
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _titleMaxWidth),
+          child: SizedBox(height: height, child: child),
+        ),
+      ),
+    );
+  }
+}
+
+class ComposerPage extends StatelessWidget {
+  const ComposerPage({super.key, required this.surface, this.toolbar});
+
+  final Widget surface;
+  final Widget? toolbar;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget? toolbar = this.toolbar;
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: _pageSidePadding,
+        vertical: toolbar == null ? 0 : _pageVerticalPadding,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _pageMaxWidth),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (toolbar != null)
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: _toolbarTopPadding,
+                    bottom: _toolbarBottomPadding,
+                  ),
+                  child: toolbar,
+                ),
+              Expanded(key: _writingSlotKey, child: surface),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ComposerWritingColumn extends StatelessWidget {
+  const ComposerWritingColumn({
+    super.key,
+    required this.sidePadding,
+    required this.child,
+  });
+
+  final double sidePadding;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return NoteColumn(
+      maxEm: composerMeasureEm,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: sidePadding,
+          right: sidePadding,
+          top: _editorTopPadding,
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class ComposerScrollbar extends StatelessWidget {
+  const ComposerScrollbar({
+    super.key,
+    required this.controller,
+    required this.child,
+  });
+
+  final ScrollController controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return RawScrollbar(
+      controller: controller,
+      thickness: _scrollbarThickness,
+      thumbColor: ComposerStageInks.of(context).line,
+      radius: const Radius.circular(Shapes.radiusXs),
+      child: child,
     );
   }
 }

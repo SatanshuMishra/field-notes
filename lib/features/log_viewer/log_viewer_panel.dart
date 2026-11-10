@@ -1,23 +1,20 @@
 import 'dart:async';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart'
-    show ComposerShell, composerPanelKey;
+    show ComposerShell;
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/entry_cards/task_toggle.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
-import 'package:field_notes/features/log_viewer/note_panel_view.dart';
-import 'package:field_notes/features/log_viewer/note_sheet_view.dart';
+import 'package:field_notes/features/log_viewer/note_reading_room.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/notes/notes.dart';
@@ -46,11 +43,6 @@ const String logViewerCloseLabel = 'Close';
 const String logViewerRenameFailedMessage =
     "Couldn't save that title. Please try again.";
 
-final Animatable<Offset> _sheetRise = Tween<Offset>(
-  begin: const Offset(0, 1),
-  end: Offset.zero,
-).chain(CurveTween(curve: phoneSheetCurve));
-
 class LogViewerPanel extends ConsumerStatefulWidget {
   const LogViewerPanel({
     super.key,
@@ -78,72 +70,14 @@ class LogViewerPanel extends ConsumerStatefulWidget {
 class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   late String _entryId = widget.entryId;
   bool _editing = false;
-  bool _noteExpanded = false;
   bool _deleting = false;
   bool _left = false;
   bool _stepped = false;
   bool _fullScreen = false;
   int _viewGeneration = 0;
-  int? _scrimPointer;
 
   bool get _sidebar =>
       resolveShellLayout(Theme.of(context).platform) == ShellLayout.sidebar;
-
-  @override
-  void initState() {
-    super.initState();
-    GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointer);
-  }
-
-  @override
-  void dispose() {
-    GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointer);
-    super.dispose();
-  }
-
-  void _onPointer(PointerEvent event) {
-    final int pointer = event.pointer;
-    if (pointer != _scrimPointer) {
-      return;
-    }
-    if (event is PointerUpEvent || event is PointerCancelEvent) {
-      Timer.run(() {
-        if (_scrimPointer == pointer) {
-          _scrimPointer = null;
-        }
-      });
-    }
-  }
-
-  void _onPointerDown(PointerDownEvent event) {
-    if (_landsOnScrim(event.position)) {
-      _scrimPointer = event.pointer;
-    }
-  }
-
-  bool _landsOnScrim(Offset position) {
-    RenderBox? panel;
-    void visit(Element element) {
-      if (panel != null) {
-        return;
-      }
-      if (element.widget.key == composerPanelKey) {
-        final RenderObject? box = element.renderObject;
-        if (box is RenderBox && box.hasSize) {
-          panel = box;
-        }
-        return;
-      }
-      element.visitChildren(visit);
-    }
-
-    context.visitChildElements(visit);
-    final RenderBox? found = panel;
-    if (found == null) {
-      return false;
-    }
-    return !(Offset.zero & found.size).contains(found.globalToLocal(position));
-  }
 
   void _leave(LogViewerOutcome outcome) {
     if (!mounted || _left) {
@@ -155,19 +89,13 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
 
   void _back() => _leave(LogViewerOutcome.returned);
 
-  void _closeAll() => _leave(LogViewerOutcome.closedAll);
-
   void _toggleFullScreen() => setState(() => _fullScreen = !_fullScreen);
 
   void _onPopInvoked(bool didPop, Object? result) {
     if (didPop || _editing) {
       return;
     }
-    _leave(
-      _scrimPointer == null
-          ? LogViewerOutcome.returned
-          : LogViewerOutcome.closedAll,
-    );
+    _leave(LogViewerOutcome.returned);
   }
 
   List<Entry>? _currentEntries() =>
@@ -208,12 +136,6 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       return;
     }
     setState(() => _editing = true);
-  }
-
-  void _onNoteExpandedChanged(bool expanded) {
-    if (mounted && expanded != _noteExpanded) {
-      setState(() => _noteExpanded = expanded);
-    }
   }
 
   void _onEditDone(bool saved) {
@@ -306,17 +228,14 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     return PopScope<Object?>(
       canPop: false,
       onPopInvokedWithResult: _onPopInvoked,
-      child: Listener(
-        onPointerDown: _onPointerDown,
-        child: SizedBox.expand(
-          key: logViewerPanelKey,
-          child: index < 0
-              ? null
-              : KeyedSubtree(
-                  key: ValueKey<int>(_viewGeneration),
-                  child: _view(entries!, index),
-                ),
-        ),
+      child: SizedBox.expand(
+        key: logViewerPanelKey,
+        child: index < 0
+            ? null
+            : KeyedSubtree(
+                key: ValueKey<int>(_viewGeneration),
+                child: _view(entries!, index),
+              ),
       ),
     );
   }
@@ -352,12 +271,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
           onPlace: onPlace,
         );
       case EntryType.text:
-        if (_editing) {
-          return _editRoom(scene.entry);
-        }
-        return _sidebar
-            ? _notePanel(scene, resolver)
-            : _noteSheet(scene, resolver);
+        return _noteRoom(scene, resolver);
     }
   }
 
@@ -403,53 +317,23 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     );
   }
 
-  Widget _noteSheet(LogViewerScene scene, MediaResolver resolver) {
-    final Animation<double> appear =
-        ModalRoute.of(context)?.animation ?? kAlwaysCompleteAnimation;
-    return Stack(
-      children: <Widget>[
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            excludeFromSemantics: true,
-            onTap: _closeAll,
-            child: const ColoredBox(color: phoneSheetBarrierColor),
-          ),
-        ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: SlideTransition(
-            position: appear.drive(_sheetRise),
-            child: NoteSheetView(
-              scene: scene,
-              resolver: resolver,
-              expanded: _noteExpanded,
-              onExpandedChanged: _onNoteExpandedChanged,
-              onToggleTask: _toggleTaskOf(scene.entry),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _notePanel(LogViewerScene scene, MediaResolver resolver) {
-    return NotePanelView(
-      scene: scene,
-      resolver: resolver,
-      onToggleTask: _toggleTaskOf(scene.entry),
-    );
-  }
-
-  Widget _editRoom(Entry entry) {
+  Widget _noteRoom(LogViewerScene scene, MediaResolver resolver) {
+    final Entry entry = scene.entry;
     return ComposerShell(
       responsive: true,
-      child: EditNoteConnector(
-        key: ValueKey<String>('log-viewer-edit-${entry.id}'),
-        entry: entry,
-        date: widget.date,
-        onDone: _onEditDone,
-      ),
+      child: _editing
+          ? EditNoteConnector(
+              key: ValueKey<String>('log-viewer-edit-${entry.id}'),
+              entry: entry,
+              date: widget.date,
+              onDone: _onEditDone,
+            )
+          : NoteReadingRoom(
+              key: noteReadingRoomKey,
+              scene: scene,
+              resolver: resolver,
+              onToggleTask: _toggleTaskOf(entry),
+            ),
     );
   }
 }

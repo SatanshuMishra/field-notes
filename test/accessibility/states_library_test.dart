@@ -47,14 +47,9 @@ const List<String> _mainPathSlugs = <String>[
 ];
 
 const List<String> _sheetStateIds = <String>[
-  'd1-viewer-todos',
-  'd2-viewer-photo',
-  'd5-reader-menu',
-  'd6-task-toast',
   'd7-day-with-entries',
   'd8-day-empty',
   'd14-delete-entry-dialog',
-  'd15-viewer-middle-entry',
   'd16-day-past-mood',
 ];
 

@@ -403,6 +403,7 @@ class ViewerKeys extends StatefulWidget {
     this.onEscape,
     this.onPageUp,
     this.onPageDown,
+    this.onEdit,
     this.autofocus = true,
   });
 
@@ -413,6 +414,7 @@ class ViewerKeys extends StatefulWidget {
   final VoidCallback? onEscape;
   final VoidCallback? onPageUp;
   final VoidCallback? onPageDown;
+  final VoidCallback? onEdit;
   final bool autofocus;
 
   @override
@@ -450,8 +452,16 @@ class _ViewerKeysState extends State<ViewerKeys> {
     if (key == LogicalKeyboardKey.pageDown) {
       return widget.onPageDown;
     }
+    if (key == LogicalKeyboardKey.keyE && !_chordHeld) {
+      return widget.onEdit;
+    }
     return null;
   }
+
+  bool get _chordHeld =>
+      HardwareKeyboard.instance.isControlPressed ||
+      HardwareKeyboard.instance.isMetaPressed ||
+      HardwareKeyboard.instance.isAltPressed;
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
