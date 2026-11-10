@@ -17,7 +17,7 @@ import 'support/a11y_baseline.dart';
 import 'support/a11y_state.dart';
 import 'support/reading_order.dart';
 
-const Size _smallestSidebar = Size(873, 600);
+const Size _smallestSidebar = Size(720, 600);
 const Size _smallestBottomBar = Size(360, 640);
 const List<double> _textScales = <double>[1, 1.3];
 const int _maxPresses = 60;

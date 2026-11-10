@@ -57,9 +57,6 @@ const double settingsUpdateBannerIconSize = 18;
 const double settingsUpdateBannerGap = 14;
 const double settingsSectionMarkSize = 9;
 
-const double _eyebrowSize = 15;
-const double _titleSize = 30;
-const double _titleHeight = 1.05;
 const double _headingGap = 12;
 const double _rowLabelSize = 15;
 const double _summaryGap = 3;
@@ -399,31 +396,9 @@ class _PageHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final FieldNotesTextStyles textStyles = context.textStyles;
     return Padding(
       padding: _headingPadding,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            eyebrow,
-            style: textStyles.pageEyebrowAccent.copyWith(
-              fontSize: _eyebrowSize,
-            ),
-          ),
-          Semantics(
-            header: true,
-            child: Text(
-              title,
-              style: textStyles.displaySerif.copyWith(
-                fontSize: _titleSize,
-                height: _titleHeight,
-              ),
-            ),
-          ),
-        ],
-      ),
+      child: PageHeader(eyebrow: eyebrow, title: title),
     );
   }
 }

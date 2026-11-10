@@ -5,18 +5,7 @@
 
 #include <cmath>
 
-constexpr double kSidebarWidth = 216;
-constexpr double kTodayRailWidth = 266;
-constexpr double kSeamWidth = 1;
-constexpr double kTodayPanePadding = 24;
-constexpr double kEntryCardPadding = 15;
-constexpr double kNoteBodyFontSize = 16;
-constexpr double kMinimumReadingColumnEm = 19.4;
-
-constexpr double kMinimumContentWidth =
-    kSidebarWidth + kSeamWidth + kTodayPanePadding + kEntryCardPadding +
-    kMinimumReadingColumnEm * kNoteBodyFontSize + kEntryCardPadding +
-    kTodayPanePadding + kSeamWidth + kTodayRailWidth;
+constexpr double kMinimumContentWidth = 720;
 constexpr double kMinimumContentHeight = 600;
 constexpr double kOpeningWindowWidth = 1200;
 constexpr double kOpeningWindowHeight = 800;

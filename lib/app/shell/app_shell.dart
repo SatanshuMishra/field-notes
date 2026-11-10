@@ -111,6 +111,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         onSound: onSound,
         soundOn: ref.watch(soundEnabledProvider),
         collapsed: _sidebarCollapsed(),
+        railOnly: windowForcesSidebarRail(MediaQuery.sizeOf(context).width),
         onCollapsedChanged: _setSidebarCollapsed,
         syncStatus: (BuildContext context, bool collapsed) =>
             SidebarSyncStatus(collapsed: collapsed),

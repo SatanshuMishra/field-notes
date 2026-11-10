@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/data/media/media_work_budget.dart';
+import 'package:field_notes/design/feedback/toast.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/domain/settings/app_settings.dart';
@@ -79,6 +80,7 @@ class _VideoComposerConnectorState
   bool _closing = false;
   bool _asking = false;
   bool _cameraOn = true;
+  final TextEditingController _title = TextEditingController();
   Future<void>? _cameraChange;
   VoiceRecorder? _voiceRecorder;
   Duration _elapsed = Duration.zero;
@@ -119,6 +121,7 @@ class _VideoComposerConnectorState
   @override
   void initState() {
     super.initState();
+    dismissTransientToast();
     _recorder = ref.read(videoRecorderProvider);
     _wakeHold = RecordingWakeHold(ref.read(stayAwakeProvider));
     if (_recorder case final CameraAccessReporting reporting) {
@@ -633,15 +636,29 @@ class _VideoComposerConnectorState
     }
     _closing = true;
     _wakeHold.update(live: false);
+    final String title = _title.text;
+    final ProviderContainer scope = ProviderScope.containerOf(
+      context,
+      listen: false,
+    );
     await _release();
+    final bool named = await nameRecordedLog(
+      scope,
+      entryId: entryId,
+      title: title,
+      timeout: widget.saveTimeout,
+    );
     if (!mounted) {
       return;
     }
-    closeImmersiveRecorder<String>(
+    showRecorderKeptToast(
       context,
-      result: entryId,
-      toast: voiceTake ? voiceSavedToastMessage : videoSavedToastMessage,
+      message: voiceTake ? voiceSavedToastMessage : videoSavedToastMessage,
+      entryId: entryId,
+      title: title,
+      named: named,
     );
+    closeImmersiveRecorder<String>(context, result: entryId);
   }
 
   Future<String> _captureVoice(
@@ -853,6 +870,7 @@ class _VideoComposerConnectorState
     _stopTicker();
     _wakeHold.dispose();
     unawaited(_endUnkeptTake().whenComplete(_release));
+    _title.dispose();
     super.dispose();
   }
 
@@ -902,6 +920,7 @@ class _VideoComposerConnectorState
       onVoiceSettings: _openVoiceSettings,
       levels: _cameraOn ? _recorder.level : _voice.level,
       hearing: _cameraOn ? _recorder.hearingNow : _voice.hearingNow,
+      titleController: _title,
     );
   }
 }

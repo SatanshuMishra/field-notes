@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -17,6 +18,7 @@ import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,10 +29,14 @@ import 'support/fake_settings_repository.dart';
 import 'support/recording_reminder_scheduler.dart';
 import 'support/settings_harness.dart';
 
+final TargetPlatformVariant _phoneAndDesktop = TargetPlatformVariant(
+  <TargetPlatform>{TargetPlatform.android, TargetPlatform.macOS},
+);
+
 Future<void> _pumpScreen(
   WidgetTester tester, {
   required FakeSettingsRepository repository,
-  Stream<AppSettings>? settingsStream,
+  Stream<AppSettings> Function()? settingsStream,
 }) async {
   useWideSurface(tester);
   await tester.pumpWidget(
@@ -41,7 +47,8 @@ Future<void> _pumpScreen(
         settingsRepositoryProvider.overrideWithValue(repository),
         appSettingsProvider.overrideWith(
           (Ref ref) =>
-              settingsStream ?? Stream<AppSettings>.value(AppSettings.defaults),
+              settingsStream?.call() ??
+              Stream<AppSettings>.value(AppSettings.defaults),
         ),
         entriesForDateProvider.overrideWith(
           (Ref ref, String date) => Stream<List<Entry>>.value(const <Entry>[]),
@@ -97,7 +104,7 @@ void main() {
     );
   });
 
-  testWidgets('shows the placeholder while settings are still loading', (
+  testWidgets('shows the shared loading block while settings are loading', (
     WidgetTester tester,
   ) async {
     final StreamController<AppSettings> pending =
@@ -107,27 +114,50 @@ void main() {
     await _pumpScreen(
       tester,
       repository: FakeSettingsRepository(),
-      settingsStream: pending.stream,
+      settingsStream: () => pending.stream,
     );
 
-    expect(find.byType(CrossHatchPlaceholder), findsOneWidget);
+    expect(find.widgetWithText(StateBlock, 'Loading'), findsOneWidget);
+    expect(find.byType(CrossHatchPlaceholder), findsNothing);
     expect(find.byType(SyncStorageSection), findsNothing);
     expect(find.text('preferences'), findsNothing);
-  });
+  }, variant: _phoneAndDesktop);
 
-  testWidgets('shows a recoverable message when settings cannot load', (
+  testWidgets('a failed load offers a retry that reloads the settings', (
     WidgetTester tester,
   ) async {
+    int loads = 0;
+    bool databaseHealed = false;
     await _pumpScreen(
       tester,
       repository: FakeSettingsRepository(),
-      settingsStream: Stream<AppSettings>.error(StateError('db gone')),
+      settingsStream: () {
+        loads++;
+        return databaseHealed
+            ? Stream<AppSettings>.value(AppSettings.defaults)
+            : Stream<AppSettings>.error(StateError('db gone'));
+      },
     );
 
-    expect(find.text('Your settings could not be loaded.'), findsOneWidget);
-    expect(find.text('Try again'), findsOneWidget);
+    expect(
+      find.widgetWithText(StateBlock, 'Your settings could not be loaded.'),
+      findsOneWidget,
+    );
     expect(find.byType(SyncStorageSection), findsNothing);
-  });
+
+    databaseHealed = true;
+    final int loadsBeforeRetry = loads;
+    await tester.tap(find.text('Try again'));
+    await tester.pump();
+    expect(loads, loadsBeforeRetry + 1);
+
+    await tester.pumpAndSettle();
+    expect(find.byType(StateBlock), findsNothing);
+    expect(
+      find.byType(SyncStorageSection, skipOffstage: false),
+      findsOneWidget,
+    );
+  }, variant: _phoneAndDesktop);
 
   testWidgets('surfaces a failed write as a dismissible notice', (
     WidgetTester tester,

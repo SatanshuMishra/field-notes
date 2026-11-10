@@ -26,7 +26,7 @@ import '../support/note_editor_driver.dart';
 import 'support/app_shell_harness.dart';
 
 const Size _sidebarSurface = Size(1200, 900);
-const Size _shortSidebarSurface = Size(1100, 520);
+const Size _shortSidebarSurface = Size(1120, 520);
 const Size _phoneSurface = Size(440, 900);
 const Color _lightPanelTop = Color(0xFFEFE2CE);
 const Color _darkPanelTop = Color(0xFF1C1919);

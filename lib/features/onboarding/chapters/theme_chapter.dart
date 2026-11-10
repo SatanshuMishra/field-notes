@@ -35,11 +35,14 @@ const double _sidebarBodyGap = 92;
 const double _sidebarMargin = 56;
 const double _sidebarBottom = 72;
 const double _sidebarGridMaxWidth = 1028;
+const double _sidebarGridMinWidth = 760;
 const double _sidebarCardGap = 22;
 const EdgeInsets _cardPadding = EdgeInsets.all(10);
 const double _cardInnerGap = 10;
 const double _cardOutline = 2;
-const BorderRadius _cardRadius = BorderRadius.all(Radius.circular(16));
+const BorderRadius _cardRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusLg),
+);
 const Offset _cardShadowOffset = Offset(3, 3);
 const EdgeInsets _cardLabelPadding = EdgeInsets.symmetric(
   horizontal: 4,
@@ -244,9 +247,9 @@ class _SidebarTheme extends StatelessWidget {
             ),
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints area) {
-                final double width = math.min(
-                  area.maxWidth,
-                  _sidebarGridMaxWidth,
+                final double width = math.max(
+                  math.min(area.maxWidth, _sidebarGridMaxWidth),
+                  _sidebarGridMinWidth,
                 );
                 return Align(
                   alignment: Alignment.topCenter,

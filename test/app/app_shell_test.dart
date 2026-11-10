@@ -112,8 +112,11 @@ void main() {
       );
       expect(find.text('preferences'), findsNothing);
       expect(
-        tester.widget<Text>(find.byKey(settingsContentTitleKey)).data,
-        'Journal',
+        find.descendant(
+          of: find.byKey(settingsContentTitleKey),
+          matching: find.text('Journal'),
+        ),
+        findsOneWidget,
       );
     });
 
