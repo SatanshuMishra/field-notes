@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-10T23:47:17.400Z
+Updated: 2026-11-10T23:47:20.092Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
@@ -21,7 +21,7 @@ Root causes found: rounded outlines break where an opaque child is clipped only 
 
 ## Next step
 
-When feat/streak-late-night lands, dispatch reminder-schedules on it from fn/fanout18/brief-reminder-schedules.md; review each finished branch against fn/fanout18/review-bar.md and send confirmed findings back to its builder.
+Review each finished branch against fn/fanout18/review-bar.md and send confirmed findings back to its builder; if review changes feat/streak-late-night, have the reminder-schedules builder rebase onto its new head; once every branch is green, merge all ten in one scratch worktree and run the suites they touch before opening any PR.
 
 Needs: D1, D2, D3, D5, D6, D7, R1.
 
