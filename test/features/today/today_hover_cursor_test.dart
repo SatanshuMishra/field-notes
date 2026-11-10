@@ -210,14 +210,28 @@ void main() {
 
     await pumpToday(tester, ThisWeekGarden(cells: _week()));
     await _expectRows(tester, mouse, <_Row>[
-      _Row('week cell sunday', 'Sun', 'Sun, Happy', _row, 10),
-      _Row('week cell monday', 'Mon', 'Mon, no mood', _row, 10),
-      _Row('week cell tuesday', 'Tue', 'Tue, Warm', _row, 10),
-      _Row('week cell wednesday', 'Wed', 'Wed, no mood', _row, 10),
-      _Row('week cell thursday', 'Thu', 'Thu, Hopeful', _row, 10),
-      _Row('week cell friday', 'Fri', 'Fri, no mood', _row, 10),
-      _Row('week cell saturday', 'Sat', 'Sat, Anxious', _row, 10),
+      _Row('week cell sunday', 'Sun', 'Open Sunday, July 19, happy', _row, 10),
+      _Row(
+        'week cell monday',
+        'Mon',
+        'Open Monday, July 20, no mood',
+        _row,
+        10,
+      ),
+      _Row('week cell tuesday', 'Tue', 'Open Tuesday, July 21, warm', _row, 10),
     ]);
+    for (final String weekday in <String>['Wed', 'Thu', 'Fri', 'Sat']) {
+      expect(
+        find.ancestor(of: find.text(weekday), matching: find.byType(Pressable)),
+        findsNothing,
+        reason: weekday,
+      );
+      await mouse.moveTo(tester.getCenter(find.text(weekday)));
+      await tester.pump();
+      expect(_cursor(), SystemMouseCursors.basic, reason: weekday);
+    }
+    await mouse.moveTo(_offEveryControl);
+    await tester.pump();
 
     await tester.pumpWidget(const SizedBox());
     await pumpToday(
