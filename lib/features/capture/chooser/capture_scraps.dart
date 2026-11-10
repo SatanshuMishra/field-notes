@@ -26,8 +26,7 @@ bool captureTextEnlarged(BuildContext context) =>
 
 const double _textProbe = 1;
 
-const double _roomyOverlap = 10;
-const double _compactOverlap = 6;
+const double _scrapOverlap = 10;
 const double _wrapGap = 10;
 const double _wrapRunGap = 28;
 
@@ -36,10 +35,8 @@ const Duration _dealSpan = Duration(milliseconds: 600);
 const double _dealRise = 46;
 const double _dealExtraTilts = 3;
 
-const double _roomyLabelSize = 26;
-const double _compactLabelSize = 20;
-const double _roomyDescriptionSize = 17;
-const double _compactDescriptionSize = 14;
+const double _labelSize = 26;
+const double _descriptionSize = 17;
 const double _descriptionLineHeight = 1.05;
 
 const double _hoverShadowOffset = 3;
@@ -105,16 +102,14 @@ double _radians(double degrees) => degrees * math.pi / 180;
 
 class _ScrapSpec {
   const _ScrapSpec({
-    required this.roomy,
-    required this.compact,
+    required this.size,
     required this.tiltDegrees,
     required this.drop,
     required this.dealDelay,
     required this.radius,
   });
 
-  final Size roomy;
-  final Size compact;
+  final Size size;
   final double tiltDegrees;
   final double drop;
   final Duration dealDelay;
@@ -122,8 +117,7 @@ class _ScrapSpec {
 }
 
 const _ScrapSpec _noteSpec = _ScrapSpec(
-  roomy: Size(178, 200),
-  compact: Size(130, 172),
+  size: Size(178, 200),
   tiltDegrees: -3.2,
   drop: 0,
   dealDelay: Duration(milliseconds: 40),
@@ -131,8 +125,7 @@ const _ScrapSpec _noteSpec = _ScrapSpec(
 );
 
 const _ScrapSpec _voiceSpec = _ScrapSpec(
-  roomy: Size(158, 176),
-  compact: Size(112, 156),
+  size: Size(158, 176),
   tiltDegrees: 2.6,
   drop: 16,
   dealDelay: Duration(milliseconds: 110),
@@ -140,8 +133,7 @@ const _ScrapSpec _voiceSpec = _ScrapSpec(
 );
 
 const _ScrapSpec _videoSpec = _ScrapSpec(
-  roomy: Size(172, 208),
-  compact: Size(116, 176),
+  size: Size(172, 208),
   tiltDegrees: -1.5,
   drop: 5,
   dealDelay: Duration(milliseconds: 180),
@@ -159,14 +151,12 @@ class _ScrapCopy {
     required this.label,
     required this.description,
     required this.available,
-    required this.compact,
     required this.textEnlarged,
   });
 
   final String label;
   final String description;
   final bool available;
-  final bool compact;
   final bool textEnlarged;
 }
 
@@ -176,13 +166,11 @@ class CaptureScraps extends StatefulWidget {
     required this.availableTypes,
     required this.unavailableLabel,
     required this.onSelected,
-    required this.compact,
   });
 
   final Set<EntryType> availableTypes;
   final String unavailableLabel;
   final ValueChanged<EntryType> onSelected;
-  final bool compact;
 
   @override
   State<CaptureScraps> createState() => _CaptureScrapsState();
@@ -226,22 +214,17 @@ class _CaptureScrapsState extends State<CaptureScraps>
     }
   }
 
-  double get _overlap => widget.compact ? _compactOverlap : _roomyOverlap;
-
-  Size _sizeOf(EntryType type) {
-    final _ScrapSpec spec = _specFor(type);
-    return widget.compact ? spec.compact : spec.roomy;
-  }
+  Size _sizeOf(EntryType type) => _specFor(type).size;
 
   double _leftOf(int index) => captureOptions
       .take(index)
       .fold<double>(
         0,
         (double left, CaptureOption option) =>
-            left + _sizeOf(option.type).width - _overlap,
+            left + _sizeOf(option.type).width - _scrapOverlap,
       );
 
-  double get _pileWidth => _leftOf(captureOptions.length) + _overlap;
+  double get _pileWidth => _leftOf(captureOptions.length) + _scrapOverlap;
 
   double get _pileHeight => captureOptions
       .map(
@@ -297,7 +280,6 @@ class _CaptureScrapsState extends State<CaptureScraps>
                 ? option.description
                 : widget.unavailableLabel,
             available: available,
-            compact: widget.compact,
             textEnlarged: textEnlarged,
           ),
           onSelected: available ? widget.onSelected : null,
@@ -566,10 +548,8 @@ class _ScrapText extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final TextStyle hand = context.textStyles.accent;
-    final double labelSize = copy.compact ? _compactLabelSize : _roomyLabelSize;
-    final double descriptionSize = copy.compact
-        ? _compactDescriptionSize
-        : _roomyDescriptionSize;
+    const double labelSize = _labelSize;
+    const double descriptionSize = _descriptionSize;
     final double? labelLinePixels = labelLine;
     final double? descriptionLinePixels = descriptionLine;
     return Column(
@@ -580,7 +560,6 @@ class _ScrapText extends StatelessWidget {
           padding: EdgeInsets.only(bottom: labelBottom),
           child: Text(
             copy.label,
-            softWrap: !copy.compact || copy.textEnlarged,
             overflow: TextOverflow.visible,
             style: hand.copyWith(
               fontSize: labelSize,
@@ -614,10 +593,9 @@ class _NoteSlip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    final bool compact = copy.compact;
-    final double pencilSize = compact ? 32 : 46;
-    final double pencilRight = compact ? 16 : 10;
-    final double pencilBottom = compact ? 6 : 10;
+    const double pencilSize = 46;
+    const double pencilRight = 10;
+    const double pencilBottom = 10;
     return Stack(
       children: <Widget>[
         Positioned.fill(
@@ -632,9 +610,9 @@ class _NoteSlip extends StatelessWidget {
         ),
         Padding(
           padding: EdgeInsets.fromLTRB(
-            compact ? 32 : 36,
-            compact ? 46 : 50,
-            compact ? 4 : 8,
+            36,
+            50,
+            8,
             copy.textEnlarged ? pencilSize + pencilBottom : 0,
           ),
           child: _ScrapText(
@@ -669,28 +647,25 @@ class _VoiceTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    final bool compact = copy.compact;
     return Stack(
       clipBehavior: Clip.none,
       children: <Widget>[
         Padding(
-          padding: compact
-              ? const EdgeInsets.fromLTRB(8, 28, 8, 10)
-              : const EdgeInsets.fromLTRB(14, 30, 14, 12),
+          padding: const EdgeInsets.fromLTRB(14, 30, 14, 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               SizedBox(
-                height: compact ? 40 : 54,
+                height: 54,
                 child: CustomPaint(
                   painter: _WaveformPainter(
                     color: copy.available ? Palette.coral : colors.dashMuted,
-                    gap: compact ? 2 : 3,
+                    gap: 3,
                   ),
                 ),
               ),
-              SizedBox(height: compact ? 8 : 10),
+              const SizedBox(height: 10),
               _ScrapText(copy: copy),
             ],
           ),
@@ -743,27 +718,26 @@ class _InstantPhoto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    final bool compact = copy.compact;
     return Padding(
-      padding: EdgeInsets.all(compact ? 7 : 10),
+      padding: const EdgeInsets.all(10),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           SizedBox(
-            height: compact ? 92 : 128,
+            height: 128,
             child: CustomPaint(
               painter: _InstantPhotoPainter(
                 developed: copy.available,
                 blank: colors.hatchMid,
                 blankShutter: colors.dashMuted,
                 edge: colors.ink.withValues(alpha: _photoInkAlpha),
-                shutterSize: compact ? 36 : 46,
-                shutterDotSize: compact ? 14 : 18,
+                shutterSize: 46,
+                shutterDotSize: 18,
               ),
             ),
           ),
-          SizedBox(height: compact ? 7 : 9),
+          const SizedBox(height: 9),
           _ScrapText(copy: copy),
         ],
       ),

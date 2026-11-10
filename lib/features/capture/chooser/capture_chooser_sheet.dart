@@ -3,15 +3,23 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/icons/capture_icons.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/core/capture_route.dart';
 
 import 'capture_scraps.dart';
 
 const String captureChooserSubtitle = 'how do you want to plant today?';
 
 const Key captureChooserTapeKey = ValueKey<String>('capture-chooser-tape');
+
+Key captureChooserRowKey(EntryType type) =>
+    ValueKey<String>('capture-chooser-row-${type.id}');
 
 const double _pageMaxWidth = 572;
 const double _pageMargin = 16;
@@ -32,12 +40,37 @@ const double _tapeNotch = 0.03;
 const double _subtitleSize = 20;
 const double _subtitleLineHeight = 1.2;
 const double _subtitleGap = 2;
-const double _roomyScrapsGap = 22;
-const double _compactScrapsGap = 16;
+const double _scrapsGap = 22;
 
 const double _sheetPaddingTop = 10;
-const double _sheetPaddingHorizontal = 7;
-const double _sheetPaddingBottom = 48;
+const double _sheetPaddingHorizontal = 16;
+const double _sheetPaddingBottom = 22;
+const double _sheetSubtitleSize = 12;
+const double _sheetSubtitleGap = 1;
+const double _sheetRowsGap = 15;
+
+const double _rowGap = 9;
+const double _rowBorderWidth = 1.5;
+const double _rowIconGap = 12;
+const double _rowPaddingVertical = 13;
+const double _rowPaddingHorizontal = 15;
+const double _rowIconSize = 20;
+const double _rowCaptionLineHeight = 1.1;
+
+const BorderRadius _rowRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusMd),
+);
+
+CaptureGlyph _glyphFor(EntryType type) {
+  switch (type) {
+    case EntryType.text:
+      return CaptureGlyph.pencil;
+    case EntryType.voice:
+      return CaptureGlyph.mic;
+    case EntryType.video:
+      return CaptureGlyph.video;
+  }
+}
 
 class CaptureChooserSheet extends StatelessWidget {
   const CaptureChooserSheet({
@@ -97,7 +130,7 @@ class CaptureChooserSheet extends StatelessWidget {
                       _pagePaddingHorizontal,
                       _pagePaddingBottom,
                     ),
-                    child: _buildBody(context),
+                    child: _buildPageBody(context),
                   ),
                 ),
                 Positioned(
@@ -120,24 +153,19 @@ class CaptureChooserSheet extends StatelessWidget {
   Widget _buildSheet(BuildContext context) {
     return PhoneSheet(
       color: context.colors.panelTop,
-      child: RuledPaper(
-        color: _ruleColor(context),
-        firstRule: _pageFirstRule,
-        period: _pageRulePeriod,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            _sheetPaddingHorizontal,
-            _sheetPaddingTop,
-            _sheetPaddingHorizontal,
-            _sheetPaddingBottom,
-          ),
-          child: _buildBody(context),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          _sheetPaddingHorizontal,
+          _sheetPaddingTop,
+          _sheetPaddingHorizontal,
+          _sheetPaddingBottom,
         ),
+        child: _buildSheetBody(context),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context) {
+  Widget _buildPageBody(BuildContext context) {
     final FieldNotesTextStyles textStyles = context.textStyles;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -153,14 +181,133 @@ class CaptureChooserSheet extends StatelessWidget {
           ),
           textAlign: TextAlign.center,
         ),
-        SizedBox(height: _isSheet ? _compactScrapsGap : _roomyScrapsGap),
+        const SizedBox(height: _scrapsGap),
         CaptureScraps(
           availableTypes: availableTypes,
           unavailableLabel: unavailableLabel,
           onSelected: onOptionSelected,
-          compact: _isSheet,
         ),
       ],
+    );
+  }
+
+  Widget _buildSheetBody(BuildContext context) {
+    final FieldNotesTextStyles textStyles = context.textStyles;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          title,
+          style: textStyles.sectionSerif,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: _sheetSubtitleGap),
+        Text(
+          captureChooserSubtitle,
+          style: textStyles.subtitleAccent.copyWith(
+            fontSize: _sheetSubtitleSize,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: _sheetRowsGap),
+        for (final (int index, CaptureOption option)
+            in captureOptions.indexed) ...<Widget>[
+          if (index > 0) const SizedBox(height: _rowGap),
+          _CaptureOptionRow(
+            option: option,
+            isAvailable: availableTypes.contains(option.type),
+            unavailableLabel: unavailableLabel,
+            onSelected: onOptionSelected,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _CaptureOptionRow extends StatelessWidget {
+  const _CaptureOptionRow({
+    required this.option,
+    required this.isAvailable,
+    required this.unavailableLabel,
+    required this.onSelected,
+  });
+
+  final CaptureOption option;
+  final bool isAvailable;
+  final String unavailableLabel;
+  final ValueChanged<EntryType> onSelected;
+
+  bool get _isPrimary => option.type == EntryType.text;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesTextStyles textStyles = context.textStyles;
+    final FieldNotesShadows shadows = context.shadows;
+    final Color foreground = _isPrimary ? Palette.onAccent : colors.ink;
+    final VoidCallback? select = isAvailable
+        ? () => onSelected(option.type)
+        : null;
+    final String caption = isAvailable ? option.description : unavailableLabel;
+    final TextStyle captionStyle = textStyles.subtitleAccent.copyWith(
+      height: _rowCaptionLineHeight,
+    );
+    return Pressable(
+      key: captureChooserRowKey(option.type),
+      label: '${option.label}\n$caption',
+      onPressed: select,
+      borderRadius: _rowRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        surface: _isPrimary ? FocusRingSurface.dark : FocusRingSurface.light,
+        borderRadius: _rowRadius,
+        child: Container(
+          decoration: BoxDecoration(
+            color: _isPrimary ? Palette.coral : colors.cardWarm,
+            border: Border.all(color: colors.line, width: _rowBorderWidth),
+            borderRadius: _rowRadius,
+            boxShadow: _isPrimary ? shadows.emphasis : shadows.cardDefault,
+          ),
+          padding: const EdgeInsets.symmetric(
+            vertical: _rowPaddingVertical,
+            horizontal: _rowPaddingHorizontal,
+          ),
+          child: Row(
+            children: <Widget>[
+              CaptureIcon(
+                glyph: _glyphFor(option.type),
+                color: foreground,
+                size: _rowIconSize,
+              ),
+              const SizedBox(width: _rowIconGap),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      option.label,
+                      style: textStyles.labelSans.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: foreground,
+                      ),
+                    ),
+                    Text(
+                      caption,
+                      style: _isPrimary
+                          ? captionStyle.copyWith(color: Palette.onAccent)
+                          : captionStyle,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

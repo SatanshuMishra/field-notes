@@ -33,6 +33,38 @@ const Map<EntryType, double> _restingTilts = <EntryType, double>{
 };
 const double _angleTolerance = 0.001;
 
+class _Choice {
+  const _Choice(this.noun, this.layout, this.platform, this.size, this.keyOf);
+
+  final String noun;
+  final ShellLayout layout;
+  final TargetPlatform platform;
+  final Size size;
+  final Key Function(EntryType) keyOf;
+}
+
+const List<_Choice> _choices = <_Choice>[
+  _Choice(
+    'desktop scrap',
+    ShellLayout.sidebar,
+    TargetPlatform.macOS,
+    _desktop,
+    captureScrapKey,
+  ),
+  _Choice(
+    'Android row',
+    ShellLayout.bottomBar,
+    TargetPlatform.android,
+    _phone,
+    captureChooserRowKey,
+  ),
+];
+
+List<Rect> _rowRects(WidgetTester tester) => <Rect>[
+  for (final CaptureOption option in captureOptions)
+    tester.getRect(find.byKey(captureChooserRowKey(option.type))),
+];
+
 class _Pose {
   const _Pose(this.degrees, this.rise);
 
@@ -200,31 +232,32 @@ Widget _openerApp(
 }
 
 void main() {
-  for (final CaptureOption option in captureOptions) {
-    testWidgets('tapping the ${option.label} scrap opens its route', (
-      WidgetTester tester,
-    ) async {
-      tester.view.physicalSize = _desktop;
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      final List<EntryType> opened = <EntryType>[];
-      String? result;
-      await tester.pumpWidget(
-        _openerApp(
-          _routesRecording(opened),
-          (String? id) => result = id,
-          TargetPlatform.macOS,
-        ),
-      );
+  for (final _Choice choice in _choices) {
+    for (final CaptureOption option in captureOptions) {
+      testWidgets('tapping the ${option.label} ${choice.noun} opens its '
+          'route', (WidgetTester tester) async {
+        tester.view.physicalSize = choice.size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final List<EntryType> opened = <EntryType>[];
+        String? result;
+        await tester.pumpWidget(
+          _openerApp(
+            _routesRecording(opened),
+            (String? id) => result = id,
+            choice.platform,
+          ),
+        );
 
-      await tester.tap(find.text('open'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(captureScrapKey(option.type)));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(choice.keyOf(option.type)));
+        await tester.pumpAndSettle();
 
-      expect(opened, <EntryType>[option.type]);
-      expect(result, 'entry-${option.type.id}');
-    });
+        expect(opened, <EntryType>[option.type]);
+        expect(result, 'entry-${option.type.id}');
+      });
+    }
   }
 
   testWidgets('every scrap keeps the copy of its capture option', (
@@ -240,28 +273,35 @@ void main() {
     }
   });
 
-  testWidgets('each scrap reads as one button naming its copy', (
-    WidgetTester tester,
-  ) async {
-    final SemanticsHandle semantics = tester.ensureSemantics();
-    await _pumpSheet(tester);
-
-    for (final CaptureOption option in captureOptions) {
-      expect(
-        tester.getSemantics(find.byKey(captureScrapKey(option.type))),
-        isSemantics(
-          label: '${option.label}\n${option.description}',
-          isButton: true,
-          hasEnabledState: true,
-          isEnabled: true,
-          isFocusable: true,
-          hasFocusAction: true,
-          hasTapAction: true,
-        ),
+  for (final _Choice choice in _choices) {
+    testWidgets('each ${choice.noun} reads as one button naming its copy', (
+      WidgetTester tester,
+    ) async {
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      await _pumpSheet(
+        tester,
+        layout: choice.layout,
+        platform: choice.platform,
+        size: choice.size,
       );
-    }
-    semantics.dispose();
-  });
+
+      for (final CaptureOption option in captureOptions) {
+        expect(
+          tester.getSemantics(find.byKey(choice.keyOf(option.type))),
+          isSemantics(
+            label: '${option.label}\n${option.description}',
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: true,
+            isFocusable: true,
+            hasFocusAction: true,
+            hasTapAction: true,
+          ),
+        );
+      }
+      semantics.dispose();
+    });
+  }
 
   testWidgets('at rest each scrap sits at its own slight tilt on a taped '
       'page', (WidgetTester tester) async {
@@ -359,9 +399,8 @@ void main() {
     expect(selected, <EntryType>[EntryType.voice]);
   });
 
-  testWidgets('on Android the chooser opens as a bottom sheet with no tape', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('on Android the chooser opens as a bottom sheet of three '
+      'full-width rows, not scraps', (WidgetTester tester) async {
     tester.view.physicalSize = _phone;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -385,66 +424,82 @@ void main() {
     );
     expect(find.byType(StickerCard), findsNothing);
     expect(find.byKey(captureChooserTapeKey), findsNothing);
+    expect(find.byKey(captureScrapPileKey), findsNothing);
     expect(tester.getBottomLeft(find.byType(PhoneSheet)).dy, _phone.height);
-    for (final CaptureOption option in captureOptions) {
-      final Rect slot = tester.getRect(
-        find.byKey(captureScrapKey(option.type)),
-      );
-      expect(slot.left, greaterThanOrEqualTo(0));
-      expect(slot.right, lessThanOrEqualTo(_phone.width));
-      expect(slot.shortestSide, greaterThanOrEqualTo(48));
+    final List<Rect> rows = _rowRects(tester);
+    for (final (int index, Rect row) in rows.indexed) {
+      expect(row.left, rows.first.left);
+      expect(row.width, greaterThan(_phone.width * 0.8));
+      expect(row.right, lessThanOrEqualTo(_phone.width));
+      expect(row.height, greaterThanOrEqualTo(48));
+      if (index > 0) {
+        expect(row.top, greaterThan(rows[index - 1].bottom));
+      }
     }
   });
 
-  testWidgets('a narrow phone still fits the three scraps', (
-    WidgetTester tester,
-  ) async {
-    await _pumpSheet(
-      tester,
-      layout: ShellLayout.bottomBar,
-      platform: TargetPlatform.android,
-      size: const Size(320, 700),
-    );
+  for (final (Size size, double textScale) in <(Size, double)>[
+    (const Size(320, 700), 1),
+    (_phone, 2),
+  ]) {
+    testWidgets('the Android rows fit ${size.width.round()} wide at '
+        '${textScale}x text', (WidgetTester tester) async {
+      await _pumpSheet(
+        tester,
+        layout: ShellLayout.bottomBar,
+        platform: TargetPlatform.android,
+        size: size,
+        textScale: textScale,
+      );
 
-    expect(tester.takeException(), isNull);
-    final Rect pile = tester.getRect(find.byKey(captureScrapPileKey));
-    expect(pile.left, greaterThanOrEqualTo(0));
-    expect(pile.right, lessThanOrEqualTo(320));
-  });
+      expect(tester.takeException(), isNull);
+      final List<Rect> rows = _rowRects(tester);
+      for (final (int index, Rect row) in rows.indexed) {
+        expect(row.left, greaterThanOrEqualTo(0));
+        expect(row.right, lessThanOrEqualTo(size.width));
+        expect(row.top, greaterThanOrEqualTo(0));
+        for (final Rect other in rows.skip(index + 1)) {
+          expect(row.overlaps(other), isFalse);
+        }
+      }
+    });
+  }
 
   group('an unavailable scrap', () {
-    Future<void> pumpTextOnly(
-      WidgetTester tester, {
-      List<EntryType>? selected,
-    }) => _pumpSheet(
-      tester,
-      available: const <EntryType>{EntryType.text},
-      onSelected: selected?.add,
-    );
+    Future<void> pumpTextOnly(WidgetTester tester) =>
+        _pumpSheet(tester, available: const <EntryType>{EntryType.text});
 
-    testWidgets('says it is coming soon and cannot be chosen', (
-      WidgetTester tester,
-    ) async {
-      final List<EntryType> selected = <EntryType>[];
-      final SemanticsHandle semantics = tester.ensureSemantics();
-      await pumpTextOnly(tester, selected: selected);
+    for (final _Choice choice in _choices) {
+      testWidgets('says on the ${choice.noun} it is coming soon and cannot be '
+          'chosen', (WidgetTester tester) async {
+        final List<EntryType> selected = <EntryType>[];
+        final SemanticsHandle semantics = tester.ensureSemantics();
+        await _pumpSheet(
+          tester,
+          available: const <EntryType>{EntryType.text},
+          onSelected: selected.add,
+          layout: choice.layout,
+          platform: choice.platform,
+          size: choice.size,
+        );
 
-      expect(find.text('Coming soon'), findsNWidgets(2));
-      expect(find.text('speak it, hands-free'), findsNothing);
-      await tester.tap(find.byKey(captureScrapKey(EntryType.voice)));
-      await tester.pump();
-      expect(selected, isEmpty);
-      expect(
-        tester.getSemantics(find.byKey(captureScrapKey(EntryType.video))),
-        isSemantics(
-          label: 'Record video\nComing soon',
-          isButton: true,
-          hasEnabledState: true,
-          isEnabled: false,
-        ),
-      );
-      semantics.dispose();
-    });
+        expect(find.text('Coming soon'), findsNWidgets(2));
+        expect(find.text('speak it, hands-free'), findsNothing);
+        await tester.tap(find.byKey(choice.keyOf(EntryType.voice)));
+        await tester.pump();
+        expect(selected, isEmpty);
+        expect(
+          tester.getSemantics(find.byKey(choice.keyOf(EntryType.video))),
+          isSemantics(
+            label: 'Record video\nComing soon',
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: false,
+          ),
+        );
+        semantics.dispose();
+      });
+    }
 
     testWidgets('does not lift, straighten or show the click cursor', (
       WidgetTester tester,
@@ -541,34 +596,23 @@ void main() {
       expect(pose.rise, closeTo(captureScrapLift, _angleTolerance));
     });
 
-    for (final (ShellLayout layout, TargetPlatform platform, Size size)
-        in <(ShellLayout, TargetPlatform, Size)>[
-          (ShellLayout.sidebar, TargetPlatform.macOS, _desktop),
-          (ShellLayout.bottomBar, TargetPlatform.android, _phone),
-        ]) {
-      testWidgets('at double size the ${layout.name} scraps part and nothing '
-          'overflows', (WidgetTester tester) async {
-        await _pumpSheet(
-          tester,
-          layout: layout,
-          platform: platform,
-          size: size,
-          textScale: 2,
-        );
+    testWidgets('at double size the scraps part and nothing overflows', (
+      WidgetTester tester,
+    ) async {
+      await _pumpSheet(tester, textScale: 2);
 
-        expect(tester.takeException(), isNull);
-        expect(find.byKey(captureScrapPileKey), findsNothing);
-        final List<Rect> slots = <Rect>[
-          for (final EntryType type in EntryType.values)
-            tester.getRect(find.byKey(captureScrapKey(type))),
-        ];
-        for (final (int index, Rect slot) in slots.indexed) {
-          for (final Rect other in slots.skip(index + 1)) {
-            expect(slot.overlaps(other), isFalse);
-          }
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(captureScrapPileKey), findsNothing);
+      final List<Rect> slots = <Rect>[
+        for (final EntryType type in EntryType.values)
+          tester.getRect(find.byKey(captureScrapKey(type))),
+      ];
+      for (final (int index, Rect slot) in slots.indexed) {
+        for (final Rect other in slots.skip(index + 1)) {
+          expect(slot.overlaps(other), isFalse);
         }
-      });
-    }
+      }
+    });
   });
 
   testWidgets('with reduced motion the scraps are dealt and turn at once', (
