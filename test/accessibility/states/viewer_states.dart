@@ -707,7 +707,7 @@ final List<A11yState> viewerStates = <A11yState>[
       pump: _pumpChangeMood,
       proof: <A11yProof>[
         A11yProof(_confirmIn(PhoneSheet)),
-        A11yProof(find.text('Change mood')),
+        A11yProof(find.text('Change bloom')),
       ],
     ),
     desktop: A11yLayoutHalf(
@@ -716,7 +716,7 @@ final List<A11yState> viewerStates = <A11yState>[
         A11yProof(
           find.descendant(
             of: find.byType(StickerCard),
-            matching: find.widgetWithText(StickerButton, 'Change mood'),
+            matching: find.widgetWithText(StickerButton, 'Change bloom'),
           ),
         ),
       ],

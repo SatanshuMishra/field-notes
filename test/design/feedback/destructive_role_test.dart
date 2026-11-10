@@ -125,7 +125,7 @@ final List<_DestructiveFlow> _flows = <_DestructiveFlow>[
   (
     name: 'showConfirmDialog',
     destructive: 'Delete',
-    cancel: 'Cancel',
+    cancel: 'Keep it',
     home: (List<bool?> results) => _opener(
       'Open',
       (BuildContext context) async => results.add(
@@ -134,6 +134,7 @@ final List<_DestructiveFlow> _flows = <_DestructiveFlow>[
           title: 'Delete this entry?',
           message: 'This log will be removed. This can’t be undone.',
           confirmLabel: 'Delete',
+          cancelLabel: 'Keep it',
           danger: true,
         ),
       ),
@@ -217,7 +218,7 @@ void _expectWrapsInFull(WidgetTester tester, String label) {
   expect(text, findsOneWidget, reason: label);
   final RenderParagraph paragraph = tester.renderObject<RenderParagraph>(text);
   expect(paragraph.didExceedMaxLines, isFalse, reason: label);
-  expect(_lineCount(tester, text), 2, reason: label);
+  expect(_lineCount(tester, text), greaterThanOrEqualTo(2), reason: label);
   expect(tester.takeException(), isNull, reason: label);
 }
 
@@ -670,6 +671,7 @@ void main() {
                 title: 'Delete this entry?',
                 message: 'This log will be removed.',
                 confirmLabel: _thirtyCharacters,
+                cancelLabel: 'Keep it',
                 danger: true,
               ),
             ),

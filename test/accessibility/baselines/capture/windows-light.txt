@@ -40,8 +40,6 @@ text-contrast | c10-discard-dialog-sidebar | Cancel | Today · 9:30 AM / New not
 text-contrast | c10-discard-dialog-sidebar | New note | <root> # measured: 9.73:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar | Today · 9:30 AM | <root> # measured: 6.53:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | # title   - list   1. steps   > quote | <root> # measured: 6.54:1 by token arithmetic
-text-contrast | c10-discard-dialog-sidebar@2x | Cancel | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # measured: 9.41:1 by token arithmetic
-text-contrast | c10-discard-dialog-sidebar@2x | New note | <root> # measured: 9.73:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | Today · 9:30 AM | <root> # measured: 6.53:1 by token arithmetic
 text-contrast | c9-selection-menu@2x | Copy | <root> # Flutter's own control
 text-contrast | c9-selection-menu@2x | Paste | <root> # Flutter's own control

@@ -196,6 +196,13 @@ void main() {
       await tester.tap(_inDialog(find.byKey(deviceRemoveKey(_otherDevice))));
       await tester.pumpAndSettle();
       expect(find.text(removeDevicePrompt('Galaxy S24 Ultra')), findsOneWidget);
+      expect(
+        find.text(
+          'It stops syncing with this journal. Nothing on it is deleted.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Keep it'), findsOneWidget);
       await tester.tap(find.byKey(confirmDialogCancelKey));
       await tester.pumpAndSettle();
       expect(find.text(removeDevicePrompt('Galaxy S24 Ultra')), findsNothing);
