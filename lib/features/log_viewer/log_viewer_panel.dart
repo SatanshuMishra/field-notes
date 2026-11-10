@@ -41,6 +41,8 @@ const String logViewerEarlierLabel = 'Earlier log';
 const String logViewerLaterLabel = 'Later log';
 const String logViewerBackLabel = 'Back';
 const String logViewerCloseLabel = 'Close';
+const String logViewerRenameFailedMessage =
+    "Couldn't save that title. Please try again.";
 
 String logViewerDeleteMessageFor(String place) =>
     'This log will be removed from $place. This can’t be undone.';
@@ -278,6 +280,17 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     _leave(LogViewerOutcome.deleted);
   }
 
+  Future<void> _rename(Entry entry, String? title) async {
+    try {
+      await ref.read(journalRepositoryProvider).setEntryTitle(entry.id, title);
+    } catch (error, stackTrace) {
+      debugPrint('Log rename failed: $error\n$stackTrace');
+      if (mounted) {
+        showTransientToast(context, logViewerRenameFailedMessage);
+      }
+    }
+  }
+
   void _leaveIfRemoved(List<Entry>? entries) {
     if (entries == null || _deleting || _left || _indexIn(entries) >= 0) {
       return;
@@ -383,6 +396,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       onLater: later == null ? null : _later,
       onDelete: () => _delete(entry),
       onEdit: entry.type == EntryType.text ? () => _edit(entry) : null,
+      onRename: (String? title) => unawaited(_rename(entry, title)),
     );
   }
 

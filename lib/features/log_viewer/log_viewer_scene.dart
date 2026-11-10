@@ -36,6 +36,7 @@ final class LogViewerScene {
     required this.onLater,
     required this.onDelete,
     required this.onEdit,
+    this.onRename,
   });
 
   final Entry entry;
@@ -52,6 +53,7 @@ final class LogViewerScene {
   final VoidCallback? onLater;
   final VoidCallback onDelete;
   final VoidCallback? onEdit;
+  final ValueChanged<String?>? onRename;
 
   String get exitLabel {
     return switch (exit) {
@@ -70,6 +72,9 @@ final class LogViewerScene {
   String clockOf(BuildContext context) {
     return entryClockOf(context, entry);
   }
+
+  String stamp(BuildContext context) =>
+      '$dayTitle$_quietLineSeparator${clockOf(context)}';
 
   String quietLine(BuildContext context) {
     final String? place = position;
