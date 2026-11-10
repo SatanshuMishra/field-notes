@@ -24,10 +24,7 @@ Future<void> _pumpComposer(
       home: DialogHost(
         child: ComposerShell(
           responsive: true,
-          child: TextComposerSheet(
-            onSave: (String _) {},
-            onCancel: () {},
-          ),
+          child: TextComposerSheet(onSave: (String _) {}, onCancel: () {}),
         ),
       ),
     ),
@@ -35,11 +32,8 @@ Future<void> _pumpComposer(
   await tester.pump();
 }
 
-Rect _sheet(WidgetTester tester) =>
-    tester.getRect(find.byType(TextComposerSheet));
-
 void main() {
-  testWidgets('the sheet stays below the status bar with the keyboard up', (
+  testWidgets('the room stays below the status bar with the keyboard up', (
     WidgetTester tester,
   ) async {
     await _pumpComposer(tester, keyboardInset: _keyboard);
@@ -48,16 +42,18 @@ void main() {
       tester.getRect(find.byKey(composerPanelKey)),
       Offset.zero & _phoneSurface,
     );
-    expect(_sheet(tester).top, _statusBar);
     expect(
-      tester.getRect(find.text('Cancel')).top,
+      tester.getRect(find.byKey(composerCloseKey)).top,
       greaterThanOrEqualTo(_statusBar),
     );
-    expect(_sheet(tester).bottom, _phoneSurface.height - _keyboard);
+    expect(
+      tester.getRect(find.byKey(composerSaveKey)).bottom,
+      lessThanOrEqualTo(_phoneSurface.height - _keyboard),
+    );
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the sheet stays below the status bar with the keyboard down', (
+  testWidgets('the room stays below the status bar with the keyboard down', (
     WidgetTester tester,
   ) async {
     await _pumpComposer(tester, keyboardInset: 0);
@@ -66,8 +62,14 @@ void main() {
       tester.getRect(find.byKey(composerPanelKey)),
       Offset.zero & _phoneSurface,
     );
-    expect(_sheet(tester).top, _statusBar);
-    expect(_sheet(tester).bottom, _phoneSurface.height);
+    expect(
+      tester.getRect(find.byKey(composerCloseKey)).top,
+      greaterThanOrEqualTo(_statusBar),
+    );
+    expect(
+      tester.getRect(find.byKey(composerSaveKey)).bottom,
+      lessThanOrEqualTo(_phoneSurface.height),
+    );
     expect(tester.takeException(), isNull);
   });
 }

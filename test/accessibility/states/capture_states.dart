@@ -70,6 +70,7 @@ import '../../support/photo_line_fixture.dart';
 import '../support/a11y_state.dart';
 
 const double _keyboardInset = 300;
+const double _narrowDesktopWidth = 480;
 
 const String _today = '2026-09-18';
 const String _launcherLabel = 'open';
@@ -134,8 +135,9 @@ void _useSurface(
   WidgetTester tester,
   A11yVariant variant, {
   double keyboard = 0,
+  A11yWindow? window,
 }) {
-  variant.useWindow(tester);
+  variant.useWindow(tester, window);
   tester.view.viewInsets = FakeViewPadding(
     bottom: variant.desktop ? 0 : keyboard * variant.window.devicePixelRatio,
   );
@@ -200,8 +202,9 @@ Future<void> _openComposer(
   FakeDraftStore? drafts,
   List<Override> extra = const <Override>[],
   double keyboard = 0,
+  A11yWindow? window,
 }) async {
-  _useSurface(tester, variant, keyboard: keyboard);
+  _useSurface(tester, variant, keyboard: keyboard, window: window);
   await tester.pumpWidget(
     ProviderScope(
       overrides: _composerOverrides(drafts: drafts, extra: extra),
@@ -223,8 +226,15 @@ Future<void> _composeNote(
   String text, {
   List<Override> extra = const <Override>[],
   double keyboard = 0,
+  A11yWindow? window,
 }) async {
-  await _openComposer(tester, variant, extra: extra, keyboard: keyboard);
+  await _openComposer(
+    tester,
+    variant,
+    extra: extra,
+    keyboard: keyboard,
+    window: window,
+  );
   await NoteEditorDriver(tester).enterText(text);
   await tester.pump(draftIdleDebounceForTest);
   await tester.pumpAndSettle();
@@ -238,8 +248,27 @@ Future<void> _pumpComposerWithKeyboard(
   A11yVariant variant,
 ) => _composeNote(tester, variant, _noteText, keyboard: _keyboardInset);
 
+A11yWindow _windowTooNarrowForTheToolbar(A11yVariant variant) {
+  final A11yWindow window = variant.window;
+  return variant.desktop
+      ? A11yWindow(
+          physicalSize: Size(
+            _narrowDesktopWidth * window.devicePixelRatio,
+            window.physicalSize.height,
+          ),
+          devicePixelRatio: window.devicePixelRatio,
+        )
+      : window;
+}
+
 Future<void> _pumpMoreFormats(WidgetTester tester, A11yVariant variant) async {
-  await _pumpComposerWithKeyboard(tester, variant);
+  await _composeNote(
+    tester,
+    variant,
+    _noteText,
+    keyboard: _keyboardInset,
+    window: _windowTooNarrowForTheToolbar(variant),
+  );
   await tester.ensureVisible(find.byKey(formatMoreKey));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(formatMoreKey));
@@ -286,7 +315,7 @@ Future<void> _pumpPhotoSelected(
   await _composeNote(
     tester,
     variant,
-    'one\n${mdPhotoLine(photoIdA)}\ntwo',
+    '${mdPhotoLine(photoIdA)}\none two',
     extra: <Override>[_photoResolver()],
   );
   final NoteEditorDriver driver = NoteEditorDriver(tester);
@@ -534,18 +563,7 @@ final Finder _fullScreenComposer = find.byElementPredicate(
           box.size == MediaQuery.sizeOf(element),
         _ => false,
       },
-  description: 'the composer filling the phone screen',
-);
-
-final Finder _panelComposer = find.byElementPredicate(
-  (Element element) =>
-      element.widget.key == composerPanelKey &&
-      switch (element.renderObject) {
-        final RenderBox box when box.hasSize =>
-          box.size.width < MediaQuery.sizeOf(element).width,
-        _ => false,
-      },
-  description: 'the composer as a panel narrower than the desktop window',
+  description: 'the composer filling the window',
 );
 
 final Finder _desktopChooser = find.descendant(
@@ -596,7 +614,7 @@ final List<A11yState> captureStates = <A11yState>[
       pump: _pumpNewComposer,
       proof: <A11yProof>[
         A11yProof(find.byType(TextComposerSheet)),
-        A11yProof(_panelComposer),
+        A11yProof(_fullScreenComposer),
       ],
     ),
   ),
@@ -612,7 +630,7 @@ final List<A11yState> captureStates = <A11yState>[
   A11yState(
     id: 'c4-more-formats',
     pump: _pumpMoreFormats,
-    proof: <A11yProof>[A11yProof(find.byKey(formatStrikethroughKey))],
+    proof: <A11yProof>[A11yProof(find.byKey(formatRedoKey))],
   ),
   ...a11yInBothLayouts(
     id: 'c5-edit-note',
@@ -628,7 +646,7 @@ final List<A11yState> captureStates = <A11yState>[
       pump: _pumpEditNote,
       proof: <A11yProof>[
         A11yProof(find.text(editNoteSaveLabel)),
-        A11yProof(_panelComposer),
+        A11yProof(_fullScreenComposer),
       ],
     ),
   ),

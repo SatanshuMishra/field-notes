@@ -45,7 +45,11 @@ const Color _white = Color(0xFFFFFFFF);
 final int _lightRow = _ink.withValues(alpha: 0.06).toARGB32();
 final int _lightPill = _coral.withValues(alpha: 0.08).toARGB32();
 final int _dark = _white.withValues(alpha: 0.12).toARGB32();
+final int _keepHover = FieldNotesColors.light.mediaCtaHover.toARGB32();
 final int _stageSoftHover = Palette.mediaInk.withValues(alpha: 0.1).toARGB32();
+
+const Size _desktopWindow = Size(1280, 900);
+const Size _narrowWindow = Size(480, 900);
 
 const Key _cameraToggleKey = ValueKey<String>('camera-toggle');
 const Key _flipKey = ValueKey<String>('camera-flip');
@@ -80,7 +84,7 @@ Finder _pressableAround(String text) => find
     .first;
 
 void _desktopView(WidgetTester tester) {
-  tester.view.physicalSize = const Size(1280, 900);
+  tester.view.physicalSize = _desktopWindow;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 }
@@ -404,13 +408,19 @@ void main() {
     );
     await _expectRows(tester, mouse, <_Row>[
       _Row(
-        'Cancel',
-        _pressableAt(composerCloseKey),
+        'Leave',
+        _pressableOn(composerCloseKey),
         _lightRow,
         _Shape.rounded,
-        10,
+        Shapes.radius8,
       ),
-      _Row('Save', _pressableAt(composerSaveKey), _dark, _Shape.rounded, 13),
+      _Row(
+        'Keep this',
+        _pressableOn(composerSaveKey),
+        _keepHover,
+        _Shape.rounded,
+        Shapes.radiusControl,
+      ),
       _Row(
         'Discard',
         _pressableOn(draftRestoredDiscardKey),
@@ -418,87 +428,54 @@ void main() {
         _Shape.rounded,
         13,
       ),
-      _Row('Bold', _pressableIn(formatBoldKey), _lightRow, _Shape.rounded, 6),
-      _Row(
-        'Italic',
-        _pressableIn(formatItalicKey),
-        _lightRow,
-        _Shape.rounded,
-        6,
-      ),
-      _Row(
-        'Heading',
-        _pressableIn(formatHeadingKey),
-        _lightRow,
-        _Shape.rounded,
-        6,
-      ),
-      _Row(
-        'Bullet list',
-        _pressableIn(formatListKey),
-        _lightRow,
-        _Shape.rounded,
-        6,
-      ),
-      _Row(
-        'Numbered list',
-        _pressableIn(formatNumberedKey),
-        _lightRow,
-        _Shape.rounded,
-        6,
-      ),
-      _Row(
-        'Task list',
-        _pressableIn(formatTaskKey),
-        _lightRow,
-        _Shape.rounded,
-        6,
-      ),
-      _Row('Quote', _pressableIn(formatQuoteKey), _lightRow, _Shape.rounded, 6),
-      _Row('Link', _pressableIn(formatLinkKey), _lightRow, _Shape.rounded, 6),
-      _Row('Table', _pressableIn(formatTableKey), _lightRow, _Shape.rounded, 6),
+      for (final (String label, Key key) in <(String, Key)>[
+        ('Bold', formatBoldKey),
+        ('Italic', formatItalicKey),
+        ('Heading', formatHeadingKey),
+        ('Strikethrough', formatStrikethroughKey),
+        ('Highlight', formatHighlightKey),
+        ('Inline code', formatCodeKey),
+        ('Bullet list', formatListKey),
+        ('Numbered list', formatNumberedKey),
+        ('Task list', formatTaskKey),
+        ('Quote', formatQuoteKey),
+        ('Link', formatLinkKey),
+        ('Table', formatTableKey),
+        ('Add a photo', composerAddPhotoKey),
+      ])
+        _Row(
+          label,
+          _pressableIn(key),
+          _lightRow,
+          _Shape.rounded,
+          Shapes.radius8,
+        ),
+    ]);
+
+    tester.view.physicalSize = _narrowWindow;
+    await tester.pump();
+    await _expectRows(tester, mouse, <_Row>[
       _Row(
         'More formats',
         _pressableIn(formatMoreKey),
         _lightRow,
         _Shape.rounded,
-        6,
-      ),
-      _Row(
-        'Add memory',
-        _pressableOn(composerAddPhotoKey),
-        _dark,
-        _Shape.rounded,
-        11,
+        Shapes.radius8,
       ),
     ]);
-
     await tester.tap(_pressableIn(formatMoreKey));
     await tester.pump();
     await tester.pump();
     await _expectRows(tester, mouse, <_Row>[
       _Row(
-        'Strikethrough',
-        _pressableOn(formatStrikethroughKey),
-        _dark,
+        'Add a photo',
+        _pressableOn(composerAddPhotoKey),
+        _lightRow,
         _Shape.rounded,
-        6,
-      ),
-      _Row(
-        'Highlight',
-        _pressableOn(formatHighlightKey),
-        _dark,
-        _Shape.rounded,
-        6,
-      ),
-      _Row(
-        'Inline code',
-        _pressableOn(formatCodeKey),
-        _dark,
-        _Shape.rounded,
-        6,
+        Shapes.radius8,
       ),
     ]);
+    tester.view.physicalSize = _desktopWindow;
 
     final NoteEditorController controller = NoteEditorController(
       text: 'one\n${mdPhotoLine(photoIdA)}\ntwo',

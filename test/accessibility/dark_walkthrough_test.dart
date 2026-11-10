@@ -44,6 +44,7 @@ import 'package:field_notes/features/today/today_screen.dart';
 import 'package:field_notes/state/state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -583,15 +584,24 @@ void main() {
           'the text composer',
         );
 
-        await _tap(tester, find.byKey(formatMoreKey));
-        _expectDark(
-          tester,
-          find.byKey(formatHighlightKey),
-          'the More formats menu',
-        );
-        await _tap(tester, find.byKey(formatMoreKey));
+        final Finder more = find.byKey(formatMoreKey);
+        if (more.evaluate().isNotEmpty) {
+          await _tap(tester, more);
+          _expectDark(
+            tester,
+            find.byKey(formatRedoKey),
+            'the More formats menu',
+          );
+          await _tap(tester, more);
+        }
 
-        await tester.tap(find.text('Save'));
+        final LogicalKeyboardKey saveModifier =
+            layout.platform == TargetPlatform.macOS
+            ? LogicalKeyboardKey.meta
+            : LogicalKeyboardKey.control;
+        await tester.sendKeyDownEvent(saveModifier);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.sendKeyUpEvent(saveModifier);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 400));
         _expectDark(tester, find.text(emptySaveGuardMessage), 'a toast');

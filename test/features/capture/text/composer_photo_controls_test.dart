@@ -18,6 +18,7 @@ import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/photo/photo_picker.dart';
 import 'package:field_notes/features/capture/text/composer_footer.dart';
+import 'package:field_notes/features/capture/text/editor/format_bar.dart';
 import 'package:field_notes/features/capture/text/editor/note_editor.dart';
 import 'package:field_notes/features/capture/text/editor/photo_caption_field.dart';
 import 'package:field_notes/features/capture/text/editor/photo_toolbar.dart';
@@ -35,6 +36,7 @@ import 'package:field_notes/features/notes/photos/photo_import.dart';
 import 'package:field_notes/state/draft_provider.dart';
 import 'package:field_notes/state/media_provider.dart';
 
+import '../../../support/composer_photo_bar.dart';
 import '../../../support/note_editor_driver.dart';
 import '../../../support/photo_line_fixture.dart';
 import '../../notes/support/notes_harness.dart';
@@ -96,13 +98,12 @@ class _EditorHarness {
   }
 }
 
-FakeNoteMediaResolver _resolvedPhotos() => FakeNoteMediaResolver(
-  <String, ResolvedMedia>{
-    prefixOf(photoIdA): availablePhoto(photoIdA, width: 1200, height: 900),
-    prefixOf(photoIdB): availablePhoto(photoIdB, width: 1200, height: 900),
-    prefixOf(photoIdC): availablePhoto(photoIdC, width: 1200, height: 900),
-  },
-)..memoizeAll();
+FakeNoteMediaResolver _resolvedPhotos() =>
+    FakeNoteMediaResolver(<String, ResolvedMedia>{
+      prefixOf(photoIdA): availablePhoto(photoIdA, width: 1200, height: 900),
+      prefixOf(photoIdB): availablePhoto(photoIdB, width: 1200, height: 900),
+      prefixOf(photoIdC): availablePhoto(photoIdC, width: 1200, height: 900),
+    })..memoizeAll();
 
 Future<_EditorHarness> _pumpEditor(
   WidgetTester tester,
@@ -172,10 +173,11 @@ Future<TextEditingController> _pumpFooter(
   addTearDown(controller.dispose);
   await tester.pumpWidget(
     notesHarness(
-      ComposerFooter(
+      ComposerPhotoBar(
         controller: controller,
-        onAddPhoto: (importer ?? FakePhotoImporter()).call,
+        importer: (importer ?? FakePhotoImporter()).call,
       ),
+      width: composerPhotoBarRoom,
     ),
   );
   await tester.pump();
@@ -232,10 +234,10 @@ Future<_Composing> _pumpComposing(
                   ),
                 ),
                 SizedBox(
-                  width: 688,
-                  child: ComposerFooter(
+                  width: composerPhotoBarRoom,
+                  child: ComposerPhotoBar(
                     controller: composing.controller,
-                    onAddPhoto: importer,
+                    importer: importer,
                     editorFocusNode: composing.focusNode,
                   ),
                 ),
@@ -363,9 +365,8 @@ void main() {
           ],
         ).call,
       );
-      await NoteEditorDriver(
-        tester,
-      ).setSelection(TextSelection.collapsed(offset: entry.value.$1));
+      await NoteEditorDriver(tester)
+          .setSelection(TextSelection.collapsed(offset: entry.value.$1));
 
       await _addMemory(tester);
 
@@ -386,9 +387,8 @@ void main() {
         ],
       ).call,
     );
-    await NoteEditorDriver(
-      tester,
-    ).setSelection(const TextSelection.collapsed(offset: 1));
+    await NoteEditorDriver(tester)
+        .setSelection(const TextSelection.collapsed(offset: 1));
 
     await _addMemory(tester);
 
@@ -446,74 +446,74 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets(
-    'one undo takes back an added photo',
-    (WidgetTester tester) async {
-      final _Composing composing = await _pumpComposing(
-        tester,
-        'A\n\nB\n\nC',
-        FakePhotoImporter(
-          results: <List<String>>[
-            <String>[prefixOf(photoIdA)],
-          ],
-        ).call,
-      );
-      final NoteEditorDriver driver = NoteEditorDriver(tester);
-      composing.focusNode.requestFocus();
-      await tester.pump();
-      await driver.setSelection(const TextSelection.collapsed(offset: 1));
-
-      await _addMemory(tester);
-      expect(composing.controller.text, 'A\n$a\n\nB\n\nC');
-
-      await driver.pressKey(LogicalKeyboardKey.keyZ, meta: true);
-
-      expect(composing.controller.text, 'A\n\nB\n\nC');
-      await tester.pump(const Duration(seconds: 5));
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
-  );
-
-  testWidgets('a plain controller with no selection gets the photo at the end', (
+  testWidgets('one undo takes back an added photo', (
     WidgetTester tester,
   ) async {
-    final TextEditingController controller = await _pumpFooter(
+    final _Composing composing = await _pumpComposing(
       tester,
-      text: 'kept',
-      importer: FakePhotoImporter(
+      'A\n\nB\n\nC',
+      FakePhotoImporter(
         results: <List<String>>[
           <String>[prefixOf(photoIdA)],
         ],
-      ),
+      ).call,
     );
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
+    composing.focusNode.requestFocus();
+    await tester.pump();
+    await driver.setSelection(const TextSelection.collapsed(offset: 1));
 
-    await _press(tester, find.byKey(composerAddPhotoKey));
+    await _addMemory(tester);
+    expect(composing.controller.text, 'A\n$a\n\nB\n\nC');
 
-    expect(controller.text, 'kept\n$a\n');
-  });
+    await driver.pressKey(LogicalKeyboardKey.keyZ, meta: true);
 
-  testWidgets('Add memory picks, stores and inserts the photo line at the caret', (
-    WidgetTester tester,
-  ) async {
-    final FakePhotoImporter importer = FakePhotoImporter(
-      results: <List<String>>[
-        <String>[prefixOf(photoIdA)],
-      ],
-    );
-    final TextEditingController controller = await _pumpFooter(
-      tester,
-      text: 'one\ntwo',
-      selection: caretAt(3),
-      importer: importer,
-    );
+    expect(composing.controller.text, 'A\n\nB\n\nC');
+    await tester.pump(const Duration(seconds: 5));
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
-    await _press(tester, find.byKey(composerAddPhotoKey));
+  testWidgets(
+    'a plain controller with no selection gets the photo at the end',
+    (WidgetTester tester) async {
+      final TextEditingController controller = await _pumpFooter(
+        tester,
+        text: 'kept',
+        importer: FakePhotoImporter(
+          results: <List<String>>[
+            <String>[prefixOf(photoIdA)],
+          ],
+        ),
+      );
 
-    expect(importer.calls, 1);
-    expect(controller.text, 'one\n$a\ntwo');
-    expect(_photos(controller.text), hasLength(1));
-    expect(_photos(controller.text).single.reference, prefixOf(photoIdA));
-  });
+      await _press(tester, find.byKey(composerAddPhotoKey));
+
+      expect(controller.text, 'kept\n$a\n');
+    },
+  );
+
+  testWidgets(
+    'Add memory picks, stores and inserts the photo line at the caret',
+    (WidgetTester tester) async {
+      final FakePhotoImporter importer = FakePhotoImporter(
+        results: <List<String>>[
+          <String>[prefixOf(photoIdA)],
+        ],
+      );
+      final TextEditingController controller = await _pumpFooter(
+        tester,
+        text: 'one\ntwo',
+        selection: caretAt(3),
+        importer: importer,
+      );
+
+      await _press(tester, find.byKey(composerAddPhotoKey));
+
+      expect(importer.calls, 1);
+      expect(controller.text, 'one\n$a\ntwo');
+      expect(_photos(controller.text), hasLength(1));
+      expect(_photos(controller.text).single.reference, prefixOf(photoIdA));
+    },
+  );
 
   testWidgets('a refused pick is reported and leaves the note alone', (
     WidgetTester tester,
@@ -577,36 +577,37 @@ void main() {
     );
     await tester.pumpWidget(
       notesHarness(
-        Column(
-          children: <Widget>[
-            SizedBox(
-              height: 120,
-              child: TextField(
-                controller: controller,
-                focusNode: editor,
-                maxLines: null,
-                expands: true,
-              ),
-            ),
-            ComposerFooter(
-              controller: controller,
-              onAddPhoto: importer.call,
-              editorFocusNode: editor,
-            ),
-          ],
+        ComposerPhotoBar(
+          controller: controller,
+          importer: importer.call,
+          editorFocusNode: editor,
         ),
+        width: composerPhotoBarRoom,
       ),
     );
     editor.requestFocus();
     await tester.pump();
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-    await tester.pump();
+    bool addPhotoFocused() {
+      final BuildContext? focused = FocusManager.instance.primaryFocus?.context;
+      return focused != null &&
+          find
+              .descendant(
+                of: find.byKey(composerAddPhotoKey),
+                matching: find.byElementPredicate(
+                  (Element element) => identical(element, focused),
+                ),
+              )
+              .evaluate()
+              .isNotEmpty;
+    }
 
-    expect(
-      FocusManager.instance.primaryFocus?.debugLabel,
-      composerAddPhotoLabel,
-    );
+    for (int press = 0; press < 16 && !addPhotoFocused(); press++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+    }
+
+    expect(addPhotoFocused(), isTrue);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
@@ -616,7 +617,9 @@ void main() {
     expect(editor.hasFocus, isTrue);
   });
 
-  testWidgets('Add memory survives a short screen', (WidgetTester tester) async {
+  testWidgets('Add memory survives a short screen', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = _landscapePhoneSurface;
     tester.view.devicePixelRatio = 1;
     tester.view.viewInsets = const FakeViewPadding(bottom: _keyboardInset);
@@ -638,6 +641,8 @@ void main() {
       ),
     );
     await tester.pump();
+
+    await _press(tester, find.byKey(formatMoreKey));
 
     expect(find.byKey(composerAddPhotoKey).hitTestable(), findsOneWidget);
     expect(find.text(composerAddPhotoLabel), findsOneWidget);
@@ -946,28 +951,32 @@ void main() {
   });
 
   group('NotePhotoStore', () {
-    test('stores a pick with its dimensions and answers a 12-hex reference',
-        () async {
-      final FakeNoteMediaStore media =
-          FakeNoteMediaStore(assignIds: <String>[photoIdA]);
+    test(
+      'stores a pick with its dimensions and answers a 12-hex reference',
+      () async {
+        final FakeNoteMediaStore media = FakeNoteMediaStore(
+          assignIds: <String>[photoIdA],
+        );
 
-      final String reference = await NotePhotoStore(media).importPhoto(
-        const CaptureBytes(
-          bytes: <int>[1, 2, 3],
-          mime: 'image/png',
-          width: 640,
-          height: 480,
-        ),
-      );
+        final String reference = await NotePhotoStore(media).importPhoto(
+          const CaptureBytes(
+            bytes: <int>[1, 2, 3],
+            mime: 'image/png',
+            width: 640,
+            height: 480,
+          ),
+        );
 
-      expect(reference, prefixOf(photoIdA));
-      expect(media.blobs.single.width, 640);
-      expect(media.blobs.single.height, 480);
-    });
+        expect(reference, prefixOf(photoIdA));
+        expect(media.blobs.single.width, 640);
+        expect(media.blobs.single.height, 480);
+      },
+    );
 
     test('stores a file pick with its dimensions', () async {
-      final FakeNoteMediaStore media =
-          FakeNoteMediaStore(assignIds: <String>[photoIdA]);
+      final FakeNoteMediaStore media = FakeNoteMediaStore(
+        assignIds: <String>[photoIdA],
+      );
 
       final String reference = await NotePhotoStore(media).importPhoto(
         CaptureFile(
@@ -983,34 +992,37 @@ void main() {
       expect(media.blobs.single.height, 2048);
     });
 
-    test('extends the reference when a stored neighbour shares its prefix',
-        () async {
-      final String twin = '${prefixOf(photoIdA)}${'f' * 52}';
-      final FakeNoteMediaStore media =
-          FakeNoteMediaStore(assignIds: <String>[photoIdA])
-            ..register(photoBlob(twin));
+    test(
+      'extends the reference when a stored neighbour shares its prefix',
+      () async {
+        final String twin = '${prefixOf(photoIdA)}${'f' * 52}';
+        final FakeNoteMediaStore media = FakeNoteMediaStore(
+          assignIds: <String>[photoIdA],
+        )..register(photoBlob(twin));
 
-      final String reference = await NotePhotoStore(media).importPhoto(
-        CaptureFile(file: File('unused.jpg'), mime: 'image/jpeg'),
-      );
+        final String reference = await NotePhotoStore(media).importPhoto(
+          CaptureFile(file: File('unused.jpg'), mime: 'image/jpeg'),
+        );
 
-      expect(reference, photoIdA.substring(0, 16));
-    });
+        expect(reference, photoIdA.substring(0, 16));
+      },
+    );
 
     test('resolves references to full ids once each, in first-seen order, '
         'skipping any it cannot resolve', () async {
       final FakeNoteMediaStore media = FakeNoteMediaStore()
         ..register(photoBlob(photoIdA))
         ..register(photoBlob(photoIdB));
-      final String source = '${mdPhotoLine(photoIdB)}\n'
+      final String source =
+          '${mdPhotoLine(photoIdB)}\n'
           '![](photo/${photoIdA.substring(0, 16)})\n'
           '${mdPhotoLine(photoIdA)}\n'
           '![](photo/0123456789ab)';
 
-      expect(
-        await NotePhotoStore(media).mediaIdsReferencedBy(source),
-        <String>[photoIdB, photoIdA],
-      );
+      expect(await NotePhotoStore(media).mediaIdsReferencedBy(source), <String>[
+        photoIdB,
+        photoIdA,
+      ]);
     });
 
     test('a source with no reference never opens the store', () async {

@@ -1,34 +1,37 @@
-flutter-text-contrast | c11-draft-chip | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # measured: 6.92:1 by token arithmetic
 focus-visible | c9-selection-menu | Copy | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Cut | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Paste | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Select All | <root> # Flutter's own control
 keyboard | c1-chooser-sidebar | Dismiss capture chooser | <root> # Flutter's own control
 keyboard | c10-discard-dialog-sidebar | Dismiss | <root> # Flutter's own control
-keyboard | c8-table-toolbar | Add memory | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Align centre | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Align left | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Align right | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Bold | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Bullet list | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Cancel | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Column left | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Column right | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Delete column | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Delete row | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Delete table | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Heading | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Italic | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Link | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | More formats | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Numbered list | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Quote | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Row above | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Row below | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Save | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Table | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Task list | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
-keyboard | c8-table-toolbar | Undo | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Add a photo | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Align centre | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Align left | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Align right | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Bold | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Bullet list | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Column left | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Column right | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Delete column | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Delete row | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Delete table | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Heading | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Highlight | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Inline code | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Italic | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Keep this | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Leave | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Let it go | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Link | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Numbered list | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Quote | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Row above | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Row below | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Strikethrough | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Table | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Task list | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Title / Add a title | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
+keyboard | c8-table-toolbar | Undo | ⌘ Return / keep / Esc / leave / 8 words # platform: Tab moves between table cells as in every editor table; Ctrl+Tab leaves the editor, entering the table toolbar first from a cell
 missing-role | c1-chooser-sidebar | Dismiss capture chooser | <root> # Flutter's own control
 missing-role | c1-chooser-sidebar@2x | Dismiss capture chooser | <root> # Flutter's own control
 missing-role | c10-discard-dialog-sidebar | Dismiss | <root> # Flutter's own control
@@ -37,10 +40,24 @@ small-target | c9-selection-menu | Copy | <root> # Flutter's own control
 small-target | c9-selection-menu | Cut | <root> # Flutter's own control
 small-target | c9-selection-menu | Paste | <root> # Flutter's own control
 small-target | c9-selection-menu | Select All | <root> # Flutter's own control
-text-contrast | c10-discard-dialog-sidebar | # title   - list   1. steps   > quote | <root> # measured: 6.54:1 by token arithmetic
-text-contrast | c10-discard-dialog-sidebar | Cancel | Today · 9:30 AM / New note / # title   - list   1. steps   > quote # measured: 9.41:1 by token arithmetic
-text-contrast | c10-discard-dialog-sidebar | New note | <root> # measured: 9.73:1 by token arithmetic
-text-contrast | c10-discard-dialog-sidebar | Today · 9:30 AM | <root> # measured: 6.53:1 by token arithmetic
-text-contrast | c10-discard-dialog-sidebar@2x | # title   - list   1. steps   > quote | <root> # measured: 6.54:1 by token arithmetic
-text-contrast | c10-discard-dialog-sidebar@2x | Today · 9:30 AM | <root> # measured: 6.53:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar | 6 words | New note, Today · 9:30 AM # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar | Add a title | ⌘ Return / keep / Esc / leave / 6 words # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar | Esc | New note, Today · 9:30 AM # measured: 7.64:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar | Leave | ⌘ Return / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar | Let it go | ⌘ Return / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar | Private · only you will read this | ⌘ Return / keep / Esc / leave / 6 words # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar | There’s no wrong way to say it. | ⌘ Return / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar | keep | New note, Today · 9:30 AM # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar | leave | New note, Today · 9:30 AM # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar | ⌘ Return | New note, Today · 9:30 AM # measured: 7.64:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar@2x | 6 words | New note, Today · 9:30 AM # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar@2x | Add a title | ⌘ Return / keep / Esc / leave / 6 words # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar@2x | Esc | New note, Today · 9:30 AM # measured: 7.64:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar@2x | Leave | ⌘ Return / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar@2x | Let it go | ⌘ Return / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar@2x | Private · only you will read this | ⌘ Return / keep / Esc / leave / 6 words # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar@2x | There’s no wrong way to say it. | ⌘ Return / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar@2x | keep | New note, Today · 9:30 AM # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar@2x | leave | New note, Today · 9:30 AM # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog-sidebar@2x | ⌘ Return | New note, Today · 9:30 AM # measured: 7.64:1 by token arithmetic
 truncated-text | c9-selection-menu@2x | Select All | <root> # Flutter's own control

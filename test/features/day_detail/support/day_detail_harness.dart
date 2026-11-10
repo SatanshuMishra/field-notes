@@ -185,6 +185,7 @@ class FakeJournalRepository implements JournalRepository {
   final List<({String id, String textContent})> textUpdates =
       <({String id, String textContent})>[];
   final List<NoteSaveRecord> noteSaves = <NoteSaveRecord>[];
+  final List<String?> noteSaveTitles = <String?>[];
   final List<({String id, String? title})> titleUpdates =
       <({String id, String? title})>[];
 
@@ -260,6 +261,7 @@ class FakeJournalRepository implements JournalRepository {
     if (error != null) {
       throw error;
     }
+    noteSaveTitles.add(title);
     noteSaves.add((
       entryId: entryId,
       date: date,

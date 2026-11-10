@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:field_notes/design/art/art.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 
@@ -16,6 +15,7 @@ Future<void> _pumpShell(
   required Size window,
   bool responsive = false,
   TargetPlatform? platform,
+  Brightness brightness = Brightness.light,
   Widget child = const SizedBox(key: _content, height: 200),
 }) async {
   tester.view.physicalSize = window;
@@ -23,18 +23,21 @@ Future<void> _pumpShell(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MaterialApp(
+      key: ValueKey<Brightness>(brightness),
       debugShowCheckedModeBanner: false,
-      theme: platform == null ? null : ThemeData(platform: platform),
-      home: ComposerShell(
-        responsive: responsive,
-        child: child,
+      theme: ThemeData(
+        platform: platform,
+        brightness: brightness,
+        extensions: <ThemeExtension<dynamic>>[
+          brightness == Brightness.dark
+              ? FieldNotesColors.dark
+              : FieldNotesColors.light,
+        ],
       ),
+      home: ComposerShell(responsive: responsive, child: child),
     ),
   );
 }
-
-double _panelWidth(WidgetTester tester) =>
-    tester.getSize(find.byKey(composerPanelKey)).width;
 
 void _usePhoneInsets(WidgetTester tester, {double keyboard = 0}) {
   tester.view.padding = const FakeViewPadding(
@@ -48,67 +51,46 @@ void _usePhoneInsets(WidgetTester tester, {double keyboard = 0}) {
   tester.view.viewInsets = FakeViewPadding(bottom: keyboard);
 }
 
+Color _roomColor(WidgetTester tester) =>
+    tester.widget<ColoredBox>(find.byKey(composerPanelKey)).color;
+
 void main() {
-  testWidgets('the sprig paints beneath the composer content',
-      (WidgetTester tester) async {
-    await _pumpShell(tester, window: const Size(1280, 900));
-
-    final Stack stack = tester.widget<Stack>(
-      find
-          .descendant(
-            of: find.byKey(composerPanelKey),
-            matching: find.byType(Stack),
-          )
-          .first,
-    );
-    final int sprig = stack.children.indexWhere(
-      (Widget child) =>
-          find
-              .descendant(
-                of: find.byWidget(child),
-                matching: find.byType(SprigArt),
-              )
-              .evaluate()
-              .isNotEmpty,
-    );
-    final int content =
-        stack.children.indexWhere((Widget child) => child.key == _content);
-
-    expect(sprig, isNonNegative);
-    expect(content, isNonNegative);
-    expect(sprig, lessThan(content));
-  });
-
-  for (final ({double window, double panel}) size
-      in <({double window, double panel})>[
-    (window: 900, panel: 640),
-    (window: 1280, panel: 768),
-    (window: 1920, panel: 1000),
-    (window: 390, panel: 390),
+  for (final Size window in <Size>[
+    const Size(900, 900),
+    const Size(1280, 900),
+    const Size(1920, 1200),
   ]) {
-    testWidgets(
-        'a responsive panel is ${size.panel} wide in a ${size.window} window',
-        (WidgetTester tester) async {
+    testWidgets('a responsive room fills a $window desktop window', (
+      WidgetTester tester,
+    ) async {
       await _pumpShell(
         tester,
-        window: Size(size.window, 900),
+        window: window,
         responsive: true,
         platform: TargetPlatform.macOS,
       );
 
-      expect(_panelWidth(tester), size.panel);
+      expect(
+        tester.getRect(find.byKey(composerPanelKey)),
+        Offset.zero & window,
+      );
     });
   }
 
-  testWidgets('a fixed panel stays 640 wide in a wide window',
-      (WidgetTester tester) async {
+  testWidgets('a fixed panel stays 640 wide in a wide window', (
+    WidgetTester tester,
+  ) async {
     await _pumpShell(tester, window: const Size(1920, 900));
 
-    expect(_panelWidth(tester), composerPanelWidth);
+    expect(
+      tester.getSize(find.byKey(composerPanelKey)).width,
+      composerPanelWidth,
+    );
   });
 
-  testWidgets('a responsive panel on the phone fills the screen edge to edge',
-      (WidgetTester tester) async {
+  testWidgets('a responsive room on the phone runs edge to edge in stage ink', (
+    WidgetTester tester,
+  ) async {
     _usePhoneInsets(tester);
     await _pumpShell(
       tester,
@@ -119,18 +101,10 @@ void main() {
     );
 
     expect(tester.getRect(find.byKey(composerPanelKey)), Offset.zero & _phone);
+    expect(tester.getRect(find.byKey(_content)), Offset.zero & _phone);
     expect(
-      tester.getRect(find.byKey(_content)),
-      Rect.fromLTRB(0, _statusBar, _phone.width, _phone.height - _gestureBar),
-    );
-    final BoxDecoration paper = tester
-        .widget<Container>(find.byKey(composerPanelKey))
-        .decoration! as BoxDecoration;
-    expect(paper.border, isNull);
-    expect(paper.borderRadius, isNull);
-    expect(
-      paper.color?.toARGB32(),
-      FieldNotesColors.light.composerPaper.toARGB32(),
+      _roomColor(tester).toARGB32(),
+      FieldNotesColors.light.viewerStage.toARGB32(),
     );
     expect(
       find.descendant(
@@ -141,8 +115,44 @@ void main() {
     );
   });
 
-  testWidgets('a responsive phone panel ends at the top of the keyboard',
-      (WidgetTester tester) async {
+  testWidgets('the room is paper in Light and dark in Dark', (
+    WidgetTester tester,
+  ) async {
+    for (final TargetPlatform platform in <TargetPlatform>[
+      TargetPlatform.android,
+      TargetPlatform.macOS,
+      TargetPlatform.windows,
+    ]) {
+      await _pumpShell(
+        tester,
+        window: const Size(1000, 800),
+        responsive: true,
+        platform: platform,
+      );
+      expect(
+        _roomColor(tester).toARGB32(),
+        FieldNotesColors.light.viewerStage.toARGB32(),
+        reason: '$platform light',
+      );
+
+      await _pumpShell(
+        tester,
+        window: const Size(1000, 800),
+        responsive: true,
+        platform: platform,
+        brightness: Brightness.dark,
+      );
+      expect(
+        _roomColor(tester).toARGB32(),
+        FieldNotesColors.dark.viewerStage.toARGB32(),
+        reason: '$platform dark',
+      );
+    }
+  });
+
+  testWidgets('a responsive phone room hands the keyboard inset to its child', (
+    WidgetTester tester,
+  ) async {
     _usePhoneInsets(tester, keyboard: 300);
     await _pumpShell(
       tester,
@@ -152,30 +162,42 @@ void main() {
       child: const SizedBox.expand(key: _content),
     );
 
-    expect(
-      tester.getRect(find.byKey(_content)),
-      Rect.fromLTRB(0, _statusBar, _phone.width, _phone.height - 300),
-    );
+    expect(tester.getRect(find.byKey(_content)), Offset.zero & _phone);
     expect(
       MediaQuery.viewInsetsOf(tester.element(find.byKey(_content))).bottom,
-      0,
+      300,
     );
   });
 
-  testWidgets('a fixed panel stays a floating card on the phone',
-      (WidgetTester tester) async {
-    _usePhoneInsets(tester);
+  testWidgets('a desktop room reserves the title bar for its child', (
+    WidgetTester tester,
+  ) async {
     await _pumpShell(
       tester,
-      window: _phone,
-      platform: TargetPlatform.android,
+      window: const Size(1280, 900),
+      responsive: true,
+      platform: TargetPlatform.macOS,
+      child: const SizedBox.expand(key: _content),
     );
+
+    expect(find.byKey(composerTopBandKey), findsOneWidget);
+    expect(
+      MediaQuery.paddingOf(tester.element(find.byKey(_content))).top,
+      greaterThan(0),
+    );
+  });
+
+  testWidgets('a fixed panel stays a floating card on the phone', (
+    WidgetTester tester,
+  ) async {
+    _usePhoneInsets(tester);
+    await _pumpShell(tester, window: _phone, platform: TargetPlatform.android);
 
     final Rect panel = tester.getRect(find.byKey(composerPanelKey));
     expect(panel.top, greaterThan(_statusBar));
-    final BoxDecoration card = tester
-        .widget<Container>(find.byKey(composerPanelKey))
-        .decoration! as BoxDecoration;
+    final BoxDecoration card =
+        tester.widget<Container>(find.byKey(composerPanelKey)).decoration!
+            as BoxDecoration;
     expect(card.border, isNotNull);
     expect(card.borderRadius, isNotNull);
   });

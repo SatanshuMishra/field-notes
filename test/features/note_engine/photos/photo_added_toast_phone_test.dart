@@ -7,6 +7,7 @@ import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show ComposerMediaScope, NoteEditorController;
 
+import '../../../support/composer_photo_bar.dart';
 import '../../../support/note_editor_driver.dart';
 import '../../notes/support/notes_harness.dart';
 
@@ -68,10 +69,10 @@ Future<_Composing> _pumpPhoneComposing(
                   ),
                 ),
                 SizedBox(
-                  width: _phoneColumn,
-                  child: ComposerFooter(
+                  width: composerPhotoBarRoom,
+                  child: ComposerPhotoBar(
                     controller: composing.controller,
-                    onAddPhoto: importer.call,
+                    importer: importer.call,
                     editorFocusNode: composing.focusNode,
                   ),
                 ),

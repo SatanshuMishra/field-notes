@@ -23,6 +23,7 @@ import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
+import '../../support/composer_room.dart';
 import '../../support/note_editor_driver.dart';
 import '../capture/core/capture_test_support.dart'
     show FakeDraftStore, draftIdleDebounceForTest;
@@ -391,12 +392,12 @@ void main() {
     await tester.tap(_inFooter(find.byKey(logActionsEditKey)));
     await tester.pumpAndSettle();
 
-    expect(find.text('Editing morning note'), findsOneWidget);
+    expect(composerTitled('Editing morning note'), findsOneWidget);
 
     await tester.tap(find.byKey(composerCloseKey));
     await tester.pumpAndSettle();
 
-    expect(find.text('Editing morning note'), findsNothing);
+    expect(composerTitled('Editing morning note'), findsNothing);
     expect(_inSheet(find.text('Morning note')), findsOneWidget);
     expect(session.outcomes, isEmpty);
   });
@@ -423,7 +424,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(session.repository.noteSaves, hasLength(1));
-    expect(find.text('Editing morning note'), findsNothing);
+    expect(composerTitled('Editing morning note'), findsNothing);
     expect(tester.widget<PhoneSheet>(find.byType(PhoneSheet)).expanded, isTrue);
     expect(tester.getSize(find.byType(PhoneSheet)).height, expanded);
     expect(session.outcomes, isEmpty);

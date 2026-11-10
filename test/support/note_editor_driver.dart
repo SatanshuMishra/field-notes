@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
     show MdBlock, MdBlockKind, MdPhotoLine, MdTree, parseNoteTree;
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
+    show composerTitleFieldKey;
 import 'package:field_notes/features/note_engine/layout/line_fragments.dart'
     show FragmentKind, LaidOutRow, LineFragment, VisualLine;
 import 'package:field_notes/features/note_engine/note_engine.dart'
@@ -12,6 +14,7 @@ import 'package:field_notes/features/note_engine/render/note_view.dart'
 import 'package:field_notes/features/note_engine/render/render_note_view.dart'
     show NoteViewBody, RenderNoteView;
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart' show TextField;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,9 +63,8 @@ ui.Paragraph? _paintedHint(RenderNoteView render) {
   ];
   return drawn
       .where(
-        (ui.Paragraph paragraph) => !laidOut.any(
-          (ui.Paragraph text) => identical(text, paragraph),
-        ),
+        (ui.Paragraph paragraph) =>
+            !laidOut.any((ui.Paragraph text) => identical(text, paragraph)),
       )
       .firstOrNull;
 }
@@ -87,6 +89,16 @@ class NoteEditorDriver {
   );
 
   String get source => _controller.text;
+
+  Finder get titleField => _finders.byKey(composerTitleFieldKey);
+
+  String get title => tester.widget<TextField>(titleField).controller!.text;
+
+  Future<void> enterTitle(String text) async {
+    _registerTextInput();
+    await tester.enterText(titleField, text);
+    await tester.pump();
+  }
 
   String get visibleText => _render.visibleText.text;
 

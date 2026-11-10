@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:field_notes/features/capture/text/composer_footer.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -47,52 +47,31 @@ List<SemanticsNode> _nodes(
 bool _atLeast48(Size size) => size.width >= 47.99 && size.height >= 47.99;
 
 void main() {
-  testWidgets(
-    'the new-note header actions are 48 dp buttons that look the same',
-    (WidgetTester tester) async {
-      final List<String> ids = await _idsIn(
-        tester,
-        captureStates,
-        'c2-composer-new',
-      );
-      _expectNone(ids, 'missing-role', 'c2-composer-new', <String>[
-        'Cancel |',
-        'Save |',
-      ]);
-      _expectNone(ids, 'small-target', 'c2-composer-new', <String>[
-        'Cancel |',
-        'Save |',
-        'Add memory |',
-        'Undo |',
-      ]);
-      expect(
-        tester
-            .getSize(
-              find
-                  .ancestor(
-                    of: find.text('Cancel'),
-                    matching: find.byType(DecoratedBox),
-                  )
-                  .first,
-            )
-            .height,
-        40,
-      );
-      expect(
-        tester
-            .getSize(
-              find
-                  .ancestor(
-                    of: find.text('Save'),
-                    matching: find.byType(DecoratedBox),
-                  )
-                  .first,
-            )
-            .height,
-        40,
-      );
-    },
-  );
+  testWidgets('the new-note actions are 48 dp buttons that look the same', (
+    WidgetTester tester,
+  ) async {
+    final List<String> ids = await _idsIn(
+      tester,
+      captureStates,
+      'c2-composer-new',
+    );
+    _expectNone(ids, 'missing-role', 'c2-composer-new', <String>[
+      'Leave |',
+      'Let it go |',
+      'Keep this |',
+    ]);
+    _expectNone(ids, 'small-target', 'c2-composer-new', <String>[
+      'Leave |',
+      'Title |',
+      'Let it go |',
+      'Keep this |',
+      'Add a photo |',
+    ]);
+    final Size letGo = tester.getSize(find.byKey(composerLetGoKey));
+    final Size keep = tester.getSize(find.byKey(composerSaveKey));
+    expect(_atLeast48(letGo), isTrue, reason: '$letGo');
+    expect(keep.height, letGo.height);
+  });
 
   testWidgets('the edit-note header actions are 48 dp buttons', (
     WidgetTester tester,
@@ -103,11 +82,15 @@ void main() {
       'c5-edit-note',
     );
     _expectNone(ids, 'missing-role', 'c5-edit-note', <String>[
-      'Cancel |',
+      'Leave |',
+      'Back |',
+      'Discard edits |',
       'Save changes |',
     ]);
     _expectNone(ids, 'small-target', 'c5-edit-note', <String>[
-      'Cancel |',
+      'Leave |',
+      'Back |',
+      'Discard edits |',
       'Save changes |',
     ]);
   });
@@ -118,9 +101,8 @@ void main() {
     for (final String label in <String>[
       'Bold',
       'Italic',
-      'Table',
+      'Heading',
       'More formats',
-      'Undo',
     ]) {
       final List<SemanticsNode> nodes = _nodes(
         tester,
@@ -193,10 +175,6 @@ void main() {
   ) async {
     await _idsIn(tester, captureStates, 'c19-photo-removed-toast');
     final SemanticsHandle handle = tester.ensureSemantics();
-    expect(
-      _nodes(tester, (SemanticsNode node) => node.label == 'Undo'),
-      hasLength(1),
-    );
     expect(
       _nodes(
         tester,

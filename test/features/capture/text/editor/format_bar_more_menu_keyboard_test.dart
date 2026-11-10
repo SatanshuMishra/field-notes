@@ -33,9 +33,11 @@ void main() {
     await tester.tap(find.byKey(formatMoreKey));
     await tester.pump();
 
-    expect(find.byKey(formatCodeKey), findsOneWidget);
+    expect(find.byKey(formatRedoKey), findsOneWidget);
+    await tester.ensureVisible(find.byKey(formatRedoKey));
+    await tester.pump();
     expect(
-      tester.getRect(find.byKey(formatCodeKey)).bottom,
+      tester.getRect(find.byKey(formatRedoKey)).bottom,
       lessThanOrEqualTo(surface.height - keyboardInset),
     );
   });

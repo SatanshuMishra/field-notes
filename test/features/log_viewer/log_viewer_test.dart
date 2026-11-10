@@ -33,6 +33,7 @@ import 'package:field_notes/state/state.dart';
 
 import '../capture/core/capture_test_support.dart'
     show FakeDraftStore, draftIdleDebounceForTest;
+import '../../support/composer_room.dart';
 import '../../support/note_editor_driver.dart';
 import '../day_detail/support/day_detail_harness.dart';
 import '../entry_cards/support/fake_audio_player.dart';
@@ -512,7 +513,7 @@ void main() {
 
     final Rect after = tester.getRect(find.byKey(logViewerPanelKey));
     expect(driver.find, findsOneWidget);
-    expect(find.text('Editing afternoon note'), findsOneWidget);
+    expect(composerTitled('Editing afternoon note'), findsOneWidget);
     expect(after.left, before.left);
     expect(after.right, before.right);
     expect(after.center.dx, before.center.dx);

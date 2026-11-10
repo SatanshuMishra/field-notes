@@ -1,5 +1,8 @@
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
+    show composerCloseKey;
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
@@ -16,6 +19,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/composer_room.dart';
 import '../../support/note_editor_driver.dart';
 import '../capture/core/capture_test_support.dart' show FakeDraftStore;
 import '../day_detail/support/day_detail_harness.dart'
@@ -43,9 +47,7 @@ List<Entry> _entries() {
 }
 
 Widget _feed() {
-  return CustomScrollView(
-    slivers: <Widget>[TodayEntryFeed(date: _date)],
-  );
+  return CustomScrollView(slivers: <Widget>[TodayEntryFeed(date: _date)]);
 }
 
 List<Override> _overrides(FakeJournalRepository repository) {
@@ -58,16 +60,18 @@ List<Override> _overrides(FakeJournalRepository repository) {
       (Ref ref, String entryId) =>
           Stream<List<EntryPhoto>>.value(const <EntryPhoto>[]),
     ),
-    todayMediaResolverProvider
-        .overrideWith((Ref ref) async => const StubMediaResolver()),
-    notesMediaResolverProvider
-        .overrideWith((Ref ref) async => const StubMediaResolver()),
-    dayDetailMediaResolverProvider
-        .overrideWith((Ref ref) async => const StubMediaResolver()),
+    todayMediaResolverProvider.overrideWith(
+      (Ref ref) async => const StubMediaResolver(),
+    ),
+    notesMediaResolverProvider.overrideWith(
+      (Ref ref) async => const StubMediaResolver(),
+    ),
+    dayDetailMediaResolverProvider.overrideWith(
+      (Ref ref) async => const StubMediaResolver(),
+    ),
     dayForDateProvider.overrideWith(
-      (Ref ref, String date) => Stream<Day?>.value(
-        todayTestDay(date: date, mood: Mood.calm),
-      ),
+      (Ref ref, String date) =>
+          Stream<Day?>.value(todayTestDay(date: date, mood: Mood.calm)),
     ),
     journalRepositoryProvider.overrideWithValue(repository),
     draftStoreProvider.overrideWith((Ref ref) => FakeDraftStore()),
@@ -76,15 +80,14 @@ List<Override> _overrides(FakeJournalRepository repository) {
 }
 
 Finder _cardFor(String text) => find.ancestor(
-      of: find.byWidgetPredicate(
-        (Widget w) => w is NoteBody && w.text == text,
-      ),
-      matching: find.byType(CompactLogCard),
-    );
+  of: find.byWidgetPredicate((Widget w) => w is NoteBody && w.text == text),
+  matching: find.byType(CompactLogCard),
+);
 
 Future<void> _hover(WidgetTester tester, Finder card) async {
-  final TestGesture mouse =
-      await tester.createGesture(kind: PointerDeviceKind.mouse);
+  final TestGesture mouse = await tester.createGesture(
+    kind: PointerDeviceKind.mouse,
+  );
   addTearDown(mouse.removePointer);
   await mouse.addPointer(location: Offset.zero);
   await mouse.moveTo(tester.getCenter(card));
@@ -97,8 +100,9 @@ Future<void> _drainToast(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('a feed card opens view mode and never the day modal',
-      (WidgetTester tester) async {
+  testWidgets('a feed card opens view mode and never the day modal', (
+    WidgetTester tester,
+  ) async {
     await pumpToday(
       tester,
       _feed(),
@@ -115,8 +119,9 @@ void main() {
     expect(find.byType(DayDetailPanel), findsNothing);
   });
 
-  testWidgets('the feed lists compact cards with the manage pill',
-      (WidgetTester tester) async {
+  testWidgets('the feed lists compact cards with the manage pill', (
+    WidgetTester tester,
+  ) async {
     await pumpToday(
       tester,
       _feed(),
@@ -125,8 +130,9 @@ void main() {
     );
 
     expect(find.byType(CompactLogCard), findsNWidgets(2));
-    final CompactLogCard card =
-        tester.widget<CompactLogCard>(_cardFor('morning walk'));
+    final CompactLogCard card = tester.widget<CompactLogCard>(
+      _cardFor('morning walk'),
+    );
     expect(card.density, CompactLogDensity.feed);
 
     await _hover(tester, _cardFor('morning walk'));
@@ -134,10 +140,12 @@ void main() {
     expect(find.byKey(logActionsDeleteKey).hitTestable(), findsOneWidget);
   });
 
-  testWidgets('deleting from the feed asks first, then deletes and toasts',
-      (WidgetTester tester) async {
-    final FakeJournalRepository repository =
-        FakeJournalRepository(entries: _entries());
+  testWidgets('deleting from the feed asks first, then deletes and toasts', (
+    WidgetTester tester,
+  ) async {
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: _entries(),
+    );
     await pumpToday(
       tester,
       _feed(),
@@ -162,8 +170,9 @@ void main() {
     await _drainToast(tester);
   });
 
-  testWidgets("the pill's Edit opens edit mode directly with Cancel",
-      (WidgetTester tester) async {
+  testWidgets("the pill's Edit opens edit mode directly with Leave", (
+    WidgetTester tester,
+  ) async {
     await pumpToday(
       tester,
       _feed(),
@@ -176,8 +185,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(NoteEditorDriver(tester).source, contains('coffee on the porch'));
-    expect(find.text('Cancel'), findsOneWidget);
+    expect(
+      tester.widget<Pressable>(find.byKey(composerCloseKey)).label,
+      'Leave',
+    );
     expect(find.text('Afternoon note'), findsNothing);
-    expect(find.text('Editing afternoon note'), findsOneWidget);
+    expect(composerTitled('Editing afternoon note'), findsOneWidget);
   });
 }
