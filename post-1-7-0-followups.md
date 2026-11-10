@@ -1,6 +1,6 @@
 # post-1-7-0-followups: Post-1.7.0 follow-ups: privacy line, note title focus, note viewer and editor parity, voice button, week garden, overnight Today, day modal
 Status: active
-Updated: 2026-11-10T18:42:17.099Z
+Updated: 2026-11-10T18:42:18.670Z
 Next ids: c4 D1 R2 S1
 
 ## Goal
@@ -19,7 +19,7 @@ Week garden (e) is open as SatanshuMishra/field-notes#363, assigned, 15 tests pa
 
 ## Next step
 
-As each agent returns, review its branch diff, run its tests, confirm both capture branches carry the byte-identical capture_day_line.dart (sha256 1eb5f153...), then push and open one pull request per branch assigned to the owner.
+As each agent returns, review its branch diff, run its tests, confirm both capture branches carry the byte-identical capture_day_line.dart (sha256 1eb5f153...), then push and open one pull request per branch assigned to the owner. Plain gh pr create is refused in this session; open through the GitHub MCP create_pull_request with render's title and body, then assign and bind.
 
 ## Decisions in force
 
