@@ -27,6 +27,7 @@ import '../photo/photo_test_support.dart' show FakePhotoPicker;
 
 const Size _landscapePhoneSurface = Size(844, 390);
 const double _keyboardInset = 200;
+const Duration _hold = Duration(milliseconds: 110);
 
 class _ComposerTrigger extends StatelessWidget {
   const _ComposerTrigger({required this.date, required this.onResult});
@@ -87,85 +88,98 @@ void _useLandscapePhone(WidgetTester tester) {
 
 void main() {
   testWidgets(
-      'the new-note composer keeps Add memory on a landscape phone with the keyboard up',
-      (WidgetTester tester) async {
-    final NoteEditorDriver driver = NoteEditorDriver(tester);
-    _useLandscapePhone(tester);
-    await tester.pumpWidget(
-      _composerApp(
-        writer: FakeNoteWriter(),
-        onResult: (String? _) {},
-        overrides: _mediaOverrides(FakeNoteMediaStore()),
-      ),
-    );
-    await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
+    'a landscape phone with the keyboard up strips the room to one row',
+    (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      _useLandscapePhone(tester);
+      await tester.pumpWidget(
+        _composerApp(
+          writer: FakeNoteWriter(),
+          onResult: (String? _) {},
+          overrides: _mediaOverrides(FakeNoteMediaStore()),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(composerAddPhotoKey).hitTestable(), findsOneWidget);
-    expect(find.byKey(formatUndoKey), findsOneWidget);
-    expect(find.byKey(composerHintsKey), findsNothing);
-    expect(
-      tester.getSize(find.byKey(composerAddPhotoKey)).height,
-      formatBarHeight,
-    );
-    _expectInside(
-      tester.getRect(find.byKey(composerAddPhotoKey)),
-      tester.getRect(find.byType(FormatBar)),
-    );
-    expect(
-      driver.contentRect.height,
-      greaterThanOrEqualTo(3 * _lineHeight),
-    );
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.byKey(formatMoreKey).hitTestable(), findsOneWidget);
+      expect(find.byKey(composerSaveKey).hitTestable(), findsOneWidget);
+      expect(find.byKey(composerCloseKey).hitTestable(), findsOneWidget);
+      expect(find.byType(ComposerFooter), findsNothing);
+      expect(find.text('Esc'), findsNothing);
+      _expectInside(
+        tester.getRect(find.byKey(formatMoreKey)),
+        tester.getRect(find.byType(FormatBar)),
+      );
+      expect(driver.contentRect.height, greaterThanOrEqualTo(3 * _lineHeight));
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('a pick started from the footer lands after the keyboard closes',
-      (WidgetTester tester) async {
-    final NoteEditorDriver driver = NoteEditorDriver(tester);
-    _useLandscapePhone(tester);
-    final Completer<List<String>> pick = Completer<List<String>>();
-    final String reference = prefixOf(photoIdA);
+  testWidgets(
+    'a pick started from the toolbar lands after the keyboard closes',
+    (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      _useLandscapePhone(tester);
+      final Completer<List<String>> pick = Completer<List<String>>();
+      final String reference = prefixOf(photoIdA);
+      await tester.pumpWidget(
+        MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: DialogHost(
+            child: ComposerShell(
+              responsive: true,
+              child: TextComposerSheet(
+                onSave: (String _) {},
+                onCancel: () {},
+                onAddPhoto: () => pick.future,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await driver.press(find.byKey(formatMoreKey), _hold);
+      await tester.pump();
+      await driver.press(find.byKey(composerAddPhotoKey), _hold);
+      await tester.pump();
+
+      tester.view.viewInsets = FakeViewPadding.zero;
+      await tester.pump();
+
+      expect(find.byType(ComposerFooter), findsOneWidget);
+
+      pick.complete(<String>[reference]);
+      await tester.pump();
+
+      expect(driver.source, contains(mdPhotoLine(photoIdA)));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('a taller short window keeps the band and a tight row', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(844, 420);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
         home: DialogHost(
           child: ComposerShell(
-            child: TextComposerSheet(
-              onSave: (String _) {},
-              onCancel: () {},
-              onAddPhoto: () => pick.future,
-            ),
+            responsive: true,
+            child: TextComposerSheet(onSave: (String _) {}, onCancel: () {}),
           ),
         ),
       ),
     );
     await tester.pump();
 
-    _expectInside(
-      tester.getRect(find.byKey(composerAddPhotoKey)),
-      tester.getRect(find.byType(ComposerFooter)),
-    );
-    await tester.tap(find.byKey(composerAddPhotoKey));
-    await tester.pump();
-
-    tester.view.viewInsets = FakeViewPadding.zero;
-    await tester.pump();
-
-    pick.complete(<String>[reference]);
-    await tester.pump();
-
-    expect(driver.source, contains(mdPhotoLine(photoIdA)));
-    expect(
-      tester.getRect(find.byType(ComposerFooter)).bottom,
-      closeTo(
-        tester.getRect(find.byKey(composerWritingSurfaceKey)).bottom,
-        0.5,
-      ),
-    );
+    expect(find.byType(ComposerFooter), findsOneWidget);
+    expect(find.text(composerRestingStatus), findsNothing);
+    expect(find.byKey(composerTitleFieldKey), findsOneWidget);
     expect(tester.takeException(), isNull);
-  });
-
-  test('the footer and the bar agree on the shared heights', () {
-    expect(composerFooterHeight, greaterThanOrEqualTo(formatBarHeight));
   });
 }

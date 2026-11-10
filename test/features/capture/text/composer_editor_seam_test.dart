@@ -121,11 +121,17 @@ void main() {
 
     expect(find.byType(NoteEditorView), findsOneWidget);
     expect(find.byKey(noteEditorKey), findsOneWidget);
-    expect(find.byType(EditableText), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(NoteEditorView),
+        matching: find.byType(EditableText),
+      ),
+      findsNothing,
+    );
     expect(_view(tester).controller, isA<NoteEditorController>());
 
     await driver.enterText('a good day');
-    await driver.press(find.text('Save'), _hold);
+    await driver.press(find.text('Keep this'), _hold);
 
     expect(saved, <String>['a good day']);
 
@@ -366,40 +372,31 @@ void main() {
   );
 
   testWidgets(
-    'on macOS Keep editing after a scrim click returns focus, input and selection',
+    'on macOS a click on the ground of the room keeps the note in hand',
     (WidgetTester tester) async {
       await _open(tester, _composerApp());
       final NoteEditorDriver driver = NoteEditorDriver(tester);
       await driver.typeText('never mind');
-      final TextSelection before = driver.selection;
-      final Rect panel = tester.getRect(find.byKey(composerPanelKey));
 
-      await tester.tapAt(
-        Offset(panel.left / 2, panel.center.dy),
-        kind: PointerDeviceKind.mouse,
-      );
+      await tester.tapAt(const Offset(4, 400), kind: PointerDeviceKind.mouse);
       await tester.pumpAndSettle();
 
-      expect(find.text(composerDiscardTitle), findsOneWidget);
-
-      await _keepEditingByMouse(tester);
-
-      await _expectEditorResumes(tester, before: before, typed: 'never mind!');
+      expect(find.text(composerDiscardTitle), findsNothing);
+      expect(find.byKey(composerPanelKey), findsOneWidget);
+      expect(driver.source, 'never mind');
     },
     variant: TargetPlatformVariant.only(TargetPlatform.macOS),
   );
 
   testWidgets(
-    'on macOS Save on an empty note keeps the editor focused',
+    'on macOS the keep shortcut on an empty note keeps the editor focused',
     (WidgetTester tester) async {
       await _open(tester, _composerApp());
-      final NoteEditorDriver driver = NoteEditorDriver(tester);
 
-      await driver.press(
-        find.text('Save'),
-        _hold,
-        kind: PointerDeviceKind.mouse,
-      );
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+      await tester.pump();
 
       expect(find.text(emptySaveGuardMessage), findsOneWidget);
       expect(_view(tester).focusNode.hasPrimaryFocus, isTrue);

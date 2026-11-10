@@ -43,16 +43,17 @@ class _Trigger extends StatelessWidget {
         context: context,
         barrierDismissible: false,
         barrierLabel: 'Dismiss note composer',
-        pageBuilder: (
-          BuildContext dialogContext,
-          Animation<double> animation,
-          Animation<double> secondaryAnimation,
-        ) {
-          return TextComposerConnector(
-            date: '2026-07-21',
-            saveTimeout: timeout,
-          );
-        },
+        pageBuilder:
+            (
+              BuildContext dialogContext,
+              Animation<double> animation,
+              Animation<double> secondaryAnimation,
+            ) {
+              return TextComposerConnector(
+                date: '2026-07-21',
+                saveTimeout: timeout,
+              );
+            },
       ),
       child: const Text('open'),
     );
@@ -60,10 +61,10 @@ class _Trigger extends StatelessWidget {
 }
 
 void main() {
-  testWidgets(
-      'when save() never completes, the save is bounded: the "Saving…" '
-      'state clears and a timeout error is surfaced instead of hanging',
-      (WidgetTester tester) async {
+  testWidgets('when save() never completes, the save is bounded: the "Saving…" '
+      'state clears and a timeout error is surfaced instead of hanging', (
+    WidgetTester tester,
+  ) async {
     final NoteEditorDriver driver = NoteEditorDriver(tester);
     final _HangingNoteWriter writer = _HangingNoteWriter();
 
@@ -86,7 +87,7 @@ void main() {
     await driver.enterText('a slow day');
     await tester.pump();
 
-    await tester.tap(find.text('Save'));
+    await tester.tap(find.text('Keep this'));
     await tester.pump();
     expect(find.text('Saving…'), findsOneWidget);
 
@@ -95,7 +96,7 @@ void main() {
     expect(writer.saveCalls, 1);
     expect(find.text(textSaveTimeoutMessage), findsOneWidget);
     expect(find.text('Saving…'), findsNothing);
-    expect(find.text('Save'), findsOneWidget);
+    expect(find.text('Keep this'), findsOneWidget);
     expect(find.byType(TextComposerSheet), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());

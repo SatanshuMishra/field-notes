@@ -10,6 +10,7 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/day_detail/day_detail.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
@@ -17,6 +18,7 @@ import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
 import '../capture/core/capture_test_support.dart' show FakeDraftStore;
+import '../../support/composer_room.dart';
 import 'support/day_detail_harness.dart';
 
 const Size _phone = Size(384, 832);
@@ -275,7 +277,7 @@ void main() {
     await tester.tap(_entryAction(_note, logActionsEditLabel));
     await tester.pumpAndSettle();
 
-    expect(find.text('Editing morning note'), findsOneWidget);
+    expect(composerTitled('Editing morning note'), findsOneWidget);
     semantics.dispose();
   });
 
@@ -288,14 +290,17 @@ void main() {
     await tester.tap(_inFooter(find.byKey(dayDetailAddNoteKey)));
     await tester.pumpAndSettle();
 
-    expect(find.text(newNoteTitle), findsOneWidget);
-    expect(find.text(_dayTitle), findsWidgets);
+    expect(composerTitled(newNoteTitle), findsOneWidget);
+    expect(
+      tester.widget<TextComposerSheet>(find.byType(TextComposerSheet)).kicker,
+      contains(_dayTitle),
+    );
     expect(_inSheet(find.text('2 logs that day')), findsNothing);
 
-    await tester.tap(find.text('Back'));
+    await tester.tap(find.byKey(composerCloseKey));
     await tester.pumpAndSettle();
 
-    expect(find.text(newNoteTitle), findsNothing);
+    expect(composerTitled(newNoteTitle), findsNothing);
     expect(_inSheet(find.text('2 logs that day')), findsOneWidget);
   });
 

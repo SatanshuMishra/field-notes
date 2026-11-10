@@ -1,31 +1,44 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:field_notes/design/focus/keyboard_focus_builder.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/focus/keyboard_focus_builder.dart';
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
+import 'package:field_notes/design/motion/motion_tokens.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/icon_sticker_button.dart'
+    show IconStickerGlyph, IconStickerGlyphIcon;
 import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:field_notes/domain/notes/markdown/markdown.dart'
+    show plainTextOfTree;
 import 'package:field_notes/domain/services/capture_service.dart'
     show CaptureMedia;
+import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
+import 'package:field_notes/features/capture/core/journal_note_writer.dart'
+    show NoteSourceParts, splitNoteSource, titledNoteSource;
+import 'package:field_notes/features/capture/immersive/stage_phase.dart'
+    show stageLayoutOf;
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show NoteEditorController;
 import 'package:field_notes/features/notes/photos/photo_import.dart';
 
 import 'composer_footer.dart';
-import 'composer_header_layout.dart';
 import 'editor/format_bar.dart';
 import 'editor/note_editor.dart';
 
+export 'composer_footer.dart' show composerSaveKey;
+
 const Key composerCloseKey = ValueKey<String>('composer-close');
 
-const Key composerSaveKey = ValueKey<String>('composer-save');
+const Key composerTitleFieldKey = ValueKey<String>('composer-title-field');
 
 const double composerMeasureEm = 45;
 
@@ -35,53 +48,82 @@ const Key composerWritingSurfaceKey = ValueKey<String>(
 
 const String emptySaveGuardMessage = 'Write something first';
 
+const String composerTitleHint = 'Add a title';
+
+const String composerKeepNewLabel = 'Keep this';
+
+const String composerRestingStatus = 'There’s no wrong way to say it.';
+
+const Duration composerChromeRest = Duration(milliseconds: 1500);
+
+const Key _titleSlotKey = ValueKey<String>('composer-title-slot');
+const Key _pageSlotKey = ValueKey<String>('composer-page-slot');
+const Key _writingSlotKey = ValueKey<String>('composer-writing-slot');
+
 enum ComposerExit { cancel, back }
 
-const double _headerVerticalPadding = 16;
-const double _headerHorizontalPadding = 18;
-const double _headerGap = 14;
-const double _headerRuleThickness = 1.5;
-const double _titleLineHeight = 1.05;
-const double _exitPillHeight = 34;
-const double _phoneHeaderButtonHeight = 40;
-const double _headerTargetInset =
-    (kMinInteractiveDimension - _exitPillHeight) / 2;
-const double _exitPillStartPadding = 8;
-const double _exitPillEndPadding = 12;
-const double _exitPillVerticalPadding = 4;
-const BorderRadius _exitPillBorderRadius = BorderRadius.all(
-  Radius.circular(10),
+const double _compactWidth = 560;
+const double _hintsMinWidth = 640;
+const double _statusFloor = 520;
+const double _footerFloor = 360;
+const double _stripFloor = 300;
+const double _toolbarFloor = 200;
+const double _titleFloor = 200;
+const double _bandHorizontalPadding = 16;
+const double _bandVerticalPadding = 12;
+const double _bandGap = 12;
+const double _compactPrivacyReach = 64;
+const double _widePrivacyReach = 120;
+const double _privacySize = 13;
+const double _lockSize = 14;
+const double _lockGap = 6;
+const double _lockStroke = 1.8;
+const double _lockViewBox = 24;
+const double _leaveGlyphSize = 18;
+const double _leaveGap = 6;
+const double _leaveHorizontalPadding = 10;
+const double _hintGap = 12;
+const double _hintKeyGap = 4;
+const double _hintKeyRadius = 6;
+const double _hintKeySize = 11;
+const double _hintTextSize = 12;
+const EdgeInsets _hintKeyPadding = EdgeInsets.symmetric(
+  horizontal: 6,
+  vertical: 3,
 );
-const double _exitGlyphSize = 15;
-const double _exitGlyphGap = 4;
-const double _exitStrokeWidth = 2.2;
-const double _exitViewBox = 24;
+const double _titleSidePadding = 24;
+const double _titleMaxWidth = 560;
+const double _titleHeight = 44;
+const double _titleSize = 24;
+const double _titleCompactSize = 20;
+const double _titleLineHeight = 1.25;
+const double _pageMaxWidth = 720;
+const double _pageSidePadding = 24;
+const double _pageVerticalPadding = 8;
+const double _toolbarTopPadding = 4;
+const double _toolbarBottomPadding = 8;
+const double _editorSidePadding = 8;
+const double _editorWideSidePadding = 16;
+const double _editorTopPadding = 12;
+const double _editorEndInset = 40;
+const double _scrollbarThickness = 9;
+const double _statusMinHeight = 34;
+const double _statusSize = 22;
+const double _statusCompactSize = 18;
+const double _statusLineHeight = 1.2;
+const EdgeInsets _statusPadding = EdgeInsets.fromLTRB(24, 6, 24, 2);
+const double _stripSidePadding = 8;
+const double _chipVerticalMargin = 6;
+const double _ringOutset = 2;
+const double _ringWidth = 2;
 const double _backChevronStrokeWidth = 2;
 const double _backChevronArm = 5;
-const double _saveVerticalPadding = 7;
-const double _saveHorizontalPadding = 15;
-const double _disabledOpacity = 0.5;
-const BorderRadius _saveBorderRadius = BorderRadius.all(
-  Radius.circular(Shapes.radiusPill),
+const BorderRadius _fieldRadius = BorderRadius.all(
+  Radius.circular(Shapes.radius8),
 );
-const double _phoneSaveHorizontalPadding = 14;
-const BorderRadius _phoneSaveBorderRadius = BorderRadius.all(
-  Radius.circular(12),
-);
-const double _bodyHorizontalPadding = 18;
-const double _bodyBottomPadding = 14;
-const double _surfaceRuleThickness = 1;
-const double _pageTopPaddingShare = 0.10;
-const double _pageTopPaddingMin = 8;
-const double _pageTopPaddingMax = 44;
-const double _pageHorizontalPadding = 38;
-const double _pageEndGap = 12;
-const double _scrollbarThickness = 9;
-const double _errorGap = 8;
-const double _editorRingOutset = 2;
-const double _chipVerticalPadding = 10;
-const double _composerChromeHeight = 104;
-const int _minimumWritingLines = 4;
+
+final RegExp _writtenWord = RegExp(r'\S+');
+final RegExp _lineBreaks = RegExp(r'[\r\n]');
 
 class TextComposerSheet extends StatefulWidget {
   const TextComposerSheet({
@@ -98,7 +140,7 @@ class TextComposerSheet extends StatefulWidget {
     this.kicker = '',
     this.exit = ComposerExit.cancel,
     this.hintText = 'Start writing…',
-    this.saveLabel = 'Save',
+    this.saveLabel = composerKeepNewLabel,
     this.savingLabel = 'Saving…',
     this.onAddPhoto,
     this.spellCheckEnabled = false,
@@ -128,28 +170,56 @@ class TextComposerSheet extends StatefulWidget {
 }
 
 class _TextComposerSheetState extends State<TextComposerSheet> {
+  late final TextEditingController _source;
+  late final bool _ownsSource;
+  late NoteSourceParts _origin;
+  late final TextEditingController _titleController;
+  late final TextEditingController _bodySource;
   late final NoteEditorController _controller;
-  late final bool _ownsController;
-  late final FocusNode _focusNode;
-  late final ScrollController _scrollController;
-  late final UndoHistoryController _undoController;
-  final GlobalKey _footerKey = GlobalKey();
-  final GlobalKey _dockedFooterKey = GlobalKey();
-  final GlobalKey _dockedBarKey = GlobalKey();
+  late String _seenTitle;
+  late String _seenBody;
+  final FocusNode _focusNode = FocusNode();
+  final FocusNode _titleFocusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
+  final UndoHistoryController _undoController = UndoHistoryController();
+  final ValueNotifier<int> _typing = ValueNotifier<int>(0);
+  final GlobalKey _actionsKey = GlobalKey();
+  final GlobalKey _statusKey = GlobalKey();
+  ComposerPhotoAdder? _photoAdder;
+  Timer? _pointerRest;
+  bool _pointerResting = false;
+  bool _chromeHidden = false;
+  bool _keepChromeVisible = false;
+  bool _mirroring = false;
+  bool _traversing = false;
+
+  bool get _editing => widget.saveLabel != composerKeepNewLabel;
 
   @override
   void initState() {
     super.initState();
     final TextEditingController? external = widget.controller;
-    _ownsController = external is! NoteEditorController;
-    _controller = switch (external) {
-      null => NoteEditorController(text: widget.initialText),
-      NoteEditorController() => external,
-      _ => NoteEditorController.attachedTo(external),
-    };
-    _focusNode = FocusNode();
-    _scrollController = ScrollController();
-    _undoController = UndoHistoryController();
+    _ownsSource = external == null;
+    _source = external ?? TextEditingController(text: widget.initialText);
+    _origin = splitNoteSource(_source.text);
+    _seenTitle = _origin.title;
+    _seenBody = _origin.body;
+    _titleController = TextEditingController(text: _origin.title);
+    _bodySource = TextEditingController(text: _origin.body);
+    _controller = NoteEditorController.attachedTo(_bodySource);
+    _source.addListener(_followSource);
+    _titleController.addListener(_onFieldsChanged);
+    _bodySource.addListener(_onFieldsChanged);
+    FocusManager.instance.addEarlyKeyEventHandler(_noticeKey);
+    _photoAdder = widget.onAddPhoto == null
+        ? null
+        : ComposerPhotoAdder(
+            controller: _controller,
+            importer: () => widget.onAddPhoto!(),
+            editorFocusNode: _focusNode,
+            report: _reportPhotoProblem,
+          );
+    _restartPointerRest();
     WidgetsBinding.instance.addPostFrameCallback((Duration _) {
       if (mounted) {
         _focusNode.requestFocus();
@@ -158,56 +228,129 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   @override
-  void dispose() {
-    if (_ownsController) {
-      _controller.dispose();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _keepChromeVisible = MediaQuery.accessibleNavigationOf(context);
+    if (_keepChromeVisible) {
+      _chromeHidden = false;
     }
-    _focusNode.dispose();
-    _scrollController.dispose();
-    _undoController.dispose();
-    super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return ToastClearance(
-      anchors: <GlobalKey>[_dockedFooterKey, _dockedBarKey],
-      child: LayoutBuilder(builder: _layout),
-    );
+  void dispose() {
+    _pointerRest?.cancel();
+    FocusManager.instance.removeEarlyKeyEventHandler(_noticeKey);
+    _source.removeListener(_followSource);
+    _titleController.removeListener(_onFieldsChanged);
+    _bodySource.removeListener(_onFieldsChanged);
+    _photoAdder?.dispose();
+    _controller.dispose();
+    _bodySource.dispose();
+    _titleController.dispose();
+    if (_ownsSource) {
+      _source.dispose();
+    }
+    _focusNode.dispose();
+    _titleFocusNode.dispose();
+    _scrollController.dispose();
+    _undoController.dispose();
+    _typing.dispose();
+    super.dispose();
   }
 
-  Widget _layout(BuildContext context, BoxConstraints constraints) {
-    final bool roomy = _hasRoomForFormatBar(context, constraints.maxHeight);
-    final bool sidebar =
-        resolveShellLayout(Theme.of(context).platform) == ShellLayout.sidebar;
-    final Widget formatBar = _formatBar(trailing: roomy ? null : _compactAdd());
-    return CallbackShortcuts(
-      bindings: _shortcuts(context),
-      child: Focus(
-        autofocus: true,
-        skipTraversal: true,
-        child: Column(
-          mainAxisSize: MainAxisSize.max,
-          children: <Widget>[
-            _header(
-              context,
-              middle: roomy ? null : formatBar,
-              below: roomy && sidebar ? formatBar : null,
-            ),
-            DashedDivider(
-              thickness: _headerRuleThickness,
-              color: context.colors.ink25,
-            ),
-            Expanded(
-              child: _body(
-                formatBar: roomy && !sidebar ? formatBar : null,
-                footer: roomy ? _footer(showHints: true) : null,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _reportPhotoProblem(String message) {
+    if (mounted) {
+      showTransientToast(
+        _actionsKey.currentContext ?? context,
+        message,
+        glyph: IconStickerGlyph.close,
+      );
+    }
+  }
+
+  void _followSource() {
+    if (_mirroring) {
+      return;
+    }
+    final NoteSourceParts parts = splitNoteSource(_source.text);
+    _mirroring = true;
+    _origin = parts;
+    if (_titleController.text != parts.title) {
+      _titleController.text = parts.title;
+    }
+    if (_bodySource.text != parts.body) {
+      _bodySource.text = parts.body;
+    }
+    _mirroring = false;
+    _seenTitle = parts.title;
+    _seenBody = parts.body;
+  }
+
+  void _onFieldsChanged() {
+    if (_mirroring) {
+      return;
+    }
+    final String title = _titleController.text;
+    final String body = _bodySource.text;
+    if (title == _seenTitle && body == _seenBody) {
+      return;
+    }
+    _seenTitle = title;
+    _seenBody = body;
+    _mirrorOut(title, body);
+    _typing.value += 1;
+    _setTraversing(false);
+    if (_pointerResting && !_keepChromeVisible) {
+      _setChromeHidden(true);
+    }
+  }
+
+  void _mirrorOut(String title, String body) {
+    final String composed = title == _origin.title
+        ? '${_origin.lead}$body'
+        : titledNoteSource(title: title, body: body);
+    if (_source.text == composed) {
+      return;
+    }
+    _mirroring = true;
+    _source.text = composed;
+    _mirroring = false;
+  }
+
+  KeyEventResult _noticeKey(KeyEvent event) {
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.tab) {
+      _setTraversing(true);
+      _setChromeHidden(false);
+    }
+    return KeyEventResult.ignored;
+  }
+
+  void _noticePointer(PointerEvent _) {
+    _restartPointerRest();
+    _setChromeHidden(false);
+  }
+
+  void _noticePointerDown(PointerDownEvent event) {
+    _setTraversing(false);
+    _noticePointer(event);
+  }
+
+  void _restartPointerRest() {
+    _pointerResting = false;
+    _pointerRest?.cancel();
+    _pointerRest = Timer(composerChromeRest, () => _pointerResting = true);
+  }
+
+  void _setTraversing(bool value) {
+    if (_traversing != value && mounted) {
+      setState(() => _traversing = value);
+    }
+  }
+
+  void _setChromeHidden(bool value) {
+    if (_chromeHidden != value && mounted) {
+      setState(() => _chromeHidden = value);
+    }
   }
 
   Map<ShortcutActivator, VoidCallback> _shortcuts(BuildContext context) {
@@ -234,430 +377,603 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     widget.onCancel();
   }
 
-  Widget? _compactAdd() => _footer(showHints: false, compact: true);
-
-  Widget? _footer({required bool showHints, bool compact = false}) {
-    final PhotoImporter? importer = widget.onAddPhoto;
-    if (importer == null) {
-      return null;
-    }
-    return ComposerFooter(
-      key: _footerKey,
-      controller: _controller,
-      onAddPhoto: importer,
-      editorFocusNode: _focusNode,
-      showHints: showHints,
-      compact: compact,
-    );
-  }
-
-  bool _hasRoomForFormatBar(BuildContext context, double available) {
-    if (!available.isFinite) {
-      return true;
-    }
-    final double line =
-        NoteColumn.emOf(context) * context.textStyles.noteBody.height!;
-    return available >=
-        _composerChromeHeight +
-            composerFooterHeight +
-            formatBarHeight +
-            _minimumWritingLines * line;
-  }
-
-  Widget _formatBar({Widget? trailing}) {
-    return FormatBar(
-      controller: _controller,
-      undoController: _undoController,
-      trailing: trailing,
-    );
-  }
-
-  Widget _header(
-    BuildContext context, {
-    required Widget? middle,
-    Widget? below,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: _headerHorizontalPadding,
-        vertical: _headerVerticalPadding - _headerTargetInset,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          if (middle == null)
-            ComposerHeaderLayout(
-              leading: _exitPill(),
-              title: _headerMiddle(_titleBlock()),
-              trailing: _saveButton(context),
-            )
-          else
-            Row(
-              children: <Widget>[
-                _exitPill(),
-                Expanded(child: _headerMiddle(middle)),
-                _saveButton(context),
-              ],
-            ),
-          ?below,
-        ],
-      ),
-    );
-  }
-
-  Widget _headerMiddle(Widget child) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: _headerTargetInset),
-    child: child,
-  );
-
-  Widget _headerAction({
-    required String label,
-    required VoidCallback? onTap,
-    required BorderRadius focusRadius,
-    required FocusRingSurface hoverSurface,
-    required Widget child,
-  }) {
-    return TextFieldTapRegion(
-      child: Pressable(
-        label: label,
-        onPressed: onTap,
-        borderRadius: focusRadius,
-        placement: FocusRingPlacement.edge,
-        paintsHover: false,
-        builder: (BuildContext context, bool hovered) => ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: kMinInteractiveDimension,
-            minHeight: kMinInteractiveDimension,
-          ),
-          child: Center(
-            widthFactor: 1,
-            heightFactor: 1,
-            child: HoverFill(
-              hovered: hovered,
-              surface: hoverSurface,
-              borderRadius: focusRadius,
-              child: child,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _exitPill() {
-    final FieldNotesColors colors = context.colors;
-    final FieldNotesShadows shadows = context.shadows;
-    final bool back = widget.exit == ComposerExit.back;
-    return _headerAction(
-      label: back ? 'Back' : 'Cancel',
-      onTap: widget.isSaving ? null : widget.onCancel,
-      focusRadius: _exitPillBorderRadius,
-      hoverSurface: FocusRingSurface.light,
-      child: Container(
-        key: composerCloseKey,
-        constraints: BoxConstraints(
-          minHeight: _onPhone(context)
-              ? _phoneHeaderButtonHeight
-              : _exitPillHeight,
-        ),
-        padding: const EdgeInsets.only(
-          left: _exitPillStartPadding,
-          right: _exitPillEndPadding,
-          top: _exitPillVerticalPadding,
-          bottom: _exitPillVerticalPadding,
-        ),
-        decoration: BoxDecoration(
-          color: colors.cardWarm,
-          border: shadows.outline,
-          borderRadius: _exitPillBorderRadius,
-          boxShadow: shadows.chip,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            SizedBox.square(
-              dimension: _exitGlyphSize,
-              child: CustomPaint(
-                painter: back
-                    ? _BackChevronPainter(color: colors.ink)
-                    : _CloseGlyphPainter(color: colors.ink),
-              ),
-            ),
-            const SizedBox(width: _exitGlyphGap),
-            Text(
-              back ? 'Back' : 'Cancel',
-              style: context.textStyles.captureLabelSans.copyWith(
-                color: colors.ink,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _titleBlock() {
-    final FieldNotesTextStyles textStyles = context.textStyles;
-    final String kicker = widget.kicker;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: _headerGap),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          if (kicker.isNotEmpty)
-            Text(
-              kicker,
-              style: textStyles.stampAccent.copyWith(
-                color: context.colors.accentInk,
-              ),
-            ),
-          Text(
-            widget.title,
-            style: textStyles.headlineSerif.copyWith(
-              fontSize: 22,
-              height: _titleLineHeight,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _saveButton(BuildContext context) {
-    final FieldNotesShadows shadows = context.shadows;
-    final bool enabled = !widget.isSaving;
-    final bool phone = _onPhone(context);
-    final BorderRadius radius = phone
-        ? _phoneSaveBorderRadius
-        : _saveBorderRadius;
-    final Widget label = Text(
-      widget.isSaving ? widget.savingLabel : widget.saveLabel,
-      style: context.textStyles.captureLabelSans.copyWith(
-        color: Palette.onAccent,
-      ),
-    );
-    return _headerAction(
-      label: widget.isSaving ? widget.savingLabel : widget.saveLabel,
-      onTap: enabled ? () => _handleSaveTap(context) : null,
-      focusRadius: radius,
-      hoverSurface: FocusRingSurface.dark,
-      child: Opacity(
-        opacity: enabled ? 1 : _disabledOpacity,
-        child: DecoratedBox(
-          key: composerSaveKey,
-          decoration: BoxDecoration(
-            color: Palette.coral,
-            border: shadows.outline,
-            borderRadius: radius,
-            boxShadow: shadows.control,
-          ),
-          child: phone
-              ? Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: _phoneSaveHorizontalPadding,
-                  ),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minHeight: _phoneHeaderButtonHeight,
-                    ),
-                    child: Center(
-                      widthFactor: 1,
-                      heightFactor: 1,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: _exitPillVerticalPadding,
-                        ),
-                        child: label,
-                      ),
-                    ),
-                  ),
-                )
-              : Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: _saveHorizontalPadding,
-                    vertical: _saveVerticalPadding,
-                  ),
-                  child: label,
-                ),
-        ),
-      ),
-    );
-  }
-
-  bool _onPhone(BuildContext context) =>
-      resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar;
-
   void _handleSaveTap(BuildContext context) {
-    final String text = _controller.text;
-    if (text.trim().isEmpty) {
+    final String body = _controller.text;
+    if (body.trim().isEmpty) {
       showTransientToast(context, emptySaveGuardMessage);
       return;
     }
-    widget.onSave(text);
+    final String title = _titleController.text.trim();
+    widget.onSave(
+      title.isEmpty && !_origin.carriesTitle
+          ? body
+          : titledNoteSource(title: title, body: body),
+    );
   }
 
-  Widget _body({Widget? formatBar, Widget? footer}) {
-    final String? errorMessage = widget.errorMessage;
-    return Column(
-      mainAxisSize: MainAxisSize.max,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        if (widget.draftRestored)
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: _bodyHorizontalPadding,
-            ),
-            child: DraftRestoredChip(
-              onDiscard: widget.onDiscardDraft,
-              verticalMargin: _chipVerticalPadding,
-            ),
-          ),
-        Expanded(
-          child: Stack(
-            children: <Widget>[
-              Positioned.fill(child: _writingSurface(footer: footer != null)),
-              if (footer != null)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: KeyedSubtree(
-                    key: _dockedFooterKey,
-                    child: ComposerFooterVeil(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: _bodyHorizontalPadding,
-                        ),
-                        child: footer,
-                      ),
-                    ),
-                  ),
+  VoidCallback? _keepAction(BuildContext context) {
+    final bool blocked =
+        widget.isSaving || (!_editing && _controller.text.trim().isEmpty);
+    return blocked ? null : () => _handleSaveTap(context);
+  }
+
+  VoidCallback? get _leaveAction => widget.isSaving ? null : widget.onCancel;
+
+  int get _words => _writtenWord
+      .allMatches(
+        plainTextOfTree(_controller.state.tree, _controller.state.source),
+      )
+      .length;
+
+  String get _roomLabel => widget.kicker.isEmpty
+      ? widget.title
+      : '${widget.title}, ${widget.kicker}';
+
+  @override
+  Widget build(BuildContext context) {
+    return ToastClearance(
+      anchors: <GlobalKey>[_statusKey, _actionsKey],
+      child: Semantics(
+        container: true,
+        explicitChildNodes: true,
+        label: _roomLabel,
+        child: Builder(
+          builder: (BuildContext cleared) => CallbackShortcuts(
+            bindings: _shortcuts(cleared),
+            child: Focus(
+              autofocus: true,
+              skipTraversal: true,
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: _noticePointerDown,
+                onPointerMove: _noticePointer,
+                onPointerHover: _noticePointer,
+                onPointerSignal: _noticePointer,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    ComposerStageGround(typing: _typing),
+                    LayoutBuilder(builder: _layout),
+                  ],
                 ),
-            ],
-          ),
-        ),
-        if (formatBar != null)
-          KeyedSubtree(key: _dockedBarKey, child: formatBar),
-        if (errorMessage != null)
-          Padding(
-            padding: const EdgeInsets.only(
-              left: _bodyHorizontalPadding,
-              right: _bodyHorizontalPadding,
-              top: _errorGap,
-            ),
-            child: Text(
-              errorMessage,
-              style: context.textStyles.captionSans.copyWith(
-                color: context.colors.dangerInk,
               ),
             ),
           ),
-        if (formatBar != null || errorMessage != null)
-          const SizedBox(height: _bodyBottomPadding),
+        ),
+      ),
+    );
+  }
+
+  Widget _layout(BuildContext context, BoxConstraints constraints) {
+    final MediaQueryData media = MediaQuery.of(context);
+    final double top = math.max(media.padding.top, media.viewPadding.top);
+    final double bottom = math.max(
+      media.viewInsets.bottom,
+      math.max(media.padding.bottom, media.viewPadding.bottom),
+    );
+    final double room = constraints.maxHeight - top - bottom;
+    final bool sidebar = stageLayoutOf(context) == ShellLayout.sidebar;
+    final bool compact = !sidebar || constraints.maxWidth < _compactWidth;
+    final bool strip =
+        room < _stripFloor && constraints.maxWidth >= _compactWidth;
+    final bool keepInBand = !strip && room < _footerFloor;
+    final bool short = room < _statusFloor;
+    final ComposerFooterRoom footerRoom = short || media.viewInsets.bottom > 0
+        ? ComposerFooterRoom.tight
+        : compact
+        ? ComposerFooterRoom.phone
+        : ComposerFooterRoom.desktop;
+    return Padding(
+      padding: EdgeInsets.only(top: top, bottom: bottom),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _faded(
+            strip
+                ? _strip(context)
+                : _topBand(
+                    context,
+                    compact: compact,
+                    width: constraints.maxWidth,
+                    keepInBand: keepInBand,
+                  ),
+          ),
+          if (room >= _titleFloor) _titleField(context, compact: compact),
+          if (widget.draftRestored)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: _pageSidePadding),
+              child: DraftRestoredChip(
+                onDiscard: widget.onDiscardDraft,
+                verticalMargin: _chipVerticalMargin,
+              ),
+            ),
+          Expanded(
+            key: _pageSlotKey,
+            child: _page(
+              context,
+              toolbar: !strip && room >= _toolbarFloor,
+              editorSidePadding:
+                  constraints.maxWidth - 2 * _pageSidePadding >= _pageMaxWidth
+                  ? _editorWideSidePadding
+                  : _editorSidePadding,
+            ),
+          ),
+          if (!strip)
+            KeyedSubtree(
+              key: _statusKey,
+              child: _statusLine(context, compact: compact, short: short),
+            ),
+          if (!strip && !keepInBand)
+            _faded(
+              KeyedSubtree(
+                key: _actionsKey,
+                child: ListenableBuilder(
+                  listenable: _controller,
+                  builder: (BuildContext context, Widget? _) => ComposerFooter(
+                    leaveLabel: _editing ? 'Discard edits' : 'Let it go',
+                    keepLabel: widget.saveLabel,
+                    words: _words,
+                    onLeave: _leaveAction,
+                    onKeep: _keepAction(context),
+                    room: footerRoom,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _faded(Widget child) {
+    final bool still = MediaQuery.disableAnimationsOf(context);
+    return IgnorePointer(
+      ignoring: _chromeHidden,
+      child: AnimatedOpacity(
+        opacity: _chromeHidden ? 0 : 1,
+        duration: still ? Duration.zero : Motion.fade,
+        curve: Curves.ease,
+        alwaysIncludeSemantics: true,
+        child: child,
+      ),
+    );
+  }
+
+  Widget _topBand(
+    BuildContext context, {
+    required bool compact,
+    required double width,
+    required bool keepInBand,
+  }) {
+    final bool hints = !keepInBand && !compact && width >= _hintsMinWidth;
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: _bandHorizontalPadding,
+        vertical: _bandVerticalPadding,
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              _leaveControl(context, iconOnly: compact),
+              if (hints) _hints(context),
+              if (keepInBand) _keepButton(),
+            ],
+          ),
+          if (!keepInBand)
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? _compactPrivacyReach : _widePrivacyReach,
+              ),
+              child: _privacy(context, compact: compact),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _keepButton() {
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (BuildContext context, Widget? _) => StickerButton(
+        key: composerSaveKey,
+        label: widget.saveLabel,
+        variant: StickerButtonVariant.keep,
+        onPressed: _keepAction(context),
+      ),
+    );
+  }
+
+  Widget _strip(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: _stripSidePadding),
+      child: Row(
+        children: <Widget>[
+          _leaveControl(context, iconOnly: true),
+          const SizedBox(width: _bandGap),
+          Expanded(child: _toolbar()),
+          const SizedBox(width: _bandGap),
+          _keepButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _leaveControl(BuildContext context, {required bool iconOnly}) {
+    final ComposerStageInks inks = ComposerStageInks.of(context);
+    final bool back = widget.exit == ComposerExit.back;
+    final String label = back ? 'Back' : 'Leave';
+    final TargetPlatform platform = Theme.of(context).platform;
+    final double target = iconOnly
+        ? minIconTargetOn(platform)
+        : minButtonTargetOn(platform);
+    final Widget glyph = back
+        ? SizedBox.square(
+            dimension: _leaveGlyphSize,
+            child: CustomPaint(painter: _BackChevronPainter(color: inks.ink)),
+          )
+        : IconStickerGlyphIcon(
+            glyph: IconStickerGlyph.close,
+            color: inks.ink,
+            size: _leaveGlyphSize,
+          );
+    return TextFieldTapRegion(
+      child: Pressable(
+        key: composerCloseKey,
+        label: label,
+        onPressed: _leaveAction,
+        borderRadius: _fieldRadius,
+        placement: FocusRingPlacement.edge,
+        iconOnly: iconOnly,
+        child: iconOnly
+            ? SizedBox.square(
+                dimension: target,
+                child: Center(child: glyph),
+              )
+            : ConstrainedBox(
+                constraints: BoxConstraints(minHeight: target),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: _leaveHorizontalPadding,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      glyph,
+                      const SizedBox(width: _leaveGap),
+                      Text(
+                        label,
+                        style: context.textStyles.buttonSans.copyWith(
+                          color: inks.ink,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _privacy(BuildContext context, {required bool compact}) {
+    final ComposerStageInks inks = ComposerStageInks.of(context);
+    return Semantics(
+      container: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          SizedBox.square(
+            dimension: _lockSize,
+            child: CustomPaint(painter: _LockPainter(color: inks.chrome)),
+          ),
+          const SizedBox(width: _lockGap),
+          Flexible(
+            child: Text(
+              compact
+                  ? 'Only you will read this'
+                  : 'Private · only you will read this',
+              textAlign: TextAlign.center,
+              style: context.textStyles.captionSans.copyWith(
+                fontSize: _privacySize,
+                fontWeight: FontWeight.w500,
+                color: inks.chrome,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _hints(BuildContext context) {
+    final String keep = usesCommandKey(Theme.of(context).platform)
+        ? '⌘ Return'
+        : 'Ctrl Enter';
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        _hint(context, keep, 'keep'),
+        const SizedBox(width: _hintGap),
+        _hint(context, 'Esc', 'leave'),
       ],
     );
   }
 
-  Widget _writingSurface({required bool footer}) {
-    final FieldNotesColors colors = context.colors;
-    return KeyedSubtree(
-      key: composerWritingSurfaceKey,
-      child: DecoratedBox(
-        decoration: BoxDecoration(color: colors.composerPaper),
-        child: Column(
-          children: <Widget>[
-            DashedDivider(
-              thickness: _surfaceRuleThickness,
-              color: colors.ink20,
+  Widget _hint(BuildContext context, String key, String action) {
+    final ComposerStageInks inks = ComposerStageInks.of(context);
+    final FieldNotesTextStyles styles = context.textStyles;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Container(
+          padding: _hintKeyPadding,
+          decoration: BoxDecoration(
+            border: Border.all(color: inks.line),
+            borderRadius: BorderRadius.circular(_hintKeyRadius),
+          ),
+          child: Text(
+            key,
+            style: styles.captionSans.copyWith(
+              fontSize: _hintKeySize,
+              fontWeight: FontWeight.w500,
+              color: inks.ink,
             ),
-            Expanded(child: _editor(footer: footer)),
-          ],
+          ),
+        ),
+        const SizedBox(width: _hintKeyGap),
+        Text(
+          action,
+          style: styles.captionSans.copyWith(
+            fontSize: _hintTextSize,
+            color: inks.chrome,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _titleField(BuildContext context, {required bool compact}) {
+    final ComposerStageInks inks = ComposerStageInks.of(context);
+    final double fontSize = compact ? _titleCompactSize : _titleSize;
+    final TextStyle style = context.textStyles.headlineSerif.copyWith(
+      fontSize: fontSize,
+      fontWeight: FontWeight.w400,
+      height: _titleLineHeight,
+      color: inks.ink,
+    );
+    final double fieldHeight = <double>[
+      _titleHeight,
+      minIconTargetOn(Theme.of(context).platform),
+      MediaQuery.textScalerOf(context).scale(fontSize) * _titleLineHeight,
+    ].reduce(math.max);
+    return Padding(
+      key: _titleSlotKey,
+      padding: const EdgeInsets.symmetric(horizontal: _titleSidePadding),
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _titleMaxWidth),
+          child: _StageFieldRing(
+            focusNode: _titleFocusNode,
+            armed: _traversing,
+            child: SizedBox(
+              height: fieldHeight,
+              child: Semantics(
+                label: 'Title',
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: TextField(
+                    key: composerTitleFieldKey,
+                    controller: _titleController,
+                    focusNode: _titleFocusNode,
+                    readOnly: widget.isSaving,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    textAlignVertical: TextAlignVertical.center,
+                    textInputAction: TextInputAction.next,
+                    textCapitalization: TextCapitalization.sentences,
+                    cursorColor: inks.caret,
+                    style: style,
+                    inputFormatters: <TextInputFormatter>[
+                      FilteringTextInputFormatter.deny(_lineBreaks),
+                    ],
+                    decoration: InputDecoration.collapsed(
+                      hintText: composerTitleHint,
+                      hintStyle: style.copyWith(color: inks.chrome),
+                    ),
+                    onEditingComplete: _focusNode.requestFocus,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _editor({required bool footer}) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        return RawScrollbar(
+  Widget _page(
+    BuildContext context, {
+    required bool toolbar,
+    required double editorSidePadding,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: _pageSidePadding,
+        vertical: toolbar ? _pageVerticalPadding : 0,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _pageMaxWidth),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (toolbar)
+                _faded(
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      top: _toolbarTopPadding,
+                      bottom: _toolbarBottomPadding,
+                    ),
+                    child: _toolbar(),
+                  ),
+                ),
+              Expanded(
+                key: _writingSlotKey,
+                child: _writingSurface(context, editorSidePadding),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _toolbar() {
+    final ComposerPhotoAdder? adder = _photoAdder;
+    return FormatBar(
+      controller: _controller,
+      undoController: _undoController,
+      editorFocusNode: _focusNode,
+      onAddPhoto: adder == null ? null : () => unawaited(adder.add()),
+      addingPhoto: adder?.busy,
+    );
+  }
+
+  Widget _writingSurface(BuildContext context, double editorSidePadding) {
+    final ComposerStageInks inks = ComposerStageInks.of(context);
+    final ThemeData theme = Theme.of(context);
+    final Widget surface = KeyedSubtree(
+      key: composerWritingSurfaceKey,
+      child: _StageFieldRing(
+        focusNode: _focusNode,
+        armed: _traversing,
+        child: RawScrollbar(
           controller: _scrollController,
           thickness: _scrollbarThickness,
-          thumbColor: context.colors.ink22,
+          thumbColor: inks.line,
           radius: const Radius.circular(Shapes.radiusXs),
-          child: Padding(
-            padding: _pageMargins(constraints.maxHeight),
-            child: NoteColumn(
-              maxEm: composerMeasureEm,
-              child: _page(
-                bottomInset: _pageEndInset(
-                  MediaQuery.textScalerOf(context),
-                  footer: footer,
+          child: NoteColumn(
+            maxEm: composerMeasureEm,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: editorSidePadding,
+                right: editorSidePadding,
+                top: _editorTopPadding,
+              ),
+              child: noteEditorFor(
+                NoteEditorConfig(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  undoController: _undoController,
+                  scrollController: _scrollController,
+                  hintText: widget.hintText,
+                  hintStyle: context.textStyles.noteBodyPlaceholder.copyWith(
+                    color: inks.chrome,
+                  ),
+                  cursorColor: inks.caret,
+                  photoImporter: widget.onAddPhoto,
+                  bottomInset: _editorEndInset,
+                  spellCheckEnabled: widget.spellCheckEnabled,
+                  photoMediaImporter: widget.photoMediaImporter,
                 ),
               ),
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _page({required double bottomInset}) {
-    return _EditorFocusOutline(
-      focusNode: _focusNode,
-      child: _editorView(bottomInset: bottomInset),
-    );
-  }
-
-  Widget _editorView({required double bottomInset}) {
-    return noteEditorFor(
-      NoteEditorConfig(
-        controller: _controller,
-        focusNode: _focusNode,
-        undoController: _undoController,
-        scrollController: _scrollController,
-        hintText: widget.hintText,
-        photoImporter: widget.onAddPhoto,
-        bottomInset: bottomInset,
-        spellCheckEnabled: widget.spellCheckEnabled,
-        photoMediaImporter: widget.photoMediaImporter,
+        ),
       ),
     );
+    return Theme(
+      data: theme.copyWith(
+        extensions: theme.extensions.values
+            .where(
+              (ThemeExtension<dynamic> extension) =>
+                  extension is! FieldNotesColors,
+            )
+            .followedBy(<ThemeExtension<dynamic>>[
+              context.colors.copyWith(placeholder: inks.chrome),
+            ]),
+      ),
+      child: surface,
+    );
+  }
+
+  Widget _statusLine(
+    BuildContext context, {
+    required bool compact,
+    required bool short,
+  }) {
+    final String? error = widget.errorMessage;
+    final bool urgent = error != null || widget.isSaving;
+    final String? line =
+        error ??
+        (widget.isSaving
+            ? widget.savingLabel
+            : short
+            ? null
+            : composerRestingStatus);
+    if (line == null) {
+      return const SizedBox.shrink();
+    }
+    final ComposerStageInks inks = ComposerStageInks.of(context);
+    final Widget status = Semantics(
+      container: true,
+      liveRegion: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _statusMinHeight),
+        child: Padding(
+          padding: _statusPadding,
+          child: Text(
+            line,
+            textAlign: TextAlign.center,
+            style: context.textStyles.hintAccent.copyWith(
+              fontSize: compact ? _statusCompactSize : _statusSize,
+              height: _statusLineHeight,
+              color: error != null ? context.colors.dangerInk : inks.status,
+            ),
+          ),
+        ),
+      ),
+    );
+    return urgent ? status : _faded(status);
   }
 }
 
-class _EditorFocusOutline extends StatelessWidget {
-  const _EditorFocusOutline({required this.focusNode, required this.child});
+class _StageFieldRing extends StatelessWidget {
+  const _StageFieldRing({
+    required this.focusNode,
+    required this.armed,
+    required this.child,
+  });
 
   final FocusNode focusNode;
+  final bool armed;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    const FocusRingSurface surface = FocusRingSurface.light;
+    final Color ring = ComposerStageInks.of(context).focus;
     return KeyboardFocusBuilder(
       focusNode: focusNode,
-      builder: (BuildContext context, bool shown) => Stack(
+      builder: (BuildContext context, bool keyboardFocused) => Stack(
         fit: StackFit.passthrough,
         clipBehavior: Clip.none,
         children: <Widget>[
           child,
-          if (shown)
-            Positioned.fill(
-              left: -_editorRingOutset,
-              top: -_editorRingOutset,
-              right: -_editorRingOutset,
-              bottom: -_editorRingOutset,
+          if (keyboardFocused && armed)
+            Positioned(
+              left: -_ringOutset,
+              top: -_ringOutset,
+              right: -_ringOutset,
+              bottom: -_ringOutset,
               child: IgnorePointer(
                 child: DecoratedBox(
                   key: focusRingKey,
                   decoration: BoxDecoration(
-                    border: Border.all(
-                      color: surface.colorIn(context.colors),
-                      width: surface.width,
-                    ),
-                    borderRadius: Shapes.buttonBorderRadius,
+                    border: Border.all(color: ring, width: _ringWidth),
+                    borderRadius: _fieldRadius,
                   ),
                 ),
               ),
@@ -668,23 +984,8 @@ class _EditorFocusOutline extends StatelessWidget {
   }
 }
 
-EdgeInsets _pageMargins(double surfaceHeight) {
-  return EdgeInsets.only(
-    top: clampDouble(
-      surfaceHeight * _pageTopPaddingShare,
-      _pageTopPaddingMin,
-      _pageTopPaddingMax,
-    ),
-    left: _pageHorizontalPadding,
-    right: _pageHorizontalPadding,
-  );
-}
-
-double _pageEndInset(TextScaler scaler, {required bool footer}) =>
-    (footer ? scaler.scale(composerFooterHeight) : 0) + _pageEndGap;
-
-class _CloseGlyphPainter extends CustomPainter {
-  const _CloseGlyphPainter({required this.color});
+class _LockPainter extends CustomPainter {
+  const _LockPainter({required this.color});
 
   final Color color;
 
@@ -693,19 +994,31 @@ class _CloseGlyphPainter extends CustomPainter {
     final Paint stroke = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = _exitStrokeWidth
+      ..strokeWidth = _lockStroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.save();
-    canvas.scale(size.shortestSide / _exitViewBox);
-    canvas.drawLine(const Offset(6, 6), const Offset(18, 18), stroke);
-    canvas.drawLine(const Offset(18, 6), const Offset(6, 18), stroke);
+    canvas.scale(size.shortestSide / _lockViewBox);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(5.5, 10.5, 13, 9.5),
+        const Radius.circular(2),
+      ),
+      stroke,
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(8.5, 10.5)
+        ..lineTo(8.5, 8)
+        ..arcToPoint(const Offset(15.5, 8), radius: const Radius.circular(3.5))
+        ..lineTo(15.5, 10.5),
+      stroke,
+    );
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(_CloseGlyphPainter oldDelegate) =>
-      oldDelegate.color != color;
+  bool shouldRepaint(_LockPainter oldDelegate) => oldDelegate.color != color;
 }
 
 class _BackChevronPainter extends CustomPainter {

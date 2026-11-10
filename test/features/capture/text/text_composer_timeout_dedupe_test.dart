@@ -56,16 +56,17 @@ class _Trigger extends StatelessWidget {
           context: context,
           barrierDismissible: false,
           barrierLabel: 'Dismiss note composer',
-          pageBuilder: (
-            BuildContext dialogContext,
-            Animation<double> animation,
-            Animation<double> secondaryAnimation,
-          ) {
-            return TextComposerConnector(
-              date: '2026-07-19',
-              saveTimeout: timeout,
-            );
-          },
+          pageBuilder:
+              (
+                BuildContext dialogContext,
+                Animation<double> animation,
+                Animation<double> secondaryAnimation,
+              ) {
+                return TextComposerConnector(
+                  date: '2026-07-19',
+                  saveTimeout: timeout,
+                );
+              },
         ),
       ),
       child: const Text('open'),
@@ -75,46 +76,48 @@ class _Trigger extends StatelessWidget {
 
 void main() {
   testWidgets(
-      'a save that completes within the timeout invokes save() exactly once '
-      'and pops with the real entry id', (WidgetTester tester) async {
-    final NoteEditorDriver driver = NoteEditorDriver(tester);
-    final _SlowCountingNoteWriter writer = _SlowCountingNoteWriter(
-      delay: const Duration(milliseconds: 200),
-    );
-    String? result = 'unset';
+    'a save that completes within the timeout invokes save() exactly once '
+    'and pops with the real entry id',
+    (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      final _SlowCountingNoteWriter writer = _SlowCountingNoteWriter(
+        delay: const Duration(milliseconds: 200),
+      );
+      String? result = 'unset';
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: <Override>[
-          noteWriterProvider.overrideWith((Ref ref) => writer),
-          draftStoreProvider.overrideWith((Ref ref) => FakeDraftStore()),
-        ],
-        child: captureHarness(
-          _Trigger(
-            timeout: const Duration(milliseconds: 500),
-            onResult: (String? id) => result = id,
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            noteWriterProvider.overrideWith((Ref ref) => writer),
+            draftStoreProvider.overrideWith((Ref ref) => FakeDraftStore()),
+          ],
+          child: captureHarness(
+            _Trigger(
+              timeout: const Duration(milliseconds: 500),
+              onResult: (String? id) => result = id,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('open'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(find.text('open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
 
-    await driver.enterText('a slow day');
-    await tester.pump();
+      await driver.enterText('a slow day');
+      await tester.pump();
 
-    await tester.tap(find.text('Save'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 60));
-    await tester.pump(const Duration(milliseconds: 200));
-    await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Keep this'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump(const Duration(milliseconds: 300));
 
-    expect(writer.saveCalls, 1);
-    expect(result, 'entry-1');
-    expect(find.byType(TextComposerSheet), findsNothing);
+      expect(writer.saveCalls, 1);
+      expect(result, 'entry-1');
+      expect(find.byType(TextComposerSheet), findsNothing);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }

@@ -1,4 +1,4 @@
-flutter-text-contrast | c11-draft-chip | Discard | Today · 9:30 AM / New note / Draft restored / · / # title   - list   1. steps   > quote # measured: 6.92:1 by token arithmetic
+focus-visible | c4-more-formats | Keep this | 6 words # platform: the open More formats menu covers this button until it closes, so no ring can show through it
 focus-visible | c9-selection-menu | <unlabelled> | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Copy | <root> # Flutter's own control
 focus-visible | c9-selection-menu | Cut | <root> # Flutter's own control
@@ -17,4 +17,6 @@ small-target | c9-selection-menu | Select all | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | <unlabelled> | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Copy | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Cut | <root> # Flutter's own control
-text-contrast | c10-discard-dialog | Today · 9:30 AM | <root> # measured: 6.53:1 by token arithmetic
+text-contrast | c10-discard-dialog | Add a title | 6 words # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog | Only you will read this | 6 words # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog@2x | Only you will read this | 6 words # measured: 6.38:1 by token arithmetic

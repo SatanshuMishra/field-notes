@@ -12,6 +12,7 @@ import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/draft_provider.dart';
 import 'package:field_notes/state/media_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -40,17 +41,17 @@ const double _statusBarPixels = 85;
 const String _today = '2026-09-18';
 const String _launcherLabel = 'open';
 const Duration _photoHold = Duration(milliseconds: 110);
-const String _taskPrefix = '- [ ] ';
+const String _headingPrefix = '# ';
 const Size _macWindow = Size(1280, 800);
-const double _toastGap = 16;
 const Duration _toastRise = Duration(milliseconds: 300);
 
 const List<Key> _composerControls = <Key>[
+  formatBoldKey,
   formatHeadingKey,
-  formatListKey,
-  formatNumberedKey,
-  formatTaskKey,
-  composerAddPhotoKey,
+  formatCodeKey,
+  formatMoreKey,
+  composerLetGoKey,
+  composerSaveKey,
 ];
 
 class _Launcher extends StatelessWidget {
@@ -114,7 +115,7 @@ Future<NoteEditorDriver> _removePhotoWithKeyboardUp(WidgetTester tester) async {
 void main() {
   testWidgets(
     'with the keyboard up the photo removed toast covers no format button '
-    'or Add memory',
+    'or footer action',
     (WidgetTester tester) async {
       await _removePhotoWithKeyboardUp(tester);
 
@@ -128,23 +129,22 @@ void main() {
     },
   );
 
-  testWidgets('Task list still toggles while the toast shows', (
+  testWidgets('Heading still toggles while the toast shows', (
     WidgetTester tester,
   ) async {
     final NoteEditorDriver driver = await _removePhotoWithKeyboardUp(tester);
-    expect(driver.source, isNot(contains(_taskPrefix)));
+    expect(driver.source, isNot(contains(_headingPrefix)));
 
-    await tester.tapAt(tester.getCenter(find.byKey(formatTaskKey)));
+    await tester.tapAt(tester.getCenter(find.byKey(formatHeadingKey)));
     await tester.pump();
 
-    expect(driver.source, contains(_taskPrefix));
+    expect(driver.source, contains(_headingPrefix));
 
     await tester.pump(kToastActionLifetime);
   });
 
-  testWidgets('on macOS the empty-save guard floats clear of the footer', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('on macOS the empty-save guard floats clear of the status line '
+      'and the footer', (WidgetTester tester) async {
     tester.view.physicalSize = _macWindow;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -165,14 +165,20 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.text('Save'));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
     await tester.pump();
     await tester.pump(_toastRise);
 
     final Rect toast = tester.getRect(find.byType(Toast));
-    final Rect footer = tester.getRect(find.byType(ComposerFooter));
+    final Rect status = tester.getRect(find.text(composerRestingStatus));
     expect(find.text(emptySaveGuardMessage), findsOneWidget);
-    expect(toast.bottom, closeTo(footer.top - _toastGap, 0.5));
+    expect(toast.bottom, lessThan(status.top));
+    expect(
+      toast.overlaps(tester.getRect(find.byType(ComposerFooter))),
+      isFalse,
+    );
     expect(
       toast.overlaps(tester.getRect(find.byKey(composerAddPhotoKey))),
       isFalse,

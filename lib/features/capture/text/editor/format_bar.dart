@@ -1,15 +1,18 @@
-import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/gestures.dart' show DragStartBehavior;
+import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/services.dart'
     show KeyDownEvent, KeyEvent, KeyRepeatEvent, KeyUpEvent, LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/format_icons.dart';
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/features/capture/core/composer_shell.dart'
+    show ComposerStageInks;
 import 'package:field_notes/features/note_engine/capabilities.dart'
     show tablesEnabled;
 import 'package:field_notes/features/note_engine/commands/inline_format.dart'
@@ -24,8 +27,9 @@ import 'package:field_notes/features/note_engine/document/transaction.dart'
     show Transaction;
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show NoteEditorController;
-import 'package:field_notes/features/note_engine/toolbars/table_toolbar.dart'
-    show ToolbarScrollFade;
+
+import '../composer_footer.dart'
+    show composerAddPhotoKey, composerAddPhotoLabel;
 
 const Key formatBoldKey = ValueKey<String>('format-bold');
 const Key formatItalicKey = ValueKey<String>('format-italic');
@@ -42,217 +46,312 @@ const Key formatMoreKey = ValueKey<String>('format-more');
 const Key formatStrikethroughKey = ValueKey<String>('format-strikethrough');
 const Key formatHighlightKey = ValueKey<String>('format-highlight');
 const Key formatCodeKey = ValueKey<String>('format-code');
-const Key formatBarFadeStartKey = ValueKey<String>('format-bar-fade-start');
-const Key formatBarFadeEndKey = ValueKey<String>('format-bar-fade-end');
+const Key formatBarSeparatorKey = ValueKey<String>('format-bar-separator');
 
-const double formatBarHeight = 48;
+double formatBarHeightOn(TargetPlatform platform) => minIconTargetOn(platform);
 
-const double _buttonExtent = 48;
-const double _glyphExtent = 17;
-const double _horizontalPadding = 12;
+const double _glyphExtent = 18;
 const double _disabledOpacity = 0.35;
-const double _menuGap = 4;
-const double _menuPadding = 5;
-const double _menuItemHeight = 48;
-const double _menuItemPadding = 14;
-const double _menuMinWidth = 160;
+const double _separatorWidth = 1;
+const double _separatorHeight = 18;
+const double _separatorMargin = 6;
+const double _separatorReach = _separatorWidth + 2 * _separatorMargin;
+const int _fewestShownWhenCrowded = 3;
+const double _menuGap = 6;
+const double _menuPadding = 4;
+const double _menuWidth = 190;
+const double _menuItemMinHeight = 40;
+const double _menuItemPadding = 10;
+const double _menuItemGap = 10;
+const double _menuLabelSize = 13;
 const BorderRadius _focusRadius = BorderRadius.all(
-  Radius.circular(Shapes.radiusXs),
+  Radius.circular(Shapes.radius8),
+);
+const BorderRadius _menuRadius = BorderRadius.all(
+  Radius.circular(Shapes.radius12),
 );
 
 typedef _Command = Transaction? Function(EditorState state);
+typedef _IconBuilder = Widget Function(Color ink);
 
-enum _BarGlyph { numbered, task, table, more, redo }
+enum _BarGlyph {
+  strike,
+  highlight,
+  code,
+  numbered,
+  task,
+  table,
+  photo,
+  more,
+  redo,
+}
+
+final class _BarItem {
+  const _BarItem({
+    required this.key,
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.startsGroup = false,
+  });
+
+  final Key key;
+  final String label;
+  final _IconBuilder icon;
+  final VoidCallback? onTap;
+  final bool startsGroup;
+}
+
+final class _BarFit {
+  const _BarFit({
+    required this.shown,
+    required this.tucked,
+    required this.separated,
+  });
+
+  factory _BarFit.of(List<_BarItem> items, double extent, double width) {
+    final double bare = items.length * extent;
+    final int groups = items.where((_BarItem item) => item.startsGroup).length;
+    if (bare + groups * _separatorReach <= width) {
+      return _BarFit(shown: items, tucked: const <_BarItem>[], separated: true);
+    }
+    if (bare <= width) {
+      return _BarFit(
+        shown: items,
+        tucked: const <_BarItem>[],
+        separated: false,
+      );
+    }
+    final int fits = ((width - extent) / extent).floor();
+    final int count = math.min(
+      math.max(_fewestShownWhenCrowded, fits),
+      items.length - 1,
+    );
+    return _BarFit(
+      shown: items.sublist(0, count),
+      tucked: items.sublist(count),
+      separated: false,
+    );
+  }
+
+  final List<_BarItem> shown;
+  final List<_BarItem> tucked;
+  final bool separated;
+}
 
 class FormatBar extends StatelessWidget {
   const FormatBar({
     super.key,
     required this.controller,
     required this.undoController,
-    this.trailing,
     this.tablesAvailable = tablesEnabled,
+    this.editorFocusNode,
+    this.onAddPhoto,
+    this.addingPhoto,
   });
 
   final TextEditingController controller;
   final UndoHistoryController undoController;
-  final Widget? trailing;
   final bool tablesAvailable;
+  final FocusNode? editorFocusNode;
+  final VoidCallback? onAddPhoto;
+  final ValueListenable<bool>? addingPhoto;
 
   @override
   Widget build(BuildContext context) {
-    final Color ink = context.colors.ink;
+    final double extent = formatBarHeightOn(Theme.of(context).platform);
+    final ValueListenable<bool>? adding = addingPhoto;
     return TextFieldTapRegion(
-      child: SizedBox(
-        height: formatBarHeight,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: _horizontalPadding),
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: ToolbarScrollFade(
-                  color: context.colors.composerPaper,
-                  startKey: formatBarFadeStartKey,
-                  endKey: formatBarFadeEndKey,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    dragStartBehavior: DragStartBehavior.down,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        _action(
-                          formatBoldKey,
-                          FormatIcon(
-                            glyph: FormatGlyph.bold,
-                            color: ink,
-                            size: _glyphExtent,
-                          ),
-                          'Bold',
-                          (EditorState s) =>
-                              toggleInlineFormat(s, InlineFormat.bold),
-                        ),
-                        _action(
-                          formatItalicKey,
-                          FormatIcon(
-                            glyph: FormatGlyph.italic,
-                            color: ink,
-                            size: _glyphExtent,
-                          ),
-                          'Italic',
-                          (EditorState s) =>
-                              toggleInlineFormat(s, InlineFormat.italic),
-                        ),
-                        _action(
-                          formatHeadingKey,
-                          FormatIcon(
-                            glyph: FormatGlyph.heading,
-                            color: ink,
-                            size: _glyphExtent,
-                          ),
-                          'Heading',
-                          cycleHeading,
-                        ),
-                        _action(
-                          formatListKey,
-                          FormatIcon(
-                            glyph: FormatGlyph.list,
-                            color: ink,
-                            size: _glyphExtent,
-                          ),
-                          'Bullet list',
-                          (EditorState s) => toggleList(s, NoteListKind.bullet),
-                        ),
-                        _action(
-                          formatNumberedKey,
-                          const _BarIcon(glyph: _BarGlyph.numbered),
-                          'Numbered list',
-                          (EditorState s) =>
-                              toggleList(s, NoteListKind.numbered),
-                        ),
-                        _action(
-                          formatTaskKey,
-                          const _BarIcon(glyph: _BarGlyph.task),
-                          'Task list',
-                          (EditorState s) => toggleList(s, NoteListKind.task),
-                        ),
-                        _action(
-                          formatQuoteKey,
-                          FormatIcon(
-                            glyph: FormatGlyph.quote,
-                            color: ink,
-                            size: _glyphExtent,
-                          ),
-                          'Quote',
-                          toggleQuote,
-                        ),
-                        _action(
-                          formatLinkKey,
-                          FormatIcon(
-                            glyph: FormatGlyph.link,
-                            color: ink,
-                            size: _glyphExtent,
-                          ),
-                          'Link',
-                          (EditorState s) =>
-                              toggleInlineFormat(s, InlineFormat.link),
-                        ),
-                        if (tablesAvailable)
-                          _action(
-                            formatTableKey,
-                            const _BarIcon(glyph: _BarGlyph.table),
-                            'Table',
-                            insertTable,
-                          ),
-                        _MoreFormats(
-                          key: formatMoreKey,
-                          controller: controller,
-                          onChosen: _runner(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              ?trailing,
-              _historyButton(
-                formatUndoKey,
-                FormatIcon(
-                  glyph: FormatGlyph.undo,
-                  color: ink,
-                  size: _glyphExtent,
-                ),
-                'Undo',
-                (UndoHistoryValue history) => history.canUndo,
-                undoController.undo,
-              ),
-              _historyButton(
-                formatRedoKey,
-                const _BarIcon(glyph: _BarGlyph.redo),
-                'Redo',
-                (UndoHistoryValue history) => history.canRedo,
-                undoController.redo,
-              ),
-            ],
-          ),
-        ),
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          return ListenableBuilder(
+            listenable: Listenable.merge(<Listenable?>[undoController, adding]),
+            builder: (BuildContext context, Widget? _) {
+              return _row(
+                context,
+                extent,
+                _BarFit.of(_items(), extent, constraints.maxWidth),
+              );
+            },
+          );
+        },
       ),
     );
   }
 
-  void Function(_Command command)? _runner() {
-    final TextEditingController current = controller;
-    if (current is! NoteEditorController) {
-      return null;
-    }
-    return current.applyCommand;
-  }
-
-  Widget _action(Key key, Widget icon, String label, _Command command) {
-    final void Function(_Command command)? run = _runner();
-    return _FormatButton(
-      key: key,
-      icon: icon,
-      label: label,
-      onTap: run == null ? null : () => run(command),
+  Widget _row(BuildContext context, double extent, _BarFit fit) {
+    final ComposerStageInks inks = ComposerStageInks.of(context);
+    return SizedBox(
+      height: extent,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          for (final _BarItem item in fit.shown) ...<Widget>[
+            if (fit.separated && item.startsGroup) _separator(inks.line),
+            _FormatButton(
+              key: item.key,
+              extent: extent,
+              icon: item.icon(inks.chrome),
+              label: item.label,
+              onTap: item.onTap,
+            ),
+          ],
+          if (fit.tucked.isNotEmpty)
+            _MoreFormats(
+              key: formatMoreKey,
+              controller: controller,
+              extent: extent,
+              items: fit.tucked,
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _historyButton(
+  Widget _separator(Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: _separatorMargin),
+      child: SizedBox(
+        key: formatBarSeparatorKey,
+        width: _separatorWidth,
+        height: _separatorHeight,
+        child: ColoredBox(color: color),
+      ),
+    );
+  }
+
+  List<_BarItem> _items() {
+    final bool canUndo = undoController.value.canUndo;
+    final bool canRedo = undoController.value.canRedo;
+    final bool adding = addingPhoto?.value ?? false;
+    final VoidCallback? addPhoto = onAddPhoto;
+    return <_BarItem>[
+      _format(
+        formatBoldKey,
+        'Bold',
+        _formatGlyph(FormatGlyph.bold),
+        _inline(InlineFormat.bold),
+      ),
+      _format(
+        formatItalicKey,
+        'Italic',
+        _formatGlyph(FormatGlyph.italic),
+        _inline(InlineFormat.italic),
+      ),
+      _format(
+        formatHeadingKey,
+        'Heading',
+        _formatGlyph(FormatGlyph.heading),
+        cycleHeading,
+      ),
+      _format(
+        formatStrikethroughKey,
+        'Strikethrough',
+        _barGlyph(_BarGlyph.strike),
+        _inline(InlineFormat.strikethrough),
+      ),
+      _format(
+        formatHighlightKey,
+        'Highlight',
+        _barGlyph(_BarGlyph.highlight),
+        _inline(InlineFormat.highlight),
+      ),
+      _format(
+        formatCodeKey,
+        'Inline code',
+        _barGlyph(_BarGlyph.code),
+        _inline(InlineFormat.code),
+      ),
+      _format(
+        formatListKey,
+        'Bullet list',
+        _formatGlyph(FormatGlyph.list),
+        (EditorState s) => toggleList(s, NoteListKind.bullet),
+        startsGroup: true,
+      ),
+      _format(
+        formatNumberedKey,
+        'Numbered list',
+        _barGlyph(_BarGlyph.numbered),
+        (EditorState s) => toggleList(s, NoteListKind.numbered),
+      ),
+      _format(
+        formatTaskKey,
+        'Task list',
+        _barGlyph(_BarGlyph.task),
+        (EditorState s) => toggleList(s, NoteListKind.task),
+      ),
+      _format(
+        formatQuoteKey,
+        'Quote',
+        _formatGlyph(FormatGlyph.quote),
+        toggleQuote,
+      ),
+      _format(
+        formatLinkKey,
+        'Link',
+        _formatGlyph(FormatGlyph.link),
+        _inline(InlineFormat.link),
+        startsGroup: true,
+      ),
+      if (tablesAvailable)
+        _format(
+          formatTableKey,
+          'Table',
+          _barGlyph(_BarGlyph.table),
+          insertTable,
+        ),
+      if (addPhoto != null)
+        _BarItem(
+          key: composerAddPhotoKey,
+          label: composerAddPhotoLabel,
+          icon: _barGlyph(_BarGlyph.photo),
+          onTap: adding ? null : addPhoto,
+        ),
+      _BarItem(
+        key: formatUndoKey,
+        label: 'Undo',
+        icon: _formatGlyph(FormatGlyph.undo),
+        onTap: canUndo ? undoController.undo : null,
+        startsGroup: true,
+      ),
+      _BarItem(
+        key: formatRedoKey,
+        label: 'Redo',
+        icon: _barGlyph(_BarGlyph.redo),
+        onTap: canRedo ? undoController.redo : null,
+      ),
+    ];
+  }
+
+  _Command _inline(InlineFormat format) =>
+      (EditorState s) => toggleInlineFormat(s, format);
+
+  _IconBuilder _formatGlyph(FormatGlyph glyph) =>
+      (Color ink) => FormatIcon(glyph: glyph, color: ink, size: _glyphExtent);
+
+  _IconBuilder _barGlyph(_BarGlyph glyph) =>
+      (Color ink) => _BarIcon(glyph: glyph, color: ink);
+
+  _BarItem _format(
     Key key,
-    Widget icon,
     String label,
-    bool Function(UndoHistoryValue history) available,
-    VoidCallback onTap,
-  ) {
-    return ValueListenableBuilder<UndoHistoryValue>(
-      valueListenable: undoController,
-      builder: (BuildContext context, UndoHistoryValue history, Widget? child) {
-        return _FormatButton(
-          key: key,
-          icon: icon,
-          label: label,
-          onTap: available(history) ? onTap : null,
-        );
-      },
+    _IconBuilder icon,
+    _Command command, {
+    bool startsGroup = false,
+  }) {
+    final TextEditingController current = controller;
+    return _BarItem(
+      key: key,
+      label: label,
+      icon: icon,
+      startsGroup: startsGroup,
+      onTap: current is NoteEditorController
+          ? () {
+              current.applyCommand(command);
+              editorFocusNode?.requestFocus();
+            }
+          : null,
     );
   }
 }
@@ -260,80 +359,51 @@ class FormatBar extends StatelessWidget {
 class _FormatButton extends StatelessWidget {
   const _FormatButton({
     super.key,
+    required this.extent,
     required this.icon,
     required this.label,
     required this.onTap,
   });
 
+  final double extent;
   final Widget icon;
   final String label;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final bool enabled = onTap != null;
-    return Focus(
-      canRequestFocus: false,
-      skipTraversal: true,
-      includeSemantics: false,
-      onFocusChange: (bool focused) => _revealWhen(focused, context),
-      child: Pressable(
-        label: label,
-        onPressed: onTap,
-        borderRadius: _focusRadius,
-        placement: FocusRingPlacement.edge,
-        child: SizedBox.square(
-          dimension: _buttonExtent,
-          child: Center(
-            child: Opacity(
-              opacity: enabled ? 1 : _disabledOpacity,
-              child: icon,
-            ),
+    return Pressable(
+      label: label,
+      onPressed: onTap,
+      borderRadius: _focusRadius,
+      placement: FocusRingPlacement.edge,
+      iconOnly: true,
+      child: SizedBox.square(
+        dimension: extent,
+        child: Center(
+          child: Opacity(
+            opacity: onTap != null ? 1 : _disabledOpacity,
+            child: icon,
           ),
         ),
       ),
     );
   }
-
-  void _revealWhen(bool focused, BuildContext context) {
-    if (focused) {
-      unawaited(
-        Scrollable.ensureVisible(
-          context,
-          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
-        ),
-      );
-    }
-  }
 }
-
-class _MoreItem {
-  const _MoreItem(this.key, this.label, this.format);
-
-  final Key key;
-  final String label;
-  final InlineFormat format;
-}
-
-const List<_MoreItem> _moreItems = <_MoreItem>[
-  _MoreItem(
-    formatStrikethroughKey,
-    'Strikethrough',
-    InlineFormat.strikethrough,
-  ),
-  _MoreItem(formatHighlightKey, 'Highlight', InlineFormat.highlight),
-  _MoreItem(formatCodeKey, 'Inline code', InlineFormat.code),
-];
 
 class _MoreFormats extends StatefulWidget {
   const _MoreFormats({
     super.key,
     required this.controller,
-    required this.onChosen,
+    required this.extent,
+    required this.items,
   });
 
   final TextEditingController controller;
-  final void Function(_Command command)? onChosen;
+  final double extent;
+  final List<_BarItem> items;
+
+  bool get hasAction => items.any((_BarItem item) => item.onTap != null);
 
   @override
   State<_MoreFormats> createState() => _MoreFormatsState();
@@ -350,7 +420,7 @@ class _MoreFormatsState extends State<_MoreFormats> {
   @override
   void didUpdateWidget(_MoreFormats oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.onChosen == null) {
+    if (!widget.hasAction) {
       _menu.close();
     }
   }
@@ -369,12 +439,9 @@ class _MoreFormatsState extends State<_MoreFormats> {
     }
   }
 
-  void _choose(InlineFormat format) {
-    final void Function(_Command command)? run = widget.onChosen;
+  void _choose(_BarItem item) {
     _menu.close();
-    if (run != null) {
-      run((EditorState s) => toggleInlineFormat(s, format));
-    }
+    item.onTap?.call();
   }
 
   @override
@@ -383,9 +450,13 @@ class _MoreFormatsState extends State<_MoreFormats> {
     return TapRegion(
       groupId: _group,
       child: _FormatButton(
-        icon: const _BarIcon(glyph: _BarGlyph.more),
+        extent: widget.extent,
+        icon: _BarIcon(
+          glyph: _BarGlyph.more,
+          color: ComposerStageInks.of(context).chrome,
+        ),
         label: 'More formats',
-        onTap: widget.onChosen == null ? null : _toggle,
+        onTap: widget.hasAction ? _toggle : null,
       ),
     );
   }
@@ -401,6 +472,8 @@ class _MoreFormatsState extends State<_MoreFormats> {
       button.getTransformTo(overlay),
       Offset.zero & button.size,
     );
+    final FieldNotesColors colors = overlayContext.colors;
+    final FieldNotesShadows shadows = overlayContext.shadows;
     return CustomSingleChildLayout(
       delegate: _MenuLayout(
         anchor: anchor,
@@ -410,48 +483,60 @@ class _MoreFormatsState extends State<_MoreFormats> {
         child: TapRegion(
           groupId: _group,
           onTapOutside: (PointerDownEvent _) => _menu.close(),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              color: Palette.toolbarInk,
-              borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusSm)),
-              boxShadow: Shadows.toastLift,
+          child: Container(
+            width: _menuWidth,
+            padding: const EdgeInsets.all(_menuPadding),
+            decoration: BoxDecoration(
+              color: colors.cardBright,
+              border: shadows.outline,
+              borderRadius: _menuRadius,
+              boxShadow: shadows.emphasis,
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: _menuPadding),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: _menuMinWidth),
-                child: IntrinsicWidth(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      for (final _MoreItem item in _moreItems)
-                        Pressable(
-                          key: item.key,
-                          label: item.label,
-                          onPressed: () => _choose(item.format),
-                          surface: FocusRingSurface.dark,
-                          borderRadius: _focusRadius,
-                          child: SizedBox(
-                            height: _menuItemHeight,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: _menuItemPadding,
-                              ),
-                              child: Align(
-                                alignment: AlignmentDirectional.centerStart,
-                                child: Text(
-                                  item.label,
-                                  style: overlayContext.textStyles.toolbarSans,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+            child: FocusTraversalGroup(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    for (final _BarItem item in widget.items)
+                      _menuItem(overlayContext, item),
+                  ],
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _menuItem(BuildContext overlayContext, _BarItem item) {
+    return Pressable(
+      key: item.key,
+      label: item.label,
+      onPressed: item.onTap == null ? null : () => _choose(item),
+      borderRadius: _focusRadius,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: math.max(_menuItemMinHeight, widget.extent),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: _menuItemPadding),
+          child: Opacity(
+            opacity: item.onTap != null ? 1 : _disabledOpacity,
+            child: Row(
+              children: <Widget>[
+                item.icon(overlayContext.colors.ink),
+                const SizedBox(width: _menuItemGap),
+                Expanded(
+                  child: Text(
+                    item.label,
+                    style: overlayContext.textStyles.ui.copyWith(
+                      fontSize: _menuLabelSize,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -621,8 +706,14 @@ class _MenuLayout extends SingleChildLayoutDelegate {
   final double keyboardInset;
 
   @override
-  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
-      constraints.loosen();
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final double roomBelow =
+        constraints.maxHeight - keyboardInset - anchor.bottom - _menuGap;
+    final double roomAbove = anchor.top - _menuGap;
+    return constraints.loosen().copyWith(
+      maxHeight: math.max(0, math.max(roomBelow, roomAbove)),
+    );
+  }
 
   @override
   Offset getPositionForChild(Size size, Size childSize) {
@@ -646,21 +737,26 @@ class _MenuLayout extends SingleChildLayoutDelegate {
 }
 
 class _BarIcon extends StatelessWidget {
-  const _BarIcon({required this.glyph});
+  const _BarIcon({required this.glyph, required this.color});
 
   final _BarGlyph glyph;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox.square(
       dimension: _glyphExtent,
       child: CustomPaint(
-        painter: _BarGlyphPainter(glyph: glyph, color: context.colors.ink),
+        painter: _BarGlyphPainter(glyph: glyph, color: color),
         size: const Size.square(_glyphExtent),
       ),
     );
   }
 }
+
+const double _strikeLetterSize = 15;
+const double _strikeLetterBaseline = 17.5;
+const double _strikeLetterCentre = 12;
 
 class _BarGlyphPainter extends CustomPainter {
   const _BarGlyphPainter({required this.glyph, required this.color});
@@ -672,12 +768,38 @@ class _BarGlyphPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     canvas.save();
     canvas.scale(size.shortestSide / FormatIconPainter.viewBox);
+    if (glyph == _BarGlyph.strike) {
+      _paintStrikeLetter(canvas);
+    }
     canvas.drawPath(_path(), _stroke());
     final Path? dots = _dots();
     if (dots != null) {
       canvas.drawPath(dots, _fill());
     }
     canvas.restore();
+  }
+
+  void _paintStrikeLetter(Canvas canvas) {
+    final TextPainter letter = TextPainter(
+      text: TextSpan(
+        text: 'S',
+        style: TextStyle(
+          fontFamily: TypographyTokens.serif,
+          fontSize: _strikeLetterSize,
+          color: color,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    letter.paint(
+      canvas,
+      Offset(
+        _strikeLetterCentre - letter.width / 2,
+        _strikeLetterBaseline -
+            letter.computeDistanceToActualBaseline(TextBaseline.alphabetic),
+      ),
+    );
+    letter.dispose();
   }
 
   Paint _stroke() => Paint()
@@ -698,12 +820,48 @@ class _BarGlyphPainter extends CustomPainter {
       return null;
     }
     return Path()
-      ..addOval(Rect.fromCircle(center: const Offset(5, 12), radius: 1.6))
+      ..addOval(Rect.fromCircle(center: const Offset(6, 12), radius: 1.6))
       ..addOval(Rect.fromCircle(center: const Offset(12, 12), radius: 1.6))
-      ..addOval(Rect.fromCircle(center: const Offset(19, 12), radius: 1.6));
+      ..addOval(Rect.fromCircle(center: const Offset(18, 12), radius: 1.6));
   }
 
   Path _path() => switch (glyph) {
+    _BarGlyph.strike =>
+      Path()
+        ..moveTo(5.5, 12.5)
+        ..lineTo(18.5, 12.5),
+    _BarGlyph.highlight =>
+      Path()
+        ..moveTo(13.5, 5.5)
+        ..lineTo(18.5, 10.5)
+        ..lineTo(11, 18)
+        ..lineTo(6, 18)
+        ..lineTo(6, 13)
+        ..close()
+        ..moveTo(4.5, 20.5)
+        ..lineTo(19.5, 20.5),
+    _BarGlyph.code =>
+      Path()
+        ..moveTo(8.5, 7.5)
+        ..lineTo(3.5, 12)
+        ..lineTo(8.5, 16.5)
+        ..moveTo(15.5, 7.5)
+        ..lineTo(20.5, 12)
+        ..lineTo(15.5, 16.5),
+    _BarGlyph.photo =>
+      Path()
+        ..addRRect(
+          RRect.fromRectAndRadius(
+            const Rect.fromLTWH(3.5, 5, 17, 14),
+            const Radius.circular(2.5),
+          ),
+        )
+        ..addOval(Rect.fromCircle(center: const Offset(9, 10), radius: 1.6))
+        ..moveTo(4, 17)
+        ..lineTo(9, 12.5)
+        ..lineTo(12.5, 15.5)
+        ..lineTo(15.5, 13)
+        ..lineTo(20, 17),
     _BarGlyph.numbered =>
       Path()
         ..moveTo(4, 5)

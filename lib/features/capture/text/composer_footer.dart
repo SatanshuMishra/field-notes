@@ -1,324 +1,173 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/widgets.dart';
 
-import 'package:field_notes/design/feedback/feedback.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_fill.dart';
-import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/design/widgets/icon_sticker_button.dart';
-import 'package:field_notes/domain/notes/markdown/markdown.dart'
-    show parseNoteTree;
+import 'package:field_notes/design/widgets/sticker_button.dart';
+import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/photo/photo_picker.dart';
-import 'package:field_notes/features/note_engine/capabilities.dart'
-    show tablesEnabled;
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show NoteEditorController;
-import 'package:field_notes/features/note_engine/photos/photo_relocation.dart'
-    show PhotoEdit, photoInsertion, photoTargetAt;
 import 'package:field_notes/features/notes/photos/photo_import.dart';
 
-import 'editor/format_bar.dart';
-
 const Key composerAddPhotoKey = ValueKey<String>('composer-add-photo');
+const Key composerSaveKey = ValueKey<String>('composer-save');
+const Key composerLetGoKey = ValueKey<String>('composer-let-go');
+const Key composerWordCountKey = ValueKey<String>('composer-word-count');
 
-const Key composerHintsKey = ValueKey<String>('composer-hints');
+const String composerAddPhotoLabel = 'Add a photo';
 
-const String composerAddPhotoLabel = 'Add memory';
+String composerWordsLabel(int words) => words == 1 ? '1 word' : '$words words';
 
-const String composerAddPhotoHint = 'Adds a photo to this note';
+const double _desktopActionGap = 40;
+const double _phoneActionGap = 12;
+const double _wordsMinWidth = 96;
+const double _desktopRowMinHeight = 104;
+const double _phoneRowMinHeight = 190;
+const EdgeInsets _desktopRowPadding = EdgeInsets.fromLTRB(32, 10, 32, 24);
+const EdgeInsets _phoneRowPadding = EdgeInsets.fromLTRB(20, 8, 20, 56);
+const EdgeInsets _tightRowPadding = EdgeInsets.fromLTRB(20, 4, 20, 8);
 
-const String composerAddingLabel = 'Adding…';
-
-const List<(String, String)> composerMarkdownHints = <(String, String)>[
-  ('# ', 'title'),
-  ('- ', 'list'),
-  ('1. ', 'steps'),
-  ('> ', 'quote'),
-];
-
-const double composerFooterHeight = 48;
-
-const double composerFooterHintsMinWidth = 360;
-
-const double composerFooterBlur = 18;
-
-const double composerFooterVeilOpacity = 0.72;
-
-class ComposerFooterVeil extends StatelessWidget {
-  const ComposerFooterVeil({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: composerFooterBlur,
-          sigmaY: composerFooterBlur,
-        ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: context.colors.composerPaper.withValues(
-              alpha: composerFooterVeilOpacity,
-            ),
-          ),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
-
-const double _addHorizontalPadding = 12;
-const double _addVerticalPadding = 8;
-const double _cameraExtent = 16;
-const double _cameraStroke = 2;
-const double _plusGap = 7;
-const double _hintsGap = 12;
-const double _busyOpacity = 0.5;
-const String _hintJoin = '\u00A0';
-
-class ComposerFooter extends StatefulWidget {
-  const ComposerFooter({
-    super.key,
+final class ComposerPhotoAdder {
+  ComposerPhotoAdder({
     required this.controller,
-    required this.onAddPhoto,
-    this.editorFocusNode,
-    this.showHints = true,
-    this.compact = false,
+    required this.importer,
+    required this.editorFocusNode,
+    required this.report,
   });
 
-  final TextEditingController controller;
-  final PhotoImporter onAddPhoto;
-  final FocusNode? editorFocusNode;
-  final bool showHints;
-  final bool compact;
+  final NoteEditorController controller;
+  final PhotoImporter importer;
+  final FocusNode editorFocusNode;
+  final ValueChanged<String> report;
+  final ValueNotifier<bool> _busy = ValueNotifier<bool>(false);
+  bool _disposed = false;
 
-  @override
-  State<ComposerFooter> createState() => _ComposerFooterState();
-}
+  ValueListenable<bool> get busy => _busy;
 
-class _ComposerFooterState extends State<ComposerFooter> {
-  final FocusNode _addFocus = FocusNode(debugLabel: composerAddPhotoLabel);
-  bool _busy = false;
-
-  @override
-  void dispose() {
-    _addFocus.dispose();
-    super.dispose();
-  }
-
-  Future<void> _add() async {
-    if (_busy) {
+  Future<void> add() async {
+    if (_busy.value) {
       return;
     }
-    setState(() => _busy = true);
+    _busy.value = true;
     try {
-      final TextEditingController controller = widget.controller;
-      if (controller is NoteEditorController) {
-        await controller.addPhotos(widget.onAddPhoto);
-      } else {
-        final List<String> picked = await widget.onAddPhoto();
-        if (mounted && picked.isNotEmpty) {
-          _insert(controller, picked);
-        }
-      }
+      await controller.addPhotos(importer);
     } on PhotoPickException catch (error) {
-      _report(error.message);
+      _reportUnlessGone(error.message);
     } catch (error, stackTrace) {
       debugPrint('Adding a photo to a note failed: $error\n$stackTrace');
-      _report(composerPhotoFailedMessage);
+      _reportUnlessGone(composerPhotoFailedMessage);
     } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-        widget.editorFocusNode?.requestFocus();
+      if (!_disposed) {
+        _busy.value = false;
+        editorFocusNode.requestFocus();
       }
     }
   }
 
-  void _insert(TextEditingController controller, List<String> references) {
-    final String text = controller.text;
-    final int caret = controller.selection.isValid
-        ? controller.selection.end
-        : text.length;
-    final PhotoEdit edit = photoInsertion(
-      text,
-      photoTargetAt(text, parseNoteTree(text, tables: tablesEnabled), caret),
-      references,
-    );
-    controller.value = TextEditingValue(
-      text: edit.changes.apply(text),
-      selection: TextSelection(
-        baseOffset: edit.selection.anchor,
-        extentOffset: edit.selection.head,
-      ),
-    );
-  }
-
-  void _report(String message) {
-    if (mounted) {
-      showTransientToast(context, message, glyph: IconStickerGlyph.close);
+  void _reportUnlessGone(String message) {
+    if (!_disposed) {
+      report(message);
     }
   }
+
+  void dispose() {
+    _disposed = true;
+    _busy.dispose();
+  }
+}
+
+enum ComposerFooterRoom { desktop, phone, tight }
+
+class ComposerFooter extends StatelessWidget {
+  const ComposerFooter({
+    super.key,
+    required this.leaveLabel,
+    required this.keepLabel,
+    required this.words,
+    required this.onLeave,
+    required this.onKeep,
+    this.room = ComposerFooterRoom.desktop,
+  });
+
+  final String leaveLabel;
+  final String keepLabel;
+  final int words;
+  final VoidCallback? onLeave;
+  final VoidCallback? onKeep;
+  final ComposerFooterRoom room;
+
+  bool get _desktop => room == ComposerFooterRoom.desktop;
 
   @override
   Widget build(BuildContext context) {
-    if (widget.compact) {
-      return TextFieldTapRegion(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: formatBarHeight),
-          child: _addButton(context),
-        ),
-      );
-    }
+    final double gap = _desktop ? _desktopActionGap : _phoneActionGap;
     return TextFieldTapRegion(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: composerFooterHeight),
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final bool hints =
-                widget.showHints &&
-                constraints.maxWidth >= composerFooterHintsMinWidth;
-            return Row(
-              children: <Widget>[
-                _addButton(context),
-                if (hints) ...<Widget>[
-                  const SizedBox(width: _hintsGap),
-                  Expanded(child: _hints(context)),
-                ],
-              ],
-            );
+        constraints: BoxConstraints(
+          minHeight: switch (room) {
+            ComposerFooterRoom.desktop => _desktopRowMinHeight,
+            ComposerFooterRoom.phone => _phoneRowMinHeight,
+            ComposerFooterRoom.tight => 0,
           },
         ),
-      ),
-    );
-  }
-
-  Widget _addButton(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    final FieldNotesShadows shadows = context.shadows;
-    final bool enabled = !_busy;
-    return Pressable(
-      key: composerAddPhotoKey,
-      label: composerAddPhotoLabel,
-      hint: composerAddPhotoHint,
-      onPressed: enabled ? () => unawaited(_add()) : null,
-      focusNode: _addFocus,
-      borderRadius: Shapes.buttonBorderRadius,
-      placement: FocusRingPlacement.edge,
-      paintsHover: false,
-      builder: (BuildContext context, bool hovered) => ConstrainedBox(
-        constraints: BoxConstraints(
-          minHeight: widget.compact ? formatBarHeight : composerFooterHeight,
-        ),
-        child: Center(
-          heightFactor: 1,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: Palette.coral,
-              border: shadows.outline,
-              borderRadius: Shapes.buttonBorderRadius,
-              boxShadow: shadows.control,
-            ),
-            child: HoverFill(
-              hovered: hovered,
-              surface: FocusRingSurface.dark,
-              borderRadius: Shapes.buttonBorderRadius,
-              position: DecorationPosition.background,
-              child: Opacity(
-                opacity: enabled ? 1 : _busyOpacity,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: _addHorizontalPadding,
-                    vertical: _addVerticalPadding,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      SizedBox.square(
-                        dimension: _cameraExtent,
-                        child: CustomPaint(
-                          painter: _CameraPainter(color: colors.ink),
-                        ),
-                      ),
-                      const SizedBox(width: _plusGap),
-                      Text(
-                        enabled ? composerAddPhotoLabel : composerAddingLabel,
-                        style: context.textStyles.captureLabelSans.copyWith(
-                          color: Palette.onAccent,
-                        ),
-                      ),
-                    ],
+        child: Padding(
+          padding: switch (room) {
+            ComposerFooterRoom.desktop => _desktopRowPadding,
+            ComposerFooterRoom.phone => _phoneRowPadding,
+            ComposerFooterRoom.tight => _tightRowPadding,
+          },
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: StickerButton(
+                    key: composerLetGoKey,
+                    label: leaveLabel,
+                    variant: StickerButtonVariant.stageSoft,
+                    onPressed: onLeave,
                   ),
                 ),
               ),
-            ),
+              SizedBox(width: gap),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: _wordsMinWidth),
+                child: _wordCount(context),
+              ),
+              SizedBox(width: gap),
+              Expanded(
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: StickerButton(
+                    key: composerSaveKey,
+                    label: keepLabel,
+                    variant: StickerButtonVariant.keep,
+                    onPressed: onKeep,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _hints(BuildContext context) {
-    final FieldNotesTextStyles textStyles = context.textStyles;
-    return Align(
-      alignment: AlignmentDirectional.centerEnd,
-      child: Text.rich(
-        TextSpan(
-          children: <InlineSpan>[
-            for (final (String marker, String word)
-                in composerMarkdownHints) ...<InlineSpan>[
-              TextSpan(
-                text: '${marker.trimRight()}$_hintJoin',
-                style: textStyles.caption10Sans.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              TextSpan(text: '$word   '),
-            ],
-          ],
-        ),
-        key: composerHintsKey,
-        textAlign: TextAlign.end,
-        style: textStyles.caption10Sans,
+  Widget _wordCount(BuildContext context) {
+    return Text(
+      composerWordsLabel(words),
+      key: composerWordCountKey,
+      textAlign: TextAlign.center,
+      maxLines: 1,
+      overflow: TextOverflow.fade,
+      softWrap: false,
+      style: context.textStyles.caption.copyWith(
+        color: ComposerStageInks.of(context).chrome,
+        fontSize: 13,
+        fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
       ),
     );
   }
-}
-
-class _CameraPainter extends CustomPainter {
-  const _CameraPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint stroke = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = _cameraStroke
-      ..strokeJoin = StrokeJoin.round;
-    final Rect body = Rect.fromLTWH(
-      _cameraStroke / 2,
-      size.height * 0.22,
-      size.width - _cameraStroke,
-      size.height * 0.62,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(body, const Radius.circular(2)),
-      stroke,
-    );
-    canvas.drawCircle(
-      Offset(size.width / 2, body.center.dy),
-      size.height * 0.18,
-      stroke,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_CameraPainter oldDelegate) => oldDelegate.color != color;
 }

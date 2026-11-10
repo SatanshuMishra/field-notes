@@ -204,8 +204,8 @@ void main() {
         await _pumpState(tester, 'c2-composer-new');
         await _expectLeavesBothWays(
           tester,
-          forwardTo: _android ? find.byKey(formatBoldKey) : null,
-          backwardTo: _android ? find.byType(ComposerFooter) : null,
+          forwardTo: _android ? find.byType(ComposerFooter) : null,
+          backwardTo: _android ? find.byType(FormatBar) : null,
         );
       }, variant: _bothPlatforms);
 
@@ -222,7 +222,7 @@ void main() {
         await _expectLeavesBothWays(
           tester,
           forwardTo: _android ? find.byType(TableToolbar) : null,
-          backwardTo: _android ? find.byType(ComposerFooter) : null,
+          backwardTo: _android ? find.byType(FormatBar) : null,
         );
       }, variant: _bothPlatforms);
 

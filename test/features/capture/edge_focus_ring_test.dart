@@ -106,7 +106,7 @@ void main() {
     ).requestFocus();
     await tester.pumpAndSettle();
 
-    _expectRingOnEdge(tester, bold, Shapes.radiusXs);
+    _expectRingOnEdge(tester, bold, Shapes.radius8);
   });
 
   testWidgets(

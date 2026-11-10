@@ -15,6 +15,7 @@ import 'package:field_notes/state/state.dart';
 import '../capture/core/capture_test_support.dart'
     show FakeDraftStore, draftIdleDebounceForTest;
 import '../../support/note_editor_driver.dart';
+import '../../support/composer_room.dart';
 import 'support/day_detail_harness.dart';
 
 const String _date = '2026-07-02';
@@ -133,8 +134,11 @@ void main() {
     await tester.tap(find.text('open editor'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Editing afternoon note'), findsOneWidget);
-    expect(find.text('Thursday, July 2'), findsOneWidget);
+    expect(composerTitled('Editing afternoon note'), findsOneWidget);
+    expect(
+      tester.widget<TextComposerSheet>(find.byType(TextComposerSheet)).kicker,
+      'Thursday, July 2',
+    );
     expect(find.text('Save changes'), findsOneWidget);
   });
 

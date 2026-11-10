@@ -1,4 +1,5 @@
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/notes/render/note_photo_block.dart'
@@ -94,7 +95,7 @@ void main() {
     expect(driver.selection, const TextSelection.collapsed(offset: 6));
 
     await driver.press(
-      find.text('Save'),
+      find.text('Keep this'),
       const Duration(milliseconds: 110),
     );
     expect(saved, <String>['hello, world']);
@@ -254,7 +255,11 @@ void main() {
 
     expect(
       driver.visibleHintStyle,
-      FieldNotesTextStyles(FieldNotesColors.light).noteBodyPlaceholder,
+      FieldNotesTextStyles(FieldNotesColors.light).noteBodyPlaceholder.copyWith(
+        color: ComposerStageInks.of(
+          tester.element(find.byType(TextComposerSheet)),
+        ).chrome,
+      ),
     );
     expect(driver.paintedHint?.width, tester.getSize(driver.find).width);
 
@@ -274,10 +279,7 @@ void main() {
       ),
     );
 
-    await expectLater(
-      NoteEditorDriver(tester).typeText('x'),
-      throwsStateError,
-    );
+    await expectLater(NoteEditorDriver(tester).typeText('x'), throwsStateError);
   });
 
   testWidgets('a photo past the photo count finds nothing', (
