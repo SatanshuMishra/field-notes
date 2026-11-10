@@ -5,6 +5,7 @@ import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -1026,7 +1027,9 @@ class _PhoneNavRow extends StatelessWidget {
       label: label,
       hint: description,
       onPressed: onPressed,
+      placement: FocusRingPlacement.edge,
       borderRadius: Shapes.buttonBorderRadius,
+      bleed: HoverStyle.rowBleed,
       child: ConstrainedBox(
         constraints: const BoxConstraints(
           minHeight: aboutPhoneReleaseNotesHeight,

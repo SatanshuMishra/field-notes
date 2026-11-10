@@ -5,6 +5,7 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/focus/input_modality.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -241,7 +242,10 @@ class _StepControl extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(minWidth: target, minHeight: target),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: _footerVerticalPadding),
+          padding: const EdgeInsets.symmetric(
+            horizontal: HoverStyle.fillInset,
+            vertical: _footerVerticalPadding,
+          ),
           child: Opacity(
             opacity: enabled ? 1 : _absentStepOpacity,
             child: Row(

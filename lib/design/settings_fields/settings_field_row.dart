@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/text_extent.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
@@ -156,6 +157,7 @@ class SettingsFieldRow extends StatelessWidget {
       onPressed: onPressed,
       placement: FocusRingPlacement.edge,
       borderRadius: Shapes.buttonBorderRadius,
+      bleed: HoverStyle.rowBleed,
       excludeSemantics: false,
       child: Semantics(
         expanded: expanded,

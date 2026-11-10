@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -34,6 +36,8 @@ const String _slottedDescription = 'Last change sent today';
 const String _pressLabel = 'Manage devices';
 const String _pressDescription = '2 devices · add or remove';
 const String _controlLabel = 'chevron';
+const String _headingLabel = 'server & devices';
+const double _fillBleed = 12;
 
 void _usePhoneWidth(WidgetTester tester) {
   tester.view.physicalSize = const Size(411, 900);
@@ -463,13 +467,105 @@ void main() {
       addTearDown(mouse.removePointer);
       await mouse.moveTo(pressRow.center);
       await tester.pump();
-      expect(filled(), <Rect>[pressRow]);
+      expect(filled(), <Rect>[
+        Rect.fromLTRB(
+          pressRow.left - _fillBleed,
+          pressRow.top,
+          pressRow.right + _fillBleed,
+          pressRow.bottom,
+        ),
+      ]);
       await mouse.moveTo(Offset.zero);
       await tester.pump();
       expect(filled(), isEmpty);
 
       expect(tester.takeException(), isNull);
       handle.dispose();
+    },
+  );
+
+  testWidgets(
+    'a hovered row fills 12 px past its words on both sides, keeps the words '
+    'on its heading and rings the same fill',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1140, 726);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: SizedBox(
+                  width: 640,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      const Text(_headingLabel),
+                      SettingsFieldRow(
+                        label: _pressLabel,
+                        description: _pressDescription,
+                        control: const SizedBox(
+                          key: _plainControlKey,
+                          width: 16,
+                          height: 16,
+                        ),
+                        onPressed: () {},
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final Finder row = find.widgetWithText(SettingsFieldRow, _pressLabel);
+      final Finder fill = find.descendant(
+        of: row,
+        matching: find.byKey(pressableHoverFillKey),
+      );
+      final TestGesture mouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+      );
+      await mouse.addPointer(location: Offset.zero);
+      await mouse.moveTo(tester.getCenter(find.text(_pressLabel)));
+      await tester.pump();
+
+      final BoxDecoration painted =
+          tester.widget<DecoratedBox>(fill).decoration as BoxDecoration;
+      expect(
+        painted.color?.toARGB32(),
+        FieldNotesColors.light.ink.withValues(alpha: 0.06).toARGB32(),
+      );
+      expect(painted.borderRadius, Shapes.buttonBorderRadius);
+      final Rect fillRect = tester.getRect(fill);
+      final Rect heading = tester.getRect(find.text(_headingLabel));
+      final Rect label = tester.getRect(find.text(_pressLabel));
+      final Rect control = tester.getRect(find.byKey(_plainControlKey));
+      final Rect rowRect = _rowRect(tester, _pressLabel);
+      expect(label.left, heading.left);
+      expect(rowRect.left, heading.left);
+      expect(label.left - fillRect.left, greaterThanOrEqualTo(_fillBleed));
+      expect(fillRect.right - control.right, greaterThanOrEqualTo(_fillBleed));
+      expect(fillRect.top, rowRect.top);
+      expect(fillRect.bottom, rowRect.bottom);
+
+      await mouse.removePointer();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final Finder ring = find.descendant(
+        of: row,
+        matching: find.byKey(focusRingKey),
+      );
+      expect(ring, findsOneWidget);
+      expect(tester.getRect(ring), fillRect);
+      expect(tester.takeException(), isNull);
     },
   );
 }

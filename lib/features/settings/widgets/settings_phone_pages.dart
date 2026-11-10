@@ -1,4 +1,5 @@
 import 'package:field_notes/data/sync/engine/sync_status.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/icons/settings_icons.dart';
@@ -185,7 +186,9 @@ class _SectionRow extends StatelessWidget {
       label: tab.label,
       hint: summary,
       onPressed: onPressed,
+      placement: FocusRingPlacement.edge,
       borderRadius: Shapes.buttonBorderRadius,
+      bleed: HoverStyle.rowBleed,
       child: ConstrainedBox(
         constraints: const BoxConstraints(
           minHeight: settingsSectionRowMinHeight,

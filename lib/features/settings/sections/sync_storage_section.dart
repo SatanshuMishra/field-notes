@@ -4,7 +4,9 @@ import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/data/sync/devices/device_service.dart';
 import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/data/sync/erase/device_unlink_service.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -562,7 +564,9 @@ class SyncActionRow extends StatelessWidget {
       label: label,
       hint: description,
       onPressed: onPressed,
+      placement: FocusRingPlacement.edge,
       borderRadius: Shapes.buttonBorderRadius,
+      bleed: HoverStyle.rowBleed,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: _actionRowMinHeight),
         child: Row(
