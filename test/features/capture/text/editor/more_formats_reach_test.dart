@@ -419,6 +419,7 @@ void main() {
       final NoteEditorDriver driver = NoteEditorDriver(tester);
       await driver.press(find.text('open'), _hold);
       await tester.pumpAndSettle();
+      await driver.leaveTitle();
       await driver.typeText('never mind');
       await driver.press(find.byKey(formatMoreKey), _hold);
       await tester.pumpAndSettle();

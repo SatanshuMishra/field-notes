@@ -125,6 +125,7 @@ void main() {
       await _pumpRoom(tester);
       final NoteEditorDriver driver = NoteEditorDriver(tester);
 
+      await driver.leaveTitle();
       await driver.typeText('a quiet morning');
       await tester.pump();
       expect(_surfaceRing, findsNothing);

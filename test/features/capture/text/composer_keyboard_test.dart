@@ -1,6 +1,7 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/features/capture/text/composer_footer.dart';
-import 'package:field_notes/features/capture/text/editor/format_bar.dart';
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
+    show composerTitleFieldKey;
 import 'package:field_notes/features/note_engine/editor/note_editor_view.dart';
 import 'package:field_notes/features/note_engine/toolbars/table_toolbar.dart';
 import 'package:flutter/foundation.dart';
@@ -205,7 +206,7 @@ void main() {
         await _expectLeavesBothWays(
           tester,
           forwardTo: _android ? find.byType(ComposerFooter) : null,
-          backwardTo: _android ? find.byType(FormatBar) : null,
+          backwardTo: find.byKey(composerTitleFieldKey),
         );
       }, variant: _bothPlatforms);
 
@@ -222,7 +223,7 @@ void main() {
         await _expectLeavesBothWays(
           tester,
           forwardTo: _android ? find.byType(TableToolbar) : null,
-          backwardTo: _android ? find.byType(FormatBar) : null,
+          backwardTo: find.byKey(composerTitleFieldKey),
         );
       }, variant: _bothPlatforms);
 

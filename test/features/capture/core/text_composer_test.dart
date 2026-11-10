@@ -753,6 +753,93 @@ void main() {
     });
   });
 
+  group('where the caret starts', () {
+    testWidgets('a new note starts in its title and Return moves to the page', (
+      WidgetTester tester,
+    ) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      await tester.pumpWidget(
+        _composerApp(writer: FakeNoteWriter(), onResult: (String? _) {}),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      expect(driver.titleFocused, isTrue);
+
+      await driver.typeAtCaret('River walk');
+
+      expect(driver.title, 'River walk');
+      expect(driver.source, isEmpty);
+
+      await driver.leaveTitle();
+
+      expect(driver.pageFocused, isTrue);
+    });
+
+    testWidgets('Tab in the title moves to the page and Shift-Tab comes back', (
+      WidgetTester tester,
+    ) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      await tester.pumpWidget(
+        _composerApp(writer: FakeNoteWriter(), onResult: (String? _) {}),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      await driver.pressKey(LogicalKeyboardKey.tab);
+
+      expect(driver.pageFocused, isTrue);
+
+      await driver.pressKey(LogicalKeyboardKey.tab, shift: true);
+
+      expect(driver.titleFocused, isTrue);
+    });
+
+    testWidgets('a note started in its title can still be kept untitled', (
+      WidgetTester tester,
+    ) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      final FakeNoteWriter writer = FakeNoteWriter();
+      await tester.pumpWidget(
+        _composerApp(writer: writer, onResult: (String? _) {}),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      await driver.leaveTitle();
+      await driver.typeText('untitled thoughts');
+      await tester.tap(find.text('Keep this'));
+      await tester.pumpAndSettle();
+
+      expect(writer.saves.single.source, 'untitled thoughts');
+      expect(writer.saves.single.title, isNull);
+    });
+
+    testWidgets('editing a saved note opens with the caret at the end of its '
+        'body', (WidgetTester tester) async {
+      const String body = 'This is an example note.';
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      await tester.pumpWidget(
+        captureHarness(
+          TextComposerSheet(
+            onSave: (String _) {},
+            onCancel: () {},
+            initialText: titledNoteSource(title: 'Night Cap', body: body),
+            saveLabel: 'Save changes',
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(driver.pageFocused, isTrue);
+      expect(driver.titleFocused, isFalse);
+      expect(
+        driver.selection,
+        const TextSelection.collapsed(offset: body.length),
+      );
+    });
+  });
+
   testWidgets('the composer header time follows the system setting', (
     WidgetTester tester,
   ) async {

@@ -94,6 +94,26 @@ class NoteEditorDriver {
 
   String get title => tester.widget<TextField>(titleField).controller!.text;
 
+  bool get titleFocused =>
+      tester.widget<TextField>(titleField).focusNode!.hasPrimaryFocus;
+
+  bool get pageFocused => _view.focusNode.hasPrimaryFocus;
+
+  Future<void> typeAtCaret(String text) async {
+    _registerTextInput();
+    tester.testTextInput.enterText(text);
+    await tester.pump();
+  }
+
+  Future<void> leaveTitle() async {
+    if (!titleFocused) {
+      throw StateError('The title has no focus to leave');
+    }
+    _registerTextInput();
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pump();
+  }
+
   Future<void> enterTitle(String text) async {
     _registerTextInput();
     await tester.enterText(titleField, text);
@@ -145,7 +165,7 @@ class NoteEditorDriver {
 
   Future<void> enterText(String text) async {
     _registerTextInput();
-    if (!tester.testTextInput.hasAnyClients) {
+    if (!tester.testTextInput.hasAnyClients || !_view.focusNode.hasFocus) {
       await _focus();
     }
     _controller.selection = TextSelection(
@@ -268,7 +288,7 @@ class NoteEditorDriver {
     focusNode.requestFocus();
     for (int pumps = 0; pumps < _focusPumps; pumps++) {
       await tester.pump();
-      if (tester.testTextInput.hasAnyClients) {
+      if (tester.testTextInput.hasAnyClients && focusNode.hasFocus) {
         return;
       }
     }

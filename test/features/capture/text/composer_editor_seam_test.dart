@@ -152,11 +152,14 @@ void main() {
     expect(plain.text, 'draft');
   });
 
-  testWidgets('a new note opens focused with the caret at the start', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('a new note opens in its title and Return enters the page with '
+      'the caret at the start', (WidgetTester tester) async {
     await _open(tester, _composerApp());
     final NoteEditorDriver driver = NoteEditorDriver(tester);
+
+    expect(driver.titleFocused, isTrue);
+
+    await driver.leaveTitle();
 
     expect(_view(tester).focusNode.hasPrimaryFocus, isTrue);
     expect(tester.testTextInput.hasAnyClients, isTrue);
@@ -179,6 +182,7 @@ void main() {
         controller: plain,
         onSave: (String _) {},
         onCancel: () {},
+        saveLabel: 'Save changes',
       ),
     );
     final NoteEditorDriver driver = NoteEditorDriver(tester);
@@ -194,6 +198,7 @@ void main() {
     await _open(tester, _composerApp());
     final NoteEditorDriver driver = NoteEditorDriver(tester);
 
+    await driver.leaveTitle();
     await driver.typeText('never mind');
     await driver.pressKey(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
@@ -304,6 +309,7 @@ void main() {
         onCancel: () {},
       ),
     );
+    await NoteEditorDriver(tester).leaveTitle();
     await NoteEditorDriver(tester).typeText('a');
     await NoteEditorDriver(tester).typeText('b');
 
@@ -352,6 +358,7 @@ void main() {
     (WidgetTester tester) async {
       await _open(tester, _composerApp());
       final NoteEditorDriver driver = NoteEditorDriver(tester);
+      await driver.leaveTitle();
       await driver.typeText('never mind');
       final TextSelection before = driver.selection;
 
@@ -376,6 +383,7 @@ void main() {
     (WidgetTester tester) async {
       await _open(tester, _composerApp());
       final NoteEditorDriver driver = NoteEditorDriver(tester);
+      await driver.leaveTitle();
       await driver.typeText('never mind');
 
       await tester.tapAt(const Offset(4, 400), kind: PointerDeviceKind.mouse);
@@ -392,6 +400,7 @@ void main() {
     'on macOS the keep shortcut on an empty note keeps the editor focused',
     (WidgetTester tester) async {
       await _open(tester, _composerApp());
+      await NoteEditorDriver(tester).leaveTitle();
 
       await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
@@ -420,6 +429,7 @@ void main() {
         ),
       );
       final NoteEditorDriver driver = NoteEditorDriver(tester);
+      await driver.leaveTitle();
 
       await driver.press(
         find.byKey(draftRestoredDiscardKey),

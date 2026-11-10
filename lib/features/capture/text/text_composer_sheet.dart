@@ -187,6 +187,10 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   final ScrollController _scrollController = ScrollController();
   final UndoHistoryController _undoController = UndoHistoryController();
   final ValueNotifier<int> _typing = ValueNotifier<int>(0);
+  late final _TitleThenPagePolicy _titleThenPage = _TitleThenPagePolicy(
+    title: _titleFocusNode,
+    page: _focusNode,
+  );
   final GlobalKey _actionsKey = GlobalKey();
   final GlobalKey _statusKey = GlobalKey();
   ComposerPhotoAdder? _photoAdder;
@@ -226,10 +230,14 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     _restartPointerRest();
     WidgetsBinding.instance.addPostFrameCallback((Duration _) {
       if (mounted) {
-        _focusNode.requestFocus();
+        _openingFocus.requestFocus();
       }
     });
   }
+
+  FocusNode get _openingFocus => !_editing && _titleFocusNode.context != null
+      ? _titleFocusNode
+      : _focusNode;
 
   @override
   void didChangeDependencies() {
@@ -441,18 +449,21 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             child: Focus(
               autofocus: true,
               skipTraversal: true,
-              child: Listener(
-                behavior: HitTestBehavior.translucent,
-                onPointerDown: _noticePointerDown,
-                onPointerMove: _noticePointer,
-                onPointerHover: _noticePointer,
-                onPointerSignal: _noticePointer,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: <Widget>[
-                    ComposerStageGround(typing: _typing),
-                    LayoutBuilder(builder: _layout),
-                  ],
+              child: FocusTraversalGroup(
+                policy: _titleThenPage,
+                child: Listener(
+                  behavior: HitTestBehavior.translucent,
+                  onPointerDown: _noticePointerDown,
+                  onPointerMove: _noticePointer,
+                  onPointerHover: _noticePointer,
+                  onPointerSignal: _noticePointer,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: <Widget>[
+                      ComposerStageGround(typing: _typing),
+                      LayoutBuilder(builder: _layout),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -956,6 +967,36 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
       ),
     );
     return urgent ? status : _faded(status);
+  }
+}
+
+class _TitleThenPagePolicy extends ReadingOrderTraversalPolicy {
+  _TitleThenPagePolicy({required this.title, required this.page});
+
+  final FocusNode title;
+  final FocusNode page;
+
+  @override
+  Iterable<FocusNode> sortDescendants(
+    Iterable<FocusNode> descendants,
+    FocusNode currentNode,
+  ) {
+    final List<FocusNode> reading = super
+        .sortDescendants(descendants, currentNode)
+        .toList(growable: false);
+    if (!reading.contains(title) || !reading.contains(page)) {
+      return reading;
+    }
+    final List<FocusNode> withoutTitle = <FocusNode>[
+      for (final FocusNode node in reading)
+        if (!identical(node, title)) node,
+    ];
+    final int pageAt = withoutTitle.indexOf(page);
+    return <FocusNode>[
+      ...withoutTitle.take(pageAt),
+      title,
+      ...withoutTitle.skip(pageAt),
+    ];
   }
 }
 
