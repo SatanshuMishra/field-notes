@@ -2,8 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
-import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+
+import '../transport/transport_timeline.dart';
 
 const double voiceWaveformBarWidth = 3;
 const double voiceWaveformBarGap = 2;
@@ -12,27 +13,16 @@ const double voiceWaveformTargetHeight = 48;
 const int voiceWaveformMinBars = 8;
 
 const double _barRadius = 2;
-const BorderRadius _seekHoverRadius = BorderRadius.all(
-  Radius.circular(_barRadius),
-);
 const double _midThreshold = 0.62;
 const double _minHeight = 0.07;
 const double _highestWeight = 0.65;
 const double _meanWeight = 0.35;
 const double _smallestLargest = 0.001;
 
-const double _playheadWidth = 2;
-const double _playheadReach = 2;
-const double _playheadHalo = 2;
-const double _playheadHaloAlpha = 0.18;
-const Radius _playheadRadius = Radius.circular(1);
-
 const Duration _colourShift = Duration(milliseconds: 150);
 const Curve _colourCurve = Curves.ease;
 
 const String voiceWaveformSeekLabel = 'Playback position';
-
-const Key voiceWaveformPlayheadKey = ValueKey<String>('voice-wave-playhead');
 
 Key voiceWaveformBarKey(int index) => ValueKey<String>('voice-wave-bar-$index');
 
@@ -76,109 +66,60 @@ double _barValue(List<double> peaks, int index, int count) {
 bool voiceWaveformBarPlayed(int index, int count, double progress) =>
     (index + 0.5) / count <= progress;
 
-class VoiceWaveform extends StatefulWidget {
+class VoiceWaveform extends StatelessWidget {
   const VoiceWaveform({
     super.key,
     required this.peaks,
     required this.active,
     required this.progress,
     this.onSeek,
+    this.total,
+    this.height = voiceWaveformTargetHeight,
+    this.barsHeight = voiceWaveformBarsHeight,
+    this.palette,
   });
 
   final List<double>? peaks;
   final bool active;
   final double progress;
-  final ValueChanged<double>? onSeek;
-
-  @override
-  State<VoiceWaveform> createState() => _VoiceWaveformState();
-}
-
-class _VoiceWaveformState extends State<VoiceWaveform> {
-  final FocusNode _pressFocus = FocusNode(
-    debugLabel: 'voice waveform press',
-    skipTraversal: true,
-  );
-
-  @override
-  void dispose() {
-    _pressFocus.dispose();
-    super.dispose();
-  }
+  final ValueChanged<Duration>? onSeek;
+  final Duration? total;
+  final double height;
+  final double barsHeight;
+  final TransportPalette? palette;
 
   @override
   Widget build(BuildContext context) {
-    final double progress = widget.progress;
     final double shown = progress.isNaN ? 0 : progress.clamp(0.0, 1.0);
-    return SizedBox(
-      height: voiceWaveformTargetHeight,
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          final double width = constraints.hasBoundedWidth
-              ? constraints.maxWidth
-              : voiceWaveformMinBars *
-                        (voiceWaveformBarWidth + voiceWaveformBarGap) -
-                    voiceWaveformBarGap;
-          final ValueChanged<double>? seek = widget.onSeek;
-          return ExcludeSemantics(
-            child: Pressable(
-              label: voiceWaveformSeekLabel,
-              onPressedAt: seek == null
-                  ? null
-                  : (Offset localPosition) =>
-                        seek(_fractionAt(localPosition.dx, width)),
-              borderRadius: _seekHoverRadius,
-              focusNode: _pressFocus,
-              child: SizedBox(
-                width: width,
-                height: voiceWaveformTargetHeight,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.center,
-                  children: <Widget>[
-                    RepaintBoundary(
-                      child: _Bars(
-                        peaks: widget.peaks,
-                        width: width,
-                        active: widget.active,
-                        progress: shown,
-                      ),
-                    ),
-                    if (widget.active) _playhead(context, width * shown),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+    final Duration? length = total;
+    final TransportPalette colours =
+        palette ?? TransportPalette.card(context.colors);
+    final Widget timeline = TransportTimeline(
+      label: voiceWaveformSeekLabel,
+      position: Duration(
+        milliseconds: ((length?.inMilliseconds ?? 0) * shown).round(),
       ),
-    );
-  }
-
-  double _fractionAt(double dx, double width) =>
-      width <= 0 ? 0 : (dx / width).clamp(0.0, 1.0);
-
-  Widget _playhead(BuildContext context, double centre) {
-    const double height = voiceWaveformBarsHeight + _playheadReach * 2;
-    return Positioned(
-      key: voiceWaveformPlayheadKey,
-      left: centre - _playheadWidth / 2,
-      top: (voiceWaveformTargetHeight - height) / 2,
-      width: _playheadWidth,
+      total: length,
+      onSeek: onSeek,
+      palette: colours,
       height: height,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: context.colors.accentInk,
-          borderRadius: const BorderRadius.all(_playheadRadius),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Palette.coral.withValues(alpha: _playheadHaloAlpha),
-              spreadRadius: _playheadHalo,
-            ),
-          ],
+      unboundedWidth:
+          voiceWaveformMinBars * (voiceWaveformBarWidth + voiceWaveformBarGap) -
+          voiceWaveformBarGap,
+      face: (BuildContext context, double width, double fraction) => Center(
+        child: RepaintBoundary(
+          child: _Bars(
+            peaks: peaks,
+            width: width,
+            height: barsHeight,
+            active: active,
+            progress: length == null ? shown : fraction,
+            palette: colours,
+          ),
         ),
       ),
     );
+    return length == null ? ExcludeSemantics(child: timeline) : timeline;
   }
 }
 
@@ -186,32 +127,28 @@ class _Bars extends StatelessWidget {
   const _Bars({
     required this.peaks,
     required this.width,
+    required this.height,
     required this.active,
     required this.progress,
+    required this.palette,
   });
 
   final List<double>? peaks;
   final double width;
+  final double height;
   final bool active;
   final double progress;
+  final TransportPalette palette;
 
-  Color _colourFor(
-    int index,
-    int count,
-    double height,
-    FieldNotesColors colors,
-  ) {
-    if (active) {
-      return voiceWaveformBarPlayed(index, count, progress)
-          ? Palette.coral
-          : colors.ink22;
+  Color _colourFor(int index, int count, double barShare) {
+    if (active && voiceWaveformBarPlayed(index, count, progress)) {
+      return palette.played;
     }
-    return height > _midThreshold ? colors.waveMid : colors.waveLight;
+    return barShare > _midThreshold ? palette.waveTall : palette.wave;
   }
 
   @override
   Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
     final int count = voiceWaveformBarCount(width);
     final List<double> heights = voiceWaveformBars(peaks, count);
     final double stride = math.max(
@@ -223,7 +160,7 @@ class _Bars extends StatelessWidget {
         : _colourShift;
     return SizedBox(
       width: width,
-      height: voiceWaveformBarsHeight,
+      height: height,
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: <Widget>[
@@ -231,14 +168,14 @@ class _Bars extends StatelessWidget {
             Positioned(
               key: voiceWaveformBarKey(index),
               left: index * stride,
-              top: voiceWaveformBarsHeight * (1 - heights[index]) / 2,
+              top: height * (1 - heights[index]) / 2,
               width: voiceWaveformBarWidth,
-              height: voiceWaveformBarsHeight * heights[index],
+              height: height * heights[index],
               child: AnimatedContainer(
                 duration: shift,
                 curve: _colourCurve,
                 decoration: BoxDecoration(
-                  color: _colourFor(index, count, heights[index], colors),
+                  color: _colourFor(index, count, heights[index]),
                   borderRadius: const BorderRadius.all(
                     Radius.circular(_barRadius),
                   ),

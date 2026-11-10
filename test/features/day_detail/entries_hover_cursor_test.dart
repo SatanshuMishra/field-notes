@@ -68,6 +68,7 @@ class _Row {
     this.radius,
     this.role = _Role.button,
     this.labelMatcher,
+    this.paintsFill = true,
   });
 
   final String label;
@@ -77,6 +78,7 @@ class _Row {
   final double? radius;
   final _Role role;
   final Matcher? labelMatcher;
+  final bool paintsFill;
 }
 
 enum _Role { button, slider }
@@ -148,7 +150,11 @@ Future<void> _expectRows(
     await tester.pump();
 
     expect(_cursor(), SystemMouseCursors.click, reason: row.label);
-    expect(_hoverFill(row), findsOneWidget, reason: row.label);
+    expect(
+      _hoverFill(row),
+      row.paintsFill ? findsOneWidget : findsNothing,
+      reason: row.label,
+    );
     final SemanticsNode node = tester.getSemantics(
       find
           .descendant(
@@ -515,6 +521,7 @@ void main() {
           _Shape.rounded,
           radius: 2,
           role: _Role.slider,
+          paintsFill: false,
         ),
         _Row(
           'Video position',
@@ -523,6 +530,7 @@ void main() {
           _Shape.rounded,
           radius: 2,
           role: _Role.slider,
+          paintsFill: false,
         ),
         _Row(
           'Edit note',
