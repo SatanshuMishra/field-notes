@@ -1,6 +1,7 @@
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
+import 'package:field_notes/domain/services/streak_service.dart';
 import 'package:field_notes/features/garden/model/meadow_key_provider.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/search/search_entries_provider.dart';
@@ -68,6 +69,9 @@ List<Override> shellOverrides() => <Override>[
         (_) => Stream<Map<String, int>>.value(<String, int>{
           for (final String date in _journaledDates) date: 1,
         }),
+      ),
+      streakDaysProvider.overrideWith(
+        (_) => Stream<List<StreakDay>>.value(const <StreakDay>[]),
       ),
       meadowKeyProvider.overrideWith((_) async => _meadowKey),
       searchAllEntriesProvider.overrideWith(

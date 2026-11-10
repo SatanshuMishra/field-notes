@@ -81,6 +81,11 @@ List<Override> _overrides(Mood? mood, {List<Override>? sync}) => <Override>[
   journaledDatesProvider.overrideWith(
     (Ref ref) => Stream<List<String>>.value(const <String>[_pastDay]),
   ),
+  streakDaysProvider.overrideWith(
+    (Ref ref) => Stream<List<StreakDay>>.value(const <StreakDay>[
+      StreakDay(date: _pastDay, hasBloom: true, logCount: 1),
+    ]),
+  ),
   reminderClockProvider.overrideWithValue(() => _now),
   reminderSchedulerProvider.overrideWithValue(RecordingReminderScheduler()),
   spellCheckAvailabilityProvider.overrideWithValue(

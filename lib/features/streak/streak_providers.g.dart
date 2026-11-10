@@ -56,6 +56,47 @@ final class StreakClockProvider
 
 String _$streakClockHash() => r'7be55627a0faf9b53321aed59dd9f5e90e9494c0';
 
+@ProviderFor(streakNow)
+final streakNowProvider = StreakNowProvider._();
+
+final class StreakNowProvider
+    extends $FunctionalProvider<DateTime, DateTime, DateTime>
+    with $Provider<DateTime> {
+  StreakNowProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'streakNowProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$streakNowHash();
+
+  @$internal
+  @override
+  $ProviderElement<DateTime> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  DateTime create(Ref ref) {
+    return streakNow(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DateTime value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DateTime>(value),
+    );
+  }
+}
+
+String _$streakNowHash() => r'48a02340d453da12369f17cda746aad725b93b90';
+
 @ProviderFor(streakSummary)
 final streakSummaryProvider = StreakSummaryProvider._();
 
@@ -95,4 +136,4 @@ final class StreakSummaryProvider
   }
 }
 
-String _$streakSummaryHash() => r'2fcf51049660f3ad287bb97193588e33986a9144';
+String _$streakSummaryHash() => r'bbfede4945d84766b62ee6648b28dad980b9af10';

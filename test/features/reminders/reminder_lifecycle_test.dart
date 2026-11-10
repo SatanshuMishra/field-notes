@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/services/streak_service.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/onboarding/onboarding_gate.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
@@ -67,6 +68,9 @@ Future<RecordingReminderScheduler> _launch(
         ),
         journaledDatesProvider.overrideWith(
           (Ref ref) => Stream<List<String>>.value(const <String>[]),
+        ),
+        streakDaysProvider.overrideWith(
+          (Ref ref) => Stream<List<StreakDay>>.value(const <StreakDay>[]),
         ),
         searchAllEntriesProvider.overrideWith(
           (Ref ref) => Stream<List<Entry>>.value(const <Entry>[]),

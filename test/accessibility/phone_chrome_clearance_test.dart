@@ -80,6 +80,9 @@ List<Override> _overrides(AppSettings settings) => <Override>[
   journaledDatesProvider.overrideWith(
     (Ref ref) => Stream<List<String>>.value(const <String>[]),
   ),
+  streakDaysProvider.overrideWith(
+    (Ref ref) => Stream<List<StreakDay>>.value(const <StreakDay>[]),
+  ),
   reminderClockProvider.overrideWithValue(() => _now),
   reminderSchedulerProvider.overrideWithValue(RecordingReminderScheduler()),
   spellCheckAvailabilityProvider.overrideWithValue(
