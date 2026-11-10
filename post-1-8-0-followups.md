@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-10T23:06:07.648Z
+Updated: 2026-11-10T23:06:09.734Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
@@ -21,7 +21,7 @@ Root causes found: rounded outlines break where an opaque child is clipped only 
 
 ## Next step
 
-When fix/outlined-surface lands, dispatch day-modal-tidy and night-sky on it; when feat/streak-late-night lands, dispatch reminder-schedules on it; review each finished branch.
+When feat/streak-late-night lands, dispatch reminder-schedules on it from fn/fanout18/brief-reminder-schedules.md; review each finished branch; rebase the two stacked branches if review changes fix/outlined-surface.
 
 Needs: D1, D2, D3, D5, D6, D7, R1.
 
