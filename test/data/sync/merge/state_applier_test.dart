@@ -769,21 +769,44 @@ void main() {
     expect((await mac.clocks())['title'], _phoneClock(1));
   });
 
-  test('a record from a device without titles keeps the local title', () async {
-    final _Device mac = device('Mac');
-    final RecordState local = await localTitled(mac);
-    final RecordState older = _changed(
+  RecordState editedOnPhone(
+    RecordState local,
+    String text, {
+    Set<String> without = const <String>{},
+  }) {
+    final Map<String, Object?> counts = jsonDecode(
+      local.fields['textVersion']! as String,
+    ) as Map<String, Object?>;
+    return _changed(
       local,
       fields: <String, Object?>{
-        'textContent': 'written on an older phone',
-        'textVersion': '{"phone":9}',
+        'textContent': text,
+        'textVersion': jsonEncode(<String, Object?>{...counts, 'phone': 1}),
       },
       clocks: <String, String>{
         'textContent': _phoneClock(1),
         'textVersion': _phoneClock(1),
       },
+      without: without,
+    );
+  }
+
+  Future<List<(String, String)>> queuedRows(_Device holder) async {
+    return <(String, String)>[
+      for (final SyncOutboxData row in await holder.outbox())
+        (row.recordTable, row.rowId),
+    ];
+  }
+
+  test('a record from a device without titles keeps the local title', () async {
+    final _Device mac = device('Mac');
+    final RecordState local = await localTitled(mac);
+    final RecordState older = editedOnPhone(
+      local,
+      'written on an older phone',
       without: <String>{'title'},
     );
+    await mac.db.delete(mac.db.syncOutbox).go();
 
     await mac.applyAll(<RecordState>[older]);
 
@@ -792,6 +815,27 @@ void main() {
     expect(stored.textContent, 'written on an older phone');
     expect(stored.title, 'Named here');
     expect((await mac.clocks())['title'], local.clocks['title']);
+    expect(await queuedRows(mac), <(String, String)>[
+      (SyncedTables.entries, _entryId),
+    ]);
+  });
+
+  test('a record that carries the title queues nothing', () async {
+    final _Device mac = device('Mac');
+    final RecordState local = await localTitled(mac);
+    final RecordState newer = editedOnPhone(
+      local,
+      'written on an updated phone',
+    );
+    await mac.db.delete(mac.db.syncOutbox).go();
+
+    await mac.applyAll(<RecordState>[newer]);
+
+    final Entry stored = await mac.entry();
+    expect(newer.fields['title'], 'Named here');
+    expect(stored.textContent, 'written on an updated phone');
+    expect(stored.title, 'Named here');
+    expect(await queuedRows(mac), isEmpty);
   });
 
   test('a new entry from a device without titles stores none', () async {

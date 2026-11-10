@@ -44,7 +44,7 @@ class VideoFramesChannel {
                 retriever.setDataSource(path)
                 retriever.getScaledFrameAtTime(
                     positionMs * MICROSECONDS_PER_MILLISECOND,
-                    MediaMetadataRetriever.OPTION_CLOSEST_SYNC,
+                    MediaMetadataRetriever.OPTION_CLOSEST,
                     width,
                     width * TALLEST_FRAME_RATIO,
                 )?.let(::jpegBytes)
