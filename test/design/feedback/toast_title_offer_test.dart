@@ -10,9 +10,15 @@ const String _action = 'Add a title';
 const String _fieldLabel = 'Title';
 const String _showLabel = 'show';
 const String _title = 'Morning walk';
+const String _failure = 'Could not save your title.';
 
 Future<List<String>> _showOffer(WidgetTester tester) async {
   final List<String> titled = <String>[];
+  Future<bool> keep(String title) {
+    titled.add(title);
+    return Future<bool>.value(true);
+  }
+
   await tester.pumpWidget(
     MaterialApp(
       theme: ThemeData(platform: TargetPlatform.macOS),
@@ -26,7 +32,8 @@ Future<List<String>> _showOffer(WidgetTester tester) async {
                 titleOffer: ToastTitleOffer(
                   actionLabel: _action,
                   fieldLabel: _fieldLabel,
-                  onTitled: titled.add,
+                  failureMessage: _failure,
+                  onTitled: keep,
                 ),
               ),
               child: const Text(_showLabel),
@@ -207,7 +214,8 @@ void main() {
         titleOffer: ToastTitleOffer(
           actionLabel: _action,
           fieldLabel: _fieldLabel,
-          onTitled: (String _) {},
+          failureMessage: _failure,
+          onTitled: (String _) => Future<bool>.value(true),
         ),
       ),
       throwsAssertionError,

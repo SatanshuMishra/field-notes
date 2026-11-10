@@ -128,6 +128,9 @@ Future<void> _keep(WidgetTester tester, _Rig rig) async {
   await _settle(tester);
 }
 
+String _toastTitleText(WidgetTester tester) =>
+    tester.widget<TextField>(find.byKey(toastTitleFieldKey)).controller!.text;
+
 Future<void> _finish(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump();
@@ -257,7 +260,7 @@ void main() {
     expect(find.text(recorderTitlePlaceholder), findsOneWidget);
   });
 
-  _forEachRecorder('a title that fails to save still keeps the log', (
+  _forEachRecorder('a title that fails to save waits in the toast field', (
     WidgetTester tester,
     _Rig rig,
   ) async {
@@ -269,7 +272,39 @@ void main() {
     expect(rig.results, <String?>['entry-1']);
     expect(rig.journal.titleUpdates, isEmpty);
     expect(find.text(rig.toast), findsOneWidget);
-    expect(find.text(recorderTitlePlaceholder), findsOneWidget);
+    await tester.tap(find.text(recorderTitlePlaceholder));
+    await tester.pump();
+
+    expect(_toastTitleText(tester), _title);
+  });
+
+  _forEachRecorder('a title the toast cannot save says so and stays to retry', (
+    WidgetTester tester,
+    _Rig rig,
+  ) async {
+    await _startTake(tester, rig);
+    await _keep(tester, rig);
+    await tester.tap(find.text(recorderTitlePlaceholder));
+    await tester.pump();
+    rig.journal.updateError = StateError('disk full');
+
+    await tester.enterText(find.byKey(toastTitleFieldKey), _title);
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    expect(rig.journal.titleUpdates, isEmpty);
+    expect(find.text(recorderTitleFailedMessage), findsOneWidget);
+    expect(find.text(rig.toast), findsNothing);
+    expect(_toastTitleText(tester), _title);
+
+    rig.journal.updateError = null;
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    expect(rig.journal.titleUpdates, <({String id, String? title})>[
+      (id: 'entry-1', title: _title),
+    ]);
+    expect(find.byKey(toastTitleFieldKey), findsNothing);
   });
 
   _forEachRecorder('Space typed in the title does not start a take', (

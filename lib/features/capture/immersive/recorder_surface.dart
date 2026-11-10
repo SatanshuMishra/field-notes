@@ -35,6 +35,8 @@ const Key recorderTitleFieldKey = ValueKey<String>('recorder-title-field');
 const String recorderLeaveLabel = 'Leave';
 const String recorderTitlePlaceholder = 'Add a title';
 const String recorderTitleLabel = 'Title';
+const String recorderTitleFailedMessage =
+    'Could not save your title. Try again.';
 
 const Color recorderStageColor = Palette.mediaGround;
 
@@ -989,6 +991,7 @@ void showRecorderKeptToast(
   BuildContext context, {
   required String message,
   required String entryId,
+  required String title,
   required bool named,
 }) {
   final ProviderContainer scope = ProviderScope.containerOf(
@@ -1004,9 +1007,10 @@ void showRecorderKeptToast(
         : ToastTitleOffer(
             actionLabel: recorderTitlePlaceholder,
             fieldLabel: recorderTitleLabel,
-            onTitled: (String title) => unawaited(
-              nameRecordedLog(scope, entryId: entryId, title: title),
-            ),
+            failureMessage: recorderTitleFailedMessage,
+            initialTitle: title.trim(),
+            onTitled: (String title) =>
+                nameRecordedLog(scope, entryId: entryId, title: title),
           ),
   );
 }

@@ -329,10 +329,11 @@ class _VoiceComposerConnectorState
     }
     _closing = true;
     _wakeHold.update(live: false);
+    final String title = _title.text;
     final bool named = await nameRecordedLog(
       ProviderScope.containerOf(context, listen: false),
       entryId: entryId,
-      title: _title.text,
+      title: title,
       timeout: widget.saveTimeout,
     );
     if (!mounted) {
@@ -342,6 +343,7 @@ class _VoiceComposerConnectorState
       context,
       message: voiceSavedToastMessage,
       entryId: entryId,
+      title: title,
       named: named,
     );
     closeImmersiveRecorder<String>(context, result: entryId);

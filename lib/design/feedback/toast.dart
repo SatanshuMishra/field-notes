@@ -104,17 +104,23 @@ class ToastAction {
   final String? semanticLabel;
 }
 
+typedef ToastTitleSave = Future<bool> Function(String title);
+
 @immutable
 class ToastTitleOffer {
   const ToastTitleOffer({
     required this.actionLabel,
     required this.fieldLabel,
+    required this.failureMessage,
     required this.onTitled,
+    this.initialTitle = '',
   });
 
   final String actionLabel;
   final String fieldLabel;
-  final ValueChanged<String> onTitled;
+  final String failureMessage;
+  final ToastTitleSave onTitled;
+  final String initialTitle;
 }
 
 class Toast extends StatelessWidget {
@@ -222,19 +228,27 @@ class Toast extends StatelessWidget {
 }
 
 class _ToastTitleEntry extends StatefulWidget {
-  const _ToastTitleEntry({required this.offer, required this.onClosed});
+  const _ToastTitleEntry({
+    required this.offer,
+    required this.onClosed,
+    required this.onFailed,
+  });
 
   final ToastTitleOffer offer;
   final VoidCallback onClosed;
+  final VoidCallback onFailed;
 
   @override
   State<_ToastTitleEntry> createState() => _ToastTitleEntryState();
 }
 
 class _ToastTitleEntryState extends State<_ToastTitleEntry> {
-  final TextEditingController _title = TextEditingController();
+  late final TextEditingController _title = TextEditingController(
+    text: widget.offer.initialTitle,
+  );
   final FocusNode _focus = FocusNode(debugLabel: 'toast-title');
   bool _closed = false;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -257,15 +271,29 @@ class _ToastTitleEntryState extends State<_ToastTitleEntry> {
     widget.onClosed();
   }
 
-  void _save() {
-    if (_closed) {
+  Future<void> _save() async {
+    if (_closed || _saving) {
       return;
     }
     final String title = _title.text.trim();
-    _abandon();
-    if (title.isNotEmpty) {
-      widget.offer.onTitled(title);
+    if (title.isEmpty) {
+      _abandon();
+      return;
     }
+    setState(() => _saving = true);
+    final bool saved = await widget.offer
+        .onTitled(title)
+        .catchError((Object _) => false);
+    if (!mounted || _closed) {
+      return;
+    }
+    if (saved) {
+      _abandon();
+      return;
+    }
+    setState(() => _saving = false);
+    widget.onFailed();
+    _focus.requestFocus();
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
@@ -307,6 +335,7 @@ class _ToastTitleEntryState extends State<_ToastTitleEntry> {
                   key: toastTitleFieldKey,
                   controller: _title,
                   focusNode: _focus,
+                  readOnly: _saving,
                   maxLines: 1,
                   textInputAction: TextInputAction.done,
                   textCapitalization: TextCapitalization.sentences,
@@ -320,14 +349,17 @@ class _ToastTitleEntryState extends State<_ToastTitleEntry> {
                       ),
                     ),
                   ),
-                  onEditingComplete: _save,
-                  onTapOutside: (PointerDownEvent _) => _save(),
+                  onEditingComplete: () => unawaited(_save()),
+                  onTapOutside: (PointerDownEvent _) => unawaited(_save()),
                 ),
               ),
             ),
           ),
           _ToastActionButton(
-            action: ToastAction(label: toastTitleDoneLabel, onPressed: _save),
+            action: ToastAction(
+              label: toastTitleDoneLabel,
+              onPressed: () => unawaited(_save()),
+            ),
             color: FieldNotesColors.light.waveLight,
             focusSurface: FocusRingSurface.dark,
           ),
@@ -606,6 +638,7 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
   );
   late final Timer _lifetime;
   bool _naming = false;
+  bool _titleFailed = false;
 
   ToastAction? get _visibleAction {
     final ToastTitleOffer? offer = widget.titleOffer;
@@ -620,6 +653,12 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
   void _startNaming() {
     _lifetime.cancel();
     setState(() => _naming = true);
+  }
+
+  void _titleSaveFailed() {
+    if (mounted && !_titleFailed) {
+      setState(() => _titleFailed = true);
+    }
   }
 
   @override
@@ -710,6 +749,7 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
   Widget _toast() {
     final _DarkMetrics metrics = _metricsFor(widget.scale);
     final ToastTitleOffer? offer = widget.titleOffer;
+    final bool failed = _titleFailed && offer != null;
     return IgnorePointer(
       ignoring: widget.action == null && offer == null,
       child: Focus(
@@ -728,7 +768,7 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
                     child: Transform.translate(
                       offset: Offset(0, _riseOffset * (1 - _rise.value)),
                       child: Toast(
-                        message: widget.message,
+                        message: failed ? offer.failureMessage : widget.message,
                         variant: ToastVariant.dark,
                         scale: widget.scale,
                         action: _visibleAction,
@@ -736,11 +776,12 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
                             ? _ToastTitleEntry(
                                 offer: offer,
                                 onClosed: widget.onFinished,
+                                onFailed: _titleSaveFailed,
                               )
                             : null,
                         opacity: _rise.value,
                         icon: IconStickerGlyphIcon(
-                          glyph: widget.glyph,
+                          glyph: failed ? IconStickerGlyph.close : widget.glyph,
                           color: _glassToastInk,
                           size: metrics.iconSize,
                         ),
