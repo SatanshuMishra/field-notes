@@ -326,9 +326,6 @@ class _TransportState extends State<Transport> {
   }
 
   _Fit _fitFor(BuildContext context, double width) {
-    if (!widget.fitWidth) {
-      return _Fit.roomy;
-    }
     final double target = minIconTargetOn(Theme.of(context).platform);
     final double time =
         _fitTimeAllowance * MediaQuery.textScalerOf(context).scale(1);
@@ -422,39 +419,44 @@ class _TransportState extends State<Transport> {
     ];
   }
 
+  Widget _laidOut(BuildContext context, bool compact, _Fit fit) {
+    return ListenableBuilder(
+      listenable: _tuning,
+      builder: (BuildContext context, Widget? child) {
+        final Widget track = _track(context, compact, fit);
+        final Widget laidOut = switch ((widget.mode, widget.kind)) {
+          (TransportMode.card, _) => track,
+          (TransportMode.viewer, TransportKind.video) => _viewerVideo(
+            context,
+            track,
+            compact,
+            fit,
+          ),
+          (TransportMode.viewer, TransportKind.voice) => _viewerVoice(
+            track,
+            compact,
+          ),
+        };
+        return TransportKeys(
+          bindings: _bindings(context),
+          takesFocus: _inViewer,
+          autofocus: widget.autofocus,
+          onHandled: _announceActivity,
+          child: laidOut,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool compact = _compactIn(context);
+    if (!widget.fitWidth) {
+      return _laidOut(context, compact, _Fit.roomy);
+    }
     return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final _Fit fit = _fitFor(context, constraints.maxWidth);
-        return ListenableBuilder(
-          listenable: _tuning,
-          builder: (BuildContext context, Widget? child) {
-            final Widget track = _track(context, compact, fit);
-            final Widget laidOut = switch ((widget.mode, widget.kind)) {
-              (TransportMode.card, _) => track,
-              (TransportMode.viewer, TransportKind.video) => _viewerVideo(
-                context,
-                track,
-                compact,
-                fit,
-              ),
-              (TransportMode.viewer, TransportKind.voice) => _viewerVoice(
-                track,
-                compact,
-              ),
-            };
-            return TransportKeys(
-              bindings: _bindings(context),
-              takesFocus: _inViewer,
-              autofocus: widget.autofocus,
-              onHandled: _announceActivity,
-              child: laidOut,
-            );
-          },
-        );
-      },
+      builder: (BuildContext context, BoxConstraints constraints) =>
+          _laidOut(context, compact, _fitFor(context, constraints.maxWidth)),
     );
   }
 }
