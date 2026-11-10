@@ -176,6 +176,124 @@ void main() {
     expect(result.entry.textContent, 'a good day');
     expect(throwing.attempted, <String>['session-1']);
   });
+
+  group('a titled source', () {
+    test('lands its title through saveNote and keeps it out of the body',
+        () async {
+      final NoteSaveResult result = await writer.save(
+        date: '2026-07-19',
+        source: titledNoteSource(title: ' Tuesday ', body: 'went walking'),
+      );
+
+      expect(result.entry.title, 'Tuesday');
+      expect(result.entry.textContent, 'went walking');
+    });
+
+    test('with an emptied title clears the stored one', () async {
+      final NoteSaveResult created = await writer.save(
+        date: '2026-07-19',
+        source: titledNoteSource(title: 'Tuesday', body: 'went walking'),
+      );
+
+      final NoteSaveResult edited = await writer.save(
+        entryId: created.entry.id,
+        date: '2026-07-19',
+        source: titledNoteSource(title: '', body: 'went walking'),
+      );
+
+      expect(edited.entry.title, anyOf(isNull, isEmpty));
+    });
+
+    test('counts its title toward the note length', () async {
+      await expectLater(
+        writer.save(
+          date: '2026-07-19',
+          source: titledNoteSource(
+            title: 'T',
+            body: 'a' * maxNoteCharacters,
+          ),
+        ),
+        throwsA(
+          isA<NoteWriteException>().having(
+            (NoteWriteException error) => error.message,
+            'message',
+            noteTooLongMessage,
+          ),
+        ),
+      );
+    });
+
+    test('with no body is refused', () async {
+      await expectLater(
+        writer.save(
+          date: '2026-07-19',
+          source: titledNoteSource(title: 'Tuesday', body: '   '),
+        ),
+        throwsA(isA<NoteWriteException>()),
+      );
+    });
+  });
+
+  group('a plain source', () {
+    test('leaves a stored title alone', () async {
+      final NoteSaveResult created = await writer.save(
+        date: '2026-07-19',
+        source: titledNoteSource(title: 'Tuesday', body: 'went walking'),
+      );
+
+      final NoteSaveResult edited = await writer.save(
+        entryId: created.entry.id,
+        date: '2026-07-19',
+        source: 'went running',
+      );
+
+      expect(edited.entry.title, 'Tuesday');
+      expect(edited.entry.textContent, 'went running');
+    });
+
+    test('keeps a leading heading in the body at the writer', () async {
+      final NoteSaveResult result = await writer.save(
+        date: '2026-07-19',
+        source: '# Morning\n\nbody here',
+      );
+
+      expect(result.entry.title, isNull);
+      expect(result.entry.textContent, '# Morning\n\nbody here');
+    });
+  });
+
+  group('splitNoteSource', () {
+    test('lifts a leading heading and remembers exactly what it lifted', () {
+      final NoteSourceParts parts = splitNoteSource(
+        '\n# Morning **light**\n\nbody here',
+      );
+
+      expect(parts.title, 'Morning light');
+      expect(parts.body, 'body here');
+      expect(parts.lead, '\n# Morning **light**\n\n');
+      expect('${parts.lead}${parts.body}', '\n# Morning **light**\n\nbody here');
+      expect(parts.carriesTitle, isTrue);
+    });
+
+    test('reads a titled source before looking for a heading', () {
+      final NoteSourceParts parts = splitNoteSource(
+        titledNoteSource(title: 'Tuesday', body: '# Later\n\nmore'),
+      );
+
+      expect(parts.title, 'Tuesday');
+      expect(parts.body, '# Later\n\nmore');
+    });
+
+    for (final String source in <String>['', 'a line', 'a line\n\n# Later']) {
+      test('leaves "$source" whole', () {
+        final NoteSourceParts parts = splitNoteSource(source);
+
+        expect(parts.title, isEmpty);
+        expect(parts.body, source);
+        expect(parts.carriesTitle, isFalse);
+      });
+    }
+  });
 }
 
 class _ThrowingDeleteDraftStore extends FakeDraftStore {
