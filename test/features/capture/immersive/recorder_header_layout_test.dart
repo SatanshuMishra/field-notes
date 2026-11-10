@@ -29,7 +29,7 @@ enum _Recorder { voice, video }
 const String _date = '2026-09-28';
 const String _openLabel = 'open';
 const Size _desktopWindow = Size(1280, 800);
-const Size _minimumWindow = Size(873, 600);
+const Size _minimumWindow = Size(720, 600);
 const Size _phoneWindow = Size(384, 832);
 const Rect _trafficLights = Rect.fromLTRB(0, 0, 78, 42);
 const Rect _captionButtons = Rect.fromLTRB(1142, 0, 1280, 42);
