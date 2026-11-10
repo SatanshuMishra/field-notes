@@ -206,7 +206,7 @@ void main() {
       await tester.pumpWidget(
         _host(
           const ViewerStage(
-            ground: ViewerGround.voice,
+            ground: ViewerGround.media,
             child: SizedBox.expand(key: _contentKey),
           ),
           platform: TargetPlatform.android,
@@ -264,6 +264,82 @@ void main() {
         const Rect.fromLTWH(0, 42, 1280, 758),
       );
     }
+  });
+
+  testWidgets('the voice stage asks for status bar icons by theme', (
+    WidgetTester tester,
+  ) async {
+    _phone(tester);
+    for (final (Brightness brightness, SystemUiOverlayStyle bars)
+        in <(Brightness, SystemUiOverlayStyle)>[
+          (Brightness.light, lightBackdropSystemBars),
+          (Brightness.dark, darkBackdropSystemBars),
+        ]) {
+      await tester.pumpWidget(
+        _host(
+          const ViewerStage(
+            ground: ViewerGround.voice,
+            child: SizedBox.expand(key: _contentKey),
+          ),
+          platform: TargetPlatform.android,
+          brightness: brightness,
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        tester
+            .widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+              _inStage(find.byType(AnnotatedRegion<SystemUiOverlayStyle>)),
+            )
+            .value,
+        bars,
+      );
+      expect(SystemChrome.latestStyle, bars);
+    }
+  });
+
+  testWidgets('a deferring no-swipe region only claims what it hits', (
+    WidgetTester tester,
+  ) async {
+    _phone(tester);
+    int next = 0;
+    await tester.pumpWidget(
+      _host(
+        ViewerStage(
+          ground: ViewerGround.media,
+          onSwipeNext: () => next += 1,
+          child: NoSwipe(
+            behavior: HitTestBehavior.deferToChild,
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 100,
+                  child: GestureDetector(
+                    key: _regionKey,
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {},
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        platform: TargetPlatform.android,
+      ),
+    );
+
+    await tester.flingFrom(const Offset(300, 300), const Offset(-200, 0), 1000);
+    await tester.pump();
+    expect(next, 1);
+
+    await tester.flingFrom(const Offset(300, 780), const Offset(-200, 0), 1000);
+    await tester.pump();
+    expect(next, 1);
   });
 
   testWidgets('a swipe steps but a drag on a no-swipe region does not', (

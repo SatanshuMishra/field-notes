@@ -12,6 +12,8 @@ import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
+import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
+    show viewerTitleFieldKey;
 import 'package:field_notes/features/notes/notes_providers.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
@@ -141,11 +143,11 @@ void main() {
       _darkInk,
     );
 
-    const Entry entry = Entry(
-      id: 'e1',
-      dayId: 'd1',
+    final Entry entry = Entry(
+      id: 'entry-1',
+      dayId: 'day-1',
       type: EntryType.text,
-      title: 'Rose bed',
+      title: 'Roses at dawn',
       textContent: 'Watered the roses.',
       createdAt: 0,
       updatedAt: 0,
@@ -191,11 +193,14 @@ void main() {
                 )
                 .color;
       expect(paper, _darkPaper, reason: '$platform');
-      expect(
-        _textColour(tester, logOwnTitle(entry)!),
-        _darkInk,
-        reason: '$platform',
+      final EditableText title = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(viewerTitleFieldKey),
+          matching: find.byType(EditableText),
+        ),
       );
+      expect(title.controller.text, 'Roses at dawn', reason: '$platform');
+      expect(title.style.color, _darkInk, reason: '$platform');
     }
   });
 }

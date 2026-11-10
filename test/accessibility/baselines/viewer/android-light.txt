@@ -18,3 +18,4 @@ small-target | d5-reader-menu | Copy | <root> # Flutter's own control
 small-target | d5-reader-menu | Select all | <root> # Flutter's own control
 small-target | d5-reader-menu@2x | <unlabelled> | <root> # Flutter's own control
 small-target | d5-reader-menu@2x | Copy | <root> # Flutter's own control
+text-contrast | d14-delete-entry-dialog | Friday, September 18 | <root> # measured: 6.53:1 by token arithmetic

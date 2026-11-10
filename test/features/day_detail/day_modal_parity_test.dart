@@ -347,6 +347,7 @@ void main() {
     await tester.tap(find.text('8:12 AM · morning · note'));
     await tester.pumpAndSettle();
 
+    expect(find.byType(LogViewerPanel), findsOneWidget);
     expect(_reading('entry-1'), findsOneWidget);
     expect(_dayTitleInPanel(), findsNothing);
     expect(find.byType(DayDetailPanel), findsNothing);
@@ -354,7 +355,7 @@ void main() {
     await tester.tap(find.text('Back'));
     await tester.pumpAndSettle();
 
-    expect(_reading('entry-1'), findsNothing);
+    expect(find.byType(LogViewerPanel), findsNothing);
     expect(_dayTitleInPanel(), findsOneWidget);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
@@ -382,14 +383,18 @@ void main() {
   ) async {
     await _openDay(tester, entries: _threeNotes());
 
+    final Finder reading = find.byWidgetPredicate(
+      (Widget widget) =>
+          widget is LogViewerPanel || widget.key == dayNotePaneKey,
+    );
     await tester.tap(find.text('8:12 AM · morning · note'));
     await tester.pumpAndSettle();
-    expect(_reading('entry-1'), findsOneWidget);
+    expect(reading, findsOneWidget);
 
     await tester.tapAt(const Offset(4, 4));
     await tester.pumpAndSettle();
 
-    expect(_reading('entry-1'), findsNothing);
+    expect(reading, findsNothing);
     expect(find.byType(DayDetailPanel, skipOffstage: false), findsNothing);
     expect(find.text('open day'), findsOneWidget);
   }, variant: _bothLayouts);

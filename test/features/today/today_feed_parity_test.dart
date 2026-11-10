@@ -115,6 +115,7 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(find.text('Afternoon note'), findsNothing);
     expect(find.text('Close'), findsOneWidget);
     expect(find.byType(DayDetailPanel), findsNothing);
   });

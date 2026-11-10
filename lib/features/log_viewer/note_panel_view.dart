@@ -11,13 +11,13 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart'
-    show LogActionsPill, MediaResolver, logActionsPillTapInset, logOwnTitle;
+    show LogActionsPill, MediaResolver, logActionsPillTapInset;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show logViewerBackKey;
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
 import 'package:field_notes/features/log_viewer/note_reading.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
-    show ViewerKeys;
+    show ViewerKeys, ViewerLogTitle;
 
 const double _panelWidthShare = 0.62;
 const double _readingEms = 34;
@@ -99,6 +99,8 @@ class NotePanelView extends StatelessWidget {
               onLeft: scene.onEarlier,
               onRight: scene.onLater,
               onEscape: scene.onBack,
+              onPageUp: scene.onEarlier,
+              onPageDown: scene.onLater,
               child: _reading(context),
             ),
       ),
@@ -212,15 +214,15 @@ class NotePanelView extends StatelessWidget {
               color: context.colors.accentInk,
             ),
           ),
-          Text(
-            logOwnTitle(scene.entry) ?? '',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textStyles.headlineSerif.copyWith(
-              fontSize: _titleSize,
-              height: _titleLineHeight,
+          if (ViewerLogTitle.shows(scene))
+            ViewerLogTitle(
+              scene: scene,
+              style: textStyles.headlineSerif.copyWith(
+                fontSize: _titleSize,
+                height: _titleLineHeight,
+              ),
+              hintInk: context.colors.inkSoft,
             ),
-          ),
         ],
       ),
     );

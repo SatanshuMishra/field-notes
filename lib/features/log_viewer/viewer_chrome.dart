@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -13,21 +15,52 @@ import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
+import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
+import 'package:field_notes/design/widgets/phone_sheet.dart';
 import 'package:field_notes/design/widgets/sticker_button.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart'
     show VideoDownloadRing;
+import 'package:field_notes/features/entry_cards/cards/video_controls_overlay.dart'
+    show canAutoHideVideoControls;
 import 'package:field_notes/features/entry_cards/cards/voice_body.dart'
     show PlayPauseGlyph;
+import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart'
+    show logActionsDeleteKey;
+import 'package:field_notes/features/entry_cards/transport/transport.dart'
+    show TransportActivityNotification;
+import 'package:field_notes/features/log_viewer/log_viewer.dart'
+    show LogViewerExit;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
-    show logViewerCloseLabel, logViewerDeleteLabel;
+    show
+        logViewerBackKey,
+        logViewerCloseLabel,
+        logViewerDeleteLabel,
+        logViewerEarlierKey,
+        logViewerEarlierLabel,
+        logViewerLaterKey,
+        logViewerLaterLabel;
+import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show isTextInputFocused;
 
 const double viewerDockLift = 18;
+
+const Duration viewerControlsIdle = Duration(seconds: 3);
+
+const String viewerTitleLabel = 'Title';
+const String viewerTitleHint = 'Add a title';
+const String viewerRenameLabel = 'Rename';
+const String viewerSaveTitleLabel = 'Save';
+const String viewerDeleteLogLabel = 'Delete log';
+
+const Key viewerTitleFieldKey = ValueKey<String>('viewer-title-field');
+const Key viewerRenameRowKey = ValueKey<String>('viewer-rename-row');
+const Key viewerSaveTitleKey = ValueKey<String>('viewer-save-title');
 
 const String _playLabel = 'Play';
 const String _pauseLabel = 'Pause';
@@ -83,6 +116,61 @@ const EdgeInsets _labelScrimPadding = EdgeInsets.symmetric(
 const double _shadeHeight = 140;
 const double _shadeAlpha = 0.7;
 
+const Alignment _stageCentre = Alignment(0, -0.2);
+const double _stageRadius = 1.2;
+const double _stageEdgeShare = 0.4;
+
+const Duration _doubleTapWindow = Duration(milliseconds: 300);
+
+const String _escapeShortcut = 'Esc';
+const String _earlierShortcut = 'Page Up';
+const String _laterShortcut = 'Page Down';
+
+const double _edgeArrowSize = 48;
+const double _edgeArrowGlyph = 24;
+const double _edgeArrowInset = 16;
+const double _edgeArrowCompactInset = 4;
+const double _edgeArrowBorder = 1.5;
+const double _edgeRestDark = 0.66;
+const double _edgeHoverDark = 0.92;
+const double _edgeRestLight = 0.9;
+const double _edgeLineDark = 0.32;
+const double _edgeLineLight = 0.55;
+const BorderRadius _edgeArrowRadius = BorderRadius.all(
+  Radius.circular(_edgeArrowSize / 2),
+);
+
+const double _logBarTop = 12;
+const double _logBarSide = 16;
+const double _logBarFadeBelow = 40;
+const double _logBarGap = 8;
+const double _dockBackingHeight = 200;
+const double _dockBackingFadeStop = 0.35;
+const double _logBarGlyph = 18;
+const double _logBarTitleSize = 19;
+const double _logBarTitleLine = 1.3;
+const double _logBarTitleMaxWidth = 520;
+const double _logBarTitleRule = 1.5;
+const double _logBarTitleGap = 1;
+const double _logBarStampSize = 15;
+const double _logBarStampLine = 1.1;
+const double _logBarFlower = 14;
+const double _logBarFlowerGap = 6;
+const EdgeInsets _logBarCountPadding = EdgeInsets.symmetric(horizontal: 8);
+const EdgeInsets _logBarTitlePadding = EdgeInsets.symmetric(vertical: 2);
+const BorderRadius _logBarButtonRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusMd),
+);
+
+const double _sheetRowHeight = 52;
+const double _sheetGlyph = 18;
+const double _sheetRowGap = 12;
+const double _sheetRowSeam = 1;
+const double _sheetTitleSize = 19;
+const EdgeInsets _sheetRowPadding = EdgeInsets.symmetric(horizontal: 18);
+const EdgeInsets _sheetFieldPadding = EdgeInsets.fromLTRB(18, 4, 18, 12);
+const EdgeInsets _sheetBottomPadding = EdgeInsets.only(bottom: 8);
+
 final BoxDecoration _voiceGlow = BoxDecoration(
   gradient: RadialGradient(
     radius: _glowRadius,
@@ -115,6 +203,10 @@ class ViewerStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget painted = _ViewerGroundPaint(ground: ground, child: child);
+    final SystemUiOverlayStyle bars = switch (ground) {
+      ViewerGround.voice => systemBarsOverColor(context.colors.viewerStage),
+      ViewerGround.media => darkBackdropSystemBars,
+    };
     if (_isSidebar(context)) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -125,7 +217,7 @@ class ViewerStage extends StatelessWidget {
       );
     }
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: darkBackdropSystemBars,
+      value: bars,
       child: _ViewerSwipe(
         onNext: onSwipeNext,
         onPrevious: onSwipePrevious,
@@ -145,8 +237,21 @@ class _ViewerGroundPaint extends StatelessWidget {
   Widget build(BuildContext context) {
     final Widget filled = SizedBox.expand(child: child);
     return switch (ground) {
-      ViewerGround.voice => ColoredBox(
-        color: Palette.mediaGround,
+      ViewerGround.voice => DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: _stageCentre,
+            radius: _stageRadius,
+            colors: <Color>[
+              context.colors.viewerStage,
+              Color.lerp(
+                context.colors.viewerStage,
+                context.colors.viewerStageEdge,
+                _stageEdgeShare,
+              )!,
+            ],
+          ),
+        ),
         child: DecoratedBox(decoration: _voiceGlow, child: filled),
       ),
       ViewerGround.media => ColoredBox(
@@ -261,9 +366,16 @@ class _ViewerSwipeState extends State<_ViewerSwipe> {
 }
 
 class NoSwipe extends StatelessWidget {
-  const NoSwipe({super.key, required this.child});
+  const NoSwipe({
+    super.key,
+    required this.child,
+    this.behavior = HitTestBehavior.translucent,
+    this.onPointerDown,
+  });
 
   final Widget child;
+  final HitTestBehavior behavior;
+  final ValueChanged<int>? onPointerDown;
 
   @override
   Widget build(BuildContext context) {
@@ -271,10 +383,11 @@ class NoSwipe extends StatelessWidget {
         .dependOnInheritedWidgetOfExactType<_SwipeClaim>()
         ?.claim;
     return Listener(
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: claim == null
-          ? null
-          : (PointerDownEvent event) => claim(event.pointer),
+      behavior: behavior,
+      onPointerDown: (PointerDownEvent event) {
+        claim?.call(event.pointer);
+        onPointerDown?.call(event.pointer);
+      },
       child: child,
     );
   }
@@ -288,6 +401,9 @@ class ViewerKeys extends StatefulWidget {
     this.onLeft,
     this.onRight,
     this.onEscape,
+    this.onPageUp,
+    this.onPageDown,
+    this.autofocus = true,
   });
 
   final Widget child;
@@ -295,6 +411,9 @@ class ViewerKeys extends StatefulWidget {
   final VoidCallback? onLeft;
   final VoidCallback? onRight;
   final VoidCallback? onEscape;
+  final VoidCallback? onPageUp;
+  final VoidCallback? onPageDown;
+  final bool autofocus;
 
   @override
   State<ViewerKeys> createState() => _ViewerKeysState();
@@ -325,6 +444,12 @@ class _ViewerKeysState extends State<ViewerKeys> {
     if (key == LogicalKeyboardKey.escape) {
       return widget.onEscape;
     }
+    if (key == LogicalKeyboardKey.pageUp) {
+      return widget.onPageUp;
+    }
+    if (key == LogicalKeyboardKey.pageDown) {
+      return widget.onPageDown;
+    }
     return null;
   }
 
@@ -351,7 +476,7 @@ class _ViewerKeysState extends State<ViewerKeys> {
   Widget build(BuildContext context) {
     return Focus(
       focusNode: _keys,
-      autofocus: true,
+      autofocus: widget.autofocus,
       skipTraversal: true,
       onKeyEvent: _onKey,
       child: widget.child,
@@ -919,6 +1044,988 @@ class ViewerOverlayShade extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ViewerControlsFade extends StatefulWidget {
+  const ViewerControlsFade({
+    super.key,
+    required this.ready,
+    required this.playing,
+    required this.child,
+  });
+
+  final bool ready;
+  final bool playing;
+  final Widget child;
+
+  @override
+  State<ViewerControlsFade> createState() => _ViewerControlsFadeState();
+}
+
+class _ViewerControlsFadeState extends State<ViewerControlsFade> {
+  final FocusNode _within = FocusNode(
+    debugLabel: 'viewer controls',
+    canRequestFocus: false,
+    skipTraversal: true,
+  );
+  Timer? _idle;
+  Timer? _pictureTap;
+  bool _hidden = false;
+  bool _accessibleNavigation = false;
+  bool _shownAtDown = true;
+  Set<int> _pressed = const <int>{};
+  int? _controlPointer;
+  _Stroke? _stroke;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_onFocusMoved);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _accessibleNavigation =
+        MediaQuery.maybeAccessibleNavigationOf(context) ?? false;
+    _hidden = false;
+    _restartIdle();
+  }
+
+  @override
+  void didUpdateWidget(ViewerControlsFade oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.ready != widget.ready ||
+        oldWidget.playing != widget.playing) {
+      _hidden = false;
+      _restartIdle();
+    }
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeListener(_onFocusMoved);
+    _within.dispose();
+    _idle?.cancel();
+    _pictureTap?.cancel();
+    super.dispose();
+  }
+
+  void _onFocusMoved() {
+    if (mounted && _within.hasFocus) {
+      _wake();
+    }
+  }
+
+  bool get _canHide => canAutoHideVideoControls(
+    controlsEnabled: widget.ready,
+    isPlaying: widget.playing,
+    focusWithin: false,
+    accessibleNavigation: _accessibleNavigation,
+  );
+
+  bool get _focusOnControl {
+    final FocusNode? focus = FocusManager.instance.primaryFocus;
+    return focus != null && focus is! FocusScopeNode && !focus.skipTraversal;
+  }
+
+  bool get _touch => !_isSidebar(context);
+
+  void _restartIdle() {
+    _idle?.cancel();
+    _idle = _canHide ? Timer(viewerControlsIdle, _onIdle) : null;
+  }
+
+  void _onIdle() {
+    _idle = null;
+    if (!mounted || !_canHide) {
+      return;
+    }
+    if (_pressed.isNotEmpty || _focusOnControl) {
+      _restartIdle();
+      return;
+    }
+    setState(() => _hidden = true);
+  }
+
+  void _wake() {
+    if (_hidden) {
+      setState(() => _hidden = false);
+    }
+    _restartIdle();
+  }
+
+  bool _onTransportActivity(TransportActivityNotification notification) {
+    _wake();
+    return false;
+  }
+
+  void _onDown(PointerDownEvent event) {
+    _shownAtDown = !_hidden;
+    _pressed = <int>{..._pressed, event.pointer};
+    _stroke = _Stroke(
+      pointer: event.pointer,
+      start: event.position,
+      claimed: event.pointer == _controlPointer,
+    );
+    _controlPointer = null;
+    _wake();
+  }
+
+  void _onUp(PointerUpEvent event) {
+    _pressed = _pressed.difference(<int>{event.pointer});
+    final _Stroke? stroke = _stroke;
+    _stroke = null;
+    final bool tapped =
+        stroke != null &&
+        stroke.pointer == event.pointer &&
+        !stroke.claimed &&
+        (event.position - stroke.start).distance < kTouchSlop;
+    if (tapped && _touch) {
+      _onPictureTap();
+    }
+  }
+
+  void _onCancel(PointerCancelEvent event) {
+    _pressed = _pressed.difference(<int>{event.pointer});
+    if (_stroke?.pointer == event.pointer) {
+      _stroke = null;
+    }
+  }
+
+  void _onPictureTap() {
+    final Timer? pending = _pictureTap;
+    if (pending != null) {
+      pending.cancel();
+      _pictureTap = null;
+      return;
+    }
+    final bool hide = _shownAtDown;
+    _pictureTap = Timer(_doubleTapWindow, () {
+      _pictureTap = null;
+      if (mounted && hide && _canHide) {
+        _idle?.cancel();
+        _idle = null;
+        setState(() => _hidden = true);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool visible = !_canHide || !_hidden;
+    final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    return MouseRegion(
+      opaque: false,
+      onEnter: (PointerEnterEvent _) => _wake(),
+      onHover: (PointerHoverEvent _) => _wake(),
+      onExit: (PointerExitEvent _) => _wake(),
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: _onDown,
+        onPointerMove: (PointerMoveEvent _) => _wake(),
+        onPointerUp: _onUp,
+        onPointerCancel: _onCancel,
+        child: AnimatedOpacity(
+          opacity: visible ? 1 : 0,
+          duration: still ? Duration.zero : Motion.fade,
+          curve: Motion.fadeCurve,
+          child: IgnorePointer(
+            ignoring: !visible,
+            child: AnnotatedRegion<SystemUiOverlayStyle>(
+              value: systemBarsOverColor(context.colors.viewerStage),
+              child: NotificationListener<TransportActivityNotification>(
+                onNotification: _onTransportActivity,
+                child: NoSwipe(
+                  behavior: HitTestBehavior.deferToChild,
+                  onPointerDown: (int pointer) => _controlPointer = pointer,
+                  child: Focus(
+                    focusNode: _within,
+                    includeSemantics: false,
+                    child: widget.child,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ViewerDockBacking extends StatelessWidget {
+  const ViewerDockBacking({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    return IgnorePointer(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: SizedBox(
+          height: _dockBackingHeight,
+          width: double.infinity,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: <Color>[colors.viewerFadeStart, colors.viewerFadeEnd],
+                stops: const <double>[0, _dockBackingFadeStop],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ViewerEdgeArrows extends StatelessWidget {
+  const ViewerEdgeArrows({
+    super.key,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final double inset = _isSidebar(context)
+        ? _edgeArrowInset
+        : _edgeArrowCompactInset;
+    final VoidCallback? previous = onPrevious;
+    final VoidCallback? next = onNext;
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        if (previous != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: EdgeInsets.only(left: inset),
+              child: NoSwipe(
+                child: _EdgeArrow(
+                  key: logViewerEarlierKey,
+                  pointsBack: true,
+                  label: logViewerEarlierLabel,
+                  shortcut: _earlierShortcut,
+                  onPressed: previous,
+                ),
+              ),
+            ),
+          ),
+        if (next != null)
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: EdgeInsets.only(right: inset),
+              child: NoSwipe(
+                child: _EdgeArrow(
+                  key: logViewerLaterKey,
+                  pointsBack: false,
+                  label: logViewerLaterLabel,
+                  shortcut: _laterShortcut,
+                  onPressed: next,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class ViewerFullScreenHide extends StatelessWidget {
+  const ViewerFullScreenHide({
+    super.key,
+    required this.fullScreen,
+    required this.child,
+  });
+
+  final bool fullScreen;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    return ExcludeFocus(
+      excluding: fullScreen,
+      child: IgnorePointer(
+        ignoring: fullScreen,
+        child: AnimatedOpacity(
+          opacity: fullScreen ? 0 : 1,
+          duration: still ? Duration.zero : Motion.fade,
+          curve: Motion.fadeCurve,
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+@immutable
+final class _EdgeArrowColors {
+  const _EdgeArrowColors({
+    required this.rest,
+    required this.hover,
+    required this.line,
+  });
+
+  factory _EdgeArrowColors.of(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    return switch (Theme.of(context).brightness) {
+      Brightness.dark => _EdgeArrowColors(
+        rest: colors.viewerFadeEnd.withValues(alpha: _edgeRestDark),
+        hover: colors.viewerFadeEnd.withValues(alpha: _edgeHoverDark),
+        line: colors.ink.withValues(alpha: _edgeLineDark),
+      ),
+      Brightness.light => _EdgeArrowColors(
+        rest: colors.cardBright.withValues(alpha: _edgeRestLight),
+        hover: colors.cardLight,
+        line: colors.ink.withValues(alpha: _edgeLineLight),
+      ),
+    };
+  }
+
+  final Color rest;
+  final Color hover;
+  final Color line;
+}
+
+class _EdgeArrow extends StatelessWidget {
+  const _EdgeArrow({
+    super.key,
+    required this.pointsBack,
+    required this.label,
+    required this.shortcut,
+    required this.onPressed,
+  });
+
+  final bool pointsBack;
+  final String label;
+  final String shortcut;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final _EdgeArrowColors edge = _EdgeArrowColors.of(context);
+    return Pressable(
+      label: label,
+      tooltip: '$label ($shortcut)',
+      iconOnly: true,
+      onPressed: onPressed,
+      borderRadius: _edgeArrowRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Container(
+        width: _edgeArrowSize,
+        height: _edgeArrowSize,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: hovered ? edge.hover : edge.rest,
+          shape: BoxShape.circle,
+          border: Border.all(color: edge.line, width: _edgeArrowBorder),
+        ),
+        child: ChevronGlyph(
+          pointsBack: pointsBack,
+          color: context.colors.ink,
+          size: _edgeArrowGlyph,
+        ),
+      ),
+    );
+  }
+}
+
+String? _titleOrNull(String? raw) {
+  final String title = raw?.trim() ?? '';
+  return title.isEmpty ? null : title;
+}
+
+TextStyle _titleStyle(BuildContext context) => context.textStyles.headlineSerif
+    .copyWith(fontSize: _logBarTitleSize, height: _logBarTitleLine);
+
+class ViewerLogBar extends StatelessWidget {
+  const ViewerLogBar({super.key, required this.scene, this.fades = false});
+
+  final LogViewerScene scene;
+  final bool fades;
+
+  BoxDecoration _fade(FieldNotesColors colors) {
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: <Color>[colors.viewerFadeEnd, colors.viewerFadeStart],
+      ),
+    );
+  }
+
+  Widget _exitGlyph(Color color) {
+    return switch (scene.exit) {
+      LogViewerExit.back => ChevronGlyph(
+        pointsBack: true,
+        color: color,
+        size: _logBarGlyph,
+      ),
+      LogViewerExit.close => IconStickerGlyphIcon(
+        glyph: IconStickerGlyph.close,
+        color: color,
+        size: _logBarGlyph,
+      ),
+    };
+  }
+
+  Widget _trashGlyph(Color color) => IconStickerGlyphIcon(
+    glyph: IconStickerGlyph.trash,
+    color: color,
+    size: _logBarGlyph,
+  );
+
+  Widget _count(BuildContext context, String position, Color ink) {
+    return Padding(
+      padding: _logBarCountPadding,
+      child: Text(
+        position,
+        maxLines: 1,
+        softWrap: false,
+        style: context.textStyles.captionSans.copyWith(
+          color: ink,
+          fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool sidebar = _isSidebar(context);
+    final String? position = scene.position;
+    final FieldNotesColors colors = context.colors;
+    final Color softInk = fades ? colors.inkSoft : colors.ink;
+    final double statusBar = sidebar ? 0 : MediaQuery.paddingOf(context).top;
+    final Widget row = Padding(
+      padding: EdgeInsets.fromLTRB(
+        _logBarSide,
+        statusBar + _logBarTop,
+        _logBarSide,
+        fades ? 0 : _logBarTop,
+      ),
+      child: Row(
+        children: <Widget>[
+          if (sidebar) ...<Widget>[
+            _LogBarButton(
+              key: logViewerBackKey,
+              label: scene.exitLabel,
+              tooltip: '${scene.exitLabel} ($_escapeShortcut)',
+              glyph: _exitGlyph,
+              onPressed: scene.onBack,
+            ),
+            const SizedBox(width: _logBarGap),
+          ],
+          Expanded(
+            child: _LogBarHeading(
+              scene: scene,
+              editable: sidebar,
+              softInk: softInk,
+            ),
+          ),
+          if (position != null) _count(context, position, softInk),
+          if (sidebar)
+            _LogBarButton(
+              key: logActionsDeleteKey,
+              label: logViewerDeleteLabel,
+              tooltip: logViewerDeleteLabel,
+              glyph: _trashGlyph,
+              hoverColor: colors.dangerInk,
+              onPressed: scene.onDelete,
+            ),
+        ],
+      ),
+    );
+    return Align(
+      alignment: Alignment.topCenter,
+      child: fades
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                ColoredBox(color: colors.viewerFadeEnd, child: row),
+                IgnorePointer(
+                  child: SizedBox(
+                    height: _logBarFadeBelow,
+                    child: DecoratedBox(decoration: _fade(colors)),
+                  ),
+                ),
+              ],
+            )
+          : row,
+    );
+  }
+}
+
+class _LogBarButton extends StatelessWidget {
+  const _LogBarButton({
+    super.key,
+    required this.label,
+    required this.tooltip,
+    required this.glyph,
+    required this.onPressed,
+    this.hoverColor,
+  });
+
+  final String label;
+  final String tooltip;
+  final Widget Function(Color color) glyph;
+  final VoidCallback onPressed;
+  final Color? hoverColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    return Pressable(
+      label: label,
+      tooltip: tooltip,
+      iconOnly: true,
+      onPressed: onPressed,
+      borderRadius: _logBarButtonRadius,
+      builder: (BuildContext context, bool hovered) => SizedBox.square(
+        dimension: minIconTargetOn(Theme.of(context).platform),
+        child: Center(
+          child: glyph(hovered ? hoverColor ?? colors.ink : colors.inkSoft),
+        ),
+      ),
+    );
+  }
+}
+
+class _LogBarHeading extends StatelessWidget {
+  const _LogBarHeading({
+    required this.scene,
+    required this.editable,
+    required this.softInk,
+  });
+
+  final LogViewerScene scene;
+  final bool editable;
+  final Color softInk;
+
+  Widget? _title(BuildContext context) {
+    if (!ViewerLogTitle.shows(scene, editable: editable)) {
+      return null;
+    }
+    return ViewerLogTitle(
+      scene: scene,
+      editable: editable,
+      style: _titleStyle(context),
+      hintInk: softInk,
+    );
+  }
+
+  Widget _stamp(BuildContext context) {
+    final Mood? mood = scene.mood;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        if (mood != null) ...<Widget>[
+          ExcludeSemantics(
+            child: FlowerBloom.forMood(mood, size: _logBarFlower),
+          ),
+          const SizedBox(width: _logBarFlowerGap),
+        ],
+        Flexible(
+          child: Text(
+            scene.stamp(context),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.textStyles.stampAccent.copyWith(
+              fontSize: _logBarStampSize,
+              height: _logBarStampLine,
+              color: softInk,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget? title = _title(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        if (title != null) ...<Widget>[
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _logBarTitleMaxWidth),
+            child: title,
+          ),
+          const SizedBox(height: _logBarTitleGap),
+        ],
+        _stamp(context),
+      ],
+    );
+  }
+}
+
+class ViewerLogTitle extends StatelessWidget {
+  const ViewerLogTitle({
+    super.key,
+    required this.scene,
+    required this.style,
+    required this.hintInk,
+    this.editable = true,
+  });
+
+  final LogViewerScene scene;
+  final TextStyle style;
+  final Color hintInk;
+  final bool editable;
+
+  static bool shows(LogViewerScene scene, {bool editable = true}) =>
+      (editable && scene.onRename != null) ||
+      _titleOrNull(scene.entry.title) != null;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? title = _titleOrNull(scene.entry.title);
+    final LogViewerRename? rename = scene.onRename;
+    if (editable && rename != null) {
+      return _ViewerTitleField(
+        key: ValueKey<String>(scene.entry.id),
+        title: title,
+        onRename: rename,
+        style: style,
+        hintInk: hintInk,
+      );
+    }
+    return Semantics(
+      header: true,
+      child: Text(
+        title ?? '',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: style,
+      ),
+    );
+  }
+}
+
+class _ViewerTitleField extends StatefulWidget {
+  const _ViewerTitleField({
+    super.key,
+    required this.title,
+    required this.onRename,
+    required this.style,
+    required this.hintInk,
+  });
+
+  final String? title;
+  final LogViewerRename onRename;
+  final TextStyle style;
+  final Color hintInk;
+
+  @override
+  State<_ViewerTitleField> createState() => _ViewerTitleFieldState();
+}
+
+class _ViewerTitleFieldState extends State<_ViewerTitleField> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.title ?? '',
+  );
+  late final FocusNode _focus = FocusNode(
+    debugLabel: 'viewer title',
+    onKeyEvent: _onKey,
+  );
+  late String? _saved = widget.title;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_onFocus);
+  }
+
+  @override
+  void didUpdateWidget(_ViewerTitleField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.title != widget.title && !_focus.hasFocus) {
+      _saved = widget.title;
+      _controller.text = widget.title ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _commit();
+    _focus.removeListener(_onFocus);
+    _focus.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _commit() {
+    final String? typed = _titleOrNull(_controller.text);
+    if (typed != _saved) {
+      _saved = typed;
+      unawaited(_save(typed));
+    }
+  }
+
+  Future<void> _save(String? typed) async {
+    final bool saved = await widget.onRename(typed);
+    if (saved || !mounted || _saved != typed) {
+      return;
+    }
+    _saved = widget.title;
+    if (!_focus.hasFocus) {
+      _controller.text = widget.title ?? '';
+    }
+  }
+
+  void _onFocus() {
+    if (!_focus.hasFocus) {
+      _commit();
+    }
+  }
+
+  void _finish() {
+    _focus.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.escape) {
+      return KeyEventResult.ignored;
+    }
+    _controller.text = _saved ?? '';
+    _finish();
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final TextStyle style = widget.style;
+    final double target = minTargetOn(Theme.of(context).platform);
+    return Semantics(
+      container: true,
+      label: viewerTitleLabel,
+      child: Material(
+        type: MaterialType.transparency,
+        child: TextField(
+          key: viewerTitleFieldKey,
+          controller: _controller,
+          focusNode: _focus,
+          maxLines: 1,
+          style: style,
+          cursorColor: colors.ink,
+          textInputAction: TextInputAction.done,
+          textCapitalization: TextCapitalization.sentences,
+          onEditingComplete: _finish,
+          onTapOutside: (PointerDownEvent _) {
+            if (_focus.hasFocus) {
+              _finish();
+            }
+          },
+          decoration: InputDecoration(
+            isDense: true,
+            filled: false,
+            hintText: viewerTitleHint,
+            hintStyle: style.copyWith(color: widget.hintInk),
+            contentPadding: _logBarTitlePadding,
+            constraints: BoxConstraints(minHeight: target),
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color: colors.ink,
+                width: _logBarTitleRule,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> showViewerLogSheet(BuildContext context, LogViewerScene scene) {
+  return showPhoneSheet<void>(
+    context,
+    builder: (BuildContext sheetContext) => _ViewerLogSheet(scene: scene),
+  );
+}
+
+class _ViewerLogSheet extends StatefulWidget {
+  const _ViewerLogSheet({required this.scene});
+
+  final LogViewerScene scene;
+
+  @override
+  State<_ViewerLogSheet> createState() => _ViewerLogSheetState();
+}
+
+class _ViewerLogSheetState extends State<_ViewerLogSheet> {
+  late final TextEditingController _title = TextEditingController(
+    text: widget.scene.entry.title ?? '',
+  );
+  bool _renaming = false;
+
+  @override
+  void dispose() {
+    _title.dispose();
+    super.dispose();
+  }
+
+  void _close() => Navigator.of(context).pop();
+
+  void _save() {
+    final String? typed = _titleOrNull(_title.text);
+    final LogViewerRename? rename = widget.scene.onRename;
+    if (rename != null && typed != _titleOrNull(widget.scene.entry.title)) {
+      unawaited(rename(typed));
+    }
+    _close();
+  }
+
+  void _delete() {
+    _close();
+    widget.scene.onDelete();
+  }
+
+  Widget _field(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final TextStyle style = _titleStyle(context)
+        .copyWith(fontSize: _sheetTitleSize);
+    return Padding(
+      padding: _sheetFieldPadding,
+      child: Semantics(
+        label: viewerTitleLabel,
+        child: TextField(
+          key: viewerTitleFieldKey,
+          controller: _title,
+          autofocus: true,
+          maxLines: 1,
+          style: style,
+          cursorColor: colors.ink,
+          textInputAction: TextInputAction.done,
+          textCapitalization: TextCapitalization.sentences,
+          onSubmitted: (String _) => _save(),
+          decoration: InputDecoration(
+            filled: false,
+            hintText: viewerTitleHint,
+            hintStyle: style.copyWith(color: colors.inkSoft),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: colors.inkSoft),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color: colors.ink,
+                width: _logBarTitleRule,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_renaming) {
+      return PhoneSheet(
+        title: viewerTitleLabel,
+        actions: <Widget>[
+          Expanded(
+            child: StickerButton(
+              key: viewerSaveTitleKey,
+              label: viewerSaveTitleLabel,
+              onPressed: _save,
+            ),
+          ),
+        ],
+        child: _field(context),
+      );
+    }
+    final bool canRename = widget.scene.onRename != null;
+    final bool titled = _titleOrNull(widget.scene.entry.title) != null;
+    return PhoneSheet(
+      child: Padding(
+        padding: _sheetBottomPadding,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            if (canRename) ...<Widget>[
+              _SheetRow(
+                key: viewerRenameRowKey,
+                glyph: IconStickerGlyph.edit,
+                label: titled ? viewerRenameLabel : viewerTitleHint,
+                onPressed: () => setState(() => _renaming = true),
+              ),
+              Divider(
+                height: _sheetRowSeam,
+                thickness: _sheetRowSeam,
+                color: context.colors.dashMuted,
+              ),
+            ],
+            _SheetRow(
+              key: logActionsDeleteKey,
+              glyph: IconStickerGlyph.trash,
+              label: viewerDeleteLogLabel,
+              color: context.colors.dangerInk,
+              onPressed: _delete,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetRow extends StatelessWidget {
+  const _SheetRow({
+    super.key,
+    required this.glyph,
+    required this.label,
+    required this.onPressed,
+    this.color,
+  });
+
+  final IconStickerGlyph glyph;
+  final String label;
+  final VoidCallback onPressed;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color ink = color ?? context.colors.ink;
+    return Pressable(
+      label: label,
+      onPressed: onPressed,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _sheetRowHeight),
+        child: Padding(
+          padding: _sheetRowPadding,
+          child: Row(
+            children: <Widget>[
+              IconStickerGlyphIcon(glyph: glyph, color: ink, size: _sheetGlyph),
+              const SizedBox(width: _sheetRowGap),
+              Expanded(
+                child: Text(
+                  label,
+                  style: context.textStyles.labelSans.copyWith(color: ink),
+                ),
+              ),
+            ],
           ),
         ),
       ),
