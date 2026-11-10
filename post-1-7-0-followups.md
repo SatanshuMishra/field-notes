@@ -1,6 +1,6 @@
 # post-1-7-0-followups: Post-1.7.0 follow-ups: privacy line, note title focus, note viewer and editor parity, voice button, week garden, overnight Today, day modal
-Status: active
-Updated: 2026-11-10T20:10:48.862Z
+Status: done
+Updated: 2026-11-10T20:10:54.461Z
 Next ids: c4 D1 R2 S1
 
 ## Goal
