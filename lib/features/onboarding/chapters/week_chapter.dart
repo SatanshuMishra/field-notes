@@ -76,8 +76,12 @@ const double _outline = 1.5;
 const double _firstOutline = 2;
 const double _rowRule = 1;
 const double _tracking = 0.06;
-const BorderRadius _choiceRadius = BorderRadius.all(Radius.circular(12));
-const BorderRadius _cardRadius = BorderRadius.all(Radius.circular(16));
+const BorderRadius _choiceRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusControl),
+);
+const BorderRadius _cardRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusLg),
+);
 const BorderRadius _cardInnerRadius = BorderRadius.all(
   Radius.circular(16 - _outline),
 );

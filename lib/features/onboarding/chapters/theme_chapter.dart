@@ -40,7 +40,9 @@ const double _sidebarCardGap = 22;
 const EdgeInsets _cardPadding = EdgeInsets.all(10);
 const double _cardInnerGap = 10;
 const double _cardOutline = 2;
-const BorderRadius _cardRadius = BorderRadius.all(Radius.circular(16));
+const BorderRadius _cardRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusLg),
+);
 const Offset _cardShadowOffset = Offset(3, 3);
 const EdgeInsets _cardLabelPadding = EdgeInsets.symmetric(
   horizontal: 4,
