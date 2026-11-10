@@ -24,6 +24,8 @@ import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/log_viewer/note_panel_view.dart';
 import 'package:field_notes/features/log_viewer/note_sheet_view.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
+import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
+    show viewerTitleFieldKey, viewerTitleHint;
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show NoteEditorView;
@@ -952,5 +954,46 @@ void main() {
     }
     expect(session.outcomes, isEmpty);
     expect(find.byKey(logViewerPanelKey), findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('a failed rename puts the title back and says so', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = FakeViewPadding.zero;
+    tester.view.viewPadding = FakeViewPadding.zero;
+    addTearDown(tester.view.reset);
+    final _Mixed session = await _openMixed(
+      tester,
+      entryId: 'video-log',
+      theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+    );
+    session.repository.updateError = StateError('disk full');
+    final Finder field = find.byKey(viewerTitleFieldKey);
+
+    await tester.tap(field);
+    await tester.pump();
+    await tester.enterText(field, 'The pier');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('The pier'), findsNothing);
+    expect(find.text(viewerTitleHint), findsOneWidget);
+    expect(find.text(logViewerRenameFailedMessage), findsOneWidget);
+    expect(session.repository.titleUpdates, isEmpty);
+
+    session.repository.updateError = null;
+    await tester.tap(field);
+    await tester.pump();
+    await tester.enterText(field, 'The pier');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    expect(session.repository.titleUpdates, <({String id, String? title})>[
+      (id: 'video-log', title: 'The pier'),
+    ]);
+    await _drainToast(tester);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

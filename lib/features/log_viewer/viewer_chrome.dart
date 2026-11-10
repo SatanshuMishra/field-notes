@@ -1591,7 +1591,7 @@ class _LogBarHeading extends StatelessWidget {
 
   Widget? _title(BuildContext context) {
     final String? title = _titleOrNull(scene.entry.title);
-    final ValueChanged<String?>? rename = scene.onRename;
+    final LogViewerRename? rename = scene.onRename;
     if (editable && rename != null) {
       return _ViewerTitleField(
         key: ValueKey<String>(scene.entry.id),
@@ -1670,7 +1670,7 @@ class _ViewerTitleField extends StatefulWidget {
   });
 
   final String? title;
-  final ValueChanged<String?> onRename;
+  final LogViewerRename onRename;
   final Color hintInk;
 
   @override
@@ -1715,7 +1715,18 @@ class _ViewerTitleFieldState extends State<_ViewerTitleField> {
     final String? typed = _titleOrNull(_controller.text);
     if (typed != _saved) {
       _saved = typed;
-      widget.onRename(typed);
+      unawaited(_save(typed));
+    }
+  }
+
+  Future<void> _save(String? typed) async {
+    final bool saved = await widget.onRename(typed);
+    if (saved || !mounted || _saved != typed) {
+      return;
+    }
+    _saved = widget.title;
+    if (!_focus.hasFocus) {
+      _controller.text = widget.title ?? '';
     }
   }
 
@@ -1818,8 +1829,9 @@ class _ViewerLogSheetState extends State<_ViewerLogSheet> {
 
   void _save() {
     final String? typed = _titleOrNull(_title.text);
-    if (typed != _titleOrNull(widget.scene.entry.title)) {
-      widget.scene.onRename?.call(typed);
+    final LogViewerRename? rename = widget.scene.onRename;
+    if (rename != null && typed != _titleOrNull(widget.scene.entry.title)) {
+      unawaited(rename(typed));
     }
     _close();
   }

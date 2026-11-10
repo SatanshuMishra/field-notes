@@ -51,6 +51,11 @@ final class _Calls {
   int later = 0;
   int delete = 0;
   final List<String?> titles = <String?>[];
+
+  Future<bool> rename(String? title) async {
+    titles.add(title);
+    return true;
+  }
 }
 
 void _phone(WidgetTester tester) {
@@ -143,7 +148,7 @@ LogViewerScene _scene(
     onLater: later ? () => calls.later++ : null,
     onDelete: () => calls.delete++,
     onEdit: null,
-    onRename: calls.titles.add,
+    onRename: calls.rename,
   );
 }
 

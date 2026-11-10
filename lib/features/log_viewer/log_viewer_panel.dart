@@ -280,14 +280,16 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     _leave(LogViewerOutcome.deleted);
   }
 
-  Future<void> _rename(Entry entry, String? title) async {
+  Future<bool> _rename(Entry entry, String? title) async {
     try {
       await ref.read(journalRepositoryProvider).setEntryTitle(entry.id, title);
+      return true;
     } catch (error, stackTrace) {
       debugPrint('Log rename failed: $error\n$stackTrace');
       if (mounted) {
         showTransientToast(context, logViewerRenameFailedMessage);
       }
+      return false;
     }
   }
 
@@ -396,7 +398,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       onLater: later == null ? null : _later,
       onDelete: () => _delete(entry),
       onEdit: entry.type == EntryType.text ? () => _edit(entry) : null,
-      onRename: (String? title) => unawaited(_rename(entry, title)),
+      onRename: (String? title) => _rename(entry, title),
     );
   }
 

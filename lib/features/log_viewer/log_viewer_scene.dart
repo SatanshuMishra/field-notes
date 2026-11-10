@@ -10,6 +10,8 @@ import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
 
 const String _quietLineSeparator = ' · ';
 
+typedef LogViewerRename = Future<bool> Function(String? title);
+
 String entryClockOf(BuildContext context, Entry entry) {
   return formatClock(
     context,
@@ -53,7 +55,7 @@ final class LogViewerScene {
   final VoidCallback? onLater;
   final VoidCallback onDelete;
   final VoidCallback? onEdit;
-  final ValueChanged<String?>? onRename;
+  final LogViewerRename? onRename;
 
   String get exitLabel {
     return switch (exit) {
