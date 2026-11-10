@@ -56,6 +56,47 @@ final class TodayClockProvider
 
 String _$todayClockHash() => r'43e4960a0bfc42507fbb193b421a2e046efc0f0b';
 
+@ProviderFor(todayStart)
+final todayStartProvider = TodayStartProvider._();
+
+final class TodayStartProvider
+    extends $FunctionalProvider<DateTime, DateTime, DateTime>
+    with $Provider<DateTime> {
+  TodayStartProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'todayStartProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$todayStartHash();
+
+  @$internal
+  @override
+  $ProviderElement<DateTime> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  DateTime create(Ref ref) {
+    return todayStart(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DateTime value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DateTime>(value),
+    );
+  }
+}
+
+String _$todayStartHash() => r'f529a8c5d435ae24124476e329bd08238dc56208';
+
 @ProviderFor(todayDate)
 final todayDateProvider = TodayDateProvider._();
 
@@ -95,7 +136,7 @@ final class TodayDateProvider
   }
 }
 
-String _$todayDateHash() => r'5247f6b76661000b10050cce675f63001a3937cc';
+String _$todayDateHash() => r'267fddb8cf35ffc9c795de70da76b08c32fd53f1';
 
 @ProviderFor(thisWeekCells)
 final thisWeekCellsProvider = ThisWeekCellsProvider._();
@@ -142,7 +183,7 @@ final class ThisWeekCellsProvider
   }
 }
 
-String _$thisWeekCellsHash() => r'd39e68c8f74415028a752ce03e26ea2808d2a9e6';
+String _$thisWeekCellsHash() => r'232dacfb4785764d05ace104487b1503242d65dc';
 
 @ProviderFor(todayMediaResolver)
 final todayMediaResolverProvider = TodayMediaResolverProvider._();
@@ -317,4 +358,4 @@ final class OnThisDayMemoryProvider
   }
 }
 
-String _$onThisDayMemoryHash() => r'79f247b6c5c00b01e48d8c3c2f035ec6a9b6ac43';
+String _$onThisDayMemoryHash() => r'1c82f4ef0ac48f38b285c60e3cf33b8f898eb8ca';

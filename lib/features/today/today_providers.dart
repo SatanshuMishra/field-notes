@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver_provider.dart';
 import 'package:field_notes/state/state.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'today_date.dart';
@@ -16,11 +19,28 @@ part 'today_providers.g.dart';
 DateTime Function() todayClock(Ref ref) => DateTime.now;
 
 @riverpod
-String todayDate(Ref ref) => captureDateKey(ref.watch(todayClockProvider)());
+DateTime todayStart(Ref ref) {
+  final DateTime now = ref.watch(todayClockProvider)().toLocal();
+  final Timer nextDay = Timer(
+    DateTime(now.year, now.month, now.day + 1).difference(now),
+    ref.invalidateSelf,
+  );
+  final AppLifecycleListener lifecycle = AppLifecycleListener(
+    onResume: ref.invalidateSelf,
+  );
+  ref.onDispose(() {
+    nextDay.cancel();
+    lifecycle.dispose();
+  });
+  return DateTime(now.year, now.month, now.day);
+}
+
+@riverpod
+String todayDate(Ref ref) => captureDateKey(ref.watch(todayStartProvider));
 
 @riverpod
 List<TodayWeekCell> thisWeekCells(Ref ref) {
-  final DateTime today = ref.watch(todayClockProvider)();
+  final DateTime today = ref.watch(todayStartProvider);
   final WeekStart weekStart = ref.watch(weekStartProvider);
   final List<Day> days = ref.watch(allDaysProvider).value ?? const <Day>[];
   return buildWeekCells(today: today, weekStart: weekStart, days: days);
@@ -40,7 +60,7 @@ EntryVideoPlayerFactory todayVideoPlayerFactory(Ref ref) =>
 
 @riverpod
 Future<OnThisDayMemory?> onThisDayMemory(Ref ref) async {
-  final DateTime today = ref.watch(todayClockProvider)();
+  final DateTime today = ref.watch(todayStartProvider);
   final List<Day>? days = ref.watch(allDaysProvider).value;
   final List<Day> candidates = days == null
       ? await ref

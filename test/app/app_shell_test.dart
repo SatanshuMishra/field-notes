@@ -8,8 +8,11 @@ import 'package:field_notes/app/shell/bottom_bar_shell.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/shell/sidebar_shell.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:field_notes/domain/models/models.dart' show EntryType;
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/calendar/calendar.dart';
+import 'package:field_notes/features/capture/core/capture.dart'
+    show CaptureRoute, CaptureRouteRegistry, captureRoutesProvider;
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/search/search.dart';
 import 'package:field_notes/features/settings/settings.dart';
@@ -224,6 +227,44 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey<String>('capture-button')));
       expect(captures, 1);
+    });
+
+    testWidgets('a log opened after midnight is filed under the new day', (
+      WidgetTester tester,
+    ) async {
+      DateTime now = DateTime(2026, 11, 9, 23, 58);
+      final List<String> openedFor = <String>[];
+      await pumpShell(
+        tester,
+        const AppShell(),
+        platform: TargetPlatform.android,
+        surface: _phoneSurface,
+        overrides: <Override>[
+          todayClockProvider.overrideWithValue(() => now),
+          captureRoutesProvider.overrideWithValue(
+            CaptureRouteRegistry.empty.withRoute(
+              CaptureRoute(
+                type: EntryType.text,
+                open: (BuildContext context, String date) async {
+                  openedFor.add(date);
+                  return null;
+                },
+              ),
+            ),
+          ),
+        ],
+      );
+
+      now = DateTime(2026, 11, 10, 0, 3);
+      await tester.pump(const Duration(minutes: 5));
+      await tester.tap(find.byKey(const ValueKey<String>('capture-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Write a note'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(openedFor, <String>['2026-11-10']);
     });
   });
 }
