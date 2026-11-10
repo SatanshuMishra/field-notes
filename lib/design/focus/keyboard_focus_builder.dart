@@ -1,3 +1,4 @@
+import 'package:field_notes/design/focus/input_modality.dart';
 import 'package:flutter/widgets.dart';
 
 class KeyboardFocusBuilder extends StatefulWidget {
@@ -22,6 +23,7 @@ class _KeyboardFocusBuilderState extends State<KeyboardFocusBuilder> {
     super.initState();
     widget.focusNode.addListener(_sync);
     FocusManager.instance.addHighlightModeListener(_onHighlightMode);
+    InputModality.instance.addListener(_sync);
   }
 
   @override
@@ -38,12 +40,14 @@ class _KeyboardFocusBuilderState extends State<KeyboardFocusBuilder> {
   void dispose() {
     widget.focusNode.removeListener(_sync);
     FocusManager.instance.removeHighlightModeListener(_onHighlightMode);
+    InputModality.instance.removeListener(_sync);
     super.dispose();
   }
 
   bool _isKeyboardFocused() =>
       widget.focusNode.hasPrimaryFocus &&
-      FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+      FocusManager.instance.highlightMode == FocusHighlightMode.traditional &&
+      InputModality.instance.traversing;
 
   void _onHighlightMode(FocusHighlightMode _) => _sync();
 
