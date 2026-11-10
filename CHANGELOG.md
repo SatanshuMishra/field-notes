@@ -6,6 +6,35 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-09
+
+This release lets you give any log a title and brings voice notes and videos onto one set of player controls.
+
+### New
+
+- You can give any log a title. Type one while you record a voice note or video, in the message that appears once it is saved, or at the top of a note. Rename a log later from its card's More menu or straight from the viewer. Titles sync to your other devices and are included when you export your journal.
+- Voice notes and videos share one player, on the cards and in the viewer, with a timeline, skip back and forward, mute, volume and speed. The volume and speed you choose apply to every recording.
+- Hover over or drag along a video's timeline to see a small picture of that moment above it.
+- On a touch screen, double-tap the left or right side of a video to skip back or forward 10 seconds.
+- On Mac and Windows, every player answers the same keys: Space or K to play and pause, J and L to skip 10 seconds, the left and right arrows to move 5 seconds, the up and down arrows to change the volume, and M to mute.
+- In the viewer on Mac and Windows, press F, or double-click a video, to hide everything else and fill the window with it. Escape brings the rest back, and pressing it again closes the viewer.
+
+### Improved
+
+- Notes open in their own writing space with a title at the top. A note that already starts with a heading shows it as its title, and the heading moves into the title the next time you open and save the note.
+- Log cards show a title only when the log has one, and every card has Open and More buttons, with Rename, Delete and, for notes, Edit in More. Clicking a video's picture plays or pauses it, dragging its timeline moves through it, and clicking anywhere else on the card opens it.
+- The viewer uses the same player as the cards and shows a log's title only when it has one.
+- On Mac and Windows, New log opens a taped page with three paper scraps: Voice, Video and Note. On Android, the New log sheet keeps its familiar rows, now with soft shadows under Voice and Video and handwritten captions.
+- The voice recorder uses the same record button as the video recorder and, like it, fades its controls away while you record.
+- You can make the Field Notes window narrower on Mac and Windows. When space runs short, the sidebar folds up and Today hides its side column; both come back when you widen the window.
+- Confirmation questions put their buttons in the order your system uses, and pressing Escape always picks the safe choice. On Android they open as a sheet from the bottom of the screen.
+- Search and Settings headings, and the messages they show while loading, when empty or when something goes wrong, now look the same as the rest of the app.
+- On Mac and Windows, buttons that show only an icon name themselves in a tooltip, and buttons everywhere are large enough to hit easily.
+
+### Fixed
+
+- On Mac and Windows, clicking with the mouse no longer leaves an outline around what you clicked. The outline still appears when you move around with Tab or the arrow keys.
+
 ## [1.6.0] - 2026-11-09
 
 ### Improved
