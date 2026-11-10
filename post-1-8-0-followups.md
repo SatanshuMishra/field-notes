@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-10T23:05:06.733Z
+Updated: 2026-11-10T23:06:07.648Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
@@ -15,7 +15,7 @@ Prototype the owner's eight 1.8.0 follow-ups (a to h) on the design canvas, get 
 
 ## Where things stand
 
-Fanout split a to h into ten MSPs (one PR each) from origin/main f454ef02. Built and under code review against fn/fanout18/review-bar.md: modal-video-transport (feat/modal-video-transport, b72f77ca, worktree .claude/worktrees/agent-a1abc2d27eedfac3c) and update-launch-check (feat/update-launch-check, 74df60f6, worktree .claude/worktrees/agent-aa28e60456c8b13a7). Five build agents are still running in worktrees: outline-primitive (fix/outlined-surface), hover-padding (fix/hover-padding), sync status box plus Sync now feedback (feat/sync-status-box), page-transitions, streak-late-night. Waiting to start: day-modal-tidy and night-sky stack on fix/outlined-surface; reminder-schedules stacks on feat/streak-late-night.
+Fanout split a to h into ten MSPs (one PR each) from origin/main f454ef02. Built and under code review against fn/fanout18/review-bar.md: modal-video-transport (feat/modal-video-transport, b72f77ca, worktree .claude/worktrees/agent-a1abc2d27eedfac3c), update-launch-check (feat/update-launch-check, 74df60f6, worktree .claude/worktrees/agent-aa28e60456c8b13a7) and outline-primitive (fix/outlined-surface, c19fe624, worktree .claude/worktrees/agent-a227d6afe19505c51). Building in worktrees: hover-padding (fix/hover-padding), sync status box plus Sync now feedback (feat/sync-status-box), page-transitions, streak-late-night, and, stacked on c19fe624, day-modal-tidy (feat/day-modal-tidy) and night-sky (feat/night-sky). Waiting to start: reminder-schedules stacks on feat/streak-late-night. fix/outlined-surface and feat/update-launch-check both edit test/features/settings/sections/about_updates_test.dart.
 
 Root causes found: rounded outlines break where an opaque child is clipped only to the border's outer curve (day modal right pane, day_detail_panel.dart:487-535; five other sites); hover fills hug text because Pressable sizes its fill to its child and rows pad outside it (pressable.dart:116-129).
 
