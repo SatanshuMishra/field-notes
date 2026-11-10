@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-10T22:37:36.397Z
+Updated: 2026-11-10T22:37:39.588Z
 Next ids: c4 D1 R2 S1
 
 ## Goal
@@ -34,4 +34,5 @@ Wait for the owner's answer on the 1.8 follow-ups boards and the four questions,
 ## Where the details live
 
 - Owner's request: 2026-11-10 message with ten screenshots, items a to h
-- Prototype canvas: https://claude.ai/artifact/6Jhnx5E1BxCPH9DgNu9R1m, local copy in the session scratchpad artifact-files folder
+- Prototype canvas: https://claude.ai/artifact/6Jhnx5E1BxCPH9DgNu9R1m, page "1.8 follow-ups" (boards DayModal18, HoverPadding, SyncStatus, Transitions, NightSky, Reminders); local copy in the session scratchpad artifact-files folder
+- Read-only worktree at origin/main for tracing: ~/.mitosis/fireplace/explore-180
