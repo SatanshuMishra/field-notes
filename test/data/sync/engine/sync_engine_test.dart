@@ -866,4 +866,22 @@ void main() {
       );
     },
   );
+
+  test('Sync now says whether the sync went through', () async {
+    final SyncTestDevice mac = await enrolDevice(relay, device('Mac'));
+    final SyncEngine engine = mac.engine();
+    await engine.start();
+
+    expect(await engine.syncNow(), isTrue);
+
+    mac.http.intercept = (http.BaseRequest request) async =>
+        request.method == 'GET' && request.url.path == _pull
+        ? throw http.ClientException('The relay is down')
+        : null;
+    expect(await engine.syncNow(), isFalse);
+
+    mac.http.intercept = null;
+    mac.network.kind = NetworkKind.offline;
+    expect(await engine.syncNow(), isFalse);
+  });
 }

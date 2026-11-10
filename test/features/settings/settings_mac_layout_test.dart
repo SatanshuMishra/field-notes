@@ -415,7 +415,7 @@ void main() {
     ];
     for (final Size window in <Size>[_smallestWindow, _laptopWindow, _window]) {
       for (final SyncStatus status in statuses) {
-        final String label = status.label(now);
+        final String label = syncConnectionLabel(status, now);
         final String name = '$label at ${window.width.round()}';
         await _pumpMacSettings(tester, window: window, status: status);
         await tester.tap(find.byKey(settingsTabKey(SettingsTab.syncStorage)));

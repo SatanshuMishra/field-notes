@@ -18,6 +18,7 @@ const EdgeInsets _pillPadding = EdgeInsets.symmetric(
   vertical: 5 + Shapes.outlineWidth,
 );
 const double _pillFontSize = 12;
+const double _leadingGap = 6;
 
 enum SettingsActionTone { neutral, primary, danger }
 
@@ -27,11 +28,13 @@ class SettingsActionButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.tone = SettingsActionTone.neutral,
+    this.leading,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final SettingsActionTone tone;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -41,11 +44,13 @@ class SettingsActionButton extends StatelessWidget {
         label: label,
         onPressed: onPressed,
         tone: _PillTone.neutral,
+        leading: leading,
       ),
       (ShellLayout.sidebar, SettingsActionTone.primary) => _ActionPill(
         label: label,
         onPressed: onPressed,
         tone: _PillTone.primary,
+        leading: leading,
       ),
       (ShellLayout.sidebar, SettingsActionTone.danger) => StickerButton(
         label: label,
@@ -53,11 +58,13 @@ class SettingsActionButton extends StatelessWidget {
         padTapTarget: true,
         variant: StickerButtonVariant.danger,
         labelStyle: _pillLabelStyle(context),
+        icon: leading,
       ),
       (ShellLayout.bottomBar, _) => StickerButton(
         label: label,
         onPressed: onPressed,
         padTapTarget: true,
+        icon: leading,
         variant: switch (tone) {
           SettingsActionTone.neutral => StickerButtonVariant.secondary,
           SettingsActionTone.primary => StickerButtonVariant.primary,
@@ -78,11 +85,13 @@ class _ActionPill extends StatelessWidget {
     required this.label,
     required this.onPressed,
     required this.tone,
+    this.leading,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final _PillTone tone;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -123,13 +132,24 @@ class _ActionPill extends StatelessWidget {
             boxShadow: shadows.control,
           ),
         };
+        final Widget words = Text(
+          label,
+          textAlign: TextAlign.center,
+          style: _pillLabelStyle(context).copyWith(color: foreground),
+        );
+        final Widget? leading = this.leading;
         final Widget text = Padding(
           padding: _pillPadding,
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: _pillLabelStyle(context).copyWith(color: foreground),
-          ),
+          child: leading == null
+              ? words
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    leading,
+                    const SizedBox(width: _leadingGap),
+                    Flexible(child: words),
+                  ],
+                ),
         );
         return Opacity(
           opacity: enabled ? 1.0 : 0.5,

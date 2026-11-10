@@ -1,15 +1,20 @@
+import 'dart:async';
+
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/data/sync/devices/device_service.dart';
+import 'package:field_notes/data/sync/engine/sync_engine.dart';
 import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/sync/ui/device_list.dart';
 import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
 import 'package:field_notes/state/repository_providers.dart';
+import 'package:field_notes/state/sync_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -87,6 +92,44 @@ List<JournalDevice> _twoDevices(DateTime now) => <JournalDevice>[
     isThisDevice: false,
   ),
 ];
+
+final class _SyncNowEngine implements SyncEngine {
+  _SyncNowEngine(this.answer);
+
+  final Future<bool> Function() answer;
+  int syncs = 0;
+
+  @override
+  Future<bool> syncNow() {
+    syncs += 1;
+    return answer();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+final Finder _syncNowSpinner = find.descendant(
+  of: find.byType(SyncNowButton),
+  matching: find.byType(CircularProgressIndicator),
+);
+
+Finder _inSyncNow(String label) =>
+    find.descendant(of: find.byType(SyncNowButton), matching: find.text(label));
+
+Future<_SyncNowEngine> _pumpSyncNow(
+  WidgetTester tester,
+  Future<bool> Function() answer,
+) async {
+  final _SyncNowEngine engine = _SyncNowEngine(answer);
+  await _pumpOn(tester, TargetPlatform.macOS, <Override>[
+    ...syncOnOverrides(status: SyncedStatus(DateTime.now().toUtc())),
+    syncEngineProvider.overrideWithValue(engine),
+  ]);
+  await tester.tap(_inSyncNow(syncNowLabel));
+  await tester.pump();
+  return engine;
+}
 
 Future<void> _pumpSection(
   WidgetTester tester,
@@ -376,9 +419,11 @@ void main() {
       syncOnOverrides(status: status, devices: _twoDevices(now)),
     );
 
-    expect(find.text(status.label(now)), findsOneWidget);
-    expect(find.text('Last change sent just now'), findsOneWidget);
-    expect(_rowControl(status.label(now), _action('Sync now')), findsOneWidget);
+    expect(find.text('Connected'), findsOneWidget);
+    expect(find.text('Last synced just now'), findsOneWidget);
+    expect(find.text(status.label(now)), findsNothing);
+    expect(find.textContaining('Last change sent'), findsNothing);
+    expect(_rowControl('Connected', _action('Sync now')), findsOneWidget);
     expect(find.text('Pause sync'), findsOneWidget);
     expect(find.text(_pauseCaption), findsOneWidget);
     expect(
@@ -526,8 +571,8 @@ void main() {
       _expectGroupLabelsDrawn(tester, 'Mac, synced');
       _expectTopToBottom(tester, <String>[
         'sync',
-        synced.label(now),
-        'Last change sent just now',
+        'Connected',
+        'Last synced just now',
         'Pause sync',
         _pauseCaption,
         'server & devices',
@@ -543,8 +588,8 @@ void main() {
       ], 'Mac, synced');
       _expectStatusRow(
         tester,
-        label: synced.label(now),
-        description: 'Last change sent just now',
+        label: 'Connected',
+        description: 'Last synced just now',
         tone: colors.sage,
         syncNow: true,
         reason: 'Mac, synced',
@@ -624,7 +669,7 @@ void main() {
       _expectGroupLabelsDrawn(tester, 'Windows, attention');
       _expectTopToBottom(tester, <String>[
         'sync',
-        unreachable.label(now),
+        "Can't reach your server",
         unreachable.fix!,
         'Pause sync',
         'server & devices',
@@ -637,7 +682,7 @@ void main() {
       ], 'Windows, attention');
       _expectStatusRow(
         tester,
-        label: unreachable.label(now),
+        label: "Can't reach your server",
         description: null,
         tone: colors.dangerInk,
         syncNow: true,
@@ -762,4 +807,79 @@ void main() {
     expect(find.text('Battery: Optimised'), findsNothing);
     expect(_button(openBatterySettingsLabel), findsNothing);
   }, variant: _android);
+
+  testWidgets(
+    'Sync now spins for at least 1.6 seconds, then says Synced for two',
+    (WidgetTester tester) async {
+      final _SyncNowEngine engine = await _pumpSyncNow(
+        tester,
+        () async => true,
+      );
+
+      expect(engine.syncs, 1);
+      expect(_syncNowSpinner, findsOneWidget);
+      expect(_inSyncNow(syncNowLabel), findsNothing);
+      await tester.pump(const Duration(milliseconds: 1590));
+      expect(_syncNowSpinner, findsOneWidget);
+      expect(_inSyncNow('Synced'), findsNothing);
+
+      await tester.pump(const Duration(milliseconds: 10));
+      expect(_syncNowSpinner, findsNothing);
+      expect(_inSyncNow('Synced'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SyncNowButton),
+          matching: find.byType(IconStickerGlyphIcon),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(_inSyncNow('Synced'));
+      await tester.pump(const Duration(milliseconds: 1990));
+      expect(engine.syncs, 1);
+      expect(_inSyncNow('Synced'), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 10));
+      expect(_inSyncNow('Synced'), findsNothing);
+      expect(_inSyncNow(syncNowLabel), findsOneWidget);
+      expect(_syncNowSpinner, findsNothing);
+    },
+    variant: _macOS,
+  );
+
+  testWidgets('Sync now keeps spinning while a slow sync runs', (
+    WidgetTester tester,
+  ) async {
+    final Completer<bool> sync = Completer<bool>();
+    await _pumpSyncNow(tester, () => sync.future);
+
+    await tester.pump(const Duration(seconds: 5));
+    expect(_syncNowSpinner, findsOneWidget);
+
+    sync.complete(true);
+    await tester.pump();
+    expect(_syncNowSpinner, findsNothing);
+    expect(_inSyncNow('Synced'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 2));
+    expect(_inSyncNow(syncNowLabel), findsOneWidget);
+  }, variant: _macOS);
+
+  testWidgets('a failed Sync now offers Try again', (
+    WidgetTester tester,
+  ) async {
+    final _SyncNowEngine engine = await _pumpSyncNow(tester, () async => false);
+
+    await tester.pump(const Duration(milliseconds: 1600));
+    expect(_syncNowSpinner, findsNothing);
+    expect(_inSyncNow('Synced'), findsNothing);
+    expect(_inSyncNow('Try again'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+    expect(_inSyncNow('Try again'), findsOneWidget);
+
+    await tester.tap(_inSyncNow('Try again'));
+    await tester.pump();
+    expect(engine.syncs, 2);
+    expect(_syncNowSpinner, findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1600));
+    expect(_inSyncNow('Try again'), findsOneWidget);
+  }, variant: _macOS);
 }

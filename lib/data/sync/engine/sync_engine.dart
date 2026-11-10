@@ -262,6 +262,7 @@ class SyncEngine {
   int _liveFailures = 0;
   DateTime? _blockedUntil;
   DateTime? _lastSyncedAt;
+  bool _lastCycleSucceeded = false;
   int _shownSyncs = 0;
   DateTime? _syncShownSince;
   Timer? _syncShownTimer;
@@ -406,9 +407,9 @@ class SyncEngine {
     }
   }
 
-  Future<void> syncNow() async {
+  Future<bool> syncNow() async {
     _unlockKeys();
-    await _shownSync();
+    return _shownSync();
   }
 
   Future<void> pause(bool paused) async {
@@ -934,9 +935,9 @@ class SyncEngine {
     await _requestCycle();
   }
 
-  Future<void> _shownSync() async {
+  Future<bool> _shownSync() async {
     if (!_mayTalk) {
-      return;
+      return false;
     }
     _beginShownSync();
     try {
@@ -944,6 +945,7 @@ class SyncEngine {
     } finally {
       _endShownSync();
     }
+    return _lastCycleSucceeded;
   }
 
   void _beginShownSync() {
@@ -1108,6 +1110,7 @@ class SyncEngine {
       DeviceService(database: _db, keyStore: _keyStore, client: client);
 
   Future<void> _cycleOnce() async {
+    _lastCycleSucceeded = false;
     if (!_mayTalk || _rebasing) {
       return;
     }
@@ -1463,6 +1466,7 @@ class SyncEngine {
   }
 
   void _succeeded() {
+    _lastCycleSucceeded = true;
     _failures = 0;
     _troubled = false;
     _storageFull = false;
