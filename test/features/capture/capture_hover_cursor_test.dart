@@ -1,3 +1,4 @@
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
@@ -240,6 +241,7 @@ void main() {
           EntryType.video,
         },
         onOptionSelected: (EntryType _) {},
+        layout: ShellLayout.bottomBar,
       ),
       background: const Color(0xFFF6EDDD),
     );

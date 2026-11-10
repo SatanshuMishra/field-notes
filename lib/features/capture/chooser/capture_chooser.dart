@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,6 +15,8 @@ import 'capture_chooser_sheet.dart';
 import 'capture_routes_provider.dart';
 
 const String _kChooserBarrierLabel = 'Dismiss capture chooser';
+const double _kPageEntryDrop = 12;
+const double _kPageEntryTurnDegrees = -1.4;
 
 Future<EntryType?> showCaptureChooser(
   BuildContext context, {
@@ -35,12 +39,13 @@ Future<EntryType?> showCaptureChooser(
       },
     );
   }
+  final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
   return showGeneralDialog<EntryType>(
     context: context,
     barrierDismissible: true,
     barrierLabel: _kChooserBarrierLabel,
     barrierColor: FieldNotesColors.light.ink.withValues(alpha: 0.32),
-    transitionDuration: Motion.modalPop,
+    transitionDuration: still ? Duration.zero : Motion.modalPop,
     pageBuilder:
         (
           BuildContext dialogContext,
@@ -69,9 +74,19 @@ Future<EntryType?> showCaptureChooser(
           );
           return FadeTransition(
             opacity: curved,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved),
+            child: AnimatedBuilder(
+              animation: curved,
               child: child,
+              builder: (BuildContext _, Widget? page) {
+                final double left = 1 - curved.value;
+                return Transform.translate(
+                  offset: Offset(0, _kPageEntryDrop * left),
+                  child: Transform.rotate(
+                    angle: _kPageEntryTurnDegrees * math.pi / 180 * left,
+                    child: page,
+                  ),
+                );
+              },
             ),
           );
         },
