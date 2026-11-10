@@ -189,29 +189,11 @@ Future<void> _startVideoTake(WidgetTester tester) async {
   _requireVideoPhase(tester, VideoRecorderPhase.recording);
 }
 
-Future<void> _showSecondQuestion(WidgetTester tester) async {
-  final Finder first = find.descendant(
-    of: find.byKey(reflectionQuestionKey),
-    matching: find.text(reflectionQuestions.first, findRichText: true),
-  );
-  for (
-    int shuffle = 0;
-    shuffle < reflectionQuestions.length && first.evaluate().isEmpty;
-    shuffle++
-  ) {
-    await _tap(tester, reflectionShuffleKey);
-    await tester.pump(_panelOpen);
-  }
-  await _tap(tester, reflectionShuffleKey);
-  await tester.pump(_panelOpen);
-}
-
 Future<void> _pumpVoiceQuestion(
   WidgetTester tester,
   A11yVariant variant,
 ) async {
   await _openVoice(tester, variant, prompts: true);
-  await _showSecondQuestion(tester);
   _requireVoicePhase(tester, VoiceRecorderPhase.idle);
 }
 
@@ -331,7 +313,6 @@ final List<A11yState> immersiveStates = <A11yState>[
     pump: _pumpVoiceQuestion,
     proof: <A11yProof>[
       A11yProof(find.byKey(reflectionQuestionKey)),
-      A11yProof(find.byKey(reflectionShuffleKey)),
       A11yProof(find.byKey(voiceRecordButtonKey)),
     ],
   ),

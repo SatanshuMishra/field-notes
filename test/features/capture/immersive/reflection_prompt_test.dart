@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:field_notes/app/app.dart' show AppTextScale;
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/voice/voice_composer.dart';
@@ -160,6 +161,7 @@ Future<void> _openVoice(
   double textScale = 1,
   TextScaler? ambientScaler,
   FakeVoiceRecorder? recorder,
+  Future<void> Function(BuildContext context)? open,
 }) async {
   debugDefaultTargetPlatformOverride = platform;
   tester.view.physicalSize = window;
@@ -193,7 +195,9 @@ Future<void> _openVoice(
           body: Center(
             child: Builder(
               builder: (BuildContext context) => TextButton(
-                onPressed: () async => showVoiceComposer(context, _today),
+                onPressed: () async => open == null
+                    ? showVoiceComposer(context, _today)
+                    : open(context),
                 child: const Text(_launcher),
               ),
             ),
@@ -232,47 +236,60 @@ _Rendered _rendered(WidgetTester tester) {
   );
 }
 
+Future<void> _pumpVoiceSheet(
+  WidgetTester tester, {
+  required TargetPlatform platform,
+  required Size window,
+  required double textScale,
+  required int questionIndex,
+}) async {
+  final TextEditingController title = TextEditingController();
+  addTearDown(title.dispose);
+  await _openVoice(
+    tester,
+    platform: platform,
+    window: window,
+    textScale: textScale,
+    open: (BuildContext context) => showImmersiveRecorder<void>(
+      context,
+      barrierLabel: 'voice recorder',
+      builder: (BuildContext _) => VoiceRecorderSheet(
+        phase: VoiceRecorderPhase.idle,
+        onStart: () {},
+        onStop: () {},
+        onCancel: () {},
+        titleController: title,
+        questionIndex: questionIndex,
+      ),
+    ),
+  );
+}
+
 Future<void> _expectEveryQuestion(
-  WidgetTester tester,
-  void Function(_Rendered rendered, String reason) expectText,
-) async {
-  final Finder shuffle = find.byKey(reflectionShuffleKey);
-  final Finder label = find.text(_shuffle);
-  final Set<String> seen = <String>{};
-  for (int step = 0; step < _questions.length; step++) {
-    final String question = tester
-        .widget<Text>(
-          find.descendant(
-            of: find.byKey(reflectionQuestionKey),
-            matching: find.byType(Text),
-          ),
-        )
-        .data!;
-    seen.add(question);
-    expectText(_rendered(tester), question);
-    final Rect hitBox = tester.getRect(shuffle);
-    expect(hitBox.width, greaterThanOrEqualTo(48), reason: question);
-    expect(hitBox.height, greaterThanOrEqualTo(48), reason: question);
-    expect(
-      tester.getRect(label).height,
-      moreOrLessEquals(tester.getSize(label).height, epsilon: 0.01),
-      reason: question,
+  WidgetTester tester, {
+  required TargetPlatform platform,
+  required Size window,
+  double textScale = 1,
+  required void Function(_Rendered rendered, String reason) expectText,
+}) async {
+  for (int index = 0; index < _questions.length; index++) {
+    final String question = _questions[index];
+    await _pumpVoiceSheet(
+      tester,
+      platform: platform,
+      window: window,
+      textScale: textScale,
+      questionIndex: index,
     );
+    expect(find.text(question), findsOneWidget, reason: question);
+    expectText(_rendered(tester), question);
     expect(
       tester.getRect(find.byKey(reflectionQuestionKey)).bottom,
-      lessThanOrEqualTo(hitBox.top + 0.5),
-      reason: question,
-    );
-    expect(
-      hitBox.bottom,
       lessThanOrEqualTo(tester.getRect(find.byKey(voiceOrbZoneKey)).top + 0.5),
       reason: question,
     );
     expect(tester.takeException(), isNull, reason: question);
-    await tester.tap(shuffle);
-    await tester.pump();
   }
-  expect(seen, _questions.toSet());
 }
 
 void _expectReflowedAtOrAbove(
@@ -321,7 +338,6 @@ void main() {
       for (final String question in _questions) {
         expect(find.text(question), findsNothing);
       }
-      expect(find.text(_shuffle), findsNothing);
       expect(find.text(_kicker), findsNothing);
       expect(
         tester.getSize(find.byKey(const ValueKey<String>('prompt'))),
@@ -332,39 +348,42 @@ void main() {
   });
 
   testWidgets(
-    'a question and Ask me something else show while idle and the shuffle advances',
+    'the question chosen when the recorder opens offers no shuffle and stays fixed through every phase',
     (WidgetTester tester) async {
       _useWindow(tester, TargetPlatform.macOS);
-      await tester.pumpWidget(
-        _prompt(
-          enabled: true,
-          phase: StagePhase.idle,
-          platform: TargetPlatform.macOS,
-          initialIndex: 6,
-        ),
+      Widget prompt(StagePhase phase, int index) => _prompt(
+        enabled: true,
+        phase: phase,
+        platform: TargetPlatform.macOS,
+        initialIndex: index,
       );
+
+      await tester.pumpWidget(prompt(StagePhase.idle, 6));
 
       expect(find.text(_questions[6]), findsOneWidget);
       expect(find.text(_kicker), findsOneWidget);
-      expect(find.text(_shuffle), findsOneWidget);
-      final Size shuffle = tester.getSize(find.byKey(reflectionShuffleKey));
-      expect(shuffle.height, greaterThanOrEqualTo(48));
-      expect(shuffle.width, greaterThanOrEqualTo(48));
+      expect(find.text(_shuffle), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey<String>('prompt')),
+          matching: find.byType(Pressable),
+        ),
+        findsNothing,
+      );
 
-      await tester.tap(find.byKey(reflectionShuffleKey));
-      await tester.pump();
+      for (final StagePhase phase in StagePhase.values) {
+        await tester.pumpWidget(prompt(phase, 0));
+        await tester.pump(const Duration(milliseconds: 1400));
 
-      expect(find.text(_questions[0]), findsOneWidget);
-      expect(find.text(_questions[6]), findsNothing);
-
-      await tester.tap(find.byKey(reflectionShuffleKey));
-      await tester.pump();
-      expect(find.text(_questions[1]), findsOneWidget);
+        expect(find.text(_questions[6]), findsOneWidget, reason: phase.name);
+        expect(find.text(_questions[0]), findsNothing, reason: phase.name);
+        expect(find.text(_shuffle), findsNothing, reason: phase.name);
+      }
       debugDefaultTargetPlatformOverride = null;
     },
   );
 
-  testWidgets('recording hides the shuffle and fades the question to 45%', (
+  testWidgets('recording fades the question to 45%', (
     WidgetTester tester,
   ) async {
     _useWindow(tester, TargetPlatform.android);
@@ -397,7 +416,6 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1400));
 
       expect(find.text(_questions[2]), findsOneWidget, reason: phase.name);
-      expect(find.text(_shuffle), findsNothing, reason: phase.name);
       expect(
         tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity,
         0.45,
@@ -407,44 +425,7 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('Ask me something else fades away when the breath starts', (
-    WidgetTester tester,
-  ) async {
-    _useWindow(tester, TargetPlatform.macOS);
-    Widget prompt(StagePhase phase) => _prompt(
-      enabled: true,
-      phase: phase,
-      platform: TargetPlatform.macOS,
-      initialIndex: 6,
-    );
-
-    await tester.pumpWidget(prompt(StagePhase.idle));
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.pumpWidget(prompt(StagePhase.breathing));
-    await tester.pump(const Duration(milliseconds: 130));
-
-    final double fade = tester
-        .widgetList<FadeTransition>(
-          find.ancestor(
-            of: find.text(_shuffle),
-            matching: find.byType(FadeTransition),
-          ),
-        )
-        .fold<double>(
-          1,
-          (double product, FadeTransition transition) =>
-              product * transition.opacity.value,
-        );
-    expect(fade, greaterThan(0));
-    expect(fade, lessThan(1));
-
-    await tester.pump(const Duration(milliseconds: 300));
-
-    expect(find.text(_shuffle), findsNothing);
-    debugDefaultTargetPlatformOverride = null;
-  });
-
-  testWidgets('breathing hides the shuffle but keeps the question bright', (
+  testWidgets('breathing keeps the question bright', (
     WidgetTester tester,
   ) async {
     _useWindow(tester, TargetPlatform.macOS);
@@ -457,7 +438,6 @@ void main() {
     );
 
     expect(find.text(_questions[0]), findsOneWidget);
-    expect(find.text(_shuffle), findsNothing);
     expect(
       tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity,
       1.0,
@@ -505,23 +485,21 @@ void main() {
   });
 
   testWidgets(
-    'the voice recorder keeps Ask me something else full size and grows the question past 22.5 px at the default macOS window',
+    'the voice recorder grows every question past 22.5 px at the default macOS window',
     (WidgetTester tester) async {
       for (final double textScale in <double>[0.9, 1]) {
-        await _openVoice(
+        await _expectEveryQuestion(
           tester,
           platform: TargetPlatform.macOS,
           window: const Size(873, 632),
           textScale: textScale,
-        );
-        await _expectEveryQuestion(
-          tester,
-          (_Rendered rendered, String reason) => _expectReflowedAtOrAbove(
-            rendered,
-            '$reason at $textScale',
-            question: 22.5,
-            kickerRequired: true,
-          ),
+          expectText: (_Rendered rendered, String reason) =>
+              _expectReflowedAtOrAbove(
+                rendered,
+                '$reason at $textScale',
+                question: 22.5,
+                kickerRequired: true,
+              ),
         );
       }
       await tester.pumpWidget(const SizedBox.shrink());
@@ -532,20 +510,18 @@ void main() {
   testWidgets(
     'a Large text size keeps every question at 22 px or more, unscaled, at the default macOS window',
     (WidgetTester tester) async {
-      await _openVoice(
+      await _expectEveryQuestion(
         tester,
         platform: TargetPlatform.macOS,
         window: const Size(873, 632),
         textScale: 1.15,
-      );
-      await _expectEveryQuestion(
-        tester,
-        (_Rendered rendered, String reason) => _expectReflowedAtOrAbove(
-          rendered,
-          reason,
-          question: 22,
-          kickerRequired: true,
-        ),
+        expectText: (_Rendered rendered, String reason) =>
+            _expectReflowedAtOrAbove(
+              rendered,
+              reason,
+              question: 22,
+              kickerRequired: true,
+            ),
       );
       await tester.pumpWidget(const SizedBox.shrink());
       debugDefaultTargetPlatformOverride = null;
@@ -553,41 +529,36 @@ void main() {
   );
 
   testWidgets(
-    'a 1.5 text scale hides the kicker and grows every question past 22.5 px at the default macOS window',
+    'a 1.5 text scale grows every question past 22.5 px at the default macOS window',
     (WidgetTester tester) async {
-      await _openVoice(
+      await _expectEveryQuestion(
         tester,
         platform: TargetPlatform.macOS,
         window: const Size(873, 632),
         textScale: 1.5,
+        expectText: (_Rendered rendered, String reason) =>
+            _expectReflowedAtOrAbove(
+              rendered,
+              reason,
+              question: 22.5,
+              kickerRequired: false,
+            ),
       );
-      await _expectEveryQuestion(tester, (_Rendered rendered, String reason) {
-        expect(rendered.kicker, isNull, reason: reason);
-        _expectReflowedAtOrAbove(
-          rendered,
-          reason,
-          question: 22.5,
-          kickerRequired: false,
-        );
-      });
       await tester.pumpWidget(const SizedBox.shrink());
       debugDefaultTargetPlatformOverride = null;
     },
   );
 
   testWidgets(
-    'at the macOS minimum window height every question stays readable beside a full-size shuffle',
+    'at the macOS minimum window height every question stays readable',
     (WidgetTester tester) async {
       for (final double textScale in <double>[1, 1.15]) {
-        await _openVoice(
+        await _expectEveryQuestion(
           tester,
           platform: TargetPlatform.macOS,
           window: const Size(873, 600),
           textScale: textScale,
-        );
-        await _expectEveryQuestion(
-          tester,
-          (_Rendered rendered, String reason) => expect(
+          expectText: (_Rendered rendered, String reason) => expect(
             rendered.question,
             greaterThanOrEqualTo(12),
             reason: '$reason at $textScale',
@@ -611,7 +582,6 @@ void main() {
       await startVoiceTake(tester);
       await tester.pump(voiceElapsedTick);
 
-      expect(find.byKey(reflectionShuffleKey), findsNothing);
       if (find.byKey(reflectionQuestionKey).evaluate().isNotEmpty) {
         expect(_rendered(tester).question, greaterThanOrEqualTo(12));
       }
@@ -660,34 +630,34 @@ void main() {
   );
 
   testWidgets(
-    'the voice recorder keeps Ask me something else full size on a short phone',
+    'the voice recorder holds every question at its 18 px floor on a short phone',
     (WidgetTester tester) async {
       for (final double textScale in <double>[1, 1.15]) {
-        await _openVoice(
+        await _expectEveryQuestion(
           tester,
           platform: TargetPlatform.android,
           window: const Size(320, 568),
           textScale: textScale,
-        );
-        await _expectEveryQuestion(tester, (_Rendered rendered, String reason) {
-          expect(
-            rendered.question,
-            moreOrLessEquals(18, epsilon: 0.01),
-            reason: '$reason at $textScale',
-          );
-          expect(
-            rendered.fit,
-            moreOrLessEquals(1, epsilon: 1e-6),
-            reason: '$reason at $textScale',
-          );
-          if (textScale == 1) {
+          expectText: (_Rendered rendered, String reason) {
             expect(
-              rendered.kicker,
-              greaterThan(12.1),
-              reason: '$reason shrinks the kicker only as far as it must',
+              rendered.question,
+              moreOrLessEquals(18, epsilon: 0.01),
+              reason: '$reason at $textScale',
             );
-          }
-        });
+            expect(
+              rendered.fit,
+              moreOrLessEquals(1, epsilon: 1e-6),
+              reason: '$reason at $textScale',
+            );
+            if (textScale == 1) {
+              expect(
+                rendered.kicker,
+                greaterThan(12.1),
+                reason: '$reason shrinks the kicker only as far as it must',
+              );
+            }
+          },
+        );
       }
       await tester.pumpWidget(const SizedBox.shrink());
       debugDefaultTargetPlatformOverride = null;
@@ -695,10 +665,10 @@ void main() {
   );
 
   testWidgets(
-    'in a short slot the text shrinks or drops its kicker while the shuffle keeps full size and the question holds still across phases',
+    'in a short slot the text shrinks or drops its kicker and the question holds still across phases',
     (WidgetTester tester) async {
       _useWindow(tester, TargetPlatform.macOS);
-      for (final Size slot in const <Size>[Size(640, 120), Size(640, 70)]) {
+      for (final Size slot in const <Size>[Size(640, 72), Size(640, 22)]) {
         final String reason = '$slot';
         await tester.pumpWidget(
           _promptInSlot(
@@ -712,13 +682,8 @@ void main() {
           find.byKey(reflectionQuestionKey),
         );
         expect(
-          tester.getRect(find.byKey(reflectionShuffleKey)).height,
-          48,
-          reason: reason,
-        );
-        expect(
           idleQuestion.bottom,
-          lessThanOrEqualTo(slotRect.bottom - 48),
+          lessThanOrEqualTo(slotRect.bottom),
           reason: reason,
         );
         expect(tester.takeException(), isNull, reason: reason);
@@ -731,7 +696,6 @@ void main() {
           ),
         );
         await tester.pump(const Duration(milliseconds: 300));
-        expect(find.byKey(reflectionShuffleKey), findsNothing, reason: reason);
         expect(
           tester.getRect(find.byKey(reflectionQuestionKey)),
           idleQuestion,
@@ -747,7 +711,7 @@ void main() {
     'a slot too short for a readable question shows nothing and does not overflow',
     (WidgetTester tester) async {
       _useWindow(tester, TargetPlatform.macOS);
-      for (final double height in <double>[40, 48, 52]) {
+      for (final double height in <double>[0, 4, 8]) {
         for (final StagePhase phase in <StagePhase>[
           StagePhase.idle,
           StagePhase.recording,
@@ -759,11 +723,6 @@ void main() {
               platform: TargetPlatform.macOS,
               slot: Size(640, height),
             ),
-          );
-          expect(
-            find.byKey(reflectionShuffleKey),
-            findsNothing,
-            reason: reason,
           );
           expect(
             find.byKey(reflectionQuestionKey),
@@ -786,7 +745,7 @@ void main() {
         _promptInSlot(
           phase: StagePhase.idle,
           platform: TargetPlatform.macOS,
-          slot: const Size(640, 120),
+          slot: const Size(640, 72),
           boldText: true,
         ),
       );
@@ -805,7 +764,7 @@ void main() {
         _promptInSlot(
           phase: StagePhase.idle,
           platform: TargetPlatform.android,
-          slot: const Size(268, 106),
+          slot: const Size(268, 58),
         ),
       );
 
@@ -819,10 +778,10 @@ void main() {
   );
 
   testWidgets(
-    'an Android 2.0 font curve renders the bottom-bar floors at 18 px and 12 px and keeps the kicker at 268x120',
+    'an Android 2.0 font curve renders the bottom-bar floors at 18 px and 12 px and keeps the kicker at 268x72',
     (WidgetTester tester) async {
       _useWindow(tester, TargetPlatform.android);
-      for (final double height in <double>[100, 112, 120]) {
+      for (final double height in <double>[52, 64, 72]) {
         final String reason = '268x$height';
         await tester.pumpWidget(
           _promptInSlot(
@@ -843,7 +802,7 @@ void main() {
           greaterThanOrEqualTo(18 - 0.01),
           reason: reason,
         );
-        if (height == 112) {
+        if (height == 64) {
           expect(
             rendered.question,
             moreOrLessEquals(18, epsilon: 0.01),
@@ -855,7 +814,7 @@ void main() {
             reason: reason,
           );
         }
-        if (height == 120) {
+        if (height == 72) {
           expect(rendered.kicker, isNotNull, reason: reason);
         }
         expect(tester.takeException(), isNull, reason: reason);
