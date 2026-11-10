@@ -1,6 +1,6 @@
 # post-1-7-0-followups: Post-1.7.0 follow-ups: privacy line, note title focus, note viewer and editor parity, voice button, week garden, overnight Today, day modal
 Status: active
-Updated: 2026-11-10T19:27:31.388Z
+Updated: 2026-11-10T19:50:41.443Z
 Next ids: c4 D1 R2 S1
 
 ## Goal
@@ -15,7 +15,7 @@ Prototype the owner's seven 1.7.0 follow-ups (a to g) on the design canvas, get 
 
 ## Where things stand
 
-Open and assigned: week garden (e) #363, 15 tests passing; recorders (a for recordings, d) #364, 543 tests passing; overnight Today (f) #365, 34 tests passing; day modal (g) #366, 528 tests passing. The note room (b, a for notes, c) agent is still building in its own worktree cut from 6af4e271.
+Open and assigned: week garden (e) #363, 15 tests passing; recorders (a for recordings, d) #364, 543 tests passing; overnight Today (f) #365, 34 tests passing; day modal (g) #366, 528 tests passing. The note room (b, a for notes, c) is built on branch feat/note-room, reviewed and merging cleanly with the other four; the overlapping test folders are running on all five merged in a scratch checkout before its pull request opens.
 
 ## Next step
 
