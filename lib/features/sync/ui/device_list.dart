@@ -19,7 +19,8 @@ const String devicesUnavailableMessage = "Can't reach your server right now.";
 const String devicesLockedMessage =
     'Your devices show here once Field Notes can open its keys.';
 const String removeDeviceMessage =
-    'It stops syncing at once. What it already holds stays on it.';
+    'It stops syncing with this journal. Nothing on it is deleted.';
+const String deviceKeepLabel = 'Keep it';
 const String removeDeviceFailedMessage =
     "That device couldn't be removed. Try again.";
 
@@ -76,6 +77,7 @@ class _DeviceListState extends ConsumerState<DeviceList> {
       title: removeDevicePrompt(device.name),
       message: removeDeviceMessage,
       confirmLabel: deviceRemoveLabel,
+      cancelLabel: deviceKeepLabel,
       danger: true,
     );
     if (!confirmed || !mounted) {

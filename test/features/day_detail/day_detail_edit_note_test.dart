@@ -25,6 +25,7 @@ import '../capture/core/capture_test_support.dart'
 import '../notes/support/notes_harness.dart'
     show FakeNoteMediaStore, photoBlob, photoIdA, photoIdB, photoLine;
 import '../../support/note_editor_driver.dart';
+import '../../support/composer_room.dart';
 import 'support/day_detail_harness.dart';
 
 class _EditTrigger extends StatelessWidget {
@@ -106,7 +107,7 @@ void main() {
     await tester.tap(find.text('open editor'));
     await tester.pumpAndSettle();
 
-    expect(find.text(_afternoonTitle), findsOneWidget);
+    expect(composerTitled(_afternoonTitle), findsOneWidget);
     expect(NoteEditorDriver(tester).source, 'a good day');
 
     await driver.enterText('  a better day  ');
@@ -127,7 +128,7 @@ void main() {
     ]);
     expect(drafts.drafts, isEmpty);
     expect(result, isTrue);
-    expect(find.text(_afternoonTitle), findsNothing);
+    expect(composerTitled(_afternoonTitle), findsNothing);
   });
 
   testWidgets(
@@ -153,7 +154,7 @@ void main() {
       await tester.tap(find.byKey(composerCloseKey), warnIfMissed: false);
       await tester.pumpAndSettle();
 
-      expect(find.text(composerDiscardTitle), findsOneWidget);
+      expect(find.text(editDiscardTitle), findsOneWidget);
       expect(drafts.drafts, <String, String>{
         'entry-1': 'a better day, half typed',
       });
@@ -189,7 +190,7 @@ void main() {
       await tester.tap(find.byKey(composerCloseKey), warnIfMissed: false);
       await tester.pump();
 
-      expect(find.text(composerDiscardTitle), findsOneWidget);
+      expect(find.text(editDiscardTitle), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();
@@ -233,7 +234,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repository.noteSaves, isEmpty);
-      expect(find.text(_afternoonTitle), findsOneWidget);
+      expect(composerTitled(_afternoonTitle), findsOneWidget);
       expect(drafts.drafts, <String, String>{
         'entry-1': 'a better day, half typed',
       });
@@ -358,7 +359,7 @@ void main() {
     expect(repository.noteSaves, isEmpty);
     expect(repository.textUpdates, isEmpty);
     expect(result, isFalse);
-    expect(find.text(_afternoonTitle), findsNothing);
+    expect(composerTitled(_afternoonTitle), findsNothing);
   });
 
   testWidgets('the close X on a dirty editor asks first: Keep editing stays, '
@@ -388,12 +389,12 @@ void main() {
 
     await tester.tap(find.byKey(composerCloseKey));
     await tester.pumpAndSettle();
-    expect(find.text(composerDiscardTitle), findsOneWidget);
+    expect(find.text(editDiscardTitle), findsOneWidget);
 
     await tester.tap(find.byKey(composerKeepEditingKey));
     await tester.pumpAndSettle();
-    expect(find.text(composerDiscardTitle), findsNothing);
-    expect(find.text(_afternoonTitle), findsOneWidget);
+    expect(find.text(editDiscardTitle), findsNothing);
+    expect(composerTitled(_afternoonTitle), findsOneWidget);
     expect(_editorText(tester), 'a better day');
     expect(drafts.drafts, <String, String>{'entry-1': 'a better day'});
     expect(result, 'unset');
@@ -406,11 +407,11 @@ void main() {
     expect(drafts.drafts, isEmpty);
     expect(repository.noteSaves, isEmpty);
     expect(result, isFalse);
-    expect(find.text(_afternoonTitle), findsNothing);
+    expect(composerTitled(_afternoonTitle), findsNothing);
   });
 
   testWidgets(
-    'on macOS a scrim tap on a dirty editor asks first and keeps the edit',
+    'on macOS a tap on the ground of a dirty editor neither closes it nor asks',
     (WidgetTester tester) async {
       final NoteEditorDriver driver = NoteEditorDriver(tester);
       final Entry entry = _noteEntry();
@@ -436,14 +437,8 @@ void main() {
 
       await tester.tapAt(const Offset(4, 4));
       await tester.pumpAndSettle();
-      expect(find.text(composerDiscardTitle), findsOneWidget);
-      expect(find.text(_afternoonTitle), findsOneWidget);
-      expect(result, 'unset');
-
-      await tester.tap(find.byKey(composerKeepEditingKey));
-      await tester.pumpAndSettle();
-      expect(find.text(composerDiscardTitle), findsNothing);
-      expect(find.text(_afternoonTitle), findsOneWidget);
+      expect(find.text(editDiscardTitle), findsNothing);
+      expect(composerTitled(_afternoonTitle), findsOneWidget);
       expect(_editorText(tester), 'a better day');
       expect(drafts.drafts, <String, String>{'entry-1': 'a better day'});
       expect(repository.noteSaves, isEmpty);
@@ -485,8 +480,8 @@ void main() {
 
       await sendSystemBack(tester);
 
-      expect(find.text(_afternoonTitle), findsOneWidget);
-      expect(find.text(composerDiscardTitle), findsOneWidget);
+      expect(composerTitled(_afternoonTitle), findsOneWidget);
+      expect(find.text(editDiscardTitle), findsOneWidget);
       expect(result, 'unset');
 
       await tester.tap(find.byKey(composerDiscardKey));
@@ -494,7 +489,7 @@ void main() {
 
       expect(drafts.drafts, isEmpty);
       expect(result, isFalse);
-      expect(find.text(_afternoonTitle), findsNothing);
+      expect(composerTitled(_afternoonTitle), findsNothing);
     },
   );
 
@@ -530,10 +525,17 @@ void main() {
       await tester.tap(find.byKey(draftRestoredDiscardKey));
       await tester.pumpAndSettle();
 
+      expect(find.text(editDiscardTitle), findsOneWidget);
+      expect(_editorText(tester), 'a half-typed edit');
+      expect(drafts.drafts, isNotEmpty);
+
+      await tester.tap(find.byKey(composerDiscardKey));
+      await tester.pumpAndSettle();
+
       expect(_editorText(tester), 'a good day');
       expect(find.byType(DraftRestoredChip), findsNothing);
       expect(drafts.drafts, isEmpty);
-      expect(find.text(_afternoonTitle), findsOneWidget);
+      expect(composerTitled(_afternoonTitle), findsOneWidget);
 
       await tester.tap(find.byKey(composerCloseKey));
       await tester.pumpAndSettle();

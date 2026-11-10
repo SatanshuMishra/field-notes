@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
+import 'package:field_notes/features/capture/text/composer_footer.dart';
 import 'package:field_notes/features/capture/text/editor/format_bar.dart';
 import 'package:field_notes/features/capture/text/editor/note_editor.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
@@ -16,10 +17,30 @@ const Duration _pastUndoThrottle = Duration(milliseconds: 600);
 
 const Duration _hold = Duration(milliseconds: 110);
 
+const double _narrowBar = 340;
+
 const TextEditingValue _helloSelected = TextEditingValue(
   text: 'hello world',
   selection: TextSelection(baseOffset: 0, extentOffset: 5),
 );
+
+const List<Key> _everyItem = <Key>[
+  formatBoldKey,
+  formatItalicKey,
+  formatHeadingKey,
+  formatStrikethroughKey,
+  formatHighlightKey,
+  formatCodeKey,
+  formatListKey,
+  formatNumberedKey,
+  formatTaskKey,
+  formatQuoteKey,
+  formatLinkKey,
+  formatTableKey,
+  composerAddPhotoKey,
+  formatUndoKey,
+  formatRedoKey,
+];
 
 Future<void> _pumpApp(WidgetTester tester, Widget app) {
   tester.view.physicalSize = const Size(1200, 2000);
@@ -31,87 +52,53 @@ Future<void> _pumpApp(WidgetTester tester, Widget app) {
 Future<void> _press(WidgetTester tester, Key key) =>
     NoteEditorDriver(tester).press(find.byKey(key), _hold);
 
-final Map<Key, String> _pressedHello = <Key, String>{
-  formatBoldKey: '**hello** world',
-  formatItalicKey: '*hello* world',
-  formatHeadingKey: '# hello world',
-  formatListKey: '- hello world',
-  formatNumberedKey: '1. hello world',
-  formatTaskKey: '- [ ] hello world',
-  formatQuoteKey: '> hello world',
-  formatLinkKey: '[hello]() world',
-};
-
-Future<void> _expectPressUnderFade(
-  WidgetTester tester,
-  NoteEditorController controller,
-  Key fade,
-  String reason,
-) async {
-  final Rect shade = tester.getRect(find.byKey(fade));
-  final List<({Key key, Rect overlap})> under = <({Key key, Rect overlap})>[
-    for (final Key key in _pressedHello.keys)
-      if (tester.getRect(find.byKey(key)).intersect(shade)
-          case final Rect overlap
-          when overlap.width > 0 && overlap.height > 0)
-        (key: key, overlap: overlap),
-  ]..sort(
-      (({Key key, Rect overlap}) a, ({Key key, Rect overlap}) b) =>
-          b.overlap.width.compareTo(a.overlap.width),
-    );
-  expect(under, isNotEmpty, reason: reason);
-  controller.value = _helloSelected;
-  await tester.pump();
-  final TestGesture gesture = await tester.startGesture(
-    under.first.overlap.center,
-  );
-  await tester.pump(_hold);
-  await gesture.up();
-  await tester.pump();
-  expect(controller.text, _pressedHello[under.first.key], reason: reason);
-}
-
-
 class _Harness {
-  _Harness({this.tablesAvailable = true})
-      : controller = NoteEditorController(),
-        undoController = UndoHistoryController(),
-        focusNode = FocusNode(),
-        scrollController = ScrollController();
+  _Harness({this.tablesAvailable = true, this.barWidth, this.onAddPhoto})
+    : controller = NoteEditorController(),
+      undoController = UndoHistoryController(),
+      focusNode = FocusNode(),
+      scrollController = ScrollController();
 
   final NoteEditorController controller;
   final UndoHistoryController undoController;
   final FocusNode focusNode;
   final ScrollController scrollController;
   final bool tablesAvailable;
+  final double? barWidth;
+  final VoidCallback? onAddPhoto;
 
   Widget get app => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          body: Column(
-            children: <Widget>[
-              SizedBox(
-                height: 180,
-                width: 320,
-                child: noteEditorFor(
-                  NoteEditorConfig(
-                    controller: controller,
-                    focusNode: focusNode,
-                    undoController: undoController,
-                    scrollController: scrollController,
-                    hintText: 'Start writing…',
-                  ),
-                ),
-              ),
-              FormatBar(
+    debugShowCheckedModeBanner: false,
+    home: Scaffold(
+      body: Column(
+        children: <Widget>[
+          SizedBox(
+            height: 180,
+            width: 320,
+            child: noteEditorFor(
+              NoteEditorConfig(
                 controller: controller,
+                focusNode: focusNode,
                 undoController: undoController,
-                tablesAvailable: tablesAvailable,
+                scrollController: scrollController,
+                hintText: 'Start writing…',
               ),
-            ],
+            ),
           ),
-        ),
-      );
+          SizedBox(
+            width: barWidth,
+            child: FormatBar(
+              controller: controller,
+              undoController: undoController,
+              tablesAvailable: tablesAvailable,
+              editorFocusNode: focusNode,
+              onAddPhoto: onAddPhoto,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   void dispose() {
     controller.dispose();
@@ -127,6 +114,9 @@ const List<BarCase> _barCases = <BarCase>[
   (key: formatBoldKey, expected: '**hello** world'),
   (key: formatItalicKey, expected: '*hello* world'),
   (key: formatHeadingKey, expected: '# hello world'),
+  (key: formatStrikethroughKey, expected: '~~hello~~ world'),
+  (key: formatHighlightKey, expected: '==hello== world'),
+  (key: formatCodeKey, expected: '`hello` world'),
   (key: formatListKey, expected: '- hello world'),
   (key: formatQuoteKey, expected: '> hello world'),
   (key: formatLinkKey, expected: '[hello]() world'),
@@ -134,16 +124,14 @@ const List<BarCase> _barCases = <BarCase>[
 
 void main() {
   for (final BarCase barCase in _barCases) {
-    testWidgets('${barCase.key} rewrites the buffer at the selection',
-        (WidgetTester tester) async {
+    testWidgets('${barCase.key} rewrites the buffer at the selection', (
+      WidgetTester tester,
+    ) async {
       final _Harness harness = _Harness();
       addTearDown(harness.dispose);
       await _pumpApp(tester, harness.app);
 
-      harness.controller.value = const TextEditingValue(
-        text: 'hello world',
-        selection: TextSelection(baseOffset: 0, extentOffset: 5),
-      );
+      harness.controller.value = _helloSelected;
       await tester.pump();
 
       await _press(tester, barCase.key);
@@ -153,16 +141,14 @@ void main() {
     });
   }
 
-  testWidgets('a second tap on the same control removes the markers again',
-      (WidgetTester tester) async {
+  testWidgets('a second tap on the same control removes the markers again', (
+    WidgetTester tester,
+  ) async {
     final _Harness harness = _Harness();
     addTearDown(harness.dispose);
     await _pumpApp(tester, harness.app);
 
-    harness.controller.value = const TextEditingValue(
-      text: 'hello world',
-      selection: TextSelection(baseOffset: 0, extentOffset: 5),
-    );
+    harness.controller.value = _helloSelected;
     await tester.pump();
 
     await _press(tester, formatBoldKey);
@@ -174,8 +160,9 @@ void main() {
     expect(harness.controller.text, 'hello world');
   });
 
-  testWidgets('the undo control restores the previous value with no keyboard',
-      (WidgetTester tester) async {
+  testWidgets('the undo control restores the previous value with no keyboard', (
+    WidgetTester tester,
+  ) async {
     final _Harness harness = _Harness();
     addTearDown(harness.dispose);
     await _pumpApp(tester, harness.app);
@@ -183,10 +170,7 @@ void main() {
     await NoteEditorDriver(tester).enterText('hello world');
     await tester.pump(_pastUndoThrottle);
 
-    harness.controller.value = const TextEditingValue(
-      text: 'hello world',
-      selection: TextSelection(baseOffset: 0, extentOffset: 5),
-    );
+    harness.controller.value = _helloSelected;
     await tester.pump();
     await _press(tester, formatBoldKey);
     await tester.pump(_pastUndoThrottle);
@@ -198,23 +182,19 @@ void main() {
     expect(harness.controller.text, 'hello world');
   });
 
-  testWidgets('the undo control is disabled until there is history',
-      (WidgetTester tester) async {
+  testWidgets('the undo control is disabled until there is history', (
+    WidgetTester tester,
+  ) async {
     final _Harness harness = _Harness();
     addTearDown(harness.dispose);
     await _pumpApp(tester, harness.app);
     await tester.pump(_pastUndoThrottle);
 
     expect(harness.undoController.value.canUndo, isFalse);
-    final Semantics disabled = tester.widget<Semantics>(
-      find
-          .descendant(
-            of: find.byKey(formatUndoKey),
-            matching: find.byType(Semantics),
-          )
-          .first,
+    expect(
+      tester.getSemantics(find.byKey(formatUndoKey)),
+      isSemantics(isEnabled: false),
     );
-    expect(disabled.properties.enabled, isFalse);
 
     await NoteEditorDriver(tester).enterText('something');
     await tester.pump(_pastUndoThrottle);
@@ -222,37 +202,27 @@ void main() {
     await tester.pump(_pastUndoThrottle);
 
     expect(harness.undoController.value.canUndo, isTrue);
-    final Semantics enabled = tester.widget<Semantics>(
-      find
-          .descendant(
-            of: find.byKey(formatUndoKey),
-            matching: find.byType(Semantics),
-          )
-          .first,
+    expect(
+      tester.getSemantics(find.byKey(formatUndoKey)),
+      isSemantics(isEnabled: true),
     );
-    expect(enabled.properties.enabled, isTrue);
   });
 
-  testWidgets('a bar tap keeps the editor focused and the selection intact',
-      (WidgetTester tester) async {
+  testWidgets('a bar tap keeps the editor focused and the selection intact', (
+    WidgetTester tester,
+  ) async {
     final _Harness harness = _Harness();
     addTearDown(harness.dispose);
     await _pumpApp(tester, harness.app);
 
     harness.focusNode.requestFocus();
     await tester.pump();
-    harness.controller.value = const TextEditingValue(
-      text: 'hello world',
-      selection: TextSelection(baseOffset: 0, extentOffset: 5),
-    );
+    harness.controller.value = _helloSelected;
     await tester.pump();
     expect(harness.focusNode.hasFocus, isTrue);
 
-    await NoteEditorDriver(tester).press(
-      find.byKey(formatBoldKey),
-      _hold,
-      kind: PointerDeviceKind.mouse,
-    );
+    await NoteEditorDriver(tester)
+        .press(find.byKey(formatBoldKey), _hold, kind: PointerDeviceKind.mouse);
     await tester.pump();
 
     expect(harness.focusNode.hasFocus, isTrue);
@@ -261,87 +231,115 @@ void main() {
     expect(harness.controller.selection.end, 7);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
-  testWidgets('the bar exposes a trailing slot for later capture affordances',
-      (WidgetTester tester) async {
-    final _Harness harness = _Harness();
+  testWidgets('every item sits in the row at a wide width, in order, with '
+      'separators and no More', (WidgetTester tester) async {
+    final _Harness harness = _Harness(onAddPhoto: () {});
     addTearDown(harness.dispose);
+    await _pumpApp(tester, harness.app);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: FormatBar(
-            controller: harness.controller,
-            undoController: harness.undoController,
-            tablesAvailable: true,
-            trailing: const SizedBox.square(
-              dimension: 30,
-              key: ValueKey<String>('trailing-slot'),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    expect(find.byKey(const ValueKey<String>('trailing-slot')), findsOneWidget);
+    expect(find.byKey(formatMoreKey), findsNothing);
+    expect(find.byKey(formatBarSeparatorKey), findsNWidgets(3));
+    double previous = 0;
+    for (final Key key in _everyItem) {
+      expect(find.byKey(key), findsOneWidget, reason: '$key');
+      final double left = tester.getTopLeft(find.byKey(key)).dx;
+      expect(left, greaterThan(previous), reason: '$key');
+      previous = left;
+    }
   });
 
-  testWidgets(
-      'a bar narrower than its toggles scrolls them while Undo and the '
-      'trailing slot stay put', (WidgetTester tester) async {
-    final _Harness harness = _Harness();
-    addTearDown(harness.dispose);
-    const Key trailingKey = ValueKey<String>('trailing-slot');
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Align(
-            alignment: Alignment.topLeft,
-            child: SizedBox(
-              width: 340,
-              child: FormatBar(
-                controller: harness.controller,
-                undoController: harness.undoController,
-                tablesAvailable: true,
-                trailing: const SizedBox.square(
-                  dimension: 30,
-                  key: trailingKey,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+  testWidgets('a bar that fits only without separators drops them first', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = _Harness(
+      onAddPhoto: () {},
+      barWidth: _everyItem.length * 48,
     );
+    addTearDown(harness.dispose);
+    await _pumpApp(tester, harness.app);
+
+    expect(find.byKey(formatMoreKey), findsNothing);
+    expect(find.byKey(formatBarSeparatorKey), findsNothing);
+    for (final Key key in _everyItem) {
+      expect(find.byKey(key), findsOneWidget, reason: '$key');
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a narrow bar moves only what does not fit into More, in order', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = _Harness(onAddPhoto: () {}, barWidth: _narrowBar);
+    addTearDown(harness.dispose);
+    await _pumpApp(tester, harness.app);
 
     expect(tester.takeException(), isNull);
-    final Rect bar = tester.getRect(find.byType(FormatBar));
-    final Rect undo = tester.getRect(find.byKey(formatUndoKey));
-    final Rect trailing = tester.getRect(find.byKey(trailingKey));
-    expect(bar.intersect(undo), undo);
-    expect(bar.intersect(trailing), trailing);
-    expect(
-      tester.getRect(find.byKey(formatLinkKey)).left,
-      greaterThan(trailing.left),
-    );
+    const int shown = 6;
+    for (final Key key in _everyItem.take(shown)) {
+      expect(find.byKey(key), findsOneWidget, reason: '$key');
+    }
+    for (final Key key in _everyItem.skip(shown)) {
+      expect(find.byKey(key), findsNothing, reason: '$key');
+    }
 
-    harness.controller.value = const TextEditingValue(
-      text: 'hello world',
-      selection: TextSelection(baseOffset: 0, extentOffset: 5),
-    );
-    await tester.drag(find.byKey(formatBoldKey), const Offset(-200, 0));
-    await tester.pumpAndSettle();
-
-    expect(
-      tester.getRect(find.byKey(formatLinkKey)).right,
-      lessThanOrEqualTo(trailing.left),
-    );
-    expect(tester.getRect(find.byKey(formatUndoKey)), undo);
-    expect(tester.getRect(find.byKey(trailingKey)), trailing);
-
-    await _press(tester, formatLinkKey);
+    await _press(tester, formatMoreKey);
     await tester.pump();
-    expect(harness.controller.text, '[hello]() world');
+
+    double previous = 0;
+    for (final Key key in _everyItem.skip(shown)) {
+      expect(find.byKey(key), findsOneWidget, reason: '$key');
+      final double top = tester.getTopLeft(find.byKey(key)).dy;
+      expect(top, greaterThan(previous), reason: '$key');
+      previous = top;
+    }
+  });
+
+  testWidgets('the fit follows the width the bar is given, not the window', (
+    WidgetTester tester,
+  ) async {
+    for (final ({double width, bool fits}) size
+        in <({double width, bool fits})>[
+          (width: 900, fits: true),
+          (width: 700, fits: false),
+        ]) {
+      final _Harness harness = _Harness(
+        onAddPhoto: () {},
+        barWidth: size.width,
+      );
+      addTearDown(harness.dispose);
+      await _pumpApp(tester, harness.app);
+
+      expect(
+        find.byKey(formatMoreKey),
+        size.fits ? findsNothing : findsOneWidget,
+        reason: '${size.width}',
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+  });
+
+  testWidgets('a format chosen from More runs and closes the menu', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = _Harness(barWidth: _narrowBar);
+    addTearDown(harness.dispose);
+    await _pumpApp(tester, harness.app);
+    harness.focusNode.requestFocus();
+    await tester.pump();
+
+    harness.controller.value = _helloSelected;
+    await tester.pump();
+    await _press(tester, formatMoreKey);
+    await tester.pump();
+    expect(find.byKey(formatQuoteKey), findsOneWidget);
+    expect(harness.focusNode.hasFocus, isTrue);
+
+    await _press(tester, formatQuoteKey);
+    await tester.pump();
+
+    expect(harness.controller.text, '> hello world');
+    expect(find.byKey(formatQuoteKey), findsNothing);
+    expect(harness.focusNode.hasFocus, isTrue);
   });
 
   testWidgets('italic wraps with single stars', (WidgetTester tester) async {
@@ -401,41 +399,10 @@ void main() {
       table.controller.text,
       '|  |  |  |\n| --- | --- | --- |\n|  |  |  |',
     );
-    expect(table.controller.selection, const TextSelection.collapsed(offset: 2));
-  });
-
-  testWidgets('more formats holds strikethrough, highlight and inline code', (
-    WidgetTester tester,
-  ) async {
-    final _Harness harness = _Harness();
-    addTearDown(harness.dispose);
-    await _pumpApp(tester, harness.app);
-    harness.focusNode.requestFocus();
-    await tester.pump();
-
-    const List<({Key key, String expected})> items =
-        <({Key key, String expected})>[
-          (key: formatStrikethroughKey, expected: '~~hello~~ world'),
-          (key: formatHighlightKey, expected: '==hello== world'),
-          (key: formatCodeKey, expected: '`hello` world'),
-        ];
-    for (final ({Key key, String expected}) item in items) {
-      harness.controller.value = _helloSelected;
-      await tester.pump();
-      await _press(tester, formatMoreKey);
-      expect(find.byKey(formatStrikethroughKey), findsOneWidget);
-      expect(find.byKey(formatHighlightKey), findsOneWidget);
-      expect(find.byKey(formatCodeKey), findsOneWidget);
-      expect(harness.focusNode.hasFocus, isTrue);
-
-      await _press(tester, item.key);
-
-      expect(harness.controller.text, item.expected);
-      expect(find.byKey(formatStrikethroughKey), findsNothing);
-      expect(find.byKey(formatHighlightKey), findsNothing);
-      expect(find.byKey(formatCodeKey), findsNothing);
-      expect(harness.focusNode.hasFocus, isTrue);
-    }
+    expect(
+      table.controller.selection,
+      const TextSelection.collapsed(offset: 2),
+    );
   });
 
   testWidgets('the table button is absent when tables are unavailable', (
@@ -455,7 +422,6 @@ void main() {
       formatTaskKey,
       formatQuoteKey,
       formatLinkKey,
-      formatMoreKey,
       formatUndoKey,
     ]) {
       expect(find.byKey(key), findsOneWidget);
@@ -516,13 +482,15 @@ void main() {
       formatBoldKey,
       formatItalicKey,
       formatHeadingKey,
+      formatStrikethroughKey,
+      formatHighlightKey,
+      formatCodeKey,
       formatListKey,
       formatNumberedKey,
       formatTaskKey,
       formatQuoteKey,
       formatLinkKey,
       formatTableKey,
-      formatMoreKey,
     ]) {
       expect(
         tester.getSemantics(find.byKey(key)),
@@ -539,7 +507,7 @@ void main() {
   testWidgets('a press outside the open menu closes it and changes nothing', (
     WidgetTester tester,
   ) async {
-    final _Harness harness = _Harness();
+    final _Harness harness = _Harness(barWidth: _narrowBar);
     addTearDown(harness.dispose);
     await _pumpApp(tester, harness.app);
     harness.controller.value = _helloSelected;
@@ -547,7 +515,7 @@ void main() {
 
     await _press(tester, formatMoreKey);
     await tester.pumpAndSettle();
-    expect(find.byKey(formatHighlightKey), findsOneWidget);
+    expect(find.byKey(formatQuoteKey), findsOneWidget);
     expect(tester.binding.hasScheduledFrame, isFalse);
 
     final TestGesture outside = await tester.startGesture(
@@ -557,102 +525,49 @@ void main() {
     await outside.up();
     await tester.pumpAndSettle();
 
-    expect(find.byKey(formatHighlightKey), findsNothing);
+    expect(find.byKey(formatQuoteKey), findsNothing);
     expect(harness.controller.text, 'hello world');
 
     await _press(tester, formatMoreKey);
-    expect(find.byKey(formatHighlightKey), findsOneWidget);
+    expect(find.byKey(formatQuoteKey), findsOneWidget);
     await _press(tester, formatMoreKey);
-    expect(find.byKey(formatHighlightKey), findsNothing);
+    expect(find.byKey(formatQuoteKey), findsNothing);
     expect(harness.controller.text, 'hello world');
   });
 
-  testWidgets('a scrolling format bar fades the edge that has more', (
+  testWidgets('each control meets the platform target', (
     WidgetTester tester,
   ) async {
-    for (final double width in <double>[360, 384, 411.4, 412, 430]) {
-      final String reason = 'at $width dp';
-      final NoteEditorController controller = NoteEditorController();
-      addTearDown(controller.dispose);
-      tester.view.physicalSize = Size(width, 800);
+    for (final ({TargetPlatform platform, double extent}) target
+        in <({TargetPlatform platform, double extent})>[
+          (platform: TargetPlatform.macOS, extent: 32),
+          (platform: TargetPlatform.windows, extent: 40),
+          (platform: TargetPlatform.android, extent: 48),
+        ]) {
+      final _Harness harness = _Harness();
+      addTearDown(harness.dispose);
+      tester.view.physicalSize = const Size(1200, 2000);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
         MaterialApp(
-          key: ValueKey<double>(width),
-          debugShowCheckedModeBanner: false,
-          home: DialogHost(
-            child: ComposerShell(
-              child: TextComposerSheet(
-                controller: controller,
-                onSave: (String _) {},
-                onCancel: () {},
-              ),
+          theme: ThemeData(platform: target.platform),
+          home: Scaffold(
+            body: FormatBar(
+              controller: harness.controller,
+              undoController: harness.undoController,
             ),
           ),
         ),
       );
-      await tester.pump();
 
-      final Finder scroller = find.descendant(
-        of: find.byType(FormatBar),
-        matching: find.byType(Scrollable),
-      );
-      final ScrollPosition position =
-          tester.state<ScrollableState>(scroller).position;
-      final Rect view = tester.getRect(scroller);
-      expect(position.extentAfter, greaterThan(0), reason: reason);
-      expect(find.byKey(formatBarFadeEndKey), findsOneWidget, reason: reason);
-      expect(find.byKey(formatBarFadeStartKey), findsNothing, reason: reason);
       expect(
-        tester.getRect(find.byKey(formatBarFadeEndKey)).right,
-        view.right,
-        reason: reason,
+        tester.getSize(find.byKey(formatBoldKey)),
+        Size.square(target.extent),
+        reason: '${target.platform}',
       );
-      await _expectPressUnderFade(
-        tester,
-        controller,
-        formatBarFadeEndKey,
-        reason,
-      );
-
-      position.jumpTo(position.maxScrollExtent);
-      await tester.pump();
-
-      expect(position.extentBefore, greaterThan(0), reason: reason);
-      expect(find.byKey(formatBarFadeStartKey), findsOneWidget, reason: reason);
-      expect(find.byKey(formatBarFadeEndKey), findsNothing, reason: reason);
-      expect(
-        tester.getRect(find.byKey(formatBarFadeStartKey)).left,
-        view.left,
-        reason: reason,
-      );
-      await _expectPressUnderFade(
-        tester,
-        controller,
-        formatBarFadeStartKey,
-        reason,
-      );
+      await tester.pumpWidget(const SizedBox.shrink());
     }
-
-    final _Harness wide = _Harness();
-    addTearDown(wide.dispose);
-    await _pumpApp(tester, wide.app);
-    await tester.pump();
-    expect(
-      tester
-          .state<ScrollableState>(
-            find.descendant(
-              of: find.byType(FormatBar),
-              matching: find.byType(Scrollable),
-            ),
-          )
-          .position
-          .maxScrollExtent,
-      0,
-    );
-    expect(find.byKey(formatBarFadeStartKey), findsNothing);
-    expect(find.byKey(formatBarFadeEndKey), findsNothing);
   });
 
   group('where the composer mounts the bar', () {
@@ -660,6 +575,7 @@ void main() {
       WidgetTester tester, {
       required Size surface,
       double keyboardInset = 0,
+      TargetPlatform platform = TargetPlatform.android,
     }) async {
       tester.view.physicalSize = surface;
       tester.view.devicePixelRatio = 1.0;
@@ -668,8 +584,10 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           debugShowCheckedModeBanner: false,
+          theme: ThemeData(platform: platform),
           home: DialogHost(
             child: ComposerShell(
+              responsive: true,
               child: TextComposerSheet(onSave: (String _) {}, onCancel: () {}),
             ),
           ),
@@ -678,34 +596,34 @@ void main() {
       await tester.pump();
     }
 
-    testWidgets('the compact shell puts it on the keyboard side of the paper',
-        (WidgetTester tester) async {
-      await pumpComposer(tester, surface: const Size(360, 640));
+    testWidgets('it heads the page in the room', (WidgetTester tester) async {
+      await pumpComposer(
+        tester,
+        surface: const Size(1280, 900),
+        platform: TargetPlatform.macOS,
+      );
 
       expect(find.byType(FormatBar), findsOneWidget);
       expect(
-        tester.getRect(find.byType(FormatBar)).top,
-        greaterThanOrEqualTo(tester.getRect(find.byType(RawScrollbar)).bottom),
+        tester.getRect(find.byType(FormatBar)).bottom,
+        lessThanOrEqualTo(tester.getRect(find.byType(RawScrollbar)).top),
       );
+      expect(find.byKey(formatMoreKey), findsNothing);
     });
 
-    testWidgets(
-      'the desktop shell puts it in the composer header',
-      (WidgetTester tester) async {
-        await pumpComposer(tester, surface: const Size(1280, 900));
+    testWidgets('a phone width tucks the rest into More', (
+      WidgetTester tester,
+    ) async {
+      await pumpComposer(tester, surface: const Size(390, 844));
 
-        expect(find.byType(FormatBar), findsOneWidget);
-        expect(
-          tester.getRect(find.byType(FormatBar)).bottom,
-          lessThanOrEqualTo(tester.getRect(find.byType(RawScrollbar)).top),
-        );
-      },
-      variant: TargetPlatformVariant.only(TargetPlatform.macOS),
-    );
+      expect(find.byKey(formatBoldKey), findsOneWidget);
+      expect(find.byKey(formatCodeKey), findsOneWidget);
+      expect(find.byKey(formatMoreKey), findsOneWidget);
+    });
 
-    testWidgets(
-        'a panel too short for the bar row moves the bar into the header and keeps Undo',
-        (WidgetTester tester) async {
+    testWidgets('a strip layout keeps the bar above the page', (
+      WidgetTester tester,
+    ) async {
       await pumpComposer(
         tester,
         surface: const Size(844, 390),
@@ -718,10 +636,7 @@ void main() {
         bar.bottom,
         lessThanOrEqualTo(tester.getRect(find.byType(RawScrollbar)).top),
       );
-      expect(find.byKey(formatUndoKey), findsOneWidget);
-      final Rect undo = tester.getRect(find.byKey(formatUndoKey));
-      expect(bar.intersect(undo), undo);
-      expect(find.text('Write a note'), findsNothing);
+      expect(find.byKey(formatMoreKey), findsOneWidget);
       expect(NoteEditorDriver(tester).find, findsOneWidget);
     });
   });

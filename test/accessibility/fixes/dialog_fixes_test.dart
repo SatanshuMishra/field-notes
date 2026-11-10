@@ -85,7 +85,7 @@ void main() {
       tester,
       captureStates,
       'c10-discard-dialog',
-      <String>['Keep editing', 'Discard'],
+      <String>['Keep going', 'Let it go'],
     ),
   );
 
@@ -105,7 +105,7 @@ void main() {
       tester,
       viewerStates,
       'd13-change-mood-dialog',
-      <String>['Cancel', 'Change mood'],
+      <String>['Keep this bloom', 'Change bloom'],
     ),
   );
 
@@ -115,7 +115,7 @@ void main() {
       tester,
       viewerStates,
       'd14-delete-entry-dialog',
-      <String>['Cancel', 'Delete'],
+      <String>['Keep it', 'Delete'],
     ),
   );
 

@@ -1940,9 +1940,18 @@ void main() {
       const String why = '$_singleFile: the writing surface; M1, M2';
       _pointer(_composerSeam, 'the composer writes with the new note editor', why);
       await _pumpComposer(tester);
-      expect(find.byType(NoteEditorView), findsOneWidget, reason: why);
-      expect(find.byType(TextField), findsNothing, reason: why);
-      expect(find.byType(EditableText), findsNothing, reason: why);
+      final Finder surface = find.byType(NoteEditorView);
+      expect(surface, findsOneWidget, reason: why);
+      expect(
+        find.descendant(of: surface, matching: find.byType(TextField)),
+        findsNothing,
+        reason: why,
+      );
+      expect(
+        find.descendant(of: surface, matching: find.byType(EditableText)),
+        findsNothing,
+        reason: why,
+      );
     });
 
     testWidgets(

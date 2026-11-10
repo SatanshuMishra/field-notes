@@ -6,6 +6,7 @@ import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/draft_provider.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show MaterialApp, ThemeData;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +15,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../../support/note_editor_driver.dart';
 import '../core/capture_test_support.dart';
+
+const Duration _roomFade = Duration(milliseconds: 650);
 
 class _ComposerTrigger extends StatelessWidget {
   const _ComposerTrigger({required this.date});
@@ -53,65 +56,77 @@ Future<void> _open(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-void main() {
-  testWidgets(
-    'the header shows a labelled Cancel pill, a kicker and a left-aligned title',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(
-        captureHarness(
-          TextComposerSheet(
-            onSave: (String _) {},
-            onCancel: () {},
-            title: 'New note',
-            kicker: 'Today · 14:30',
-          ),
-        ),
-      );
-
-      expect(
-        find.descendant(
-          of: find.byKey(composerCloseKey),
-          matching: find.text('Cancel'),
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('Today · 14:30'), findsOneWidget);
-      expect(tester.getSize(find.byKey(composerCloseKey)).height, 40);
-
-      final double pillRight = tester
-          .getTopRight(find.byKey(composerCloseKey))
-          .dx;
-      final double titleLeft = tester.getTopLeft(find.text('New note')).dx;
-      final double kickerLeft = tester
-          .getTopLeft(find.text('Today · 14:30'))
-          .dx;
-      final double panelCentre = tester
-          .getCenter(find.byType(TextComposerSheet))
-          .dx;
-      expect(titleLeft, lessThan(panelCentre));
-      expect(titleLeft, moreOrLessEquals(pillRight + 14));
-      expect(kickerLeft, moreOrLessEquals(titleLeft));
-      expect(
-        tester.getTopLeft(find.text('Today · 14:30')).dy,
-        lessThan(tester.getTopLeft(find.text('New note')).dy),
-      );
-    },
+Widget _desktopSheet({ComposerExit exit = ComposerExit.cancel}) {
+  return MaterialApp(
+    theme: ThemeData(platform: TargetPlatform.macOS),
+    home: TextComposerSheet(onSave: (String _) {}, onCancel: () {}, exit: exit),
   );
+}
 
-  testWidgets('a Back exit shows a Back pill with a back chevron', (
+void _useDesktopWindow(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1280, 900);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+}
+
+void main() {
+  testWidgets('the desktop band says Leave, the privacy line and the keys', (
     WidgetTester tester,
   ) async {
+    _useDesktopWindow(tester);
+    await tester.pumpWidget(_desktopSheet());
+
+    expect(
+      find.descendant(
+        of: find.byKey(composerCloseKey),
+        matching: find.text('Leave'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Private · only you will read this'), findsOneWidget);
+    expect(find.text('⌘ Return'), findsOneWidget);
+    expect(find.text('Esc'), findsOneWidget);
+    expect(
+      tester.getCenter(find.text('Private · only you will read this')).dx,
+      closeTo(640, 12),
+    );
+  });
+
+  testWidgets('Windows reads the keep key as Ctrl Enter', (
+    WidgetTester tester,
+  ) async {
+    _useDesktopWindow(tester);
     await tester.pumpWidget(
-      captureHarness(
-        TextComposerSheet(
-          onSave: (String _) {},
-          onCancel: () {},
-          title: 'New note',
-          kicker: 'Wednesday, July 15',
-          exit: ComposerExit.back,
-        ),
+      MaterialApp(
+        theme: ThemeData(platform: TargetPlatform.windows),
+        home: TextComposerSheet(onSave: (String _) {}, onCancel: () {}),
       ),
     );
+
+    expect(find.text('Ctrl Enter'), findsOneWidget);
+    expect(find.text('⌘ Return'), findsNothing);
+  });
+
+  testWidgets('the phone band is an icon and the short privacy line', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      captureHarness(TextComposerSheet(onSave: (String _) {}, onCancel: () {})),
+    );
+
+    expect(find.text('Leave'), findsNothing);
+    expect(find.bySemanticsLabel('Leave'), findsOneWidget);
+    expect(find.text('Only you will read this'), findsOneWidget);
+    expect(find.text('Esc'), findsNothing);
+    semantics.dispose();
+  });
+
+  testWidgets('a Back exit says Back with a chevron', (
+    WidgetTester tester,
+  ) async {
+    _useDesktopWindow(tester);
+    await tester.pumpWidget(_desktopSheet(exit: ComposerExit.back));
 
     expect(
       find.descendant(
@@ -120,38 +135,39 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Cancel'), findsNothing);
+    expect(find.text('Leave'), findsNothing);
   });
 
-  testWidgets('a new note for today carries the Today kicker with the time', (
+  testWidgets('a new note for today names the room and the time to a reader', (
     WidgetTester tester,
   ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
     await tester.pumpWidget(
       _composerApp(date: '2026-07-19', now: DateTime(2026, 7, 19, 14, 30)),
     );
     await _open(tester);
 
-    expect(find.text('Today · 2:30 PM'), findsOneWidget);
-    expect(find.text(newNoteTitle), findsOneWidget);
     expect(
-      find.descendant(
-        of: find.byKey(composerCloseKey),
-        matching: find.text('Cancel'),
-      ),
+      find.bySemanticsLabel('$newNoteTitle, Today · 2:30 PM'),
       findsOneWidget,
     );
+    semantics.dispose();
   });
 
-  testWidgets('a new note for a past day carries that day as its kicker', (
+  testWidgets('a new note for a past day names that day to a reader', (
     WidgetTester tester,
   ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
     await tester.pumpWidget(
       _composerApp(date: '2026-07-15', now: DateTime(2026, 7, 19, 14, 30)),
     );
     await _open(tester);
 
-    expect(find.text('Wednesday, July 15'), findsOneWidget);
-    expect(find.text(newNoteTitle), findsOneWidget);
+    expect(
+      find.bySemanticsLabel('$newNoteTitle, Wednesday, July 15'),
+      findsOneWidget,
+    );
+    semantics.dispose();
   });
 
   testWidgets('saving a new note toasts where it was saved', (
@@ -170,10 +186,10 @@ void main() {
 
     await driver.enterText('a good day');
     await tester.pump();
-    await tester.tap(find.text('Save'));
+    await tester.tap(find.text('Keep this'));
     await tester.pump();
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(_roomFade);
 
     expect(writer.saves, hasLength(1));
     expect(find.byType(TextComposerSheet), findsNothing);
@@ -208,7 +224,7 @@ void main() {
       await tester.sendKeyUpEvent(modifier);
       await tester.pump();
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(_roomFade);
 
       expect(writer.saves, hasLength(1));
       expect(writer.saves.single.source, 'a good day');

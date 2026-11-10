@@ -3,10 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/sound_service.dart';
 import 'package:field_notes/features/sound/sound_providers.dart';
@@ -17,12 +15,11 @@ import 'package:field_notes/state/state.dart';
 import 'mood_banner.dart';
 import 'mood_picker.dart';
 
-const double _kConfirmMaxWidth = 420;
-
 const String moodSaveFailedMessage =
     "Couldn't save your mood. Please try again.";
 
-const String _changeMoodLabel = 'Change mood';
+const String _keepBloomLabel = 'Keep this bloom';
+const String _changeBloomLabel = 'Change bloom';
 
 enum MoodChangeOutcome { unchanged, planted, failed }
 
@@ -61,9 +58,9 @@ Future<MoodChangeOutcome> changeMoodForDate(
   return MoodChangeOutcome.planted;
 }
 
-String _dayLabel(String date, {required bool isToday}) {
+String _dayName(String date, {required bool isToday}) {
   if (isToday) {
-    return 'today';
+    return 'Today';
   }
   final DateTime? parsed = parseDateKey(date);
   return parsed == null ? date : headerDateLabel(parsed);
@@ -74,29 +71,17 @@ Future<bool> _confirmMoodChange(
   required bool isToday,
   required String date,
   required Mood chosen,
-}) async {
-  final String title = isToday
-      ? "Change today's bloom?"
-      : "Change this day's bloom?";
-  final String message =
-      'Set ${_dayLabel(date, isToday: isToday)} to '
-      '${chosen.flower.label} · ${chosen.label}? '
-      'Your current bloom will be replaced.';
-  if (resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar) {
-    return showConfirmDialog(
-      context,
-      title: title,
-      message: message,
-      confirmLabel: _changeMoodLabel,
-    );
-  }
-  final bool? confirmed = await showDialog<bool>(
-    context: context,
-    barrierDismissible: true,
-    builder: (BuildContext dialogContext) =>
-        _MoodChangeConfirmDialog(title: title, message: message),
+}) {
+  return showConfirmDialog(
+    context,
+    title: isToday ? "Change today's bloom?" : "Change this day's bloom?",
+    message:
+        '${_dayName(date, isToday: isToday)} becomes '
+        '${chosen.flower.label}, ${chosen.label}. '
+        'Your current bloom will be replaced.',
+    confirmLabel: _changeBloomLabel,
+    cancelLabel: _keepBloomLabel,
   );
-  return confirmed ?? false;
 }
 
 class MoodBannerForDate extends ConsumerStatefulWidget {
@@ -173,59 +158,6 @@ class _MoodBannerForDateState extends ConsumerState<MoodBannerForDate> {
           Text(_writeError!, style: errorStyle),
         ],
       ],
-    );
-  }
-}
-
-class _MoodChangeConfirmDialog extends StatelessWidget {
-  const _MoodChangeConfirmDialog({required this.title, required this.message});
-
-  final String title;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final FieldNotesTextStyles textStyles = context.textStyles;
-    return Center(
-      child: Material(
-        type: MaterialType.transparency,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _kConfirmMaxWidth),
-          child: StickerCard(
-            surface: context.colors.cardBright,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(title, style: textStyles.titleSerif),
-                const SizedBox(height: 8),
-                Text(message, style: textStyles.bodySans),
-                const SizedBox(height: 20),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: <Widget>[
-                    StickerButton(
-                      label: 'Cancel',
-                      variant: StickerButtonVariant.secondary,
-                      padTapTarget: true,
-                      autofocus: true,
-                      onPressed: () => Navigator.of(context).pop(false),
-                    ),
-                    StickerButton(
-                      label: _changeMoodLabel,
-                      variant: StickerButtonVariant.primary,
-                      padTapTarget: true,
-                      onPressed: () => Navigator.of(context).pop(true),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

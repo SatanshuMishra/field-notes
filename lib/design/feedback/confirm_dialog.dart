@@ -1,34 +1,28 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
 import '../widgets/phone_sheet.dart';
 import '../widgets/sticker_button.dart';
+import '../widgets/sticker_card.dart';
 import 'dialog_host.dart';
 
 const Key confirmDialogConfirmKey = ValueKey<String>('confirm-dialog-confirm');
 const Key confirmDialogCancelKey = ValueKey<String>('confirm-dialog-cancel');
 
-const String confirmDialogCancelLabel = 'Cancel';
-
-const double _maxWidth = 370;
-const double _borderWidth = 2;
-const double _radius = 18;
-const double _padding = 22;
-const double _titleGap = 7;
-const double _actionsGap = 20;
-const double _actionSpacing = 12;
-const BorderRadius _buttonRadius = BorderRadius.all(Radius.circular(11));
-const double _buttonBorderWidth = 1.5;
-const double _buttonMinTarget = 48;
+const double _dialogWidth = 440;
+const double _windowGutter = 16;
+const double _dialogPadding = 24;
+const double _messageGap = 8;
+const double _actionsGap = 22;
+const double _actionSpacing = 10;
 
 const EdgeInsets _sheetBodyPadding = EdgeInsets.fromLTRB(20, 10, 20, 4);
 const EdgeInsets _sheetFooterPadding = EdgeInsets.fromLTRB(12, 14, 12, 12);
-const double _sheetTitleSize = 20;
-const double _sheetMessageGap = 6;
 
 const double phoneSheetButtonHeight = 48;
 const BorderRadius phoneSheetButtonRadius = BorderRadius.all(
@@ -39,39 +33,20 @@ const EdgeInsets _phoneSheetButtonPadding = EdgeInsets.symmetric(
   horizontal: 16,
   vertical: 8,
 );
-const EdgeInsets _dialogButtonPadding = EdgeInsets.symmetric(
-  vertical: 9,
-  horizontal: 16,
-);
 const double _lightForegroundLuminance = 0.5;
-
-const List<BoxShadow> _panelShadow = <BoxShadow>[
-  BoxShadow(
-    color: Color(0x99322314),
-    offset: Offset(0, 22),
-    blurRadius: 54,
-    spreadRadius: -16,
-  ),
-];
 
 const TextStyle _messageStyle = TextStyle(
   fontFamily: TypographyTokens.sans,
-  fontSize: 13,
-  fontWeight: FontWeight.w400,
-  height: 1.55,
-);
-
-const TextStyle _sheetMessageStyle = TextStyle(
-  fontFamily: TypographyTokens.sans,
-  fontSize: 13,
+  fontSize: 15,
   fontWeight: FontWeight.w400,
   height: 1.5,
 );
 
-const TextStyle _dialogButtonStyle = TextStyle(
+const TextStyle _choiceLabelStyle = TextStyle(
   fontFamily: TypographyTokens.sans,
-  fontSize: 12,
+  fontSize: 13.5,
   fontWeight: FontWeight.w600,
+  height: 1,
 );
 
 const TextStyle _phoneSheetButtonStyle = TextStyle(
@@ -85,8 +60,8 @@ Future<bool> showConfirmDialog(
   required String title,
   required String message,
   required String confirmLabel,
+  required String cancelLabel,
   bool danger = false,
-  String cancelLabel = confirmDialogCancelLabel,
   Key confirmKey = confirmDialogConfirmKey,
   Key cancelKey = confirmDialogCancelKey,
 }) async {
@@ -137,27 +112,88 @@ class _ConfirmContent {
   final Key cancelKey;
 }
 
-class ConfirmActionRow extends StatelessWidget {
-  const ConfirmActionRow({
-    super.key,
-    required this.cancel,
-    required this.confirm,
-  });
+List<Widget> confirmChoicesInOrder(
+  TargetPlatform platform, {
+  required Widget safe,
+  required Widget action,
+}) {
+  final bool actionLeads =
+      platform == TargetPlatform.windows ||
+      resolveShellLayout(platform) == ShellLayout.bottomBar;
+  return actionLeads ? <Widget>[action, safe] : <Widget>[safe, action];
+}
 
-  final Widget cancel;
-  final Widget confirm;
+class ConfirmChoiceButton extends StatelessWidget {
+  const ConfirmChoiceButton.safe({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.buttonKey,
+    this.ground = StickerGround.page,
+  }) : danger = false,
+       takesFocus = true;
+
+  const ConfirmChoiceButton.action({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.buttonKey,
+    this.ground = StickerGround.page,
+    this.danger = true,
+  }) : takesFocus = false;
+
+  final String label;
+  final VoidCallback onPressed;
+  final Key? buttonKey;
+  final StickerGround ground;
+  final bool danger;
+  final bool takesFocus;
+
+  StickerButtonVariant get _variant => switch ((takesFocus, danger, ground)) {
+    (true, _, StickerGround.page) => StickerButtonVariant.secondary,
+    (true, _, StickerGround.media) => StickerButtonVariant.stageSoft,
+    (false, true, _) => StickerButtonVariant.danger,
+    (false, false, _) => StickerButtonVariant.primary,
+  };
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      alignment: WrapAlignment.end,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: _actionSpacing,
-      runSpacing: _actionSpacing,
-      children: switch (Theme.of(context).platform) {
-        TargetPlatform.windows => <Widget>[confirm, cancel],
-        _ => <Widget>[cancel, confirm],
-      },
+    return MinTarget.button(
+      child: StickerButton(
+        key: buttonKey,
+        label: label,
+        variant: _variant,
+        ground: ground,
+        focusSurface: switch (ground) {
+          StickerGround.page => FocusRingSurface.light,
+          StickerGround.media => FocusRingSurface.dark,
+        },
+        labelStyle: _choiceLabelStyle,
+        autofocus: takesFocus,
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
+class _ConfirmWords extends StatelessWidget {
+  const _ConfirmWords({required this.content});
+
+  final _ConfirmContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(content.title, style: context.textStyles.title),
+        const SizedBox(height: _messageGap),
+        Text(
+          content.message,
+          style: _messageStyle.copyWith(color: context.colors.inkSoft),
+        ),
+      ],
     );
   }
 }
@@ -189,12 +225,8 @@ class _ConfirmSheetState extends State<_ConfirmSheet>
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final _ConfirmContent content = widget.content;
-    return PhoneSheet(
-      footerDirection: Axis.vertical,
-      footerPadding: _sheetFooterPadding,
-      actions: <Widget>[
-        if (content.danger)
-          ConstrainedBox(
+    final Widget action = content.danger
+        ? ConstrainedBox(
             constraints: const BoxConstraints(
               minHeight: phoneSheetButtonHeight,
             ),
@@ -207,16 +239,20 @@ class _ConfirmSheetState extends State<_ConfirmSheet>
               onPressed: () => resolve(true),
             ),
           )
-        else
-          PhoneSheetButton(
+        : PhoneSheetButton(
             key: content.confirmKey,
             label: content.confirmLabel,
             background: Palette.coral,
             foreground: Palette.onAccent,
             shadows: context.shadows.emphasis,
             onPressed: () => resolve(true),
-          ),
-        PhoneSheetButton(
+          );
+    return PhoneSheet(
+      footerDirection: Axis.vertical,
+      footerPadding: _sheetFooterPadding,
+      actions: confirmChoicesInOrder(
+        Theme.of(context).platform,
+        safe: PhoneSheetButton(
           key: content.cancelKey,
           label: content.cancelLabel,
           background: colors.cardLight,
@@ -224,26 +260,11 @@ class _ConfirmSheetState extends State<_ConfirmSheet>
           autofocus: true,
           onPressed: () => resolve(false),
         ),
-      ],
+        action: action,
+      ),
       child: Padding(
         padding: _sheetBodyPadding,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              content.title,
-              style: context.textStyles.headlineSerif.copyWith(
-                fontSize: _sheetTitleSize,
-              ),
-            ),
-            const SizedBox(height: _sheetMessageGap),
-            Text(
-              content.message,
-              style: _sheetMessageStyle.copyWith(color: colors.mutedDeep),
-            ),
-          ],
-        ),
+        child: _ConfirmWords(content: content),
       ),
     );
   }
@@ -350,131 +371,42 @@ class _ConfirmDialogState extends State<_ConfirmDialog>
     with _ResolvesOnce<_ConfirmDialog> {
   @override
   Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
     final _ConfirmContent content = widget.content;
     return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: _maxWidth),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.cardWarm,
-            border: Border.all(color: colors.line, width: _borderWidth),
-            borderRadius: BorderRadius.circular(_radius),
-            boxShadow: _panelShadow,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(_padding),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: _windowGutter),
+        child: SizedBox(
+          width: _dialogWidth,
+          child: StickerCard(
+            surface: context.colors.cardBright,
+            padding: const EdgeInsets.all(_dialogPadding),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Text(
-                  content.title,
-                  style: context.textStyles.headlineSerif.copyWith(
-                    fontSize: 20,
-                  ),
-                ),
-                const SizedBox(height: _titleGap),
-                Text(
-                  content.message,
-                  style: _messageStyle.copyWith(color: colors.mutedDeep),
-                ),
+                _ConfirmWords(content: content),
                 const SizedBox(height: _actionsGap),
-                ConfirmActionRow(
-                  cancel: _ConfirmDialogButton(
-                    buttonKey: content.cancelKey,
-                    label: content.cancelLabel,
-                    background: colors.cardBright,
-                    foreground: colors.ink,
-                    boxShadow: null,
-                    autofocus: true,
-                    onTap: () => resolve(false),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: _actionSpacing,
+                  runSpacing: _actionSpacing,
+                  children: confirmChoicesInOrder(
+                    Theme.of(context).platform,
+                    safe: ConfirmChoiceButton.safe(
+                      buttonKey: content.cancelKey,
+                      label: content.cancelLabel,
+                      onPressed: () => resolve(false),
+                    ),
+                    action: ConfirmChoiceButton.action(
+                      buttonKey: content.confirmKey,
+                      label: content.confirmLabel,
+                      danger: content.danger,
+                      onPressed: () => resolve(true),
+                    ),
                   ),
-                  confirm: content.danger
-                      ? StickerButton(
-                          key: content.confirmKey,
-                          label: content.confirmLabel,
-                          variant: StickerButtonVariant.danger,
-                          labelStyle: _dialogButtonStyle,
-                          padTapTarget: true,
-                          onPressed: () => resolve(true),
-                        )
-                      : _ConfirmDialogButton(
-                          buttonKey: content.confirmKey,
-                          label: content.confirmLabel,
-                          background: Palette.coral,
-                          foreground: Palette.onAccent,
-                          boxShadow: context.shadows.control,
-                          onTap: () => resolve(true),
-                        ),
                 ),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ConfirmDialogButton extends StatelessWidget {
-  const _ConfirmDialogButton({
-    required this.buttonKey,
-    required this.label,
-    required this.background,
-    required this.foreground,
-    required this.boxShadow,
-    required this.onTap,
-    this.autofocus = false,
-  });
-
-  final Key buttonKey;
-  final String label;
-  final Color background;
-  final Color foreground;
-  final List<BoxShadow>? boxShadow;
-  final VoidCallback onTap;
-  final bool autofocus;
-
-  @override
-  Widget build(BuildContext context) {
-    return Pressable(
-      key: buttonKey,
-      label: label,
-      onPressed: onTap,
-      autofocus: autofocus,
-      borderRadius: _buttonRadius,
-      paintsHover: false,
-      builder: (BuildContext context, bool hovered) => ConstrainedBox(
-        constraints: const BoxConstraints(
-          minWidth: _buttonMinTarget,
-          minHeight: _buttonMinTarget,
-        ),
-        child: Center(
-          widthFactor: 1,
-          heightFactor: 1,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: background,
-              border: Border.all(
-                color: context.colors.line,
-                width: _buttonBorderWidth,
-              ),
-              borderRadius: _buttonRadius,
-              boxShadow: boxShadow,
-            ),
-            child: _HoverVeil(
-              hovered: hovered,
-              foreground: foreground,
-              borderRadius: _buttonRadius,
-              child: Padding(
-                padding: _dialogButtonPadding,
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: _dialogButtonStyle.copyWith(color: foreground),
-                ),
-              ),
             ),
           ),
         ),

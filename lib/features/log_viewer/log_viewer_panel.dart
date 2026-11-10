@@ -33,7 +33,9 @@ const Key logViewerEarlierKey = ValueKey<String>('log-viewer-earlier');
 const Key logViewerLaterKey = ValueKey<String>('log-viewer-later');
 const Key logViewerBackKey = ValueKey<String>('log-viewer-back');
 
-const String logViewerDeleteTitle = 'Delete this entry?';
+const String logViewerDeleteTitle = 'Delete this log?';
+const String logViewerDeleteMessage = "It's gone for good, on every device.";
+const String logViewerKeepLabel = 'Keep it';
 const String logViewerDeleteLabel = 'Delete';
 const String logViewerDeletedMessage = 'Entry deleted';
 const String logViewerDeleteFailedMessage =
@@ -44,9 +46,6 @@ const String logViewerBackLabel = 'Back';
 const String logViewerCloseLabel = 'Close';
 const String logViewerRenameFailedMessage =
     "Couldn't save that title. Please try again.";
-
-String logViewerDeleteMessageFor(String place) =>
-    'This log will be removed from $place. This can’t be undone.';
 
 final Animatable<Offset> _sheetRise = Tween<Offset>(
   begin: const Offset(0, 1),
@@ -248,15 +247,12 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       return;
     }
     _deleting = true;
-    final DateTime? day = parseDateKey(widget.date);
-    final String place = day == null
-        ? widget.date
-        : dayShortLabelFor(day, today: ref.read(todayClockProvider)());
     final bool confirmed = await showConfirmDialog(
       context,
       title: logViewerDeleteTitle,
-      message: logViewerDeleteMessageFor(place),
+      message: logViewerDeleteMessage,
       confirmLabel: logViewerDeleteLabel,
+      cancelLabel: logViewerKeepLabel,
       danger: true,
     );
     if (!mounted) {

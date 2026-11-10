@@ -23,7 +23,6 @@ import '../../support/theme_harness.dart';
 import 'photo/photo_test_support.dart';
 import 'video/video_test_support.dart';
 
-const Color _composerPaper = Color(0xFF292424);
 const Color _panelTop = Color(0xFF1C1919);
 const Color _cardBright = Color(0xFF1F1B1B);
 const Color _line = Color(0xFF968888);
@@ -71,6 +70,7 @@ void main() {
     await _pumpDark(
       tester,
       ComposerShell(
+        responsive: true,
         child: TextComposerSheet(
           onSave: (String _) {},
           onCancel: () {},
@@ -82,22 +82,14 @@ void main() {
       size: _desktop,
     );
 
-    final BoxDecoration panel =
-        tester.widget<Container>(find.byKey(composerPanelKey)).decoration!
-            as BoxDecoration;
-    expect(panel.color, _composerPaper);
-    expect(_borderColour(panel), _line);
-
-    final BoxDecoration surface = _decorationsIn(
-      tester,
-      find.byKey(composerWritingSurfaceKey),
-    ).first;
-    expect(surface.color, _composerPaper);
-
-    final BoxDecoration exitPill =
-        tester.widget<Container>(find.byKey(composerCloseKey)).decoration!
-            as BoxDecoration;
-    expect(_borderColour(exitPill), _line);
+    expect(
+      tester.widget<ColoredBox>(find.byKey(composerPanelKey)).color,
+      _stage,
+    );
+    expect(
+      _decorationsIn(tester, find.byKey(composerWritingSurfaceKey)),
+      isEmpty,
+    );
 
     final Iterable<FormatIcon> glyphs = tester.widgetList<FormatIcon>(
       find.descendant(
@@ -107,7 +99,7 @@ void main() {
     );
     expect(glyphs, isNotEmpty);
     expect(glyphs.map((FormatIcon glyph) => glyph.color).toSet(), <Color>{
-      _ink,
+      _recorderLabel,
     });
     expect(
       tester.renderObject(
@@ -118,7 +110,7 @@ void main() {
             )
             .last,
       ),
-      paints..path(color: _ink),
+      paints..path(color: _recorderLabel),
     );
   });
 

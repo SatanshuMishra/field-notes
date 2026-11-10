@@ -36,6 +36,7 @@ import 'package:field_notes/state/state.dart';
 
 import '../capture/core/capture_test_support.dart'
     show FakeDraftStore, draftIdleDebounceForTest;
+import '../../support/composer_room.dart';
 import '../../support/note_editor_driver.dart';
 import '../day_detail/support/day_detail_harness.dart';
 import '../entry_cards/support/fake_audio_player.dart';
@@ -509,7 +510,7 @@ void main() {
 
     final Rect after = tester.getRect(find.byKey(logViewerPanelKey));
     expect(driver.find, findsOneWidget);
-    expect(find.text('Editing afternoon note'), findsOneWidget);
+    expect(composerTitled('Editing afternoon note'), findsOneWidget);
     expect(after.left, before.left);
     expect(after.right, before.right);
     expect(after.center.dx, before.center.dx);
@@ -556,7 +557,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text(composerDiscardTitle), findsOneWidget);
+      expect(find.text(editDiscardTitle), findsOneWidget);
 
       await driver.press(
         find.byKey(composerKeepEditingKey),
@@ -565,7 +566,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text(composerDiscardTitle), findsNothing);
+      expect(find.text(editDiscardTitle), findsNothing);
       expect(driver.find, findsOneWidget);
       expect(
         tester
@@ -592,11 +593,9 @@ void main() {
     await tester.tap(find.byKey(logActionsDeleteKey));
     await tester.pumpAndSettle();
 
-    expect(find.text('Delete this entry?'), findsOneWidget);
-    expect(
-      find.text('This log will be removed from July 19. This can’t be undone.'),
-      findsOneWidget,
-    );
+    expect(find.text('Delete this log?'), findsOneWidget);
+    expect(find.text("It's gone for good, on every device."), findsOneWidget);
+    expect(find.text('Keep it'), findsOneWidget);
     expect(session.repository.deletedEntryIds, isEmpty);
 
     await tester.tap(find.byKey(confirmDialogConfirmKey));

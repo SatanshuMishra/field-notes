@@ -11,6 +11,8 @@ import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
+import 'package:field_notes/features/capture/core/journal_note_writer.dart'
+    show NoteSourceParts, composeNoteSource, readTitledNoteSource;
 import 'package:field_notes/features/capture/core/note_draft_controller.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
@@ -29,10 +31,14 @@ const String editNoteFailedMessage =
 const String editNoteUpdatedMessage = 'Entry updated';
 
 String editNoteTitleFor(Entry entry) {
-  final DateTime createdAt =
-      DateTime.fromMillisecondsSinceEpoch(entry.createdAt).toLocal();
+  final DateTime createdAt = DateTime.fromMillisecondsSinceEpoch(
+    entry.createdAt,
+  ).toLocal();
   return 'Editing ${partOfDayFor(createdAt.hour)} note';
 }
+
+String _editableSourceOf(Entry entry) =>
+    composeNoteSource(title: entry.title, body: entry.textContent ?? '');
 
 class EditNoteConnector extends ConsumerStatefulWidget {
   const EditNoteConnector({
@@ -65,7 +71,7 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
   void initState() {
     super.initState();
     _kicker = _composeKicker();
-    final String initialText = widget.entry.textContent ?? '';
+    final String initialText = _editableSourceOf(widget.entry);
     _controller = TextEditingController(text: initialText);
     _draft = NoteDraftController(
       key: widget.entry.id,
@@ -128,22 +134,25 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
 
   Future<NoteSaveResult> _persist(String text) async {
     await _draft.settle();
+    final NoteSourceParts note = readTitledNoteSource(text);
     final NoteWriter writer = await ref.read(noteWriterProvider.future);
     final List<String> photoMediaIds = await notePhotoMediaIds(
-      text,
+      note.body,
       () => ref.read(notePhotoStoreProvider.future),
     );
     return writer.save(
       entryId: widget.entry.id,
       date: widget.date,
-      source: text,
+      source: note.body,
+      title: note.carriesTitle ? note.title : null,
       photoMediaIds: photoMediaIds,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool spellCheck = spellCheckAvailable &&
+    final bool spellCheck =
+        spellCheckAvailable &&
         ref.exists(appSettingsProvider) &&
         ref.watch(spellCheckEnabledProvider);
     return ComposerMediaScope(
@@ -162,6 +171,7 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
           locked: _isSaving,
           onDiscard: _draft.discard,
           popResult: false,
+          editingSavedNote: true,
           onClose: onDone == null ? null : (Object? result) => onDone(false),
           builder: (BuildContext context, VoidCallback requestClose) {
             return TextComposerSheet(

@@ -15,6 +15,8 @@ import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
+import 'package:field_notes/features/capture/core/journal_note_writer.dart'
+    show NoteSourceParts, readTitledNoteSource;
 import 'package:field_notes/features/capture/core/note_draft_controller.dart';
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show ComposerMediaScope, spellCheckAvailable;
@@ -119,8 +121,9 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
   String _savedToMessage() {
     final DateTime? parsed = parseDateKey(widget.date);
     final DateTime now = ref.read(todayClockProvider)();
-    final String place =
-        parsed == null ? widget.date : dayShortLabelFor(parsed, today: now);
+    final String place = parsed == null
+        ? widget.date
+        : dayShortLabelFor(parsed, today: now);
     return 'Saved to $place';
   }
 
@@ -155,14 +158,16 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
 
   Future<NoteSaveResult> _persist(String text) async {
     await _draft.settle();
+    final NoteSourceParts note = readTitledNoteSource(text);
     final NoteWriter writer = await ref.read(noteWriterProvider.future);
     final List<String> photoMediaIds = await notePhotoMediaIds(
-      text,
+      note.body,
       () => ref.read(notePhotoStoreProvider.future),
     );
     return writer.save(
       date: widget.date,
-      source: text,
+      source: note.body,
+      title: note.title.isEmpty ? null : note.title,
       photoMediaIds: photoMediaIds,
       draftKey: _draftKey,
     );
@@ -177,7 +182,8 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
 
   @override
   Widget build(BuildContext context) {
-    final bool spellCheck = spellCheckAvailable &&
+    final bool spellCheck =
+        spellCheckAvailable &&
         ref.exists(appSettingsProvider) &&
         ref.watch(spellCheckEnabledProvider);
     return ComposerMediaScope(
