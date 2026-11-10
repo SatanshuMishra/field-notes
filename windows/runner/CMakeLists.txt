@@ -12,6 +12,7 @@ add_executable(${BINARY_NAME} WIN32
   "spell_check_bridge.cpp"
   "system_channels.cpp"
   "utils.cpp"
+  "video_frames_bridge.cpp"
   "video_join_bridge.cpp"
   "win32_window.cpp"
   "window_channel.cpp"
