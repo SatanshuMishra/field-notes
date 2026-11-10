@@ -225,7 +225,7 @@ void main() {
   });
 
   testWidgets(
-    'the macOS voice recorder keeps its question 108 px from the top at the minimum window',
+    'the macOS voice recorder keeps its question under the title row at the minimum window',
     (WidgetTester tester) async {
       await _openRecorder(
         tester,
@@ -245,7 +245,7 @@ void main() {
         matching: find.byType(ReflectionPrompt),
       );
       expect(prompt, findsOneWidget);
-      expect(tester.getRect(prompt).top, 108);
+      expect(tester.getRect(prompt).top, 152);
       expect(find.byKey(reflectionQuestionKey), findsOneWidget);
 
       await _close(tester);
@@ -253,7 +253,7 @@ void main() {
   );
 
   testWidgets(
-    'the macOS video recorder keeps its question 34 px below the moved controls at the minimum window',
+    'the macOS video recorder keeps its question 34 px below the title row at the minimum window',
     (WidgetTester tester) async {
       await _openRecorder(
         tester,
@@ -270,7 +270,7 @@ void main() {
         matching: find.byType(ReflectionPrompt),
       );
       expect(prompt, findsOneWidget);
-      expect(tester.getRect(prompt).top, 124);
+      expect(tester.getRect(prompt).top, 168);
       expect(find.byKey(reflectionQuestionKey), findsOneWidget);
 
       await _close(tester);

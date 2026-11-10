@@ -348,13 +348,6 @@ void main() {
       ),
       _Row('Flip camera', _pressableIn(_flipKey), _dark, _Shape.circle),
       _Row('Input', _pressableIn(_inputKey), _dark, _Shape.circle),
-      _Row(
-        'Ask me something else',
-        _pressableOn(reflectionShuffleKey),
-        _dark,
-        _Shape.rounded,
-        14,
-      ),
     ]);
 
     await _pump(
