@@ -1,6 +1,6 @@
 # post-1-7-0-followups: Post-1.7.0 follow-ups: privacy line, note title focus, note viewer and editor parity, voice button, week garden, overnight Today, day modal
 Status: active
-Updated: 2026-11-10T19:50:43.068Z
+Updated: 2026-11-10T20:06:13.489Z
 Next ids: c4 D1 R2 S1
 
 ## Goal
@@ -15,11 +15,11 @@ Prototype the owner's seven 1.7.0 follow-ups (a to g) on the design canvas, get 
 
 ## Where things stand
 
-Open and assigned: week garden (e) #363, 15 tests passing; recorders (a for recordings, d) #364, 543 tests passing; overnight Today (f) #365, 34 tests passing; day modal (g) #366, 528 tests passing. The note room (b, a for notes, c) is built on branch feat/note-room, reviewed and merging cleanly with the other four; the overlapping test folders are running on all five merged in a scratch checkout before its pull request opens.
+Open and assigned: week garden (e) #363; recorders (a for recordings, d) #364; overnight Today (f) #365; day modal (g) #366. The first merged run of all five found one stale test per branch on #363, #364 and the note room; each is fixed and pushed (the recorder date now wraps at 2x text rather than truncating). The note room (b, a for notes, c) is committed on feat/note-room, not pushed. The merged run is repeating on the latest branches.
 
 ## Next step
 
-As each agent returns, review its branch diff, run its tests, confirm both capture branches carry the byte-identical capture_day_line.dart (sha256 1eb5f153...), then push and open one pull request per branch assigned to the owner. Plain gh pr create is refused in this session; open through the GitHub MCP create_pull_request with render's title and body, then assign and bind.
+When the merged run is green, push feat/note-room and open its pull request from scratchpad fn/fanout/pr-noteroom.json (fill the merged-run result), then tick c3 and remove the scratch integration worktree. Plain gh pr create is refused in this session; open through the GitHub MCP create_pull_request with render's title and body, then assign.
 
 ## Decisions in force
 
