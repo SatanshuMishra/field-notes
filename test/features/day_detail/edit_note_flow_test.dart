@@ -192,6 +192,38 @@ void main() {
     expect(repository.noteSaves.single.source, body);
   });
 
+  testWidgets('a note that is only a heading keeps it in the page and saves '
+      'with a new title', (WidgetTester tester) async {
+    final Entry entry = Entry(
+      id: 'entry-1',
+      dayId: 'day-1',
+      type: EntryType.text,
+      textContent: '# Groceries',
+      createdAt: DateTime(2026, 7, 2, 14, 30).millisecondsSinceEpoch,
+      updatedAt: 0,
+    );
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[entry],
+    );
+    await tester.pumpWidget(
+      _app(
+        repository: repository,
+        child: _EditTrigger(entry: entry, onResult: (bool? _) {}),
+      ),
+    );
+    await tester.tap(find.text('open editor'));
+    await tester.pumpAndSettle();
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
+
+    await driver.enterTitle('Shopping');
+    await tester.tap(find.text(editNoteSaveLabel));
+    await tester.pumpAndSettle();
+
+    expect(find.text(emptySaveGuardMessage), findsNothing);
+    expect(repository.noteSaveTitles.single, 'Shopping');
+    expect(repository.noteSaves.single.source, '# Groceries');
+  });
+
   testWidgets("editing a note is titled for its part of day under the day's "
       'kicker', (WidgetTester tester) async {
     final Entry entry = _afternoonNote();

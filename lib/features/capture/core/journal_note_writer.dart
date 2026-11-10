@@ -72,6 +72,9 @@ NoteSourceParts _liftLeadingHeading(String source) {
   final int headingEnd = first.sourceRange.end;
   final String heading = source.substring(first.sourceRange.start, headingEnd);
   final int bodyStart = _startOfNextWrittenLine(source, headingEnd);
+  if (source.substring(bodyStart).trim().isEmpty) {
+    return NoteSourceParts(title: '', body: source);
+  }
   return NoteSourceParts(
     title: plainTextOfTree(
       parseNoteTree(heading, tables: tablesEnabled),

@@ -305,7 +305,13 @@ void main() {
       expect(parts.body, '# Later\n\nmore');
     });
 
-    for (final String source in <String>['', 'a line', 'a line\n\n# Later']) {
+    for (final String source in <String>[
+      '',
+      'a line',
+      'a line\n\n# Later',
+      '# Groceries',
+      '# Groceries\n\n  \n',
+    ]) {
       test('leaves "$source" whole', () {
         final NoteSourceParts parts = splitNoteSource(source);
 
