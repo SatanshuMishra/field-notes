@@ -23,6 +23,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/page_opacity.dart';
 import '../../support/sync_overrides.dart';
 import '../../support/update_overrides.dart';
 import 'support/fake_settings_repository.dart';
@@ -183,4 +184,52 @@ void main() {
 
     expect(find.byType(SettingsNotice), findsNothing);
   });
+
+  testWidgets(
+    'moving between sections fades the right pane and keeps the list still',
+    (WidgetTester tester) async {
+      await _pumpScreen(tester, repository: FakeSettingsRepository());
+      final Finder list = find.byKey(settingsSidebarColumnKey);
+      final Finder pane = find.byKey(settingsContentColumnKey);
+
+      await tester.tap(find.byKey(settingsTabKey(SettingsTab.remindersSound)));
+      await tester.pump();
+      expect(effectiveOpacity(tester, list), 1);
+
+      for (int elapsed = 15; elapsed <= 300; elapsed += 15) {
+        await tester.pump(const Duration(milliseconds: 15));
+        expect(effectiveOpacity(tester, list), 1, reason: '$elapsed ms');
+        if (elapsed == 45) {
+          expect(effectiveOpacity(tester, pane), inExclusiveRange(0, 1));
+          expect(find.byType(RemindersSoundSection), findsNothing);
+        }
+      }
+
+      expect(effectiveOpacity(tester, pane), 1);
+      expect(find.byType(RemindersSoundSection), findsOneWidget);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
+
+  testWidgets(
+    'opening a section on phone fades the list out, then the page in',
+    (WidgetTester tester) async {
+      await _pumpScreen(tester, repository: FakeSettingsRepository());
+
+      await tester.tap(find.byKey(settingsTabKey(SettingsTab.syncStorage)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 45));
+
+      expect(
+        effectiveOpacity(tester, find.byType(SettingsSectionList)),
+        inExclusiveRange(0, 1),
+      );
+      expect(find.byType(SettingsPageHeading), findsNothing);
+
+      await tester.pump(const Duration(milliseconds: 255));
+
+      expect(find.byType(SettingsSectionList), findsNothing);
+      expect(effectiveOpacity(tester, find.byType(SettingsPageHeading)), 1);
+    },
+  );
 }
