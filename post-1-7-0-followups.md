@@ -1,6 +1,6 @@
 # post-1-7-0-followups: Post-1.7.0 follow-ups: privacy line, note title focus, note viewer and editor parity, voice button, week garden, overnight Today, day modal
 Status: active
-Updated: 2026-11-10T19:08:55.991Z
+Updated: 2026-11-10T19:09:01.289Z
 Next ids: c4 D1 R2 S1
 
 ## Goal
@@ -25,7 +25,6 @@ As each agent returns, review its branch diff, run its tests, confirm both captu
 
 ## Open risks
 
-- R1 Overnight cause: todayDateProvider, thisWeekCellsProvider and onThisDayMemoryProvider compute once and nothing refreshes them at midnight, while the Today header calls the clock on every rebuild; New log, the mood dock, the mood banner and the note editor read the same stale key, so the fix at that key covers them all (the owner reports no mis-filed logs, so no data repair is needed). A Dart timer can fire late after the Mac sleeps, so the fix also needs a check when the app resumes. Bears on c2.
 
 ## Settled, do not reopen
 
@@ -33,5 +32,4 @@ As each agent returns, review its branch diff, run its tests, confirm both captu
 
 - Owner's request: 2026-11-10 message with eight screenshots, items a to g
 - Prototype canvas: https://claude.ai/artifact/6Jhnx5E1BxCPH9DgNu9R1m (boards NoteRoom, VoiceButton, TodayDay on page followups)
-- Overnight reproduction: test/features/today/today_day_change_test.dart in worktree .claude/worktrees/post-1-7-0, uncommitted
 - Fanout plan and leaf briefs: scratchpad fn/fanout/items.json and plan.json; shared helper fn/fanout/capture_day_line.dart
