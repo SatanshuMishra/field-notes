@@ -132,6 +132,7 @@ void main() {
       expect(recorder.stopCalls, 1);
       expect(service.requests, isEmpty);
       expect(find.text(voiceSaveTimeoutMessage), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Saving your recording…'), findsNothing);
       expect(find.byKey(voiceRecordButtonKey), findsOneWidget);
       expect(find.byType(VoiceRecorderSheet), findsOneWidget);
