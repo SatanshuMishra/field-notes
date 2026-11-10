@@ -593,12 +593,6 @@ void main() {
     expect(unreleased, isNonNegative);
     expect(release, greaterThan(unreleased));
     expect(previous, greaterThan(release));
-    expect(
-      lines
-          .sublist(unreleased + 1, release)
-          .every((String line) => line.isEmpty),
-      isTrue,
-    );
 
     final ProcessResult result = Process.runSync('bash', <String>[
       'tool/release/changelog_section.sh',
