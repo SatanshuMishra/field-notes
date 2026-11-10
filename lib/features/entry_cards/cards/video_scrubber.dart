@@ -2,34 +2,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/pressable.dart';
 
-import '../../../design/tokens/tokens.dart';
-import '../util/duration_format.dart';
+import '../transport/transport.dart';
+import '../transport/transport_timeline.dart';
+
+export '../transport/transport_timeline.dart' show clampPlaybackPosition;
 
 const double scrubberHeight = 48;
-const double scrubberTrackHeight = 4;
-const double _trackRadius = scrubberTrackHeight / 2;
-const double _trackAlpha = 0.24;
-const double scrubberHandleRadius = 7.0;
-const double _shadowAlpha = 0.45;
-const double _shadowBlur = 3;
-const Offset _shadowOffset = Offset(0, 1);
-const Duration scrubberKeyboardStep = Duration(seconds: 5);
-const String videoScrubberLabel = 'Video position';
-const BorderRadius _scrubberHoverRadius = BorderRadius.all(
-  Radius.circular(_trackRadius),
-);
-
-Duration clampPlaybackPosition(Duration value, Duration total) {
-  if (value < Duration.zero) {
-    return Duration.zero;
-  }
-  if (value > total) {
-    return total;
-  }
-  return value;
-}
+const double scrubberTrackHeight = transportRailHeight;
+const double scrubberHandleRadius = transportThumbRadius;
+const Duration scrubberKeyboardStep = transportSeekStep;
+const String videoScrubberLabel = transportVideoPositionLabel;
 
 class _SeekStepIntent extends Intent {
   const _SeekStepIntent(this.steps);
@@ -53,7 +36,7 @@ const Map<ShortcutActivator, Intent> _scrubberShortcuts =
       SingleActivator(LogicalKeyboardKey.end): _SeekEdgeIntent(true),
     };
 
-class VideoScrubber extends StatefulWidget {
+class VideoScrubber extends StatelessWidget {
   const VideoScrubber({
     super.key,
     required this.position,
@@ -69,283 +52,46 @@ class VideoScrubber extends StatefulWidget {
   final ValueChanged<Duration>? onScrubUpdate;
   final VoidCallback? onScrubEnd;
 
-  @override
-  State<VideoScrubber> createState() => _VideoScrubberState();
-}
-
-class _VideoScrubberState extends State<VideoScrubber> {
-  bool _focused = false;
-  Duration? _dragPosition;
-  final FocusNode _pressFocus = FocusNode(
-    debugLabel: 'video scrubber press',
-    skipTraversal: true,
-  );
-
-  @override
-  void dispose() {
-    _pressFocus.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(VideoScrubber oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!_enabled) {
-      _dragPosition = null;
+  void _emit(Duration target) {
+    final Duration? known = total;
+    if (known != null && known > Duration.zero) {
+      onSeek?.call(clampPlaybackPosition(target, known));
     }
   }
 
-  Duration? get _total {
-    final Duration? total = widget.total;
-    if (total == null || total <= Duration.zero) {
-      return null;
-    }
-    return total;
-  }
-
-  bool get _enabled => widget.onSeek != null && _total != null;
-
-  Duration get _position {
-    final Duration? total = _total;
-    if (total == null) {
-      return Duration.zero;
-    }
-    return clampPlaybackPosition(_dragPosition ?? widget.position, total);
-  }
-
-  double get _fraction {
-    final Duration? total = _total;
-    if (total == null) {
-      return 0;
-    }
-    return _position.inMilliseconds / total.inMilliseconds;
-  }
-
-  void _onFocusHighlight(bool focused) {
-    if (!mounted || focused == _focused) {
-      return;
-    }
-    setState(() => _focused = focused);
-  }
-
-  void _emit(Duration position) {
-    final Duration? total = _total;
-    final ValueChanged<Duration>? onSeek = widget.onSeek;
-    if (total == null || onSeek == null) {
-      return;
-    }
-    onSeek(clampPlaybackPosition(position, total));
-  }
-
-  Duration? _positionForOffset(double dx, double width) {
-    final Duration? total = _total;
-    final double span = width - scrubberHandleRadius * 2;
-    if (total == null || !width.isFinite || span <= 0) {
-      return null;
-    }
-    final double fraction = ((dx - scrubberHandleRadius) / span).clamp(
-      0.0,
-      1.0,
-    );
-    return Duration(milliseconds: (total.inMilliseconds * fraction).round());
-  }
-
-  void _seekToOffset(double dx, double width) {
-    final Duration? position = _positionForOffset(dx, width);
-    if (position == null) {
-      return;
-    }
-    _emit(position);
-  }
-
-  void _previewOffset(double dx, double width) {
-    final Duration? position = _positionForOffset(dx, width);
-    if (position == null) {
-      return;
-    }
-    setState(() => _dragPosition = position);
-    widget.onScrubUpdate?.call(position);
-  }
-
-  void _endDrag() {
-    final Duration? position = _dragPosition;
-    setState(() => _dragPosition = null);
-    if (position != null) {
-      _emit(position);
-    }
-    widget.onScrubEnd?.call();
-  }
-
-  Duration _stepped(int steps) {
-    return _position + scrubberKeyboardStep * steps;
-  }
-
-  Object? _onStepIntent(_SeekStepIntent intent) {
-    _emit(_stepped(intent.steps));
+  Object? _onStep(_SeekStepIntent intent) {
+    _emit(position + scrubberKeyboardStep * intent.steps);
     return null;
   }
 
-  Object? _onEdgeIntent(_SeekEdgeIntent intent) {
-    _emit(intent.toEnd ? (_total ?? Duration.zero) : Duration.zero);
+  Object? _onEdge(_SeekEdgeIntent intent) {
+    _emit(intent.toEnd ? (total ?? Duration.zero) : Duration.zero);
     return null;
-  }
-
-  String _label(Duration position) {
-    final Duration? total = _total;
-    return '${formatMediaDuration(position.inMilliseconds)}'
-        ' of ${formatMediaDuration(total?.inMilliseconds)}';
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool enabled = _enabled;
-    final Duration? total = _total;
-    return FocusableActionDetector(
-      enabled: enabled,
-      onShowFocusHighlight: _onFocusHighlight,
+    return Shortcuts(
       shortcuts: _scrubberShortcuts,
-      actions: <Type, Action<Intent>>{
-        _SeekStepIntent: CallbackAction<_SeekStepIntent>(
-          onInvoke: _onStepIntent,
-        ),
-        _SeekEdgeIntent: CallbackAction<_SeekEdgeIntent>(
-          onInvoke: _onEdgeIntent,
-        ),
-      },
-      child: Semantics(
-        container: true,
-        slider: true,
-        enabled: enabled,
-        label: videoScrubberLabel,
-        value: _label(_position),
-        increasedValue: _label(
-          total == null
-              ? Duration.zero
-              : clampPlaybackPosition(_stepped(1), total),
-        ),
-        decreasedValue: _label(
-          total == null
-              ? Duration.zero
-              : clampPlaybackPosition(_stepped(-1), total),
-        ),
-        onIncrease: () => _emit(_stepped(1)),
-        onDecrease: () => _emit(_stepped(-1)),
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final double width = constraints.maxWidth;
-            return ExcludeSemantics(
-              child: Pressable(
-                key: const ValueKey<String>('video-scrub-bar'),
-                label: videoScrubberLabel,
-                onPressedAt: enabled
-                    ? (Offset localPosition) =>
-                          _seekToOffset(localPosition.dx, width)
-                    : null,
-                surface: FocusRingSurface.dark,
-                borderRadius: _scrubberHoverRadius,
-                focusNode: _pressFocus,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onHorizontalDragStart: enabled
-                      ? (DragStartDetails details) =>
-                            _previewOffset(details.localPosition.dx, width)
-                      : null,
-                  onHorizontalDragUpdate: enabled
-                      ? (DragUpdateDetails details) =>
-                            _previewOffset(details.localPosition.dx, width)
-                      : null,
-                  onHorizontalDragEnd: enabled
-                      ? (DragEndDetails details) => _endDrag()
-                      : null,
-                  onHorizontalDragCancel: enabled ? _endDrag : null,
-                  child: Opacity(
-                    opacity: enabled ? 1.0 : 0.5,
-                    child: SizedBox(
-                      height: scrubberHeight,
-                      child: CustomPaint(
-                        key: _focused ? focusRingKey : null,
-                        painter: _ScrubberPainter(
-                          fraction: _fraction,
-                          focused: _focused,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          _SeekStepIntent: CallbackAction<_SeekStepIntent>(onInvoke: _onStep),
+          _SeekEdgeIntent: CallbackAction<_SeekEdgeIntent>(onInvoke: _onEdge),
+        },
+        child: TransportTimeline(
+          pressKey: transportVideoTimelineKey,
+          label: videoScrubberLabel,
+          position: position,
+          total: total,
+          onSeek: onSeek,
+          onScrubUpdate: onScrubUpdate,
+          onScrubEnd: onScrubEnd,
+          palette: TransportPalette.stage(),
+          height: scrubberHeight,
+          surface: FocusRingSurface.dark,
+          alwaysShowThumb: true,
         ),
       ),
     );
   }
-}
-
-class _ScrubberPainter extends CustomPainter {
-  const _ScrubberPainter({required this.fraction, required this.focused});
-
-  final double fraction;
-  final bool focused;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double left = scrubberHandleRadius;
-    final double right = size.width - scrubberHandleRadius;
-    if (right <= left) {
-      return;
-    }
-    final double centerY = size.height / 2;
-    final Rect track = Rect.fromLTRB(
-      left,
-      centerY - _trackRadius,
-      right,
-      centerY + _trackRadius,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(track, const Radius.circular(_trackRadius)),
-      Paint()..color = Palette.mediaInk.withValues(alpha: _trackAlpha),
-    );
-
-    final double filled = (right - left) * fraction.clamp(0.0, 1.0);
-    if (filled > 0) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(left, track.top, filled, scrubberTrackHeight),
-          const Radius.circular(_trackRadius),
-        ),
-        Paint()..color = Palette.mediaPlayed,
-      );
-    }
-
-    final Offset handle = Offset(left + filled, centerY);
-    canvas.drawCircle(
-      handle + _shadowOffset,
-      scrubberHandleRadius,
-      Paint()
-        ..color = Palette.mediaBlack.withValues(alpha: _shadowAlpha)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, _shadowBlur),
-    );
-    canvas.drawCircle(
-      handle,
-      scrubberHandleRadius,
-      Paint()..color = Palette.mediaInk,
-    );
-    if (focused) {
-      final double ring = FocusRingSurface.dark.width;
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          (Offset.zero & size).deflate(ring / 2),
-          Radius.circular(size.height / 2),
-        ),
-        Paint()
-          ..color = FocusRingSurface.dark.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = ring,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_ScrubberPainter oldDelegate) =>
-      fraction != oldDelegate.fraction || focused != oldDelegate.focused;
 }

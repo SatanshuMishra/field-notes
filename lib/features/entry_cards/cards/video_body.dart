@@ -14,6 +14,7 @@ import '../media/media_resolver.dart';
 import '../playback/playback_focus.dart';
 import '../playback/video_playback.dart';
 import '../playback/video_slots.dart';
+import '../transport/transport.dart';
 import '../util/duration_format.dart';
 import 'video_controls_overlay.dart';
 import 'video_scrubber.dart';
@@ -68,6 +69,9 @@ final class VideoControlsState {
     required this.onSeek,
     required this.onScrubUpdate,
     required this.onScrubEnd,
+    required this.tuning,
+    this.mediaPath,
+    this.onSkip,
   });
 
   final bool ready;
@@ -82,6 +86,19 @@ final class VideoControlsState {
   final ValueChanged<Duration>? onSeek;
   final ValueChanged<Duration>? onScrubUpdate;
   final VoidCallback? onScrubEnd;
+  final PlaybackTuning tuning;
+  final String? mediaPath;
+  final ValueChanged<Duration>? onSkip;
+
+  TransportValue get transport => TransportValue(
+    position: position,
+    total: total,
+    isPlaying: isPlaying,
+    onToggle: onToggle,
+    onSeek: onSeek,
+    onScrubUpdate: onScrubUpdate,
+    onScrubEnd: onScrubEnd,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -97,7 +114,10 @@ final class VideoControlsState {
       other.onToggle == onToggle &&
       other.onSeek == onSeek &&
       other.onScrubUpdate == onScrubUpdate &&
-      other.onScrubEnd == onScrubEnd;
+      other.onScrubEnd == onScrubEnd &&
+      identical(other.tuning, tuning) &&
+      other.mediaPath == mediaPath &&
+      other.onSkip == onSkip;
 
   @override
   int get hashCode => Object.hash(
@@ -113,6 +133,9 @@ final class VideoControlsState {
     onSeek,
     onScrubUpdate,
     onScrubEnd,
+    tuning,
+    mediaPath,
+    onSkip,
   );
 }
 
@@ -162,6 +185,8 @@ class VideoBody extends StatefulWidget {
     this.controlModel,
     this.loadTimeout = _defaultLoadTimeout,
     this.retryBackoff = _defaultRetryBackoff,
+    this.tuning,
+    this.onFullScreen,
   });
 
   final Entry entry;
@@ -175,6 +200,8 @@ class VideoBody extends StatefulWidget {
   final VideoControlModel? controlModel;
   final Duration loadTimeout;
   final List<Duration> retryBackoff;
+  final PlaybackTuning? tuning;
+  final VoidCallback? onFullScreen;
 
   @override
   State<VideoBody> createState() => _VideoBodyState();
@@ -204,9 +231,14 @@ class _VideoBodyState extends State<VideoBody> {
 
   PlaybackFocus get _focus => widget.focus ?? playbackFocus;
 
+  PlaybackTuning get _tuning => widget.tuning ?? playbackTuning;
+
+  void _applyTuning() => applyPlaybackTuning(_player, _tuning);
+
   @override
   void initState() {
     super.initState();
+    _tuning.addListener(_applyTuning);
     _followDownload();
     if (_hasCapturedPoster) {
       _enterPhase(_VideoPhase.waiting);
@@ -223,6 +255,12 @@ class _VideoBodyState extends State<VideoBody> {
     }
     if (!identical(oldWidget.focus, widget.focus)) {
       oldWidget.focus?.release(this);
+    }
+    final PlaybackTuning previousTuning = oldWidget.tuning ?? playbackTuning;
+    if (!identical(previousTuning, _tuning)) {
+      previousTuning.removeListener(_applyTuning);
+      _tuning.addListener(_applyTuning);
+      _applyTuning();
     }
     if (identical(oldWidget.resolver, widget.resolver) &&
         oldWidget.entry.mediaId == widget.entry.mediaId) {
@@ -359,6 +397,7 @@ class _VideoBodyState extends State<VideoBody> {
       _enterPhase(_VideoPhase.ready);
       _attempt = 0;
     });
+    _applyTuning();
     await _resumeIfInterrupted();
     if (!_isCurrentAttempt(gen, token)) {
       return;
@@ -728,6 +767,9 @@ class _VideoBodyState extends State<VideoBody> {
     }
   }
 
+  void _skip(Duration delta) =>
+      _guard(_seek(_position + delta), 'Video skip failed');
+
   void _onTransportTap() {
     if (!_ready && !_canClaimSlot) {
       return;
@@ -804,6 +846,7 @@ class _VideoBodyState extends State<VideoBody> {
   @override
   void dispose() {
     _generation += 1;
+    _tuning.removeListener(_applyTuning);
     _arrivals.cancel();
     unawaited(_downloadSub?.cancel());
     _downloadSub = null;
@@ -856,6 +899,9 @@ class _VideoBodyState extends State<VideoBody> {
       onSeek: ready ? _seek : null,
       onScrubUpdate: ready ? _onScrubUpdate : null,
       onScrubEnd: ready ? _onScrubEnd : null,
+      tuning: _tuning,
+      mediaPath: _mediaFile?.path,
+      onSkip: ready ? _skip : null,
     );
   }
 
@@ -916,6 +962,8 @@ class _VideoBodyState extends State<VideoBody> {
                   controlsEnabled: state.ready,
                   isPlaying: state.isPlaying,
                   onToggle: state.onToggle,
+                  onSkip: state.onSkip,
+                  onFullScreen: widget.onFullScreen,
                   hideAfter: kVideoControlsHideDelay,
                   model: widget.controlModel,
                   child: widget.controls(context, state),

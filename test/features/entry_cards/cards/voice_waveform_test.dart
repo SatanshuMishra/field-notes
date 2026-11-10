@@ -139,6 +139,26 @@ BoxDecoration _decorationIn(WidgetTester tester, Key key) =>
 int _barArgb(WidgetTester tester, int index) =>
     _decorationIn(tester, voiceWaveformBarKey(index)).color!.toARGB32();
 
+void _expectPlaybackBars(
+  WidgetTester tester,
+  FieldNotesColors colors,
+  double progress,
+) {
+  final List<double> heights = _heights(tester);
+  final int count = heights.length;
+  for (int index = 0; index < count; index++) {
+    final Color unplayed = heights[index] > 0.62
+        ? colors.waveMid
+        : colors.waveLight;
+    expect(
+      _barArgb(tester, index),
+      ((index + 0.5) / count <= progress ? colors.mediaPlayed : unplayed)
+          .toARGB32(),
+      reason: 'bar $index',
+    );
+  }
+}
+
 List<SemanticsNode> _sliders() => find.semantics
     .byPredicate(
       (SemanticsNode node) => node.getSemanticsData().flagsCollection.isSlider,
@@ -371,12 +391,11 @@ void main() {
   });
 
   testWidgets(
-    'playback colours played bars, shows a playhead and tapping seeks',
+    'playback colours played bars, keeps the waveform as the track and tapping seeks',
     (WidgetTester tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
       final _SeekingPlayer player = _SeekingPlayer();
       await _pumpVoice(tester, player);
-      expect(find.byKey(voiceWaveformPlayheadKey), findsNothing);
 
       player.emitState(AudioPlaybackState.playing);
       player.emitPosition(const Duration(seconds: 26));
@@ -386,53 +405,17 @@ void main() {
       final Rect wave = tester.getRect(find.byType(VoiceWaveform));
       final int count = _barRects(tester).length;
       expect(count, voiceWaveformBarCount(wave.width));
-      final List<bool> played = <bool>[
-        for (int index = 0; index < count; index++)
-          _barArgb(tester, index) == Palette.coral.toARGB32(),
-      ];
-      for (int index = 0; index < count; index++) {
-        expect(
-          _barArgb(tester, index),
-          (index + 0.5) / count <= 0.4
-              ? Palette.coral.toARGB32()
-              : FieldNotesColors.light.ink22.toARGB32(),
-          reason: 'bar $index',
-        );
-      }
-      final int playedCount = played.where((bool bar) => bar).length;
-      expect(playedCount / count, closeTo(0.4, 1 / count));
-      expect(played.sublist(0, playedCount), everyElement(isTrue));
+      _expectPlaybackBars(tester, FieldNotesColors.light, 0.4);
 
-      final Rect playhead = tester.getRect(
-        find.byKey(voiceWaveformPlayheadKey),
-      );
-      expect(playhead.width, 2);
-      expect(playhead.height, _barsHeight + 4);
-      expect(playhead.center.dx, closeTo(wave.left + wave.width * 0.4, 1e-6));
-      expect(playhead.center.dy, closeTo(wave.center.dy, 1e-6));
-      final BoxDecoration line = _decorationIn(
-        tester,
-        voiceWaveformPlayheadKey,
-      );
-      expect(
-        line.color!.toARGB32(),
-        FieldNotesColors.light.accentInk.toARGB32(),
-      );
-      expect(line.boxShadow!.single.spreadRadius, 2);
-      expect(
-        line.boxShadow!.single.color.toARGB32(),
-        Palette.coral.withValues(alpha: 0.18).toARGB32(),
-      );
-
-      final Finder label = find.text('0:26 / 1:05');
+      final Finder label = find.text('0:26 / 1:05', findRichText: true);
       expect(label, findsOneWidget);
-      final Text text = tester.widget<Text>(label);
+      final Text text = tester.widget<Text>(
+        find.ancestor(of: label, matching: find.byType(Text)),
+      );
       expect(
         text.style!.fontFeatures,
         contains(const FontFeature.tabularFigures()),
       );
-      expect(text.textAlign, TextAlign.right);
-      expect(tester.getSize(label).width, greaterThanOrEqualTo(62));
 
       final List<SemanticsNode> sliders = _sliders();
       expect(sliders, hasLength(1));
@@ -471,7 +454,7 @@ void main() {
   );
 
   testWidgets(
-    'tapping an idle log seeks and plays, a paused log stays paused',
+    'tapping an idle log marks the position without playing, a paused log stays paused',
     (WidgetTester tester) async {
       final _SeekingPlayer player = _SeekingPlayer();
       await _pumpVoice(tester, player);
@@ -479,29 +462,26 @@ void main() {
 
       await tester.tapAt(Offset(wave.left + wave.width * 0.5, wave.center.dy));
       await tester.pump();
+      await tester.pump(_settle);
       expect(player.seekCalls, <Duration>[const Duration(milliseconds: 32500)]);
-      expect(player.playCalls, 1);
+      expect(player.playCalls, 0);
+      _expectPlaybackBars(tester, FieldNotesColors.light, 0.5);
 
       player.emitState(AudioPlaybackState.paused);
       player.emitPosition(const Duration(milliseconds: 32500));
       await tester.pump();
       await tester.pump(_settle);
-      expect(
-        tester.getRect(find.byKey(voiceWaveformPlayheadKey)).center.dx,
-        closeTo(wave.left + wave.width * 0.5, 1e-6),
-      );
-      expect(_barArgb(tester, 0), Palette.coral.toARGB32());
+      _expectPlaybackBars(tester, FieldNotesColors.light, 0.5);
 
       await tester.tapAt(Offset(wave.left + wave.width * 0.25, wave.center.dy));
       await tester.pump();
       expect(player.seekCalls.last, const Duration(milliseconds: 16250));
-      expect(player.playCalls, 1);
+      expect(player.playCalls, 0);
       expect(player.pauseCalls, 0);
 
       player.emitState(AudioPlaybackState.completed);
       await tester.pump();
       await tester.pump(_settle);
-      expect(find.byKey(voiceWaveformPlayheadKey), findsNothing);
       final List<double> heights = _heights(tester);
       for (int index = 0; index < heights.length; index++) {
         expect(
@@ -582,19 +562,6 @@ void main() {
     player.emitState(AudioPlaybackState.playing);
     player.emitPosition(const Duration(seconds: 26));
     await tester.pump();
-    final int count = heights.length;
-    for (int index = 0; index < count; index++) {
-      expect(
-        _barArgb(tester, index),
-        (index + 0.5) / count <= 0.4
-            ? Palette.coral.toARGB32()
-            : FieldNotesColors.dark.ink22.toARGB32(),
-        reason: 'bar $index',
-      );
-    }
-    expect(
-      _decorationIn(tester, voiceWaveformPlayheadKey).color!.toARGB32(),
-      FieldNotesColors.dark.accentInk.toARGB32(),
-    );
+    _expectPlaybackBars(tester, FieldNotesColors.dark, 0.4);
   });
 }

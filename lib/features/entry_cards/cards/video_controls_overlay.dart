@@ -10,6 +10,9 @@ import '../../../design/interaction/pressable.dart';
 import '../../../design/motion/motion.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../domain/platform/desktop_platform.dart';
+import '../transport/transport.dart';
+import '../transport/transport_bar.dart';
+import '../transport/transport_keys.dart';
 
 const Duration kVideoControlsHideDelay = Duration(milliseconds: 2600);
 
@@ -18,6 +21,9 @@ const String videoSurfaceTouchLabel = 'Show or hide video controls';
 
 const double _surfaceRingHairline = 1;
 const double _surfaceRingWidth = 2;
+const Duration _doubleTapWindow = Duration(milliseconds: 300);
+const double _skipReadoutX = 0.52;
+const double _skipReadoutY = -0.08;
 
 enum VideoControlModel { pointer, touch }
 
@@ -45,6 +51,8 @@ class VideoControlsOverlay extends StatefulWidget {
     required this.child,
     this.hideAfter = kVideoControlsHideDelay,
     this.model,
+    this.onSkip,
+    this.onFullScreen,
   });
 
   final bool controlsEnabled;
@@ -53,6 +61,8 @@ class VideoControlsOverlay extends StatefulWidget {
   final Widget child;
   final Duration hideAfter;
   final VideoControlModel? model;
+  final ValueChanged<Duration>? onSkip;
+  final VoidCallback? onFullScreen;
 
   @override
   State<VideoControlsOverlay> createState() => _VideoControlsOverlayState();
@@ -60,6 +70,10 @@ class VideoControlsOverlay extends StatefulWidget {
 
 class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   Timer? _hideTimer;
+  Timer? _tapTimer;
+  Timer? _skipFlashTimer;
+  ({String text, bool left})? _skipFlash;
+  int _skipFlashSerial = 0;
   bool _hidden = false;
   bool _focusWithin = false;
   bool _accessibleNavigation = false;
@@ -100,6 +114,8 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   void dispose() {
     _hideTimer?.cancel();
     _hideTimer = null;
+    _tapTimer?.cancel();
+    _skipFlashTimer?.cancel();
     _surfaceFocus.dispose();
     super.dispose();
   }
@@ -174,13 +190,52 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
     _registerActivity();
   }
 
-  void _onSurfaceTap() {
+  void _onSurfacePressedAt(Offset local) {
     if (_model == VideoControlModel.pointer) {
-      _registerActivity();
-      widget.onToggle?.call();
+      _onPointerClick();
       return;
     }
-    if (!_visibleAtPointerDown) {
+    final ValueChanged<Duration>? skip = widget.onSkip;
+    if (skip == null) {
+      _onTouchTap(_visibleAtPointerDown);
+      return;
+    }
+    if (_takePendingTap()) {
+      _skipFromSide(local, skip);
+      return;
+    }
+    final bool visibleAtDown = _visibleAtPointerDown;
+    _tapTimer = Timer(_doubleTapWindow, () {
+      _tapTimer = null;
+      if (mounted) {
+        _onTouchTap(visibleAtDown);
+      }
+    });
+  }
+
+  bool _takePendingTap() {
+    final Timer? pending = _tapTimer;
+    _tapTimer = null;
+    pending?.cancel();
+    return pending != null;
+  }
+
+  void _onPointerClick() {
+    _registerActivity();
+    widget.onToggle?.call();
+    final VoidCallback? fullScreen = widget.onFullScreen;
+    if (fullScreen == null) {
+      return;
+    }
+    if (_takePendingTap()) {
+      fullScreen();
+      return;
+    }
+    _tapTimer = Timer(_doubleTapWindow, () => _tapTimer = null);
+  }
+
+  void _onTouchTap(bool visibleAtDown) {
+    if (!visibleAtDown) {
       _registerActivity();
       return;
     }
@@ -190,12 +245,53 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
     _hideNow();
   }
 
+  void _skipFromSide(Offset local, ValueChanged<Duration> skip) {
+    final bool left = local.dx < (context.size?.width ?? 0) / 2;
+    final Duration delta = left ? -transportSkipStep : transportSkipStep;
+    skip(delta);
+    _skipFlashTimer?.cancel();
+    setState(() {
+      _skipFlash = (text: transportSeekReadout(delta), left: left);
+      _skipFlashSerial += 1;
+    });
+    _skipFlashTimer = Timer(transportReadoutHold, _clearSkipFlash);
+  }
+
+  void _clearSkipFlash() {
+    if (mounted) {
+      setState(() => _skipFlash = null);
+    }
+  }
+
   bool get _surfaceTapActs => widget.onToggle != null || _canAutoHide;
+
+  bool _onTransportActivity(TransportActivityNotification notification) {
+    _registerActivity();
+    return false;
+  }
+
+  Widget _skipFlashLayer(({String text, bool left}) flash) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Align(
+          alignment: Alignment(
+            flash.left ? -_skipReadoutX : _skipReadoutX,
+            _skipReadoutY,
+          ),
+          child: TransportReadout(
+            key: ValueKey<int>(_skipFlashSerial),
+            text: flash.text,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final bool visible = _visible;
     final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final ({String text, bool left})? flash = _skipFlash;
     return MouseRegion(
       opaque: false,
       onEnter: _onPointerEnter,
@@ -210,7 +306,7 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
           label: _model == VideoControlModel.pointer
               ? videoSurfacePointerLabel
               : videoSurfaceTouchLabel,
-          onPressed: _surfaceTapActs ? _onSurfaceTap : null,
+          onPressedAt: _surfaceTapActs ? _onSurfacePressedAt : null,
           surface: FocusRingSurface.dark,
           placement: FocusRingPlacement.edge,
           ringsFace: true,
@@ -233,11 +329,16 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
                     curve: Motion.fadeCurve,
                     child: IgnorePointer(
                       ignoring: !visible,
-                      child: widget.child,
+                      child:
+                          NotificationListener<TransportActivityNotification>(
+                            onNotification: _onTransportActivity,
+                            child: widget.child,
+                          ),
                     ),
                   ),
                 ),
               ),
+              if (flash != null) _skipFlashLayer(flash),
               Positioned.fill(
                 child: IgnorePointer(
                   child: KeyboardFocusBuilder(

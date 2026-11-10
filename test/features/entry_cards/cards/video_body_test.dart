@@ -142,13 +142,10 @@ void main() {
       await tester.pump();
 
       expect(player.seekCalls, hasLength(1));
-      expect(
-        player.seekCalls.single.inMilliseconds,
-        closeTo(32500, 2000),
-      );
+      expect(player.seekCalls.single.inMilliseconds, closeTo(32500, 2000));
     });
 
-    testWidgets('maps a tap to the inset track the handle is painted on', (
+    testWidgets('maps a tap to the share of the whole rail under the pointer', (
       WidgetTester tester,
     ) async {
       final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
@@ -158,17 +155,15 @@ void main() {
       await tester.pump();
 
       final Rect bar = tester.getRect(find.byKey(_scrubBar));
-      await tester.tapAt(Offset(bar.left + scrubberHandleRadius, bar.center.dy));
+      await tester.tapAt(Offset(bar.left, bar.center.dy));
       await tester.pump();
 
       expect(player.seekCalls, <Duration>[Duration.zero]);
 
-      await tester.tapAt(
-        Offset(bar.right - scrubberHandleRadius, bar.center.dy),
-      );
+      await tester.tapAt(Offset(bar.left + bar.width * 0.75, bar.center.dy));
       await tester.pump();
 
-      expect(player.seekCalls.last, const Duration(milliseconds: 65000));
+      expect(player.seekCalls.last, const Duration(milliseconds: 48750));
     });
 
     testWidgets('coalesces a drag into a single seek at the released offset', (
