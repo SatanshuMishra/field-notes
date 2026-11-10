@@ -68,6 +68,9 @@ class StateApplier {
       final RecordState newest = _newestFields(local, remote, names);
       if (remote.table == SyncedTables.entries) {
         await _applyEntry(local, remote, newest);
+        if (_dropsTitleKeptHere(received, local)) {
+          await _queueForPush(remote.table, remote.rowId);
+        }
       } else {
         await _store(local, newest);
       }
@@ -223,6 +226,15 @@ class StateApplier {
         );
   }
 
+  Future<void> _queueForPush(String table, String rowId) async {
+    await _recorder.stamp(
+      table: table,
+      rowId: rowId,
+      fields: const <String>[],
+      currentClocks: _emptyClocks,
+    );
+  }
+
   Future<void> _storeBase(RecordState remote) async {
     final Object? text = remote.fields[_textField];
     final String? clock = remote.clocks[_textField];
@@ -369,6 +381,11 @@ bool _hasUsablePeaks(RecordState remote) {
   }
   final Object? peaks = remote.fields[_peaksField];
   return peaks == null || decodeVoicePeaks(peaks) != null;
+}
+
+bool _dropsTitleKeptHere(RecordState received, RecordState? local) {
+  return !received.fields.containsKey(_titleField) &&
+      local?.clocks[_titleField] != null;
 }
 
 bool _hasUsableTitle(RecordState remote) {

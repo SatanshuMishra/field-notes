@@ -170,14 +170,17 @@ class _TransportState extends State<Transport> {
     _flash(tuning.muted ? 'Muted' : 'Sound on');
   }
 
-  Map<LogicalKeyboardKey, VoidCallback> _bindings() {
+  Map<LogicalKeyboardKey, VoidCallback> _bindings(BuildContext context) {
     final bool canSeek = _canSeek;
+    final bool hasVolumeControls = isDesktopPlatform(
+      Theme.of(context).platform,
+    );
     return transportKeyBindings(
       onToggle: widget.value.onToggle,
       onSeekBy: canSeek ? _seekBy : null,
       onSeekToShare: canSeek ? _seekToShare : null,
-      onVolumeBy: _volumeBy,
-      onMute: _toggleMute,
+      onVolumeBy: hasVolumeControls ? _volumeBy : null,
+      onMute: hasVolumeControls ? _toggleMute : null,
       onFullScreen: widget.onFullScreen,
       onFrameStep: canSeek && _isVideo && !widget.value.isPlaying
           ? (Duration delta) => _seekTo(widget.value.position + delta)
@@ -402,7 +405,7 @@ class _TransportState extends State<Transport> {
           ),
         };
         return TransportKeys(
-          bindings: _bindings(),
+          bindings: _bindings(context),
           takesFocus: _inViewer,
           autofocus: widget.autofocus,
           onHandled: _announceActivity,

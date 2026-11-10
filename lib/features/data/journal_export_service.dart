@@ -22,8 +22,8 @@ class JournalExportService implements ExportService {
     required db.AppDatabase database,
     required this._mediaStore,
     int Function()? clock,
-  })  : _db = database,
-        _clock = clock ?? _systemMillis;
+  }) : _db = database,
+       _clock = clock ?? _systemMillis;
 
   final db.AppDatabase _db;
   final MediaStore _mediaStore;
@@ -64,8 +64,10 @@ class JournalExportService implements ExportService {
         mediaFiles[bytes.archiveName] = bytes.content;
       }
       if (skippedMediaIds.isNotEmpty) {
-        debugPrint('Export skipped ${skippedMediaIds.length} unreadable media '
-            'blobs: ${skippedMediaIds.join(', ')}');
+        debugPrint(
+          'Export skipped ${skippedMediaIds.length} unreadable media '
+          'blobs: ${skippedMediaIds.join(', ')}',
+        );
       }
 
       final manifest = ExportManifest(
@@ -123,46 +125,47 @@ class JournalExportService implements ExportService {
   }
 
   Map<String, Object?> _dayJson(db.Day d) => {
-        'id': d.id,
-        'date': d.date,
-        'moodId': d.moodId,
-        'createdAt': d.createdAt,
-        'updatedAt': d.updatedAt,
-        'deletedAt': d.deletedAt,
-      };
+    'id': d.id,
+    'date': d.date,
+    'moodId': d.moodId,
+    'createdAt': d.createdAt,
+    'updatedAt': d.updatedAt,
+    'deletedAt': d.deletedAt,
+  };
 
   Map<String, Object?> _entryJson(db.Entry e) => {
-        'id': e.id,
-        'dayId': e.dayId,
-        'type': e.type,
-        'textContent': e.textContent,
-        'mediaId': e.mediaId,
-        'thumbnailMediaId': e.thumbnailMediaId,
-        'durationMs': e.durationMs,
-        'createdAt': e.createdAt,
-        'updatedAt': e.updatedAt,
-        'deletedAt': e.deletedAt,
-      };
+    'id': e.id,
+    'dayId': e.dayId,
+    'type': e.type,
+    'title': e.title,
+    'textContent': e.textContent,
+    'mediaId': e.mediaId,
+    'thumbnailMediaId': e.thumbnailMediaId,
+    'durationMs': e.durationMs,
+    'createdAt': e.createdAt,
+    'updatedAt': e.updatedAt,
+    'deletedAt': e.deletedAt,
+  };
 
   Map<String, Object?> _photoJson(db.EntryPhoto ph) => {
-        'id': ph.id,
-        'entryId': ph.entryId,
-        'mediaId': ph.mediaId,
-        'sortOrder': ph.sortOrder,
-        'createdAt': ph.createdAt,
-        'updatedAt': ph.updatedAt,
-        'deletedAt': ph.deletedAt,
-      };
+    'id': ph.id,
+    'entryId': ph.entryId,
+    'mediaId': ph.mediaId,
+    'sortOrder': ph.sortOrder,
+    'createdAt': ph.createdAt,
+    'updatedAt': ph.updatedAt,
+    'deletedAt': ph.deletedAt,
+  };
 
   Map<String, Object?> _mediaBlobJson(db.MediaBlob b) => {
-        'id': b.id,
-        'relPath': b.relPath,
-        'mime': b.mime,
-        'kind': b.kind,
-        'bytes': b.bytes,
-        'width': b.width,
-        'height': b.height,
-        'durationMs': b.durationMs,
-        'createdAt': b.createdAt,
-      };
+    'id': b.id,
+    'relPath': b.relPath,
+    'mime': b.mime,
+    'kind': b.kind,
+    'bytes': b.bytes,
+    'width': b.width,
+    'height': b.height,
+    'durationMs': b.durationMs,
+    'createdAt': b.createdAt,
+  };
 }
