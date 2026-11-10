@@ -1,6 +1,6 @@
 # ui-cohesion-release-1-7-0: UI cohesion across Mac, Windows and Android, shipped as Field Notes 1.7.0
-Status: active
-Updated: 2026-11-10T18:18:38.281Z
+Status: done
+Updated: 2026-11-10T18:18:40.984Z
 Next ids: c4 D1 R1 S1
 
 ## Goal
