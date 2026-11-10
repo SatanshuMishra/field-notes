@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 
 import '../../domain/platform/desktop_platform.dart';
 import '../focus/focus_ring.dart';
@@ -69,6 +70,13 @@ const double toastActionMinTarget = 48;
 const double _actionGap = 8;
 const double _actionHorizontalPadding = 12;
 const double _darkActionInset = 4;
+const String toastTitleDoneLabel = 'Done';
+const double _titleEntryMaxWidth = 200;
+const double _titleEntryWidthShare = 0.35;
+const double _titleEntrySize = 15;
+const double _titleEntryLeading = 1.3;
+const double _titleEntryPlaceholderAlpha = 0.72;
+const Key toastTitleFieldKey = ValueKey<String>('toast-title-field');
 const BorderRadius _actionRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusControl),
 );
@@ -96,6 +104,19 @@ class ToastAction {
   final String? semanticLabel;
 }
 
+@immutable
+class ToastTitleOffer {
+  const ToastTitleOffer({
+    required this.actionLabel,
+    required this.fieldLabel,
+    required this.onTitled,
+  });
+
+  final String actionLabel;
+  final String fieldLabel;
+  final ValueChanged<String> onTitled;
+}
+
 class Toast extends StatelessWidget {
   const Toast({
     super.key,
@@ -105,6 +126,7 @@ class Toast extends StatelessWidget {
     this.variant = ToastVariant.light,
     this.scale = ToastScale.phone,
     this.action,
+    this.trailing,
     this.opacity = 1,
   });
 
@@ -114,7 +136,10 @@ class Toast extends StatelessWidget {
   final ToastVariant variant;
   final ToastScale scale;
   final ToastAction? action;
+  final Widget? trailing;
   final double opacity;
+
+  bool get _hasEndControl => action != null || trailing != null;
 
   @override
   Widget build(BuildContext context) {
@@ -122,11 +147,12 @@ class Toast extends StatelessWidget {
       return _dark(context);
     }
     final ToastAction? action = this.action;
+    final Widget? trailing = this.trailing;
     return Opacity(
       opacity: opacity,
       child: StickerCard(
         surface: surface ?? context.colors.cardBright,
-        padding: action == null ? _lightPadding : _lightPaddingWithAction,
+        padding: _hasEndControl ? _lightPaddingWithAction : _lightPadding,
         borderRadius: Shapes.buttonBorderRadius,
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -137,6 +163,10 @@ class Toast extends StatelessWidget {
               const SizedBox(width: _actionGap),
               _ToastActionButton(action: action),
             ],
+            if (trailing != null) ...<Widget>[
+              const SizedBox(width: _actionGap),
+              trailing,
+            ],
           ],
         ),
       ),
@@ -146,12 +176,13 @@ class Toast extends StatelessWidget {
   Widget _dark(BuildContext context) {
     final Widget? icon = this.icon;
     final ToastAction? action = this.action;
+    final Widget? trailing = this.trailing;
     final _DarkMetrics metrics = _metricsFor(scale);
     return GlassSurface(
       tone: GlassTone.toast,
       opacity: opacity,
       borderRadius: BorderRadius.all(Radius.circular(metrics.radius)),
-      padding: action == null
+      padding: !_hasEndControl
           ? EdgeInsets.symmetric(
               horizontal: metrics.padHorizontal,
               vertical: metrics.padVertical,
@@ -180,6 +211,126 @@ class Toast extends StatelessWidget {
               focusSurface: FocusRingSurface.dark,
             ),
           ],
+          if (trailing != null) ...<Widget>[
+            const SizedBox(width: _actionGap),
+            trailing,
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ToastTitleEntry extends StatefulWidget {
+  const _ToastTitleEntry({required this.offer, required this.onClosed});
+
+  final ToastTitleOffer offer;
+  final VoidCallback onClosed;
+
+  @override
+  State<_ToastTitleEntry> createState() => _ToastTitleEntryState();
+}
+
+class _ToastTitleEntryState extends State<_ToastTitleEntry> {
+  final TextEditingController _title = TextEditingController();
+  final FocusNode _focus = FocusNode(debugLabel: 'toast-title');
+  bool _closed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.requestFocus();
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _abandon() {
+    if (_closed) {
+      return;
+    }
+    _closed = true;
+    widget.onClosed();
+  }
+
+  void _save() {
+    if (_closed) {
+      return;
+    }
+    final String title = _title.text.trim();
+    _abandon();
+    if (title.isNotEmpty) {
+      widget.offer.onTitled(title);
+    }
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event.logicalKey != LogicalKeyboardKey.escape) {
+      return KeyEventResult.ignored;
+    }
+    if (event is KeyDownEvent) {
+      _abandon();
+    }
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const TextStyle style = TextStyle(
+      fontFamily: TypographyTokens.serif,
+      fontSize: _titleEntrySize,
+      fontWeight: FontWeight.w400,
+      height: _titleEntryLeading,
+      color: _glassToastInk,
+    );
+    return TextFieldTapRegion(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          SizedBox(
+            width: math.min(
+              _titleEntryMaxWidth,
+              MediaQuery.sizeOf(context).width * _titleEntryWidthShare,
+            ),
+            child: Focus(
+              canRequestFocus: false,
+              skipTraversal: true,
+              includeSemantics: false,
+              onKeyEvent: _onKey,
+              child: Semantics(
+                label: widget.offer.fieldLabel,
+                child: TextField(
+                  key: toastTitleFieldKey,
+                  controller: _title,
+                  focusNode: _focus,
+                  maxLines: 1,
+                  textInputAction: TextInputAction.done,
+                  textCapitalization: TextCapitalization.sentences,
+                  cursorColor: _glassToastInk,
+                  style: style,
+                  decoration: InputDecoration.collapsed(
+                    hintText: widget.offer.actionLabel,
+                    hintStyle: style.copyWith(
+                      color: _glassToastInk.withValues(
+                        alpha: _titleEntryPlaceholderAlpha,
+                      ),
+                    ),
+                  ),
+                  onEditingComplete: _save,
+                  onTapOutside: (PointerDownEvent _) => _save(),
+                ),
+              ),
+            ),
+          ),
+          _ToastActionButton(
+            action: ToastAction(label: toastTitleDoneLabel, onPressed: _save),
+            color: FieldNotesColors.light.waveLight,
+            focusSurface: FocusRingSurface.dark,
+          ),
         ],
       ),
     );
@@ -350,9 +501,11 @@ void showTransientToast(
   String message, {
   IconStickerGlyph glyph = IconStickerGlyph.check,
   ToastAction? action,
+  ToastTitleOffer? titleOffer,
   Duration? lifetime,
   Future<void>? after,
 }) {
+  assert(action == null || titleOffer == null);
   final OverlayState overlay = Overlay.of(context, rootOverlay: true);
   final FocusScopeNode? focusHost = Focus.maybeOf(
     context,
@@ -377,7 +530,11 @@ void showTransientToast(
       clearance: clearance,
       focusHost: focusHost,
       lifetime:
-          lifetime ?? (action == null ? kToastLifetime : kToastActionLifetime),
+          lifetime ??
+          (action == null && titleOffer == null
+              ? kToastLifetime
+              : kToastActionLifetime),
+      titleOffer: titleOffer,
       action: action == null
           ? null
           : ToastAction(
@@ -419,6 +576,7 @@ class _TransientToastLayer extends StatefulWidget {
     required this.focusHost,
     required this.lifetime,
     required this.action,
+    required this.titleOffer,
     required this.onFinished,
   });
 
@@ -429,6 +587,7 @@ class _TransientToastLayer extends StatefulWidget {
   final FocusScopeNode? focusHost;
   final Duration lifetime;
   final ToastAction? action;
+  final ToastTitleOffer? titleOffer;
   final VoidCallback onFinished;
 
   @override
@@ -446,6 +605,22 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
     curve: Motion.fadeCurve,
   );
   late final Timer _lifetime;
+  bool _naming = false;
+
+  ToastAction? get _visibleAction {
+    final ToastTitleOffer? offer = widget.titleOffer;
+    if (offer == null) {
+      return widget.action;
+    }
+    return _naming
+        ? null
+        : ToastAction(label: offer.actionLabel, onPressed: _startNaming);
+  }
+
+  void _startNaming() {
+    _lifetime.cancel();
+    setState(() => _naming = true);
+  }
 
   @override
   void initState() {
@@ -534,8 +709,9 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
 
   Widget _toast() {
     final _DarkMetrics metrics = _metricsFor(widget.scale);
+    final ToastTitleOffer? offer = widget.titleOffer;
     return IgnorePointer(
-      ignoring: widget.action == null,
+      ignoring: widget.action == null && offer == null,
       child: Focus(
         parentNode: _liveFocusHost,
         canRequestFocus: false,
@@ -555,7 +731,13 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
                         message: widget.message,
                         variant: ToastVariant.dark,
                         scale: widget.scale,
-                        action: widget.action,
+                        action: _visibleAction,
+                        trailing: _naming && offer != null
+                            ? _ToastTitleEntry(
+                                offer: offer,
+                                onClosed: widget.onFinished,
+                              )
+                            : null,
                         opacity: _rise.value,
                         icon: IconStickerGlyphIcon(
                           glyph: widget.glyph,
