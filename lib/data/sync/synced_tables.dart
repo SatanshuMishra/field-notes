@@ -28,6 +28,7 @@ abstract final class SyncedTables {
     'conflictSourceDevice',
     'textVersion',
     'peaks',
+    'title',
   ];
 
   static const List<String> entryPhotoFields = <String>[

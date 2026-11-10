@@ -28,7 +28,12 @@ Future<void> _insertDay(
       );
 }
 
-Future<void> _insertVoice(EntriesDao dao, String id, {List<double>? peaks}) {
+Future<void> _insertVoice(
+  EntriesDao dao,
+  String id, {
+  List<double>? peaks,
+  String? title,
+}) {
   return dao.insertEntry(
     id: id,
     dayId: 'd1',
@@ -40,6 +45,7 @@ Future<void> _insertVoice(EntriesDao dao, String id, {List<double>? peaks}) {
     createdAt: 1000,
     updatedAt: 1000,
     peaks: peaks,
+    title: title,
   );
 }
 
@@ -215,6 +221,79 @@ void main() {
     await dao.setVoicePeaks(id: 'e1', peaks: <double>[0.25, 0.75]);
 
     expect(await dao.entryById('e1'), before);
+    expect(await db.select(db.syncOutbox).get(), isEmpty);
+  });
+
+  test('insertEntry trims a title and stores a blank one as null', () async {
+    await _insertDay(db, 'd1', '2026-07-12');
+    await _insertVoice(dao, 'e1', title: '  Morning walk  ');
+    await _insertVoice(dao, 'e2', title: '   ');
+    await _insertVoice(dao, 'e3');
+
+    expect((await dao.entryById('e1'))!.title, 'Morning walk');
+    expect((await dao.entryById('e2'))!.title, isNull);
+    expect((await dao.entryById('e3'))!.title, isNull);
+    expect(_clocks((await dao.entryById('e3'))!), contains('title'));
+  });
+
+  test('setting a title stamps only the title clock', () async {
+    await _insertDay(db, 'd1', '2026-07-12');
+    await _insertVoice(dao, 'e1');
+    final Entry before = (await dao.entryById('e1'))!;
+    await db.delete(db.syncOutbox).go();
+
+    await dao.setEntryTitle(id: 'e1', title: '  Morning walk ');
+
+    final Entry after = (await dao.entryById('e1'))!;
+    final Map<String, Object?> clocksBefore = _clocks(before);
+    final Map<String, Object?> clocksAfter = _clocks(after);
+    expect(after.title, 'Morning walk');
+    expect(after.updatedAt, 1000);
+    expect(after.textVersion, before.textVersion);
+    expect(
+      Hlc.parse(clocksAfter['title']! as String) >
+          Hlc.parse(clocksBefore['title']! as String),
+      isTrue,
+    );
+    expect(
+      Map<String, Object?>.of(clocksAfter)..remove('title'),
+      Map<String, Object?>.of(clocksBefore)..remove('title'),
+    );
+    final List<SyncOutboxData> outbox = await db.select(db.syncOutbox).get();
+    expect(outbox, hasLength(1));
+    expect(outbox.single.recordTable, 'entries');
+    expect(outbox.single.rowId, 'e1');
+  });
+
+  test('setting a blank title clears it and records the change', () async {
+    await _insertDay(db, 'd1', '2026-07-12');
+    await _insertVoice(dao, 'e1', title: 'Morning walk');
+    await db.delete(db.syncOutbox).go();
+
+    await dao.setEntryTitle(id: 'e1', title: ' \n\t ');
+
+    expect((await dao.entryById('e1'))!.title, isNull);
+    expect(await db.select(db.syncOutbox).get(), hasLength(1));
+  });
+
+  test('setting the title an entry already holds records no change', () async {
+    await _insertDay(db, 'd1', '2026-07-12');
+    await _insertVoice(dao, 'e1', title: 'Morning walk');
+    await _insertVoice(dao, 'e2');
+    final Entry titled = (await dao.entryById('e1'))!;
+    final Entry untitled = (await dao.entryById('e2'))!;
+    await db.delete(db.syncOutbox).go();
+
+    await dao.setEntryTitle(id: 'e1', title: ' Morning walk ');
+    await dao.setEntryTitle(id: 'e2', title: '   ');
+
+    expect(await dao.entryById('e1'), titled);
+    expect(await dao.entryById('e2'), untitled);
+    expect(await db.select(db.syncOutbox).get(), isEmpty);
+  });
+
+  test('setting a title on a missing entry changes nothing', () async {
+    expect(await dao.setEntryTitle(id: 'missing', title: 'Lost'), 0);
     expect(await db.select(db.syncOutbox).get(), isEmpty);
   });
 }

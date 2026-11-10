@@ -3,7 +3,7 @@ import 'package:field_notes/domain/models/models.dart';
 
 void main() {
   group('Entry', () {
-    Entry buildText({int? deletedAt}) => Entry(
+    Entry buildText({int? deletedAt, String? title}) => Entry(
           id: 'en1',
           dayId: 'dy1',
           type: EntryType.text,
@@ -11,6 +11,7 @@ void main() {
           createdAt: 1720000000000,
           updatedAt: 1720000000000,
           deletedAt: deletedAt,
+          title: title,
         );
 
     test('stores a text entry with null media fields', () {
@@ -72,6 +73,10 @@ void main() {
         buildText(),
         isNot(equals(buildText(deletedAt: 1720000009999))),
       );
+    });
+
+    test('differs on the title', () {
+      expect(buildText(), isNot(equals(buildText(title: 'A good day'))));
     });
   });
 }

@@ -32,6 +32,7 @@ class Entries extends Table {
   TextColumn get textVersion => text().withDefault(const Constant('{}'))();
   TextColumn get fieldClocks => text().withDefault(const Constant('{}'))();
   TextColumn get peaks => text().nullable()();
+  TextColumn get title => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

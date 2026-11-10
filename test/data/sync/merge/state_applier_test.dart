@@ -712,6 +712,224 @@ void main() {
     expect((await mac.clocks()).keys, isNot(contains('peaks')));
   });
 
+  Future<RecordState> localTitled(_Device holder) async {
+    await holder.addDay();
+    await holder.addText('shared words');
+    await holder.shareBase();
+    await holder.entries.setEntryTitle(id: _entryId, title: 'Named here');
+    return holder.state(SyncedTables.entries, _entryId);
+  }
+
+  test('a newer title from another device replaces the local one', () async {
+    final _Device mac = device('Mac');
+    final RecordState local = await localTitled(mac);
+    mac.now = _noon - _minute;
+
+    await mac.applyAll(<RecordState>[
+      _changed(
+        local,
+        fields: <String, Object?>{'title': 'Named on the phone'},
+        clocks: <String, String>{'title': _phoneClock(1)},
+      ),
+    ]);
+
+    expect((await mac.entry()).title, 'Named on the phone');
+    expect((await mac.clocks())['title'], _phoneClock(1));
+  });
+
+  test('an older title from another device is ignored', () async {
+    final _Device mac = device('Mac');
+    final RecordState local = await localTitled(mac);
+    final Entry before = await mac.entry();
+
+    await mac.applyAll(<RecordState>[
+      _changed(
+        local,
+        fields: <String, Object?>{'title': 'Named on the phone'},
+        clocks: <String, String>{'title': _phoneClock(-1)},
+      ),
+    ]);
+
+    expect(await mac.entry(), before);
+  });
+
+  test('a title cleared on another device merges by clock', () async {
+    final _Device mac = device('Mac');
+    final RecordState local = await localTitled(mac);
+
+    await mac.applyAll(<RecordState>[
+      _changed(
+        local,
+        fields: <String, Object?>{'title': null},
+        clocks: <String, String>{'title': _phoneClock(1)},
+      ),
+    ]);
+
+    expect((await mac.entry()).title, isNull);
+    expect((await mac.clocks())['title'], _phoneClock(1));
+  });
+
+  RecordState editedOnPhone(
+    RecordState local,
+    String text, {
+    Set<String> without = const <String>{},
+  }) {
+    final Map<String, Object?> counts = jsonDecode(
+      local.fields['textVersion']! as String,
+    ) as Map<String, Object?>;
+    return _changed(
+      local,
+      fields: <String, Object?>{
+        'textContent': text,
+        'textVersion': jsonEncode(<String, Object?>{...counts, 'phone': 1}),
+      },
+      clocks: <String, String>{
+        'textContent': _phoneClock(1),
+        'textVersion': _phoneClock(1),
+      },
+      without: without,
+    );
+  }
+
+  Future<List<(String, String)>> queuedRows(_Device holder) async {
+    return <(String, String)>[
+      for (final SyncOutboxData row in await holder.outbox())
+        (row.recordTable, row.rowId),
+    ];
+  }
+
+  test('a record from a device without titles keeps the local title', () async {
+    final _Device mac = device('Mac');
+    final RecordState local = await localTitled(mac);
+    final RecordState older = editedOnPhone(
+      local,
+      'written on an older phone',
+      without: <String>{'title'},
+    );
+    await mac.db.delete(mac.db.syncOutbox).go();
+
+    await mac.applyAll(<RecordState>[older]);
+
+    final Entry stored = await mac.entry();
+    expect(older.fields.containsKey('title'), isFalse);
+    expect(stored.textContent, 'written on an older phone');
+    expect(stored.title, 'Named here');
+    expect((await mac.clocks())['title'], local.clocks['title']);
+    expect(await queuedRows(mac), <(String, String)>[
+      (SyncedTables.entries, _entryId),
+    ]);
+  });
+
+  test('a record that carries the title queues nothing', () async {
+    final _Device mac = device('Mac');
+    final RecordState local = await localTitled(mac);
+    final RecordState newer = editedOnPhone(
+      local,
+      'written on an updated phone',
+    );
+    await mac.db.delete(mac.db.syncOutbox).go();
+
+    await mac.applyAll(<RecordState>[newer]);
+
+    final Entry stored = await mac.entry();
+    expect(newer.fields['title'], 'Named here');
+    expect(stored.textContent, 'written on an updated phone');
+    expect(stored.title, 'Named here');
+    expect(await queuedRows(mac), isEmpty);
+  });
+
+  test('a new entry from a device without titles stores none', () async {
+    final _Device phone = device('Phone');
+    final _Device mac = device('Mac');
+    await phone.addDay();
+    await phone.addText('from an older phone');
+
+    await mac.applyAll(<RecordState>[
+      await phone.state(SyncedTables.days, dayIdForDate(_date)),
+      _changed(
+        await phone.state(SyncedTables.entries, _entryId),
+        without: <String>{'title'},
+      ),
+    ]);
+
+    expect((await mac.entry()).textContent, 'from an older phone');
+    expect((await mac.entry()).title, isNull);
+    expect((await mac.clocks()).keys, isNot(contains('title')));
+  });
+
+  test('a title clock with no title or a non-text title is ignored', () async {
+    final List<RecordState Function(RecordState)> unusable =
+        <RecordState Function(RecordState)>[
+          (RecordState local) => _changed(
+            _changed(local, without: <String>{'title'}),
+            clocks: <String, String>{'title': _phoneClock(1)},
+          ),
+          (RecordState local) => _changed(
+            local,
+            fields: <String, Object?>{'title': 42},
+            clocks: <String, String>{'title': _phoneClock(1)},
+          ),
+        ];
+
+    for (final (int index, RecordState Function(RecordState) broken)
+        in unusable.indexed) {
+      final _Device mac = device('Mac $index');
+      final RecordState local = await localTitled(mac);
+
+      await mac.applyAll(<RecordState>[broken(local)]);
+
+      expect((await mac.entry()).title, 'Named here');
+      expect((await mac.clocks())['title'], local.clocks['title']);
+    }
+  });
+
+  test('a text edit and a title edit made apart both survive', () async {
+    final _Device phone = device('Phone');
+    final _Device mac = device('Mac');
+    await shareEntry(phone, mac, 'shared words');
+    phone.now = _noon + _minute;
+    await phone.editText('words edited on the phone');
+    mac.now = _noon + 2 * _minute;
+    await mac.entries.setEntryTitle(id: _entryId, title: 'Named on the mac');
+    final RecordState edited = await phone.state(
+      SyncedTables.entries,
+      _entryId,
+    );
+    final RecordState named = await mac.state(SyncedTables.entries, _entryId);
+
+    await phone.applyAll(<RecordState>[named]);
+    await mac.applyAll(<RecordState>[edited]);
+
+    for (final _Device holder in <_Device>[phone, mac]) {
+      final Entry merged = await holder.entry();
+      expect(merged.textContent, 'words edited on the phone');
+      expect(merged.title, 'Named on the mac');
+    }
+    expect((await phone.clocks()), await mac.clocks());
+  });
+
+  test('a title survives text edits made apart and merged', () async {
+    final _Device phone = device('Phone');
+    final _Device mac = device('Mac');
+    await shareEntry(phone, mac, 'first line\nsecond line');
+    await mac.shareBase();
+    phone.now = _noon + _minute;
+    await phone.editText('first line edited\nsecond line');
+    mac.now = _noon + 2 * _minute;
+    await mac.editText('first line\nsecond line edited');
+    await mac.entries.setEntryTitle(id: _entryId, title: 'Named on the mac');
+    final RecordState edited = await phone.state(
+      SyncedTables.entries,
+      _entryId,
+    );
+
+    await mac.applyAll(<RecordState>[edited]);
+
+    final Entry merged = await mac.entry();
+    expect(merged.textContent, 'first line edited\nsecond line edited');
+    expect(merged.title, 'Named on the mac');
+  });
+
   test('a malformed peaks field is ignored and the record applied', () async {
     final String tooMany = '[${List<String>.filled(36001, '0').join(',')}]';
     final List<Object?> malformed = <Object?>[42, 'nope', '[2]', tooMany];

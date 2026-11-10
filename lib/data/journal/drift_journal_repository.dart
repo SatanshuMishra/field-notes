@@ -117,6 +117,7 @@ class DriftJournalRepository implements JournalRepository {
     String? thumbnailMediaId,
     int? durationMs,
     List<double>? peaks,
+    String? title,
   }) async {
     final now = _clock();
     final row = await _entries.insertEntry(
@@ -130,6 +131,7 @@ class DriftJournalRepository implements JournalRepository {
       createdAt: now,
       updatedAt: now,
       peaks: peaks,
+      title: title,
     );
     return toDomainEntry(row);
   }
@@ -158,12 +160,23 @@ class DriftJournalRepository implements JournalRepository {
     required String date,
     required String source,
     required List<String> photoMediaIds,
+    String? title,
   }) {
     return _db.transaction(() async {
       final now = _clock();
       final row = entryId == null
-          ? await _insertNote(date: date, source: source, now: now)
-          : await _updateNote(entryId: entryId, source: source, now: now);
+          ? await _insertNote(
+              date: date,
+              source: source,
+              title: title,
+              now: now,
+            )
+          : await _updateNote(
+              entryId: entryId,
+              source: source,
+              title: title,
+              now: now,
+            );
       await _photos.replacePhotos(
         entryId: row.id,
         mediaIds: photoMediaIds,
@@ -177,6 +190,7 @@ class DriftJournalRepository implements JournalRepository {
   Future<db.Entry> _insertNote({
     required String date,
     required String source,
+    required String? title,
     required int now,
   }) async {
     final existingDay = await _days.activeDayForDate(date);
@@ -198,12 +212,14 @@ class DriftJournalRepository implements JournalRepository {
       durationMs: null,
       createdAt: now,
       updatedAt: now,
+      title: title,
     );
   }
 
   Future<db.Entry> _updateNote({
     required String entryId,
     required String source,
+    required String? title,
     required int now,
   }) async {
     final updated = await _entries.updateText(
@@ -211,6 +227,9 @@ class DriftJournalRepository implements JournalRepository {
       textContent: source,
       updatedAt: now,
     );
+    if (updated != 0 && title != null) {
+      await _entries.setEntryTitle(id: entryId, title: title);
+    }
     final row = updated == 0 ? null : await _entries.entryById(entryId);
     if (row == null) {
       throw StateError('entry $entryId does not exist');
@@ -221,6 +240,11 @@ class DriftJournalRepository implements JournalRepository {
   @override
   Future<void> setVoicePeaks(String entryId, List<double> peaks) async {
     await _entries.setVoicePeaks(id: entryId, peaks: peaks);
+  }
+
+  @override
+  Future<void> setEntryTitle(String entryId, String? title) async {
+    await _entries.setEntryTitle(id: entryId, title: title);
   }
 
   @override

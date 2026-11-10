@@ -50,6 +50,7 @@ class FailingJournalRepository implements JournalRepository {
     String? thumbnailMediaId,
     int? durationMs,
     List<double>? peaks,
+    String? title,
   }) {
     if (failCreateEntry) {
       return Future<Entry>.error(StateError('createEntry failed'));
@@ -62,8 +63,13 @@ class FailingJournalRepository implements JournalRepository {
       thumbnailMediaId: thumbnailMediaId,
       durationMs: durationMs,
       peaks: peaks,
+      title: title,
     );
   }
+
+  @override
+  Future<void> setEntryTitle(String entryId, String? title) =>
+      _inner.setEntryTitle(entryId, title);
 
   @override
   Future<EntryPhoto> addPhoto({

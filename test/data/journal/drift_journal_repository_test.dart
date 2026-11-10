@@ -186,6 +186,94 @@ void main() {
       expect(saved.updatedAt, 1000);
     });
 
+    test('a log is created with its title and reads back', () async {
+      final day = await repo.ensureDayForDate('2026-07-12');
+      final voice = await repo.createEntry(
+        dayId: day.id,
+        type: EntryType.voice,
+        mediaId: 'blob-voice',
+        title: '  Morning walk ',
+      );
+
+      expect(voice.title, 'Morning walk');
+      expect((await repo.entryById(voice.id))!.title, 'Morning walk');
+    });
+
+    test('setEntryTitle saves, then a blank title clears', () async {
+      final day = await repo.ensureDayForDate('2026-07-12');
+      final voice = await repo.createEntry(
+        dayId: day.id,
+        type: EntryType.voice,
+        mediaId: 'blob-voice',
+      );
+
+      nowValue = 5000;
+      await repo.setEntryTitle(voice.id, ' Morning walk ');
+      final Entry? named = await repo.entryById(voice.id);
+      expect(named!.title, 'Morning walk');
+      expect(named.updatedAt, 1000);
+
+      await repo.setEntryTitle(voice.id, '   ');
+      expect((await repo.entryById(voice.id))!.title, isNull);
+    });
+
+    test('saveNote creates a note with its title', () async {
+      final Entry note = await repo.saveNote(
+        date: '2026-07-12',
+        source: 'Body',
+        photoMediaIds: const <String>[],
+        title: ' A heading ',
+      );
+
+      expect(note.title, 'A heading');
+    });
+
+    test('saveNote without a title keeps the one a note has', () async {
+      final Entry note = await repo.saveNote(
+        date: '2026-07-12',
+        source: 'Body',
+        photoMediaIds: const <String>[],
+        title: 'A heading',
+      );
+
+      final Entry edited = await repo.saveNote(
+        entryId: note.id,
+        date: '2026-07-12',
+        source: 'Longer body',
+        photoMediaIds: const <String>[],
+      );
+
+      expect(edited.textContent, 'Longer body');
+      expect(edited.title, 'A heading');
+    });
+
+    test('saveNote with a title replaces or clears it on edit', () async {
+      final Entry note = await repo.saveNote(
+        date: '2026-07-12',
+        source: 'Body',
+        photoMediaIds: const <String>[],
+        title: 'A heading',
+      );
+
+      final Entry renamed = await repo.saveNote(
+        entryId: note.id,
+        date: '2026-07-12',
+        source: 'Body',
+        photoMediaIds: const <String>[],
+        title: 'Another heading',
+      );
+      final Entry cleared = await repo.saveNote(
+        entryId: note.id,
+        date: '2026-07-12',
+        source: 'Body',
+        photoMediaIds: const <String>[],
+        title: '  ',
+      );
+
+      expect(renamed.title, 'Another heading');
+      expect(cleared.title, isNull);
+    });
+
     test('updateEntryText replaces the text and bumps updatedAt', () async {
       final day = await repo.ensureDayForDate('2026-07-12');
       final entry = await repo.createEntry(

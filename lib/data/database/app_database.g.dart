@@ -1275,6 +1275,15 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, Entry> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1291,6 +1300,7 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, Entry> {
     textVersion,
     fieldClocks,
     peaks,
+    title,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1410,6 +1420,12 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, Entry> {
         peaks.isAcceptableOrUnknown(data['peaks']!, _peaksMeta),
       );
     }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    }
     return context;
   }
 
@@ -1475,6 +1491,10 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, Entry> {
         DriftSqlType.string,
         data['${effectivePrefix}peaks'],
       ),
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      ),
     );
   }
 
@@ -1499,6 +1519,7 @@ class Entry extends DataClass implements Insertable<Entry> {
   final String textVersion;
   final String fieldClocks;
   final String? peaks;
+  final String? title;
   const Entry({
     required this.id,
     required this.dayId,
@@ -1514,6 +1535,7 @@ class Entry extends DataClass implements Insertable<Entry> {
     required this.textVersion,
     required this.fieldClocks,
     this.peaks,
+    this.title,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1545,6 +1567,9 @@ class Entry extends DataClass implements Insertable<Entry> {
     map['field_clocks'] = Variable<String>(fieldClocks);
     if (!nullToAbsent || peaks != null) {
       map['peaks'] = Variable<String>(peaks);
+    }
+    if (!nullToAbsent || title != null) {
+      map['title'] = Variable<String>(title);
     }
     return map;
   }
@@ -1579,6 +1604,9 @@ class Entry extends DataClass implements Insertable<Entry> {
       peaks: peaks == null && nullToAbsent
           ? const Value.absent()
           : Value(peaks),
+      title: title == null && nullToAbsent
+          ? const Value.absent()
+          : Value(title),
     );
   }
 
@@ -1604,6 +1632,7 @@ class Entry extends DataClass implements Insertable<Entry> {
       textVersion: serializer.fromJson<String>(json['textVersion']),
       fieldClocks: serializer.fromJson<String>(json['fieldClocks']),
       peaks: serializer.fromJson<String?>(json['peaks']),
+      title: serializer.fromJson<String?>(json['title']),
     );
   }
   @override
@@ -1624,6 +1653,7 @@ class Entry extends DataClass implements Insertable<Entry> {
       'textVersion': serializer.toJson<String>(textVersion),
       'fieldClocks': serializer.toJson<String>(fieldClocks),
       'peaks': serializer.toJson<String?>(peaks),
+      'title': serializer.toJson<String?>(title),
     };
   }
 
@@ -1642,6 +1672,7 @@ class Entry extends DataClass implements Insertable<Entry> {
     String? textVersion,
     String? fieldClocks,
     Value<String?> peaks = const Value.absent(),
+    Value<String?> title = const Value.absent(),
   }) => Entry(
     id: id ?? this.id,
     dayId: dayId ?? this.dayId,
@@ -1661,6 +1692,7 @@ class Entry extends DataClass implements Insertable<Entry> {
     textVersion: textVersion ?? this.textVersion,
     fieldClocks: fieldClocks ?? this.fieldClocks,
     peaks: peaks.present ? peaks.value : this.peaks,
+    title: title.present ? title.value : this.title,
   );
   Entry copyWithCompanion(EntriesCompanion data) {
     return Entry(
@@ -1690,6 +1722,7 @@ class Entry extends DataClass implements Insertable<Entry> {
           ? data.fieldClocks.value
           : this.fieldClocks,
       peaks: data.peaks.present ? data.peaks.value : this.peaks,
+      title: data.title.present ? data.title.value : this.title,
     );
   }
 
@@ -1709,7 +1742,8 @@ class Entry extends DataClass implements Insertable<Entry> {
           ..write('conflictSourceDevice: $conflictSourceDevice, ')
           ..write('textVersion: $textVersion, ')
           ..write('fieldClocks: $fieldClocks, ')
-          ..write('peaks: $peaks')
+          ..write('peaks: $peaks, ')
+          ..write('title: $title')
           ..write(')'))
         .toString();
   }
@@ -1730,6 +1764,7 @@ class Entry extends DataClass implements Insertable<Entry> {
     textVersion,
     fieldClocks,
     peaks,
+    title,
   );
   @override
   bool operator ==(Object other) =>
@@ -1748,7 +1783,8 @@ class Entry extends DataClass implements Insertable<Entry> {
           other.conflictSourceDevice == this.conflictSourceDevice &&
           other.textVersion == this.textVersion &&
           other.fieldClocks == this.fieldClocks &&
-          other.peaks == this.peaks);
+          other.peaks == this.peaks &&
+          other.title == this.title);
 }
 
 class EntriesCompanion extends UpdateCompanion<Entry> {
@@ -1766,6 +1802,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
   final Value<String> textVersion;
   final Value<String> fieldClocks;
   final Value<String?> peaks;
+  final Value<String?> title;
   final Value<int> rowid;
   const EntriesCompanion({
     this.id = const Value.absent(),
@@ -1782,6 +1819,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
     this.textVersion = const Value.absent(),
     this.fieldClocks = const Value.absent(),
     this.peaks = const Value.absent(),
+    this.title = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   EntriesCompanion.insert({
@@ -1799,6 +1837,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
     this.textVersion = const Value.absent(),
     this.fieldClocks = const Value.absent(),
     this.peaks = const Value.absent(),
+    this.title = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        dayId = Value(dayId),
@@ -1820,6 +1859,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
     Expression<String>? textVersion,
     Expression<String>? fieldClocks,
     Expression<String>? peaks,
+    Expression<String>? title,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1838,6 +1878,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
       if (textVersion != null) 'text_version': textVersion,
       if (fieldClocks != null) 'field_clocks': fieldClocks,
       if (peaks != null) 'peaks': peaks,
+      if (title != null) 'title': title,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1857,6 +1898,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
     Value<String>? textVersion,
     Value<String>? fieldClocks,
     Value<String?>? peaks,
+    Value<String?>? title,
     Value<int>? rowid,
   }) {
     return EntriesCompanion(
@@ -1874,6 +1916,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
       textVersion: textVersion ?? this.textVersion,
       fieldClocks: fieldClocks ?? this.fieldClocks,
       peaks: peaks ?? this.peaks,
+      title: title ?? this.title,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1925,6 +1968,9 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
     if (peaks.present) {
       map['peaks'] = Variable<String>(peaks.value);
     }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1948,6 +1994,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
           ..write('textVersion: $textVersion, ')
           ..write('fieldClocks: $fieldClocks, ')
           ..write('peaks: $peaks, ')
+          ..write('title: $title, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5921,6 +5968,7 @@ typedef $$EntriesTableCreateCompanionBuilder = EntriesCompanion Function({
   Value<String> textVersion,
   Value<String> fieldClocks,
   Value<String?> peaks,
+  Value<String?> title,
   Value<int> rowid,
 });
 typedef $$EntriesTableUpdateCompanionBuilder = EntriesCompanion Function({
@@ -5938,6 +5986,7 @@ typedef $$EntriesTableUpdateCompanionBuilder = EntriesCompanion Function({
   Value<String> textVersion,
   Value<String> fieldClocks,
   Value<String?> peaks,
+  Value<String?> title,
   Value<int> rowid,
 });
 
@@ -6017,6 +6066,11 @@ class $$EntriesTableFilterComposer
 
   ColumnFilters<String> get peaks => $composableBuilder(
     column: $table.peaks,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6099,6 +6153,11 @@ class $$EntriesTableOrderingComposer
     column: $table.peaks,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$EntriesTableAnnotationComposer
@@ -6163,6 +6222,9 @@ class $$EntriesTableAnnotationComposer
 
   GeneratedColumn<String> get peaks =>
       $composableBuilder(column: $table.peaks, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
 }
 
 class $$EntriesTableTableManager
@@ -6207,6 +6269,7 @@ class $$EntriesTableTableManager
                 Value<String> textVersion = const Value.absent(),
                 Value<String> fieldClocks = const Value.absent(),
                 Value<String?> peaks = const Value.absent(),
+                Value<String?> title = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EntriesCompanion(
                 id: id,
@@ -6223,6 +6286,7 @@ class $$EntriesTableTableManager
                 textVersion: textVersion,
                 fieldClocks: fieldClocks,
                 peaks: peaks,
+                title: title,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6241,6 +6305,7 @@ class $$EntriesTableTableManager
                 Value<String> textVersion = const Value.absent(),
                 Value<String> fieldClocks = const Value.absent(),
                 Value<String?> peaks = const Value.absent(),
+                Value<String?> title = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EntriesCompanion.insert(
                 id: id,
@@ -6257,6 +6322,7 @@ class $$EntriesTableTableManager
                 textVersion: textVersion,
                 fieldClocks: fieldClocks,
                 peaks: peaks,
+                title: title,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

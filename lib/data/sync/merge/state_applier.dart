@@ -24,9 +24,11 @@ const String _updatedField = 'updatedAt';
 const String _deletedField = 'deletedAt';
 const String _dayField = 'dayId';
 const String _peaksField = 'peaks';
+const String _titleField = 'title';
 const String _clocksColumn = 'fieldClocks';
 const String _relPathColumn = 'relPath';
 const String _emptyClocks = '{}';
+const Set<String> _fieldsOlderDevicesOmit = <String>{_peaksField, _titleField};
 const List<String> _textFields = <String>[_textField, _versionField];
 const List<String> _mergedTextFields = <String>[
   _textField,
@@ -53,7 +55,7 @@ class StateApplier {
   final int Function() _wallClock;
 
   Future<ApplyOutcome> apply(RecordState received) async {
-    final RecordState remote = _withUsablePeaks(received);
+    final RecordState remote = _withoutUnusableFields(received);
     final List<String> names = _checkedFields(remote);
     final List<Hlc> remoteClocks = remote.clocks.values.map(Hlc.parse).toList();
     return _db.transaction(() async {
@@ -66,6 +68,9 @@ class StateApplier {
       final RecordState newest = _newestFields(local, remote, names);
       if (remote.table == SyncedTables.entries) {
         await _applyEntry(local, remote, newest);
+        if (_dropsTitleKeptHere(received, local)) {
+          await _queueForPush(remote.table, remote.rowId);
+        }
       } else {
         await _store(local, newest);
       }
@@ -221,6 +226,15 @@ class StateApplier {
         );
   }
 
+  Future<void> _queueForPush(String table, String rowId) async {
+    await _recorder.stamp(
+      table: table,
+      rowId: rowId,
+      fields: const <String>[],
+      currentClocks: _emptyClocks,
+    );
+  }
+
   Future<void> _storeBase(RecordState remote) async {
     final Object? text = remote.fields[_textField];
     final String? clock = remote.clocks[_textField];
@@ -332,11 +346,19 @@ List<String> _checkedFields(RecordState remote) {
 }
 
 bool _mayBeMissing(String table, String name) {
-  return table == SyncedTables.entries && name == _peaksField;
+  return table == SyncedTables.entries &&
+      _fieldsOlderDevicesOmit.contains(name);
 }
 
-RecordState _withUsablePeaks(RecordState remote) {
-  if (remote.table != SyncedTables.entries || _hasUsablePeaks(remote)) {
+RecordState _withoutUnusableFields(RecordState remote) {
+  if (remote.table != SyncedTables.entries) {
+    return remote;
+  }
+  final Set<String> unusable = <String>{
+    if (!_hasUsablePeaks(remote)) _peaksField,
+    if (!_hasUsableTitle(remote)) _titleField,
+  };
+  if (unusable.isEmpty) {
     return remote;
   }
   return RecordState(
@@ -344,11 +366,11 @@ RecordState _withUsablePeaks(RecordState remote) {
     rowId: remote.rowId,
     fields: <String, Object?>{
       for (final MapEntry<String, Object?> field in remote.fields.entries)
-        if (field.key != _peaksField) field.key: field.value,
+        if (!unusable.contains(field.key)) field.key: field.value,
     },
     clocks: <String, String>{
       for (final MapEntry<String, String> clock in remote.clocks.entries)
-        if (clock.key != _peaksField) clock.key: clock.value,
+        if (!unusable.contains(clock.key)) clock.key: clock.value,
     },
   );
 }
@@ -359,6 +381,16 @@ bool _hasUsablePeaks(RecordState remote) {
   }
   final Object? peaks = remote.fields[_peaksField];
   return peaks == null || decodeVoicePeaks(peaks) != null;
+}
+
+bool _dropsTitleKeptHere(RecordState received, RecordState? local) {
+  return !received.fields.containsKey(_titleField) &&
+      local?.clocks[_titleField] != null;
+}
+
+bool _hasUsableTitle(RecordState remote) {
+  return remote.fields.containsKey(_titleField) &&
+      remote.fields[_titleField] is String?;
 }
 
 RecordState _newestFields(

@@ -23,6 +23,7 @@ const List<String> _deleteUnsyncableFields = <String>[
   'textVersion',
 ];
 const List<String> _peaksFields = <String>['peaks'];
+const List<String> _titleFields = <String>['title'];
 
 class EntriesDao {
   EntriesDao(this._db, this._recorder);
@@ -41,6 +42,7 @@ class EntriesDao {
     required int createdAt,
     required int updatedAt,
     List<double>? peaks,
+    String? title,
   }) {
     return _db.transaction(() async {
       final String clocks = await _recorder.stamp(
@@ -68,6 +70,7 @@ class EntriesDao {
               textVersion: Value(version),
               fieldClocks: Value(clocks),
               peaks: Value(peaks == null ? null : encodeVoicePeaks(peaks)),
+              title: Value(_storedTitle(title)),
             ),
           );
     });
@@ -140,6 +143,28 @@ class EntriesDao {
     });
   }
 
+  Future<int> setEntryTitle({required String id, required String? title}) {
+    return _db.transaction(() async {
+      final String? stored = _storedTitle(title);
+      final Entry? existing = await entryById(id);
+      if (existing == null) {
+        return 0;
+      }
+      if (existing.title == stored) {
+        return 1;
+      }
+      final String clocks = await _recorder.stamp(
+        table: SyncedTables.entries,
+        rowId: id,
+        fields: _titleFields,
+        currentClocks: existing.fieldClocks,
+      );
+      return (_db.update(_db.entries)..where((t) => t.id.equals(id))).write(
+        EntriesCompanion(title: Value(stored), fieldClocks: Value(clocks)),
+      );
+    });
+  }
+
   Future<int> softDelete({required String id, required int deletedAt}) {
     return _db.transaction(() async {
       final Entry? existing = await entryById(id);
@@ -197,6 +222,11 @@ class EntriesDao {
       (rows) => rows.map((row) => row.readTable(_db.entries)).toList(),
     );
   }
+}
+
+String? _storedTitle(String? title) {
+  final String? trimmed = title?.trim();
+  return trimmed == null || trimmed.isEmpty ? null : trimmed;
 }
 
 String _raisedVersion(String encoded, String nodeId) {
