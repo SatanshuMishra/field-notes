@@ -1,7 +1,7 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-10T22:37:39.588Z
-Next ids: c4 D1 R2 S1
+Updated: 2026-11-10T22:38:13.243Z
+Next ids: c4 D2 R2 S1
 
 ## Goal
 
@@ -24,6 +24,8 @@ Root causes found: rounded outlines break where an opaque child is clipped only 
 Wait for the owner's answer on the 1.8 follow-ups boards and the four questions, then write fanout items from the approved boards and run fanout from origin/main.
 
 ## Decisions in force
+
+- D1 Owner on g: the capture rooms lose the central gradient; stars stay subtle and mostly still, comets are rare, the sky has some randomness per opening, and resource use must not spike on weak devices.
 
 ## Open risks
 
