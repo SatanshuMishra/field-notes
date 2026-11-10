@@ -5,6 +5,7 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../../../design/focus/focus_ring.dart';
 import '../../../design/interaction/pressable.dart';
@@ -172,6 +173,8 @@ class _TransportTimelineState extends State<TransportTimeline> {
     debugLabel: 'transport timeline press',
     skipTraversal: true,
   );
+  final OverlayPortalController _bubblePortal = OverlayPortalController();
+  final LayerLink _bubbleLink = LayerLink();
   Duration? _dragPosition;
   double? _pointerFraction;
   Uint8List? _frame;
@@ -191,6 +194,33 @@ class _TransportTimelineState extends State<TransportTimeline> {
     if (!_enabled) {
       _dragPosition = null;
       _forgetPointer();
+      _matchBubbleToPointer();
+    }
+  }
+
+  void _updatePointer(VoidCallback change) {
+    setState(change);
+    _matchBubbleToPointer();
+  }
+
+  void _matchBubbleToPointer() {
+    if (!mounted) {
+      return;
+    }
+    final bool wanted =
+        _pointerFraction != null && Overlay.maybeOf(context) != null;
+    if (wanted == _bubblePortal.isShowing) {
+      return;
+    }
+    final SchedulerBinding scheduler = SchedulerBinding.instance;
+    if (scheduler.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      scheduler.addPostFrameCallback((Duration _) => _matchBubbleToPointer());
+      return;
+    }
+    if (wanted) {
+      _bubblePortal.show();
+    } else {
+      _bubblePortal.hide();
     }
   }
 
@@ -282,7 +312,7 @@ class _TransportTimelineState extends State<TransportTimeline> {
       return;
     }
     final double fraction = _fractionAt(event.localPosition.dx, width);
-    setState(() => _pointerFraction = fraction);
+    _updatePointer(() => _pointerFraction = fraction);
     _lookUpFrame(_positionAt(fraction));
   }
 
@@ -291,7 +321,7 @@ class _TransportTimelineState extends State<TransportTimeline> {
     if (_dragPosition != null || _pointerFraction == null) {
       return;
     }
-    setState(_forgetPointer);
+    _updatePointer(_forgetPointer);
   }
 
   void _onDrag(double dx, double width) {
@@ -300,7 +330,7 @@ class _TransportTimelineState extends State<TransportTimeline> {
     if (position == null) {
       return;
     }
-    setState(() {
+    _updatePointer(() {
       _dragPosition = position;
       _pointerFraction = fraction;
     });
@@ -310,7 +340,7 @@ class _TransportTimelineState extends State<TransportTimeline> {
 
   void _endDrag() {
     final Duration? position = _dragPosition;
-    setState(() {
+    _updatePointer(() {
       _dragPosition = null;
       if (!_pointerInside) {
         _forgetPointer();
@@ -403,19 +433,37 @@ class _TransportTimelineState extends State<TransportTimeline> {
 
   Widget _stack(BuildContext context, double width) {
     final double? pointer = _pointerFraction;
-    return SizedBox(
-      width: width,
-      height: widget.height,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          Positioned.fill(child: _face(context, width)),
-          if (pointer != null) _ghost(width * pointer),
-          if (pointer != null) _bubble(context, width, pointer),
-          if (_focused)
-            Positioned.fill(child: IgnorePointer(child: _ring(context))),
-        ],
+    return CompositedTransformTarget(
+      link: _bubbleLink,
+      child: OverlayPortal(
+        controller: _bubblePortal,
+        overlayChildBuilder: (BuildContext context) =>
+            _bubbleLayer(context, width),
+        child: SizedBox(
+          width: width,
+          height: widget.height,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              Positioned.fill(child: _face(context, width)),
+              if (pointer != null) _ghost(width * pointer),
+              if (_focused)
+                Positioned.fill(child: IgnorePointer(child: _ring(context))),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+
+  Widget _bubbleLayer(BuildContext context, double width) {
+    final double? pointer = _pointerFraction;
+    if (pointer == null) {
+      return const SizedBox.shrink();
+    }
+    return Align(
+      alignment: Alignment.topLeft,
+      child: IgnorePointer(child: _bubble(context, width, pointer)),
     );
   }
 
@@ -482,24 +530,22 @@ class _TransportTimelineState extends State<TransportTimeline> {
       halfWidth,
       width - halfWidth,
     );
-    return Positioned(
-      key: transportBubbleKey,
-      left: centre,
-      bottom: widget.height + _bubbleGap,
-      child: FractionalTranslation(
-        translation: const Offset(-0.5, 0),
-        child: IgnorePointer(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              if (frame != null) ...<Widget>[
-                _frameFace(context, frame),
-                const SizedBox(height: _frameGap),
-              ],
-              _timeFace(context, _positionAt(fraction) ?? Duration.zero),
-            ],
-          ),
-        ),
+    return CompositedTransformFollower(
+      link: _bubbleLink,
+      showWhenUnlinked: false,
+      targetAnchor: Alignment.topLeft,
+      followerAnchor: Alignment.bottomCenter,
+      offset: Offset(centre, -_bubbleGap),
+      child: Column(
+        key: transportBubbleKey,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (frame != null) ...<Widget>[
+            _frameFace(context, frame),
+            const SizedBox(height: _frameGap),
+          ],
+          _timeFace(context, _positionAt(fraction) ?? Duration.zero),
+        ],
       ),
     );
   }
