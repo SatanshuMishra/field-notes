@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/features/capture/core/capture_day_line.dart';
 import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
@@ -29,13 +30,23 @@ Widget _app(TargetPlatform platform, Widget home) {
   );
 }
 
+const CaptureDayLine _dayLine = (lead: 'today', date: 'Monday, November 9');
+
+Offset _dayLineCenter(WidgetTester tester) {
+  return tester.getCenter(
+    find
+        .ancestor(of: find.text(_dayLine.lead), matching: find.byType(Row))
+        .first,
+  );
+}
+
 RecorderSurface _surface({
   VoidCallback? onLeave,
   RecorderArrangement arrangement = RecorderArrangement.voice,
   Widget? question,
 }) {
   return RecorderSurface(
-    privacyLine: 'Private · only you will hear this',
+    dayLine: _dayLine,
     onLeave: onLeave ?? () {},
     arrangement: arrangement,
     question: question,
@@ -144,10 +155,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(calls, <String>[startDragMethod, titlebarDoubleClickMethod]);
 
-      final Offset privacy = tester.getCenter(
-        find.text('Private · only you will hear this'),
-      );
-      expect(privacy.dx, closeTo(640, 12));
+      expect(_dayLineCenter(tester).dx, closeTo(640, 12));
       debugDefaultTargetPlatformOverride = null;
     },
   );
@@ -156,7 +164,7 @@ void main() {
     WidgetTester tester,
   ) async {
     RecorderSurface surface() => RecorderSurface(
-      privacyLine: 'Private · only you will hear this',
+      dayLine: _dayLine,
       onLeave: () {},
       trailing: const SizedBox(key: _trailingKey, width: 120, height: 20),
       centre: const SizedBox(key: _centreKey, width: 250, height: 250),
@@ -171,10 +179,7 @@ void main() {
     expect(trailing.right, 1262);
     expect(trailing.top, greaterThanOrEqualTo(42));
     expect(tester.getRect(find.byKey(recorderLeaveKey)).left, 18);
-    expect(
-      tester.getCenter(find.text('Private · only you will hear this')).dx,
-      closeTo(640, 12),
-    );
+    expect(_dayLineCenter(tester).dx, closeTo(640, 12));
 
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     await tester.pumpWidget(_app(TargetPlatform.macOS, surface()));

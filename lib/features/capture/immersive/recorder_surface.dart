@@ -18,6 +18,7 @@ import 'package:field_notes/design/motion/motion_tokens.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/platform/desktop_platform.dart';
+import 'package:field_notes/features/capture/core/capture_day_line.dart';
 import 'package:field_notes/features/entry_cards/cards/video_controls_overlay.dart'
     show canAutoHideVideoControls, videoControlsVisible;
 import 'package:field_notes/state/repository_providers.dart';
@@ -43,21 +44,18 @@ const Color recorderStageColor = Palette.mediaGround;
 const Color _chromeInk = Color(0xFFB7A58C);
 const Color _leaveGlyphInk = Color(0xCCFFFFFF);
 const Color _leaveGlyphInkBottomBar = Color(0xBFFFFFFF);
-const Color _lockInk = Color(0xB3FFFFFF);
 
 const double _minTapTarget = 48;
 const double _bandHeight = _minTapTarget;
 const double _sidebarBandInset = 18;
 const double _bottomBarBandInset = 8;
 const double _bottomBarBandTop = 4;
-const double _privacyShare = 0.5;
-const double _privacyGap = 7;
+const double _dayLineShare = 0.5;
+const double _dayLineGap = 6;
+const double _sidebarLeadSize = 17;
+const double _bottomBarLeadSize = 15;
 const double _sidebarChromeSize = 12;
 const double _bottomBarChromeSize = 10;
-const double _sidebarLockSize = 13;
-const double _bottomBarLockSize = 11;
-const double _lockStroke = 2;
-const double _lockViewBox = 24;
 const double _sidebarLeaveGlyph = 13;
 const double _bottomBarLeaveGlyph = 18;
 const double _glassLeaveGlyph = 15;
@@ -150,7 +148,7 @@ class RecorderSurface extends StatelessWidget {
   const RecorderSurface({
     super.key,
     required this.onLeave,
-    this.privacyLine,
+    this.dayLine,
     this.arrangement = RecorderArrangement.voice,
     this.glow = true,
     this.background,
@@ -166,7 +164,7 @@ class RecorderSurface extends StatelessWidget {
     this.chromeOpacity = kAlwaysCompleteAnimation,
   });
 
-  final String? privacyLine;
+  final CaptureDayLine? dayLine;
   final VoidCallback? onLeave;
   final RecorderArrangement arrangement;
   final bool glow;
@@ -245,6 +243,20 @@ class _Stage extends StatelessWidget {
   Widget _band(BuildContext context) {
     final Widget row = LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
+        final CaptureDayLine? line = surface.dayLine;
+        if (!sidebar) {
+          return Row(
+            children: <Widget>[
+              _faded(_leave()),
+              Expanded(
+                child: line == null
+                    ? const SizedBox.shrink()
+                    : Center(child: _faded(_dayLine(context, line))),
+              ),
+              if (surface.trailing case final Widget trailing) trailing,
+            ],
+          );
+        }
         return Row(
           children: <Widget>[
             Expanded(
@@ -253,12 +265,12 @@ class _Stage extends StatelessWidget {
                 child: _faded(_leave()),
               ),
             ),
-            if (surface.privacyLine case final String line)
+            if (line != null)
               ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxWidth: constraints.maxWidth * _privacyShare,
+                  maxWidth: constraints.maxWidth * _dayLineShare,
                 ),
-                child: _faded(_privacy(line)),
+                child: _faded(_dayLine(context, line)),
               ),
             Expanded(
               child: Align(
@@ -418,22 +430,29 @@ class _Stage extends StatelessWidget {
     );
   }
 
-  Widget _privacy(String line) {
-    final double lock = sidebar ? _sidebarLockSize : _bottomBarLockSize;
+  Widget _dayLine(BuildContext context, CaptureDayLine line) {
     return Semantics(
       container: true,
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
         children: <Widget>[
-          SizedBox.square(
-            dimension: lock,
-            child: const CustomPaint(painter: _LockGlyphPainter()),
+          Text(
+            line.lead,
+            style: TextStyle(
+              fontFamily: TypographyTokens.accent,
+              fontSize: sidebar ? _sidebarLeadSize : _bottomBarLeadSize,
+              fontWeight: FontWeight.w600,
+              color: context.colors.accentInk,
+            ),
           ),
-          const SizedBox(width: _privacyGap),
+          const SizedBox(width: _dayLineGap),
           Flexible(
             child: Text(
-              line,
-              textAlign: TextAlign.center,
+              line.date,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: TypographyTokens.sans,
                 fontSize: sidebar ? _sidebarChromeSize : _bottomBarChromeSize,
@@ -1133,39 +1152,4 @@ class _EllipseToBox extends GradientTransform {
         )
         .multiplied(Matrix4.translationValues(-origin.dx, -origin.dy, 0));
   }
-}
-
-class _LockGlyphPainter extends CustomPainter {
-  const _LockGlyphPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint stroke = Paint()
-      ..color = _lockInk
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = _lockStroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.save();
-    canvas.scale(size.shortestSide / _lockViewBox);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(5, 11, 14, 9),
-        const Radius.circular(2),
-      ),
-      stroke,
-    );
-    canvas.drawPath(
-      Path()
-        ..moveTo(8, 11)
-        ..lineTo(8, 8)
-        ..arcToPoint(const Offset(16, 8), radius: const Radius.circular(4))
-        ..lineTo(16, 11),
-      stroke,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_LockGlyphPainter oldDelegate) => false;
 }

@@ -223,6 +223,8 @@ final TargetPlatformVariant _windows = TargetPlatformVariant.only(
   TargetPlatform.windows,
 );
 
+const String _dayLineDate = 'Monday, November 9';
+
 void _sidebarWindow(WidgetTester tester) {
   tester.view.physicalSize = const Size(1280, 800);
   tester.view.devicePixelRatio = 1;
@@ -249,6 +251,7 @@ Future<List<String>> _pumpVoice(
         onResume: () => calls.add('resume'),
         onDismiss: dismissable ? () => calls.add('dismiss') : null,
         onKeepGoing: () => calls.add('keep going'),
+        dayLine: (lead: 'today', date: _dayLineDate),
       ),
     ),
   );
@@ -380,14 +383,14 @@ void main() {
     _sidebarWindow(tester);
     await _pumpVoice(tester, phase: VoiceRecorderPhase.idle);
     final Rect idleClose = tester.getRect(find.byKey(voiceCloseKey));
-    final Rect idlePrivacy = tester.getRect(find.text(voiceSidebarPrivacyLine));
+    final Rect idlePrivacy = tester.getRect(find.text(_dayLineDate));
 
     await _pumpVoice(tester, phase: VoiceRecorderPhase.saving);
 
     expect(find.byKey(voiceKeyHintKey), findsOneWidget);
     expect(_hint(tester, voiceKeyHintKey), isEmpty);
     expect(tester.getRect(find.byKey(voiceCloseKey)), idleClose);
-    expect(tester.getRect(find.text(voiceSidebarPrivacyLine)), idlePrivacy);
+    expect(tester.getRect(find.text(_dayLineDate)), idlePrivacy);
 
     await tester.pumpWidget(const SizedBox.shrink());
   }, variant: _mac);

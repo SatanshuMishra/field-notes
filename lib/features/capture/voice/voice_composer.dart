@@ -9,11 +9,14 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/app_settings.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
+import 'package:field_notes/features/capture/core/capture_day_line.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/recording_wake_hold.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
+import 'package:field_notes/features/today/today_date.dart';
+import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/settings_section_request.dart';
 import 'package:field_notes/state/shell_navigation.dart';
@@ -497,7 +500,16 @@ class _VoiceComposerConnectorState
       onVoiceSettings: _openVoiceSettings,
       hearing: _recorder.hearingNow,
       titleController: _title,
+      dayLine: _dayLine(),
     );
+  }
+
+  CaptureDayLine? _dayLine() {
+    final DateTime? day = parseDateKey(widget.date);
+    if (day == null) {
+      return null;
+    }
+    return captureDayLine(day: day, today: ref.watch(todayClockProvider)());
   }
 }
 

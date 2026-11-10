@@ -11,6 +11,7 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/capture/audio/cannot_hear_notice.dart';
+import 'package:field_notes/features/capture/core/capture_day_line.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/immersive/capture_button.dart';
@@ -188,6 +189,7 @@ class VideoRecorderSheet extends StatefulWidget {
     this.levels = const Stream<double>.empty(),
     this.hearing = MicrophoneHearing.hearing,
     this.titleController,
+    this.dayLine,
   });
 
   final VideoRecorderPhase phase;
@@ -220,6 +222,7 @@ class VideoRecorderSheet extends StatefulWidget {
   final Stream<double> levels;
   final MicrophoneHearing hearing;
   final TextEditingController? titleController;
+  final CaptureDayLine? dayLine;
 
   @override
   State<VideoRecorderSheet> createState() => _VideoRecorderSheetState();
@@ -461,6 +464,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
             holdsChromeWhileFocused(
               child: RecorderSurface(
                 arrangement: RecorderArrangement.video,
+                dayLine: widget.dayLine,
                 onLeave: _isSaving ? null : widget.onLeave,
                 leaveKey: videoCloseKey,
                 glassLeave: true,
