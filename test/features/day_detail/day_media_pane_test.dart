@@ -11,6 +11,8 @@ import 'package:field_notes/features/day_detail/day_detail.dart';
 import 'package:field_notes/features/day_detail/day_media_pane.dart';
 import 'package:field_notes/features/entry_cards/cards/voice_waveform.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/entry_cards/transport/transport_bar.dart'
+    show transportForward10Key;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/log_viewer/note_reading.dart'
     show LogStepFooter;
@@ -88,13 +90,13 @@ Entry _voice({int hour = 9}) => _entry(
   durationMs: 65000,
 );
 
-Entry _video({int hour = 11, String? title}) => _entry(
+Entry _video({int hour = 11, String? title, int durationMs = 4000}) => _entry(
   id: 'video-1',
   type: EntryType.video,
   hour: hour,
   title: title,
   mediaId: _videoMedia,
-  durationMs: 4000,
+  durationMs: durationMs,
 );
 
 Entry _note({int hour = 7}) => _entry(
@@ -261,6 +263,45 @@ void main() {
     expect(players.video, hasLength(1));
     expect(_plays(players), 0);
     expect(find.byType(LogViewerPanel), findsNothing);
+  }, variant: _mac);
+
+  testWidgets('the video pane carries the full-screen transport', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+    final _Players players = await _openDay(
+      tester,
+      entries: <Entry>[_video(durationMs: 60000)],
+    );
+    await tester.tap(_inCard('video-1', find.text('11:12 AM · morning')));
+    await tester.pumpAndSettle();
+    final FakeEntryVideoPlayer player = players.video.single;
+    player.emitState(VideoPlaybackState.paused);
+    player.emitPosition(const Duration(seconds: 5));
+    await tester.pump();
+
+    for (final String label in <String>[
+      'Back 10 seconds',
+      'Forward 10 seconds',
+      'Volume',
+      'Playback speed',
+      'Full screen',
+    ]) {
+      expect(
+        find.descendant(
+          of: _mediaPane(),
+          matching: find.bySemanticsLabel(label),
+        ),
+        findsOneWidget,
+        reason: label,
+      );
+    }
+
+    await tester.tap(_inPane(find.byKey(transportForward10Key)));
+    await tester.pump();
+
+    expect(player.seekCalls.last, const Duration(seconds: 15));
+    handle.dispose();
   }, variant: _mac);
 
   testWidgets('the left column plays nothing', (WidgetTester tester) async {

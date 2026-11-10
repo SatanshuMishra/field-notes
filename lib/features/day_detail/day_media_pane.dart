@@ -193,6 +193,7 @@ class _DayMediaPaneState extends ConsumerState<DayMediaPane> {
       onLater: later == null ? null : () => widget.onStep(later),
       onDelete: () => widget.onDelete(entry),
       onEdit: null,
+      onFullScreen: entry.type == EntryType.video ? _openFullScreen : null,
     );
   }
 }
