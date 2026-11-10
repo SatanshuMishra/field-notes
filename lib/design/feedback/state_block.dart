@@ -131,7 +131,12 @@ class StateBlock extends StatelessWidget {
       Text(message, textAlign: TextAlign.center, style: _messageStyle(context)),
       if (label != null && action != null) ...<Widget>[
         const SizedBox(height: _actionGap),
-        StickerButton(label: label, variant: _actionVariant, onPressed: action),
+        StickerButton(
+          label: label,
+          variant: _actionVariant,
+          padTapTarget: true,
+          onPressed: action,
+        ),
       ],
     ];
   }
