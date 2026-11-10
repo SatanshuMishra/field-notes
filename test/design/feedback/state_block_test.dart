@@ -123,6 +123,26 @@ void main() {
     });
   }
 
+  testWidgets('the retry takes a full 48 point tap', (
+    WidgetTester tester,
+  ) async {
+    int retries = 0;
+    await _pump(
+      tester,
+      StateBlock.error(
+        title: "Today didn't load",
+        message: 'Your logs are safe. Try again in a moment.',
+        onRetry: () => retries++,
+      ),
+    );
+    final Rect face = tester.getRect(find.text(stateBlockRetryLabel));
+    final Rect target = tester.getRect(find.byType(StickerButton));
+
+    expect(target.height, greaterThanOrEqualTo(48));
+    await tester.tapAt(Offset(face.center.dx, target.bottom - 1));
+    expect(retries, 1);
+  });
+
   testWidgets('empty without an action shows only its words', (
     WidgetTester tester,
   ) async {

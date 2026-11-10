@@ -1,13 +1,16 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/data/media/video_frames.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -239,6 +242,32 @@ BoxDecoration _bubbleDecoration(WidgetTester tester) =>
             .decoration
         as BoxDecoration;
 
+const Key _screenKey = ValueKey<String>('transport-test-screen');
+
+Future<(Uint8List, int)> _capture(WidgetTester tester) async {
+  final RenderRepaintBoundary boundary = tester
+      .renderObject<RenderRepaintBoundary>(find.byKey(_screenKey));
+  final (Uint8List, int)? captured = await tester.runAsync(() async {
+    final ui.Image image = await boundary.toImage();
+    final ByteData? data = await image.toByteData();
+    final int width = image.width;
+    image.dispose();
+    return (data!.buffer.asUint8List(), width);
+  });
+  return captured!;
+}
+
+Color _pixelAt((Uint8List, int) capture, Offset point) {
+  final (Uint8List pixels, int width) = capture;
+  final int index = (point.dy.floor() * width + point.dx.floor()) * 4;
+  return Color.fromARGB(
+    pixels[index + 3],
+    pixels[index],
+    pixels[index + 1],
+    pixels[index + 2],
+  );
+}
+
 void main() {
   group('timeline', () {
     for (final TargetPlatform platform in <TargetPlatform>[
@@ -349,6 +378,57 @@ void main() {
         expect(calls.seeks, isEmpty);
       },
     );
+
+    testWidgets('the hover bubble paints in full above a host that clips', (
+      WidgetTester tester,
+    ) async {
+      const Key clipKey = ValueKey<String>('clipping-host');
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: _screenKey,
+          child: _host(
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: ClipRect(
+                key: clipKey,
+                child: Transport(
+                  kind: TransportKind.video,
+                  mode: TransportMode.card,
+                  value: _value(_Calls()),
+                  tuning: PlaybackTuning(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final TestGesture mouse = await _mouse(tester);
+
+      await mouse.moveTo(_timelineAt(tester, 0.25));
+      await tester.pump();
+
+      final Rect clip = tester.getRect(find.byKey(clipKey));
+      final Rect time = tester.getRect(
+        find.descendant(
+          of: find.byKey(transportBubbleKey),
+          matching: find.text('0:25'),
+        ),
+      );
+      expect(time.bottom, lessThan(clip.top));
+      final (Uint8List, int) screen = await _capture(tester);
+      for (final Offset inside in <Offset>[
+        Offset(time.left - 4, time.center.dy),
+        Offset(time.right + 4, time.center.dy),
+        Offset(time.center.dx, time.top - 2),
+        Offset(time.center.dx, time.bottom + 2),
+      ]) {
+        expect(
+          _pixelAt(screen, inside),
+          FieldNotesColors.light.mediaBubble,
+          reason: 'bubble fill at $inside',
+        );
+      }
+    });
 
     testWidgets('hover shows the frame under the pointer for video', (
       WidgetTester tester,
@@ -659,6 +739,40 @@ void main() {
 
       expect(calls.toggles, 0);
     });
+
+    final Map<String, Finder> ringedControls = <String, Finder>{
+      'volume': find.byKey(transportVolumeKey),
+      'timeline': find.byType(TransportTimeline),
+    };
+    for (final MapEntry<String, Finder> control in ringedControls.entries) {
+      testWidgets(
+        'a mouse press clears the ring Tab drew on the ${control.key}',
+        (WidgetTester tester) async {
+          await tester.pumpWidget(_viewer(_Calls(), tuning: PlaybackTuning()));
+          await tester.pump();
+          final Finder ring = find.descendant(
+            of: control.value,
+            matching: find.byKey(focusRingKey),
+          );
+
+          for (int tabs = 0; tabs < 12 && ring.evaluate().isEmpty; tabs++) {
+            await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+            await tester.pump();
+          }
+          expect(
+            FocusManager.instance.highlightMode,
+            FocusHighlightMode.traditional,
+          );
+          expect(ring, findsOneWidget);
+
+          await tester.tap(control.value, kind: PointerDeviceKind.mouse);
+          await tester.pump();
+
+          expect(ring, findsNothing);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+      );
+    }
   });
 
   group('volume and speed reach the playback controllers', () {
@@ -825,6 +939,48 @@ void main() {
       expect(find.byKey(transportVolumeKey), findsNothing);
       expect(find.byKey(transportMuteKey), findsNothing);
       expect(find.byKey(transportSpeedKey), findsOneWidget);
+    });
+
+    testWidgets('Up, Down and M on a focused voice card leave the volume', (
+      WidgetTester tester,
+    ) async {
+      final PlaybackTuning tuning = PlaybackTuning()..setVolume(0.5);
+      await tester.pumpWidget(
+        _host(
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Transport(
+              kind: TransportKind.voice,
+              mode: TransportMode.card,
+              value: _value(_Calls()),
+              tuning: tuning,
+            ),
+          ),
+          platform: TargetPlatform.android,
+        ),
+      );
+      Focus.of(
+        tester.element(
+          find.descendant(
+            of: find.byKey(transportForward10Key),
+            matching: find.byType(TransportGlyphIcon),
+          ),
+        ),
+      ).requestFocus();
+      await tester.pump();
+
+      for (final LogicalKeyboardKey key in <LogicalKeyboardKey>[
+        LogicalKeyboardKey.arrowDown,
+        LogicalKeyboardKey.arrowDown,
+        LogicalKeyboardKey.arrowUp,
+        LogicalKeyboardKey.keyM,
+      ]) {
+        await tester.sendKeyEvent(key);
+        await tester.pump();
+      }
+
+      expect(tuning.volume, 0.5);
+      expect(tuning.muted, isFalse);
     });
 
     for (final (String side, double share, int expected, String readout)
