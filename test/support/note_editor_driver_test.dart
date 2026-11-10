@@ -101,6 +101,22 @@ void main() {
     expect(saved, <String>['hello, world']);
   });
 
+  testWidgets('the driver enters and reads the title', (
+    WidgetTester tester,
+  ) async {
+    await _pumpComposer(tester);
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
+
+    expect(driver.titleField, findsOneWidget);
+    expect(driver.title, isEmpty);
+
+    await driver.enterTitle('Tuesday');
+    expect(driver.title, 'Tuesday');
+
+    await driver.enterTitle('');
+    expect(driver.title, isEmpty);
+  });
+
   testWidgets('the driver finds the nth photo in document order', (
     WidgetTester tester,
   ) async {

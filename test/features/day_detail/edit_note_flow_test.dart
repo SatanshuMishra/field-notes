@@ -41,9 +41,8 @@ class _EditTrigger extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () async => onResult(
-        await showEditNote(context, entry: entry, date: _date),
-      ),
+      onTap: () async =>
+          onResult(await showEditNote(context, entry: entry, date: _date)),
       child: const Text('open editor'),
     );
   }
@@ -62,23 +61,24 @@ class _RouteTrigger extends StatelessWidget {
       onTap: () => Navigator.of(context).push<void>(
         PageRouteBuilder<void>(
           opaque: false,
-          pageBuilder: (
-            BuildContext routeContext,
-            Animation<double> animation,
-            Animation<double> secondaryAnimation,
-          ) {
-            return DialogHost(
-              child: ComposerShell(
-                closeOnScrimTap: true,
-                responsive: true,
-                child: EditNoteConnector(
-                  entry: entry,
-                  date: _date,
-                  onDone: onDone,
-                ),
-              ),
-            );
-          },
+          pageBuilder:
+              (
+                BuildContext routeContext,
+                Animation<double> animation,
+                Animation<double> secondaryAnimation,
+              ) {
+                return DialogHost(
+                  child: ComposerShell(
+                    closeOnScrimTap: true,
+                    responsive: true,
+                    child: EditNoteConnector(
+                      entry: entry,
+                      date: _date,
+                      onDone: onDone,
+                    ),
+                  ),
+                );
+              },
         ),
       ),
       child: const Text('open route'),
@@ -145,16 +145,11 @@ void main() {
     );
     await tester.tap(find.text('open editor'));
     await tester.pumpAndSettle();
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
 
-    expect(
-      tester
-          .widget<TextField>(find.byKey(composerTitleFieldKey))
-          .controller!
-          .text,
-      'River walk',
-    );
+    expect(driver.title, 'River walk');
 
-    await tester.enterText(find.byKey(composerTitleFieldKey), '');
+    await driver.enterTitle('');
     await tester.pump(draftIdleDebounceForTest);
     await tester.tap(find.text(editNoteSaveLabel));
     await tester.pumpAndSettle();
@@ -183,9 +178,9 @@ void main() {
     expect(find.text('Save changes'), findsOneWidget);
   });
 
-  testWidgets(
-      'Save changes writes the edit and toasts Entry updated',
-      (WidgetTester tester) async {
+  testWidgets('Save changes writes the edit and toasts Entry updated', (
+    WidgetTester tester,
+  ) async {
     final FakeJournalRepository repository = await _openAndEdit(tester);
 
     await tester.tap(find.text(editNoteSaveLabel));
@@ -207,47 +202,48 @@ void main() {
   });
 
   testWidgets(
-      'with a done callback the editor reports instead of closing its route',
-      (WidgetTester tester) async {
-    final NoteEditorDriver driver = NoteEditorDriver(tester);
-    final Entry entry = _afternoonNote();
-    final FakeJournalRepository repository = FakeJournalRepository(
-      entries: <Entry>[entry],
-    );
-    final List<bool> reports = <bool>[];
+    'with a done callback the editor reports instead of closing its route',
+    (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      final Entry entry = _afternoonNote();
+      final FakeJournalRepository repository = FakeJournalRepository(
+        entries: <Entry>[entry],
+      );
+      final List<bool> reports = <bool>[];
 
-    await tester.pumpWidget(
-      _app(
-        repository: repository,
-        child: _RouteTrigger(entry: entry, onDone: reports.add),
-      ),
-    );
-    await tester.tap(find.text('open route'));
-    await tester.pumpAndSettle();
-    await driver.enterText('a better day');
-    await tester.pump(draftIdleDebounceForTest);
-    await tester.tap(find.text(editNoteSaveLabel));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        _app(
+          repository: repository,
+          child: _RouteTrigger(entry: entry, onDone: reports.add),
+        ),
+      );
+      await tester.tap(find.text('open route'));
+      await tester.pumpAndSettle();
+      await driver.enterText('a better day');
+      await tester.pump(draftIdleDebounceForTest);
+      await tester.tap(find.text(editNoteSaveLabel));
+      await tester.pumpAndSettle();
 
-    expect(repository.noteSaves, hasLength(1));
-    expect(reports, <bool>[true]);
-    expect(find.byType(EditNoteConnector), findsOneWidget);
-    await tester.pump(kToastLifetime);
-    await tester.pumpAndSettle();
+      expect(repository.noteSaves, hasLength(1));
+      expect(reports, <bool>[true]);
+      expect(find.byType(EditNoteConnector), findsOneWidget);
+      await tester.pump(kToastLifetime);
+      await tester.pumpAndSettle();
 
-    final List<bool> closeReports = <bool>[];
-    await tester.pumpWidget(
-      _app(
-        repository: FakeJournalRepository(entries: <Entry>[entry]),
-        child: _RouteTrigger(entry: entry, onDone: closeReports.add),
-      ),
-    );
-    await tester.tap(find.text('open route'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(composerCloseKey));
-    await tester.pumpAndSettle();
+      final List<bool> closeReports = <bool>[];
+      await tester.pumpWidget(
+        _app(
+          repository: FakeJournalRepository(entries: <Entry>[entry]),
+          child: _RouteTrigger(entry: entry, onDone: closeReports.add),
+        ),
+      );
+      await tester.tap(find.text('open route'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(composerCloseKey));
+      await tester.pumpAndSettle();
 
-    expect(closeReports, <bool>[false]);
-    expect(find.byType(EditNoteConnector), findsOneWidget);
-  });
+      expect(closeReports, <bool>[false]);
+      expect(find.byType(EditNoteConnector), findsOneWidget);
+    },
+  );
 }
