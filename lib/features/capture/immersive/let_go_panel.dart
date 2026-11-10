@@ -1,14 +1,12 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_fill.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
-import 'package:field_notes/design/interaction/pressable.dart';
+import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/design/feedback/confirm_dialog.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/sticker_button.dart';
 
 const String letGoTitle = 'Let this one go?';
-const String letGoMessage = 'Nothing will be saved. That’s okay too.';
+const String letGoMessage = "Nothing will be saved. That's okay too.";
 const String letGoKeepGoingLabel = 'Keep going';
 const String letGoConfirmLabel = 'Let it go';
 
@@ -16,7 +14,6 @@ const Color _panelFill = Color(0xB81C1713);
 const Color _panelEdge = Color(0x24F3E6D1);
 const Color _titleInk = Color(0xFFF3E6D1);
 const Color _messageInk = Color(0xFFB7A58C);
-const Color _outlineInk = Color(0x66F3E6D1);
 
 const double _panelRadius = 18;
 const double _panelEdgeWidth = 1;
@@ -31,22 +28,8 @@ const double _compactMessageGap = 2;
 const double _wideActionsGap = 26;
 const double _compactActionsGap = 12;
 const double _buttonGap = 8;
-const double _buttonLabelSize = 13;
-const double _outlineWidth = 1.5;
-const double _minTapTarget = 48;
-const TextStyle _buttonLabelStyle = TextStyle(
-  fontFamily: TypographyTokens.sans,
-  fontSize: _buttonLabelSize,
-  fontWeight: FontWeight.w600,
-);
-const BorderRadius _pillRadius = BorderRadius.all(Radius.circular(20));
-const BorderRadius _compactPillRadius = BorderRadius.all(Radius.circular(24));
-const EdgeInsets _keepGoingPadding = EdgeInsets.symmetric(
-  horizontal: 16,
-  vertical: 10,
-);
 
-class LetGoPanel extends StatefulWidget {
+class LetGoPanel extends StatelessWidget {
   const LetGoPanel({
     super.key,
     required this.onKeepGoing,
@@ -63,88 +46,91 @@ class LetGoPanel extends StatefulWidget {
   final Key? letGoKey;
 
   @override
-  State<LetGoPanel> createState() => _LetGoPanelState();
-}
-
-class _LetGoPanelState extends State<LetGoPanel> {
-  final FocusNode _keepGoingFocus = FocusNode(debugLabel: letGoKeepGoingLabel);
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(_focusSafeChoice);
-  }
-
-  void _focusSafeChoice(Duration _) {
-    if (mounted) {
-      _keepGoingFocus.requestFocus();
-    }
-  }
-
-  @override
-  void dispose() {
-    _keepGoingFocus.dispose();
-    super.dispose();
-  }
-
-  bool get _compact => widget.compact;
-
-  @override
   Widget build(BuildContext context) {
+    final List<Widget> choices = confirmChoicesInOrder(
+      Theme.of(context).platform,
+      safe: ConfirmChoiceButton.safe(
+        buttonKey: keepGoingKey,
+        label: letGoKeepGoingLabel,
+        ground: StickerGround.media,
+        onPressed: onKeepGoing,
+      ),
+      action: ConfirmChoiceButton.action(
+        buttonKey: letGoKey,
+        label: letGoConfirmLabel,
+        ground: StickerGround.media,
+        onPressed: onLetGo,
+      ),
+    );
     return Semantics(
       container: true,
       explicitChildNodes: true,
       scopesRoute: true,
       namesRoute: true,
       label: letGoTitle,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: _panelFill,
-          border: Border.fromBorderSide(
-            BorderSide(color: _panelEdge, width: _panelEdgeWidth),
+      child: TapRegion(
+        consumeOutsideTaps: true,
+        onTapOutside: (PointerDownEvent _) => onKeepGoing(),
+        child: _TabCanLeaveFocusScope(
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              color: _panelFill,
+              border: Border.fromBorderSide(
+                BorderSide(color: _panelEdge, width: _panelEdgeWidth),
+              ),
+              borderRadius: BorderRadius.all(Radius.circular(_panelRadius)),
+            ),
+            child: Padding(
+              padding: compact ? _compactPadding : _widePadding,
+              child: compact
+                  ? _belowTheWords(context, choices)
+                  : _besideTheWords(choices),
+            ),
           ),
-          borderRadius: BorderRadius.all(Radius.circular(_panelRadius)),
-        ),
-        child: Padding(
-          padding: _compact ? _compactPadding : _widePadding,
-          child: _compact ? _stacked() : _sideBySide(),
         ),
       ),
     );
   }
 
-  Widget _sideBySide() {
+  Widget _besideTheWords(List<Widget> choices) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Flexible(child: _copy()),
+        Flexible(child: _words()),
         const SizedBox(width: _wideActionsGap),
-        _keepGoing(),
+        choices.first,
         const SizedBox(width: _buttonGap),
-        _letGo(),
+        choices.last,
       ],
     );
   }
 
-  Widget _stacked() {
+  Widget _belowTheWords(BuildContext context, List<Widget> choices) {
+    final bool stacked =
+        resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _copy(),
+        _words(),
         const SizedBox(height: _compactActionsGap),
-        Row(
-          children: <Widget>[
-            Expanded(child: _keepGoing()),
-            const SizedBox(width: _buttonGap),
-            Expanded(child: _letGo()),
-          ],
-        ),
+        if (stacked) ...<Widget>[
+          choices.first,
+          const SizedBox(height: _buttonGap),
+          choices.last,
+        ] else
+          Row(
+            children: <Widget>[
+              Expanded(child: choices.first),
+              const SizedBox(width: _buttonGap),
+              Expanded(child: choices.last),
+            ],
+          ),
       ],
     );
   }
 
-  Widget _copy() {
+  Widget _words() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,18 +140,18 @@ class _LetGoPanelState extends State<LetGoPanel> {
             letGoTitle,
             style: TextStyle(
               fontFamily: TypographyTokens.serif,
-              fontSize: _compact ? _compactTitleSize : _wideTitleSize,
+              fontSize: compact ? _compactTitleSize : _wideTitleSize,
               fontWeight: FontWeight.w500,
               color: _titleInk,
             ),
           ),
         ),
-        SizedBox(height: _compact ? _compactMessageGap : _wideMessageGap),
+        SizedBox(height: compact ? _compactMessageGap : _wideMessageGap),
         Text(
           letGoMessage,
           style: TextStyle(
             fontFamily: TypographyTokens.sans,
-            fontSize: _compact ? _compactMessageSize : _wideMessageSize,
+            fontSize: compact ? _compactMessageSize : _wideMessageSize,
             fontWeight: FontWeight.w400,
             color: _messageInk,
           ),
@@ -173,111 +159,31 @@ class _LetGoPanelState extends State<LetGoPanel> {
       ],
     );
   }
-
-  Widget _keepGoing() {
-    return _PanelButton(
-      key: widget.keepGoingKey,
-      label: letGoKeepGoingLabel,
-      onPressed: widget.onKeepGoing,
-      focusNode: _keepGoingFocus,
-      compact: _compact,
-      padding: _keepGoingPadding,
-      decoration: BoxDecoration(
-        border: Border.all(color: _outlineInk, width: _outlineWidth),
-        borderRadius: _compact ? _compactPillRadius : _pillRadius,
-      ),
-      labelColor: _titleInk,
-    );
-  }
-
-  Widget _letGo() {
-    return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: _compact ? _minTapTarget : 0),
-      child: StickerButton(
-        key: widget.letGoKey,
-        label: letGoConfirmLabel,
-        variant: StickerButtonVariant.danger,
-        ground: StickerGround.media,
-        focusSurface: FocusRingSurface.dark,
-        padTapTarget: !_compact,
-        labelStyle: _buttonLabelStyle,
-        borderRadius: _compact ? _compactPillRadius : _pillRadius,
-        onPressed: widget.onLetGo,
-      ),
-    );
-  }
 }
 
-class _PanelButton extends StatelessWidget {
-  const _PanelButton({
-    super.key,
-    required this.label,
-    required this.onPressed,
-    required this.compact,
-    required this.padding,
-    required this.decoration,
-    required this.labelColor,
-    this.focusNode,
-  });
+class _TabCanLeaveFocusScope extends StatefulWidget {
+  const _TabCanLeaveFocusScope({required this.child});
 
-  final String label;
-  final VoidCallback onPressed;
-  final bool compact;
-  final EdgeInsets padding;
-  final BoxDecoration decoration;
-  final Color labelColor;
-  final FocusNode? focusNode;
+  final Widget child;
+
+  @override
+  State<_TabCanLeaveFocusScope> createState() => _TabCanLeaveFocusScopeState();
+}
+
+class _TabCanLeaveFocusScopeState extends State<_TabCanLeaveFocusScope> {
+  final FocusScopeNode _scope = FocusScopeNode(
+    debugLabel: 'Let go panel',
+    traversalEdgeBehavior: TraversalEdgeBehavior.parentScope,
+  );
+
+  @override
+  void dispose() {
+    _scope.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final BorderRadius radius =
-        decoration.borderRadius?.resolve(Directionality.of(context)) ??
-        _pillRadius;
-    Widget face(BuildContext context, bool hovered) => DecoratedBox(
-      decoration: decoration,
-      child: HoverFill(
-        hovered: hovered,
-        surface: FocusRingSurface.dark,
-        shape: HoverShape.pill,
-        borderRadius: radius,
-        position: DecorationPosition.background,
-        child: Padding(
-          padding: compact ? EdgeInsets.zero : padding,
-          child: SizedBox(
-            height: compact ? _minTapTarget : null,
-            child: Center(
-              widthFactor: compact ? null : 1,
-              heightFactor: compact ? null : 1,
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: _buttonLabelStyle.copyWith(color: labelColor),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    return Pressable(
-      label: label,
-      onPressed: onPressed,
-      focusNode: focusNode,
-      surface: FocusRingSurface.dark,
-      shape: HoverShape.pill,
-      borderRadius: radius,
-      paintsHover: false,
-      builder: (BuildContext context, bool hovered) => ConstrainedBox(
-        constraints: const BoxConstraints(
-          minWidth: _minTapTarget,
-          minHeight: _minTapTarget,
-        ),
-        child: Center(
-          widthFactor: compact ? null : 1,
-          heightFactor: 1,
-          child: face(context, hovered),
-        ),
-      ),
-    );
+    return FocusScope(node: _scope, child: widget.child);
   }
 }

@@ -149,11 +149,9 @@ void main() {
     await tester.tap(find.byKey(logActionsDeleteKey).hitTestable());
     await tester.pumpAndSettle();
 
-    expect(find.text('Delete this entry?'), findsOneWidget);
-    expect(
-      find.text('This log will be removed from today. This can’t be undone.'),
-      findsOneWidget,
-    );
+    expect(find.text('Delete this log?'), findsOneWidget);
+    expect(find.text("It's gone for good, on every device."), findsOneWidget);
+    expect(find.text('Keep it'), findsOneWidget);
     expect(repository.deletedEntryIds, isEmpty);
 
     await tester.tap(find.byKey(confirmDialogConfirmKey));

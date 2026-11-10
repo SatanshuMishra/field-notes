@@ -1,25 +1,44 @@
 import 'package:flutter/material.dart';
 
-import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
-import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:field_notes/features/capture/immersive/let_go_panel.dart';
 
-const String composerDiscardTitle = 'Discard this note?';
-const String composerDiscardMessage = 'Your unsaved changes will be lost.';
-const String composerKeepEditingLabel = 'Keep editing';
-const String composerDiscardLabel = 'Discard';
+const String composerDiscardTitle = letGoTitle;
+const String composerDiscardMessage = letGoMessage;
+const String composerKeepEditingLabel = letGoKeepGoingLabel;
+const String composerDiscardLabel = letGoConfirmLabel;
+const String editDiscardTitle = 'Discard your edits?';
+const String editDiscardMessage = 'Your note stays as it was.';
+const String editKeepEditingLabel = 'Keep editing';
+const String editDiscardLabel = 'Discard edits';
 const Key composerKeepEditingKey = ValueKey<String>('composer-keep-editing');
 const Key composerDiscardKey = ValueKey<String>('composer-discard');
-
-const double _confirmMaxWidth = 420;
-const double _confirmTitleGap = 8;
-const double _confirmActionsGap = 20;
 
 typedef ComposerGuardBuilder = Widget Function(
   BuildContext context,
   VoidCallback requestClose,
 );
+
+Future<bool> _askToDiscard(BuildContext context, {required bool editing}) {
+  return showConfirmDialog(
+    context,
+    title: editing ? editDiscardTitle : composerDiscardTitle,
+    message: editing ? editDiscardMessage : composerDiscardMessage,
+    confirmLabel: editing ? editDiscardLabel : composerDiscardLabel,
+    cancelLabel: editing ? editKeepEditingLabel : composerKeepEditingLabel,
+    danger: true,
+    confirmKey: composerDiscardKey,
+    cancelKey: composerKeepEditingKey,
+  );
+}
+
+Future<bool> confirmDiscardRestoredDraft(BuildContext context) {
+  final _ComposerGuardState? guard = context
+      .findAncestorStateOfType<_ComposerGuardState>();
+  return guard == null
+      ? _askToDiscard(context, editing: false)
+      : guard._confirmDiscardRestoredDraft();
+}
 
 class ComposerGuard extends StatefulWidget {
   const ComposerGuard({
@@ -88,39 +107,35 @@ class _ComposerGuardState extends State<ComposerGuard> {
       await _discardAndPop();
       return;
     }
+    if (await _confirmDiscard()) {
+      await _discardAndPop();
+    }
+  }
+
+  bool get _editingSavedNote => widget.popResult == false;
+
+  Future<bool> _confirmDiscard() async {
     _confirming = true;
-    final bool discard = await _confirmDiscard();
+    final bool discard = await _askToDiscard(
+      context,
+      editing: _editingSavedNote,
+    );
     _confirming = false;
     if (!mounted) {
-      return;
+      return false;
     }
     if (!discard) {
       _resumeEditing();
-      return;
     }
-    await _discardAndPop();
+    return discard;
   }
 
-  Future<bool> _confirmDiscard() async {
-    if (resolveShellLayout(Theme.of(context).platform) ==
-        ShellLayout.bottomBar) {
-      return showConfirmDialog(
-        context,
-        title: composerDiscardTitle,
-        message: composerDiscardMessage,
-        confirmLabel: composerDiscardLabel,
-        cancelLabel: composerKeepEditingLabel,
-        danger: true,
-        confirmKey: composerDiscardKey,
-        cancelKey: composerKeepEditingKey,
-      );
+  Future<bool> _confirmDiscardRestoredDraft() async {
+    final bool discard = await _confirmDiscard();
+    if (discard) {
+      _resumeEditing();
     }
-    final bool? discard = await showDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext dialogContext) => const _DiscardConfirmDialog(),
-    );
-    return discard ?? false;
+    return discard;
   }
 
   Future<void> _discardAndPop() async {
@@ -147,59 +162,6 @@ class _ComposerGuardState extends State<ComposerGuard> {
       canPop: false,
       onPopInvokedWithResult: _onPopInvoked,
       child: widget.builder(context, _requestClose),
-    );
-  }
-}
-
-class _DiscardConfirmDialog extends StatelessWidget {
-  const _DiscardConfirmDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Material(
-        type: MaterialType.transparency,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _confirmMaxWidth),
-          child: StickerCard(
-            surface: context.colors.cardBright,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  composerDiscardTitle,
-                  style: context.textStyles.titleSerif,
-                ),
-                const SizedBox(height: _confirmTitleGap),
-                Text(
-                  composerDiscardMessage,
-                  style: context.textStyles.bodySans,
-                ),
-                const SizedBox(height: _confirmActionsGap),
-                ConfirmActionRow(
-                  cancel: StickerButton(
-                    key: composerKeepEditingKey,
-                    label: composerKeepEditingLabel,
-                    variant: StickerButtonVariant.secondary,
-                    padTapTarget: true,
-                    autofocus: true,
-                    onPressed: () => Navigator.of(context).pop(false),
-                  ),
-                  confirm: StickerButton(
-                    key: composerDiscardKey,
-                    label: composerDiscardLabel,
-                    variant: StickerButtonVariant.danger,
-                    labelStyle: context.textStyles.captureLabelSans,
-                    padTapTarget: true,
-                    onPressed: () => Navigator.of(context).pop(true),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

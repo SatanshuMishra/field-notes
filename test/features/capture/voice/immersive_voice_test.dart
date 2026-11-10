@@ -686,6 +686,18 @@ void main() {
       expect(find.byKey(voiceDiscardConfirmKey), findsOneWidget);
       expect(find.byKey(voiceSavePillKey), findsNothing);
 
+      await tester.tapAt(const Offset(12, 300));
+      await tester.pump();
+      await tester.pump(_step);
+
+      expect(find.byType(LetGoPanel), findsNothing);
+      expect(rig.recorder.cancelCalls, 0);
+
+      await tester.tap(find.byKey(voiceDiscardPillKey));
+      await tester.pump();
+      await tester.pump(_step);
+      expect(find.byType(LetGoPanel), findsOneWidget);
+
       await tester.tap(find.text(letGoKeepGoingLabel));
       await tester.pump();
       await tester.pump(_step);

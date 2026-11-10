@@ -153,7 +153,7 @@ void main() {
       await tester.tap(find.byKey(composerCloseKey), warnIfMissed: false);
       await tester.pumpAndSettle();
 
-      expect(find.text(composerDiscardTitle), findsOneWidget);
+      expect(find.text(editDiscardTitle), findsOneWidget);
       expect(drafts.drafts, <String, String>{
         'entry-1': 'a better day, half typed',
       });
@@ -189,7 +189,7 @@ void main() {
       await tester.tap(find.byKey(composerCloseKey), warnIfMissed: false);
       await tester.pump();
 
-      expect(find.text(composerDiscardTitle), findsOneWidget);
+      expect(find.text(editDiscardTitle), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();
@@ -388,11 +388,11 @@ void main() {
 
     await tester.tap(find.byKey(composerCloseKey));
     await tester.pumpAndSettle();
-    expect(find.text(composerDiscardTitle), findsOneWidget);
+    expect(find.text(editDiscardTitle), findsOneWidget);
 
     await tester.tap(find.byKey(composerKeepEditingKey));
     await tester.pumpAndSettle();
-    expect(find.text(composerDiscardTitle), findsNothing);
+    expect(find.text(editDiscardTitle), findsNothing);
     expect(find.text(_afternoonTitle), findsOneWidget);
     expect(_editorText(tester), 'a better day');
     expect(drafts.drafts, <String, String>{'entry-1': 'a better day'});
@@ -436,13 +436,13 @@ void main() {
 
       await tester.tapAt(const Offset(4, 4));
       await tester.pumpAndSettle();
-      expect(find.text(composerDiscardTitle), findsOneWidget);
+      expect(find.text(editDiscardTitle), findsOneWidget);
       expect(find.text(_afternoonTitle), findsOneWidget);
       expect(result, 'unset');
 
       await tester.tap(find.byKey(composerKeepEditingKey));
       await tester.pumpAndSettle();
-      expect(find.text(composerDiscardTitle), findsNothing);
+      expect(find.text(editDiscardTitle), findsNothing);
       expect(find.text(_afternoonTitle), findsOneWidget);
       expect(_editorText(tester), 'a better day');
       expect(drafts.drafts, <String, String>{'entry-1': 'a better day'});
@@ -486,7 +486,7 @@ void main() {
       await sendSystemBack(tester);
 
       expect(find.text(_afternoonTitle), findsOneWidget);
-      expect(find.text(composerDiscardTitle), findsOneWidget);
+      expect(find.text(editDiscardTitle), findsOneWidget);
       expect(result, 'unset');
 
       await tester.tap(find.byKey(composerDiscardKey));
@@ -528,6 +528,13 @@ void main() {
       expect(find.text(draftRestoredLabel), findsOneWidget);
 
       await tester.tap(find.byKey(draftRestoredDiscardKey));
+      await tester.pumpAndSettle();
+
+      expect(find.text(editDiscardTitle), findsOneWidget);
+      expect(_editorText(tester), 'a half-typed edit');
+      expect(drafts.drafts, isNotEmpty);
+
+      await tester.tap(find.byKey(composerDiscardKey));
       await tester.pumpAndSettle();
 
       expect(_editorText(tester), 'a good day');

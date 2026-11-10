@@ -27,9 +27,10 @@ import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show
         logViewerDeleteLabel,
-        logViewerDeleteMessageFor,
+        logViewerDeleteMessage,
         logViewerDeleteTitle,
-        logViewerDeletedMessage;
+        logViewerDeletedMessage,
+        logViewerKeepLabel;
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
     show ViewerKeys;
 import 'package:field_notes/features/mood/mood.dart';
@@ -417,19 +418,13 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
     );
   }
 
-  String _deletePlace() {
-    final DateTime? day = parseDateKey(_date);
-    return day == null
-        ? _date
-        : dayShortLabelFor(day, today: ref.read(todayClockProvider)());
-  }
-
   Future<void> _delete(Entry entry) async {
     final bool confirmed = await showConfirmDialog(
       context,
       title: logViewerDeleteTitle,
-      message: logViewerDeleteMessageFor(_deletePlace()),
+      message: logViewerDeleteMessage,
       confirmLabel: logViewerDeleteLabel,
+      cancelLabel: logViewerKeepLabel,
       danger: true,
     );
     if (!confirmed || !mounted) {

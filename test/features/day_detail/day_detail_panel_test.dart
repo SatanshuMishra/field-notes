@@ -30,7 +30,7 @@ Future<void> _revealPillOn(WidgetTester tester, Finder card) async {
 Future<void> _confirmDelete(WidgetTester tester) async {
   await tester.tap(find.byKey(logActionsDeleteKey).hitTestable());
   await tester.pumpAndSettle();
-  expect(find.text('Delete this entry?'), findsOneWidget);
+  expect(find.text('Delete this log?'), findsOneWidget);
   await tester.tap(find.byKey(confirmDialogConfirmKey));
   await tester.pumpAndSettle();
 }

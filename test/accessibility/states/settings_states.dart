@@ -1,6 +1,7 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/data/media/audio_output.dart';
 import 'package:field_notes/data/sync/engine/sync_status.dart';
+import 'package:field_notes/design/feedback/dialog_host.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/anchored_dropdown.dart';
@@ -146,8 +147,7 @@ final Finder _weekStartChoices = find.byWidgetPredicate(
 );
 
 final Finder _deleteAllConfirm = find.byWidgetPredicate(
-  (Widget widget) =>
-      _onPhone ? widget is PhoneSheet : widget is DeleteAllConfirmDialog,
+  (Widget widget) => _onPhone ? widget is PhoneSheet : widget is DialogHost,
   description: 'the delete-all confirm sheet on the phone, dialog on desktop',
 );
 

@@ -52,6 +52,7 @@ Future<List<bool>> _open(WidgetTester tester, TargetPlatform platform) async {
                   title: _title,
                   message: _message,
                   confirmLabel: 'Delete',
+                  cancelLabel: 'Keep it',
                   danger: true,
                 ),
               ),
@@ -76,7 +77,7 @@ BoxDecoration _decorationOf(WidgetTester tester, Key key) {
 }
 
 void main() {
-  testWidgets('a phone confirm opens as a sheet with the action above Cancel', (
+  testWidgets('a phone confirm opens as a sheet with the action above the safe button', (
     WidgetTester tester,
   ) async {
     final List<bool> phoneResults = await _open(
@@ -102,7 +103,7 @@ void main() {
     );
 
     final TextStyle titleStyle = tester.widget<Text>(find.text(_title)).style!;
-    expect(titleStyle.fontSize, 20);
+    expect(titleStyle.fontSize, 24);
     expect(titleStyle.fontFamily, TypographyTokens.serif);
     expect(titleStyle.fontWeight, FontWeight.w500);
 
@@ -157,7 +158,7 @@ void main() {
       FieldNotesColors.light.cardLight.toARGB32(),
     );
     expect(
-      tester.widget<Text>(find.text('Cancel')).style!.color!.toARGB32(),
+      tester.widget<Text>(find.text('Keep it')).style!.color!.toARGB32(),
       FieldNotesColors.light.ink.toARGB32(),
     );
 

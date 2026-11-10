@@ -371,6 +371,7 @@ Widget _dialogOpener() => Builder(
         title: 'Delete this note?',
         message: 'It leaves this device and every synced one.',
         confirmLabel: 'Delete',
+        cancelLabel: 'Keep it',
         danger: true,
       ),
       child: const Text('Ask'),
@@ -380,11 +381,11 @@ Widget _dialogOpener() => Builder(
 
 final List<_Row> _dialogRows = <_Row>[
   _Row(
-    'Cancel',
+    'Keep it',
     find.byKey(confirmDialogCancelKey),
     _lightRow,
     _Shape.rounded,
-    11,
+    12,
   ),
   _Row(
     'Delete',

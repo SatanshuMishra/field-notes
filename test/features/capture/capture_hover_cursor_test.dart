@@ -44,6 +44,7 @@ const Color _white = Color(0xFFFFFFFF);
 final int _lightRow = _ink.withValues(alpha: 0.06).toARGB32();
 final int _lightPill = _coral.withValues(alpha: 0.08).toARGB32();
 final int _dark = _white.withValues(alpha: 0.12).toARGB32();
+final int _stageSoftHover = Palette.mediaInk.withValues(alpha: 0.1).toARGB32();
 
 const Key _cameraToggleKey = ValueKey<String>('camera-toggle');
 const Key _flipKey = ValueKey<String>('camera-flip');
@@ -283,11 +284,11 @@ void main() {
       _Row(
         'Keep going',
         _pressableOn(_keepGoingKey),
-        _dark,
+        _stageSoftHover,
         _Shape.rounded,
-        20,
+        12,
       ),
-      _Row('Let it go', _pressableOn(_letGoKey), _dark, _Shape.rounded, 20),
+      _Row('Let it go', _pressableOn(_letGoKey), _dark, _Shape.rounded, 11),
     ]);
 
     await _pump(

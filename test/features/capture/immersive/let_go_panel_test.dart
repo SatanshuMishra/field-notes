@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 
 const Key _keepGoingKey = ValueKey<String>('keep-going');
@@ -64,9 +66,9 @@ Future<void> _open(
   required VoidCallback onLetGo,
 }) async {
   debugDefaultTargetPlatformOverride = platform;
-  tester.view.physicalSize = platform == TargetPlatform.macOS
-      ? const Size(1280, 800)
-      : const Size(360, 740);
+  tester.view.physicalSize = platform == TargetPlatform.android
+      ? const Size(360, 740)
+      : const Size(1280, 800);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -122,7 +124,7 @@ void main() {
 
       expect(find.text('Let this one go?'), findsOneWidget);
       expect(
-        find.text('Nothing will be saved. That’s okay too.'),
+        find.text("Nothing will be saved. That's okay too."),
         findsOneWidget,
       );
       expect(find.text('Keep going'), findsOneWidget);
@@ -147,7 +149,7 @@ void main() {
     },
   );
 
-  testWidgets('the compact panel stacks full-width buttons below the copy', (
+  testWidgets('on the phone the action stacks above the safe button', (
     WidgetTester tester,
   ) async {
     int keepGoing = 0;
@@ -160,12 +162,12 @@ void main() {
     );
 
     final Rect message = tester.getRect(
-      find.text('Nothing will be saved. That’s okay too.'),
+      find.text("Nothing will be saved. That's okay too."),
     );
     final Rect keep = tester.getRect(find.byKey(_keepGoingKey));
     final Rect letGo = tester.getRect(find.byKey(_letGoKey));
-    expect(keep.top, greaterThanOrEqualTo(message.bottom));
-    expect(letGo.top, keep.top);
+    expect(letGo.top, greaterThanOrEqualTo(message.bottom));
+    expect(keep.top, greaterThanOrEqualTo(letGo.bottom));
     expect(keep.height, greaterThanOrEqualTo(48));
     expect(letGo.height, greaterThanOrEqualTo(48));
     expect(keep.width, closeTo(letGo.width, 1));
@@ -175,6 +177,104 @@ void main() {
     await tester.pump();
     expect(keepGoing, 1);
     debugDefaultTargetPlatformOverride = null;
+  });
+
+  for (final bool compact in <bool>[false, true]) {
+    testWidgets('desktop button order follows the platform, compact $compact', (
+      WidgetTester tester,
+    ) async {
+      for (final TargetPlatform platform in <TargetPlatform>[
+        TargetPlatform.macOS,
+        TargetPlatform.windows,
+      ]) {
+        await _open(
+          tester,
+          platform: platform,
+          compact: compact,
+          onKeepGoing: () {},
+          onLetGo: () {},
+        );
+
+        final double keep = tester.getCenter(find.byKey(_keepGoingKey)).dx;
+        final double letGo = tester.getCenter(find.byKey(_letGoKey)).dx;
+        expect(
+          keep < letGo,
+          platform == TargetPlatform.macOS,
+          reason: '$platform',
+        );
+        expect(_hasFocusWithin(tester, _keepGoingKey), isTrue);
+      }
+      debugDefaultTargetPlatformOverride = null;
+    });
+  }
+
+  testWidgets('the panel uses the shared safe and action buttons', (
+    WidgetTester tester,
+  ) async {
+    await _open(
+      tester,
+      platform: TargetPlatform.macOS,
+      compact: false,
+      onKeepGoing: () {},
+      onLetGo: () {},
+    );
+
+    expect(
+      tester.widget<StickerButton>(find.byKey(_keepGoingKey)).variant,
+      StickerButtonVariant.stageSoft,
+    );
+    expect(
+      tester.widget<StickerButton>(find.byKey(_letGoKey)).variant,
+      StickerButtonVariant.danger,
+    );
+    expect(find.byType(ConfirmChoiceButton), findsNWidgets(2));
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('tapping outside keeps going and reaches nothing underneath', (
+    WidgetTester tester,
+  ) async {
+    int keepGoing = 0;
+    int letGo = 0;
+    int underneath = 0;
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+        home: Scaffold(
+          backgroundColor: recorderStageColor,
+          body: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              TextButton(
+                onPressed: () => underneath++,
+                child: const Text('Underneath'),
+              ),
+              LetGoPanel(
+                compact: false,
+                keepGoingKey: _keepGoingKey,
+                letGoKey: _letGoKey,
+                onKeepGoing: () => keepGoing++,
+                onLetGo: () => letGo++,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Underneath'));
+    await tester.pump();
+    expect(keepGoing, 1);
+    expect(underneath, 0);
+
+    await tester.tap(find.byKey(_letGoKey));
+    await tester.pump();
+    expect(keepGoing, 1);
+    expect(letGo, 1);
   });
 
   testWidgets('the panel is a semantics scope named Let this one go?', (
