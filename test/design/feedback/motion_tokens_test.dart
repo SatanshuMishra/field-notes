@@ -14,8 +14,8 @@ void main() {
       }
     });
 
-    test('exposes the seven locked durations', () {
-      expect(Motion.all, hasLength(7));
+    test('exposes the ten locked durations', () {
+      expect(Motion.all, hasLength(10));
       expect(
         Motion.all,
         containsAll(<Duration>[
@@ -26,6 +26,9 @@ void main() {
           Motion.toastRise,
           Motion.modalPop,
           Motion.sheetSlide,
+          Motion.pageOut,
+          Motion.pageIn,
+          Motion.pageFadeReduced,
         ]),
       );
     });

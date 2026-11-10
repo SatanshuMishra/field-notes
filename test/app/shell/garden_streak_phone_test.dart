@@ -27,6 +27,7 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey<String>('tab-garden')));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(GardenScreen), findsOneWidget);
       expect(_streakCard(), findsNothing);
@@ -53,6 +54,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey<String>('rail-garden')));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(GardenScreen), findsOneWidget);
     expect(

@@ -72,6 +72,7 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey<String>('rail-calendar')));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(CalendarScreen), findsOneWidget);
       expect(find.byType(TodayScreen), findsNothing);
@@ -84,6 +85,7 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey<String>('rail-garden')));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(GardenScreen), findsOneWidget);
     });
@@ -95,6 +97,7 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey<String>('rail-search')));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(SearchScreen), findsOneWidget);
     });
@@ -171,6 +174,7 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey<String>('tab-garden')));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(GardenScreen), findsOneWidget);
       expect(find.byType(TodayScreen), findsNothing);
@@ -188,6 +192,7 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey<String>('tab-search')));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(SearchScreen), findsOneWidget);
     });

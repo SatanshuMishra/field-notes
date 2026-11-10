@@ -84,6 +84,7 @@ Future<void> _open(WidgetTester tester, ShellDestination d) async {
     warnIfMissed: false,
   );
   await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
   await tester.pump();
 }
 

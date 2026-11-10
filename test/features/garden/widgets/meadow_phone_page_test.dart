@@ -89,6 +89,7 @@ Future<ProviderContainer> _pumpShellMeadow(WidgetTester tester) async {
   );
   await tester.tap(find.byKey(const ValueKey<String>('tab-garden')));
   await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
   await tester.pump();
   return ProviderScope.containerOf(tester.element(find.byType(GardenScreen)));
 }
