@@ -1,9 +1,7 @@
-import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/data/sync/erase/device_unlink_service.dart';
 import 'package:field_notes/data/sync/erase/journal_erase_service.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
 import 'package:field_notes/state/sync_providers.dart';
 import 'package:flutter/material.dart';
@@ -11,8 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const String _deleteAllTitle = 'Delete everything?';
 const String _deleteAllMessage =
-    'This erases every entry, photo, and mood on this device. '
-    'It cannot be undone.';
+    "This erases every log, photo and mood on this device. It can't be undone.";
 const String _keepLabel = 'Keep my journal';
 const String _deleteLabel = 'Delete everything';
 
@@ -61,73 +58,20 @@ Future<bool> confirmDeleteAll(BuildContext context) async {
     await showSyncDeleteAll(context);
     return false;
   }
-  if (resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar) {
-    return showConfirmDialog(
-      context,
-      title: _deleteAllTitle,
-      message: _deleteAllMessage,
-      confirmLabel: _deleteLabel,
-      cancelLabel: _keepLabel,
-      danger: true,
-    );
-  }
-  final bool? confirmed = await showDialog<bool>(
-    context: context,
-    barrierDismissible: true,
-    builder: (BuildContext context) => const DeleteAllConfirmDialog(),
+  return showConfirmDialog(
+    context,
+    title: _deleteAllTitle,
+    message: _deleteAllMessage,
+    confirmLabel: _deleteLabel,
+    cancelLabel: _keepLabel,
+    danger: true,
   );
-  return confirmed ?? false;
 }
 
 Future<void> showSyncDeleteAll(BuildContext context) => showSyncFlow<void>(
   context,
   builder: (BuildContext dialogContext) => const SyncDeleteAllDialog(),
 );
-
-class DeleteAllConfirmDialog extends StatelessWidget {
-  const DeleteAllConfirmDialog({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final FieldNotesTextStyles textStyles = context.textStyles;
-    return Center(
-      child: Material(
-        type: MaterialType.transparency,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: StickerCard(
-            surface: context.colors.cardBright,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(_deleteAllTitle, style: textStyles.titleSerif),
-                const SizedBox(height: 8),
-                Text(_deleteAllMessage, style: textStyles.bodySans),
-                const SizedBox(height: 20),
-                ConfirmActionRow(
-                  cancel: StickerButton(
-                    label: _keepLabel,
-                    variant: StickerButtonVariant.secondary,
-                    padTapTarget: true,
-                    autofocus: true,
-                    onPressed: () => Navigator.of(context).pop(false),
-                  ),
-                  confirm: StickerButton(
-                    label: _deleteLabel,
-                    variant: StickerButtonVariant.danger,
-                    padTapTarget: true,
-                    onPressed: () => Navigator.of(context).pop(true),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class SyncDeleteAllDialog extends ConsumerStatefulWidget {
   const SyncDeleteAllDialog({super.key});

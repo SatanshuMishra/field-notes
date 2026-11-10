@@ -199,13 +199,13 @@ class _ComposerTrigger extends StatelessWidget {
 
 void main() {
   testWidgets(
-    'on macOS a pointer on Highlight reaches Highlight through reading-order '
+    'on macOS a pointer on a tucked format reaches it through reading-order '
     'frames',
     (WidgetTester tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
       for (final Size surface in <Size>[
-        const Size(1280, 900),
-        const Size(760, 620),
+        const Size(420, 900),
+        const Size(400, 620),
       ]) {
         tester.view.physicalSize = surface;
         tester.view.devicePixelRatio = 1;
@@ -230,19 +230,19 @@ void main() {
         await NoteEditorDriver(tester).press(find.byKey(formatMoreKey), _hold);
         await tester.pumpAndSettle();
 
-        final SemanticsNode highlight = tester.getSemantics(
-          find.byKey(formatHighlightKey),
+        final SemanticsNode tucked = tester.getSemantics(
+          find.byKey(formatLinkKey),
         );
-        expect(highlight.label, 'Highlight');
+        expect(tucked.label, 'Link');
         final SemanticsNode root = _root(tester);
         final SemanticsNode reached = _pointerReaches(
           root,
-          _globalRect(highlight).center,
+          _globalRect(tucked).center,
           _sentNodes(root),
         );
         expect(
           reached.id,
-          highlight.id,
+          tucked.id,
           reason:
               'at $surface the pointer reached #${reached.id} '
               '"${reached.label}"',
@@ -297,16 +297,15 @@ void main() {
   testWidgets(
     'the More formats menu keeps the text style and scale of its anchor',
     (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.physicalSize = const Size(420, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
         MaterialApp(
           debugShowCheckedModeBanner: false,
           builder: (BuildContext context, Widget? child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: const TextScaler.linear(1.3)),
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(1.3)),
             child: child!,
           ),
           home: DialogHost(
@@ -323,14 +322,15 @@ void main() {
       final BuildContext anchor = tester.element(find.byKey(formatMoreKey));
       final RenderParagraph label = tester.renderObject<RenderParagraph>(
         find.descendant(
-          of: find.byKey(formatHighlightKey),
+          of: find.byKey(formatLinkKey),
           matching: find.byType(RichText),
         ),
       );
       expect(
         label.text.style,
         DefaultTextStyle.of(anchor).style.merge(
-          const FieldNotesTextStyles(FieldNotesColors.light).toolbarSans,
+          const FieldNotesTextStyles(FieldNotesColors.light).ui
+              .copyWith(fontSize: label.text.style?.fontSize),
         ),
       );
       expect(label.textScaler, MediaQuery.textScalerOf(anchor));
@@ -382,9 +382,8 @@ void main() {
     'a photo toolbar menu closes with its anchor and lets Escape through',
     (WidgetTester tester) async {
       final ValueNotifier<double> width = await _pumpPhotoSelected(tester);
-      await NoteEditorDriver(
-        tester,
-      ).press(find.byKey(photoToolbarMoreKey), _hold);
+      await NoteEditorDriver(tester)
+          .press(find.byKey(photoToolbarMoreKey), _hold);
       await tester.pumpAndSettle();
       expect(find.byKey(photoToolbarMoveUpKey), findsOneWidget);
 
@@ -405,7 +404,7 @@ void main() {
   testWidgets(
     'Escape closes the open More formats menu and keeps the composer open',
     (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(1200, 2000);
+      tester.view.physicalSize = const Size(400, 2000);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
@@ -423,26 +422,26 @@ void main() {
       await driver.typeText('never mind');
       await driver.press(find.byKey(formatMoreKey), _hold);
       await tester.pumpAndSettle();
-      expect(find.byKey(formatHighlightKey), findsOneWidget);
+      expect(find.byKey(formatQuoteKey), findsOneWidget);
 
       await driver.pressKey(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
 
-      expect(find.byKey(formatHighlightKey), findsNothing);
+      expect(find.byKey(formatQuoteKey), findsNothing);
       expect(find.text(composerDiscardTitle), findsNothing);
       expect(find.byType(TextComposerSheet), findsOneWidget);
       expect(driver.source, 'never mind');
 
       await driver.press(find.byKey(formatMoreKey), _hold);
       await tester.pumpAndSettle();
-      expect(find.byKey(formatHighlightKey), findsOneWidget);
+      expect(find.byKey(formatQuoteKey), findsOneWidget);
       await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
       await tester.sendKeyRepeatEvent(LogicalKeyboardKey.escape);
       await tester.sendKeyRepeatEvent(LogicalKeyboardKey.escape);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
 
-      expect(find.byKey(formatHighlightKey), findsNothing);
+      expect(find.byKey(formatQuoteKey), findsNothing);
       expect(find.text(composerDiscardTitle), findsNothing);
       expect(find.byType(TextComposerSheet), findsOneWidget);
 

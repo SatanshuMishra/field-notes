@@ -21,9 +21,9 @@ const String todayFeedEmptyMessage =
     'Capture a moment — write it, speak it, or film it.';
 const String todayFeedErrorMessage = "Couldn't load today's entries.";
 const String todayMediaErrorMessage = "Couldn't load your media library.";
-const String todayDeleteTitle = 'Delete this entry?';
-const String todayDeleteMessage =
-    'This log will be removed from today. This can’t be undone.';
+const String todayDeleteTitle = 'Delete this log?';
+const String todayDeleteMessage = "It's gone for good, on every device.";
+const String todayKeepLabel = 'Keep it';
 const String todayDeleteLabel = 'Delete';
 const String todayDeletedMessage = 'Entry deleted';
 const String todayDeleteFailedMessage =
@@ -54,8 +54,9 @@ class TodayEntryFeed extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Entry>> entriesAsync =
-        ref.watch(entriesForDateProvider(date));
+    final AsyncValue<List<Entry>> entriesAsync = ref.watch(
+      entriesForDateProvider(date),
+    );
     if (entriesAsync.hasError) {
       return _adapter(_message(context, todayFeedErrorMessage));
     }
@@ -76,8 +77,9 @@ class TodayEntryFeed extends ConsumerWidget {
       );
     }
 
-    final AsyncValue<MediaResolver> resolverAsync =
-        ref.watch(todayMediaResolverProvider);
+    final AsyncValue<MediaResolver> resolverAsync = ref.watch(
+      todayMediaResolverProvider,
+    );
     if (resolverAsync.hasError) {
       return _adapter(_message(context, todayMediaErrorMessage));
     }
@@ -187,6 +189,7 @@ class TodayEntryTile extends ConsumerWidget {
       title: todayDeleteTitle,
       message: todayDeleteMessage,
       confirmLabel: todayDeleteLabel,
+      cancelLabel: todayKeepLabel,
       danger: true,
     );
     if (!confirmed) {

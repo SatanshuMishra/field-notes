@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../../support/sync_overrides.dart';
 
+const String _deleteAllTitle = 'Delete everything?';
+
 final TargetPlatformVariant _bothPlatforms = TargetPlatformVariant(
   <TargetPlatform>{TargetPlatform.macOS, TargetPlatform.android},
 );
@@ -30,7 +32,7 @@ Future<void> _openDialog(WidgetTester tester, List<bool> outcomes) async {
   );
   await tester.tap(find.text('open'));
   await tester.pumpAndSettle();
-  expect(find.byType(DeleteAllConfirmDialog), findsOneWidget);
+  expect(find.text(_deleteAllTitle), findsOneWidget);
   expect(outcomes, isEmpty);
 }
 
@@ -98,8 +100,7 @@ void main() {
 
     expect(
       find.text(
-        'This erases every entry, photo, and mood on this device. '
-        'It cannot be undone.',
+        "This erases every log, photo and mood on this device. It can't be undone.",
       ),
       findsOneWidget,
     );
@@ -107,7 +108,7 @@ void main() {
     await tester.tap(find.text('Keep my journal'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(DeleteAllConfirmDialog), findsNothing);
+    expect(find.text(_deleteAllTitle), findsNothing);
     expect(outcomes, <bool>[false]);
   });
 
@@ -120,7 +121,7 @@ void main() {
     await tester.tapAt(const Offset(5, 5));
     await tester.pumpAndSettle();
 
-    expect(find.byType(DeleteAllConfirmDialog), findsNothing);
+    expect(find.text(_deleteAllTitle), findsNothing);
     expect(outcomes, <bool>[false]);
   });
 
@@ -131,7 +132,7 @@ void main() {
     await tester.tap(find.text('Delete everything'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(DeleteAllConfirmDialog), findsNothing);
+    expect(find.text(_deleteAllTitle), findsNothing);
     expect(outcomes, <bool>[true]);
   });
 
@@ -141,7 +142,7 @@ void main() {
     final List<bool> outcomes = <bool>[];
     await _openSyncDialog(tester, outcomes);
 
-    expect(find.byType(DeleteAllConfirmDialog), findsNothing);
+    expect(find.text(_deleteAllTitle), findsNothing);
     expect(find.byType(SyncDeleteAllDialog), findsOneWidget);
     expect(find.text('Delete your journal'), findsOneWidget);
     expect(find.text(removeFromThisDeviceMessage), findsOneWidget);

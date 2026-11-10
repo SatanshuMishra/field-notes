@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/day_detail/day_detail_header.dart';
@@ -16,6 +17,7 @@ import 'package:field_notes/state/state.dart';
 
 import '../capture/core/capture_test_support.dart' show FakeDraftStore;
 import '../../support/ax_update_checker.dart';
+import '../../support/composer_room.dart';
 import '../../support/note_editor_driver.dart';
 import '../entry_cards/support/reading_path.dart';
 import 'support/day_detail_harness.dart';
@@ -30,7 +32,7 @@ Future<void> _revealPillOn(WidgetTester tester, Finder card) async {
 Future<void> _confirmDelete(WidgetTester tester) async {
   await tester.tap(find.byKey(logActionsDeleteKey).hitTestable());
   await tester.pumpAndSettle();
-  expect(find.text('Delete this entry?'), findsOneWidget);
+  expect(find.text('Delete this log?'), findsOneWidget);
   await tester.tap(find.byKey(confirmDialogConfirmKey));
   await tester.pumpAndSettle();
 }
@@ -161,8 +163,8 @@ void main() {
     await tester.tap(find.text('Add a note'));
     await tester.pumpAndSettle();
 
-    expect(find.text(newNoteTitle), findsOneWidget);
-    expect(find.text('Back'), findsOneWidget);
+    expect(composerTitled(newNoteTitle), findsOneWidget);
+    expect(find.byKey(composerCloseKey), findsOneWidget);
     expect(find.text('Sunday, July 19'), findsWidgets);
   });
 
@@ -183,7 +185,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text(
+      composerTitled(
         editNoteTitleFor(
           entryOf(type: EntryType.text, textContent: 'a good day'),
         ),

@@ -5,6 +5,8 @@ import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
+import 'composer_guard.dart';
+
 const String draftRestoredLabel = 'Draft restored';
 const String draftRestoredDiscardLabel = 'Discard';
 const Key draftRestoredDiscardKey = ValueKey<String>('draft-restored-discard');
@@ -48,7 +50,7 @@ class DraftRestoredChip extends StatelessWidget {
               top: 0,
               bottom: 0,
               end: 0,
-              child: _discardButton(discardStyle),
+              child: _discardButton(context, discardStyle),
             ),
           ],
         ),
@@ -89,12 +91,18 @@ class DraftRestoredChip extends StatelessWidget {
     );
   }
 
-  Widget _discardButton(TextStyle discardStyle) {
+  Future<void> _confirmDiscard(BuildContext context) async {
+    if (await confirmDiscardRestoredDraft(context)) {
+      onDiscard?.call();
+    }
+  }
+
+  Widget _discardButton(BuildContext context, TextStyle discardStyle) {
     return TextFieldTapRegion(
       child: Pressable(
         key: draftRestoredDiscardKey,
         label: draftRestoredDiscardLabel,
-        onPressed: onDiscard,
+        onPressed: onDiscard == null ? null : () => _confirmDiscard(context),
         shape: HoverShape.pill,
         borderRadius: _discardFocusRadius,
         placement: FocusRingPlacement.edge,

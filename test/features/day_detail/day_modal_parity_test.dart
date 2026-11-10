@@ -9,6 +9,7 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_header.dart';
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
@@ -412,11 +413,9 @@ void main() {
     await tester.tap(find.byKey(logActionsDeleteKey).hitTestable());
     await tester.pumpAndSettle();
 
-    expect(find.text('Delete this entry?'), findsOneWidget);
-    expect(
-      find.text('This log will be removed from July 19. This can’t be undone.'),
-      findsOneWidget,
-    );
+    expect(find.text('Delete this log?'), findsOneWidget);
+    expect(find.text("It's gone for good, on every device."), findsOneWidget);
+    expect(find.text('Keep it'), findsOneWidget);
     expect(repository.deletedEntryIds, isEmpty);
 
     await tester.tap(find.text('Delete'));
@@ -438,13 +437,17 @@ void main() {
     await tester.tap(find.text('Add a note'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Back'), findsOneWidget);
+    final Finder composerOfferingBack = find.byWidgetPredicate(
+      (Widget widget) =>
+          widget is TextComposerSheet && widget.exit == ComposerExit.back,
+    );
+    expect(composerOfferingBack, findsOneWidget);
     expect(_dayTitleInPanel(), findsNothing);
 
-    await tester.tap(find.text('Back'));
+    await tester.tap(find.byKey(composerCloseKey));
     await tester.pumpAndSettle();
 
-    expect(find.text('Back'), findsNothing);
+    expect(composerOfferingBack, findsNothing);
     expect(_dayTitleInPanel(), findsOneWidget);
   }, variant: _bothLayouts);
 }

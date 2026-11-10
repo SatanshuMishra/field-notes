@@ -1,5 +1,8 @@
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
+    show composerCloseKey;
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
@@ -17,6 +20,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/composer_room.dart';
 import '../../support/note_editor_driver.dart';
 import '../capture/core/capture_test_support.dart' show FakeDraftStore;
 import '../day_detail/support/day_detail_harness.dart'
@@ -158,11 +162,9 @@ void main() {
     await tester.tap(find.byKey(logActionsDeleteKey).hitTestable());
     await tester.pumpAndSettle();
 
-    expect(find.text('Delete this entry?'), findsOneWidget);
-    expect(
-      find.text('This log will be removed from today. This can’t be undone.'),
-      findsOneWidget,
-    );
+    expect(find.text('Delete this log?'), findsOneWidget);
+    expect(find.text("It's gone for good, on every device."), findsOneWidget);
+    expect(find.text('Keep it'), findsOneWidget);
     expect(repository.deletedEntryIds, isEmpty);
 
     await tester.tap(find.byKey(confirmDialogConfirmKey));
@@ -173,7 +175,7 @@ void main() {
     await _drainToast(tester);
   });
 
-  testWidgets("the More menu's Edit opens edit mode directly with Cancel", (
+  testWidgets("the More menu's Edit opens edit mode directly with Leave", (
     WidgetTester tester,
   ) async {
     await pumpToday(
@@ -188,8 +190,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(NoteEditorDriver(tester).source, contains('coffee on the porch'));
-    expect(find.text('Cancel'), findsOneWidget);
+    expect(
+      tester.widget<Pressable>(find.byKey(composerCloseKey)).label,
+      'Leave',
+    );
     expect(find.text('Afternoon note'), findsNothing);
-    expect(find.text('Editing afternoon note'), findsOneWidget);
+    expect(composerTitled('Editing afternoon note'), findsOneWidget);
   });
 }

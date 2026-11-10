@@ -59,13 +59,13 @@ void main() {
     expect(find.text("Change today's bloom?"), findsOneWidget);
     expect(
       find.text(
-        'Set today to Peony · Happy? '
+        'Today becomes Peony, Happy. '
         'Your current bloom will be replaced.',
       ),
       findsOneWidget,
     );
 
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.text('Keep this bloom'));
     await tester.pumpAndSettle();
 
     expect(fake.moodWrites, isEmpty);
@@ -86,7 +86,7 @@ void main() {
     await tester.tap(find.text('Happy'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Change mood'));
+    await tester.tap(find.text('Change bloom'));
     await tester.pumpAndSettle();
 
     expect(fake.moodWrites, <({String date, Mood? mood})>[
