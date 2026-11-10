@@ -950,19 +950,38 @@ class _RecorderTitleFieldState extends State<RecorderTitleField> {
       right: -_titleRingOutset,
       bottom: -_titleRingOutset,
       child: IgnorePointer(
-        child: DecoratedBox(
+        child: CustomPaint(
           key: focusRingKey,
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: surface.colorIn(context.colors),
-              width: surface.width,
-            ),
-            borderRadius: _titleRadius,
+          painter: _TitleRingPainter(
+            color: surface.colorIn(context.colors),
+            width: surface.width,
           ),
         ),
       ),
     );
   }
+}
+
+class _TitleRingPainter extends CustomPainter {
+  const _TitleRingPainter({required this.color, required this.width});
+
+  final Color color;
+  final double width;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Border.all(
+      color: color,
+      width: width,
+    ).paint(canvas, Offset.zero & size, borderRadius: _titleRadius);
+  }
+
+  @override
+  bool hitTest(Offset position) => false;
+
+  @override
+  bool shouldRepaint(_TitleRingPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.width != width;
 }
 
 Future<bool> nameRecordedLog(
