@@ -11,6 +11,7 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart'
     show CaptureMedia;
 import 'package:field_notes/domain/services/note_writer.dart';
+import 'package:field_notes/features/capture/core/capture_day_line.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
@@ -118,6 +119,11 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
     return parsed == null ? widget.date : dayTitleFor(parsed, today: _openedAt);
   }
 
+  CaptureDayLine? _dayLine() {
+    final DateTime? day = parseDateKey(widget.date);
+    return day == null ? null : captureDayLine(day: day, today: _openedAt);
+  }
+
   String _savedToMessage() {
     final DateTime? parsed = parseDateKey(widget.date);
     final DateTime now = ref.read(todayClockProvider)();
@@ -211,6 +217,7 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
               isSaving: _isSaving,
               title: newNoteTitle,
               kicker: _composeKicker(context),
+              dayLine: _dayLine(),
               exit: widget.exit,
               onAddPhoto: () => importNotePhotos(ref),
               spellCheckEnabled: spellCheck,

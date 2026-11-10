@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:field_notes/design/widgets/widgets.dart' show NoteColumn;
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
     show MdPhotoSide, MdPhotoSize;
@@ -16,8 +15,6 @@ import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
-import 'package:field_notes/features/log_viewer/note_panel_view.dart'
-    show notePanelWidthFor;
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show NoteEditorView, NoteReaderView;
 import 'package:field_notes/features/note_engine/render/photo_figure.dart'
@@ -100,7 +97,7 @@ RenderNoteView _reader(WidgetTester tester) =>
 
 void main() {
   testWidgets(
-    'the note viewer lays out a 34 em column in a 1280 pixel window',
+    'the note viewer fills a 1280 window and reads in the composer column',
     (WidgetTester tester) async {
       _pinWindow(tester, const Size(1280, 900));
 
@@ -112,19 +109,13 @@ void main() {
         entryId: 'entry-1',
       );
 
-      expect(
-        tester.getSize(find.byKey(composerPanelKey)).width,
-        notePanelWidthFor(1280),
-      );
-      expect(
-        tester.getSize(_readerColumn()).width,
-        34 * NoteColumn.emOf(tester.element(_readerColumn())),
-      );
+      expect(tester.getSize(find.byKey(composerPanelKey)).width, 1280);
+      expect(tester.getSize(_readerColumn()).width, 688);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.macOS),
   );
 
-  testWidgets('the note viewer caps its column at 45 em in a 1920 window', (
+  testWidgets('the note viewer keeps the composer column in a 1920 window', (
     WidgetTester tester,
   ) async {
     _pinWindow(tester, const Size(1920, 1200));
@@ -137,7 +128,7 @@ void main() {
       entryId: 'entry-1',
     );
 
-    expect(tester.getSize(_readerColumn()).width, 720);
+    expect(tester.getSize(_readerColumn()).width, 688);
   });
 
   testWidgets('the composer writes in the same 688 column in a 1280 window', (

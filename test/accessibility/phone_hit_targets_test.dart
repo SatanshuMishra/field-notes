@@ -346,10 +346,11 @@ final List<_Surface> _surfaces = <_Surface>[
   _Surface('Log sheet', (WidgetTester tester) async {
     await _pumpToday(tester);
     await _tap(tester, find.byType(CompactLogCard).first);
-  }, <_Primary>[_footerButtons]),
+  }, const <_Primary>[]),
   _Surface('delete confirm sheet', (WidgetTester tester) async {
     await _pumpToday(tester);
     await _tap(tester, find.byType(CompactLogCard).first);
+    await _tap(tester, find.byKey(logActionsMoreKey).last);
     await _tap(tester, find.byKey(logActionsDeleteKey));
   }, <_Primary>[_footerButtons]),
   _Surface('flower month', _pumpCalendar, <_Primary>[

@@ -8,20 +8,20 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/domain/notes/note_photos.dart';
+import 'package:field_notes/features/capture/core/composer_shell.dart'
+    show ComposerShell;
 import 'package:field_notes/features/entry_cards/entry_cards.dart'
-    show ResolvedMedia, logActionsDeleteKey, logActionsEditKey;
+    show ResolvedMedia, logActionsEditKey, logActionsMoreKey;
 import 'package:field_notes/features/entry_cards/media/media_image.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart'
     show LogViewerExit;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show logViewerBackKey, logViewerEarlierKey, logViewerLaterKey;
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
-import 'package:field_notes/features/log_viewer/note_panel_view.dart';
-import 'package:field_notes/features/log_viewer/note_sheet_view.dart';
+import 'package:field_notes/features/log_viewer/note_reading_room.dart';
 import 'package:field_notes/features/log_viewer/photo_viewer.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
 import 'package:field_notes/features/log_viewer/viewer_waveform.dart';
@@ -49,6 +49,8 @@ final int _lightRow = _ink.withValues(alpha: 0.06).toARGB32();
 final int _dark = _white.withValues(alpha: 0.12).toARGB32();
 
 const Size _desktop = Size(1440, 900);
+const double _roomRadius = Shapes.radius12;
+const double _leaveRadius = Shapes.radius8;
 const Size _phone = Size(384, 832);
 const String _date = '2026-07-19';
 const String _dayTitle = 'Sunday, July 19';
@@ -207,29 +209,6 @@ LogViewerScene _scene() => LogViewerScene(
   onEdit: () {},
 );
 
-class _SheetHost extends StatefulWidget {
-  const _SheetHost();
-
-  @override
-  State<_SheetHost> createState() => _SheetHostState();
-}
-
-class _SheetHostState extends State<_SheetHost> {
-  final FakeNoteMediaResolver _resolver = FakeNoteMediaResolver();
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return NoteSheetView(
-      scene: _scene(),
-      resolver: _resolver,
-      expanded: _expanded,
-      onExpandedChanged: (bool expanded) =>
-          setState(() => _expanded = expanded),
-    );
-  }
-}
-
 Future<void> _openFrom(
   WidgetTester tester,
   TargetPlatform platform,
@@ -257,7 +236,7 @@ Future<void> _openFrom(
   await tester.pumpAndSettle();
 }
 
-void _openPanel(BuildContext context) => showGeneralDialog<void>(
+void _openRoom(BuildContext context) => showGeneralDialog<void>(
   context: context,
   barrierDismissible: false,
   barrierLabel: 'Dismiss log viewer',
@@ -268,16 +247,14 @@ void _openPanel(BuildContext context) => showGeneralDialog<void>(
         Animation<double> animation,
         Animation<double> secondaryAnimation,
       ) => DialogHost(
-        child: NotePanelView(
-          scene: _scene(),
-          resolver: FakeNoteMediaResolver(),
+        child: ComposerShell(
+          responsive: true,
+          child: NoteReadingRoom(
+            scene: _scene(),
+            resolver: FakeNoteMediaResolver(),
+          ),
         ),
       ),
-);
-
-void _openSheet(BuildContext context) => showPhoneSheet<void>(
-  context,
-  builder: (BuildContext sheetContext) => const _SheetHost(),
 );
 
 void _openPhotos(BuildContext context) => showPhotoViewer(
@@ -443,14 +420,28 @@ void main() {
       ]);
 
       await mouse.moveTo(Offset.zero);
-      await _openFrom(tester, TargetPlatform.macOS, _openPanel);
+      await _openFrom(tester, TargetPlatform.macOS, _openRoom);
       await _expectRows(tester, mouse, <_Row>[
         _Row(
           'Close',
           find.byKey(logViewerBackKey),
           _lightRow,
           _Shape.rounded,
-          radius: 10,
+          radius: _leaveRadius,
+        ),
+        _Row(
+          'Edit note',
+          find.byKey(logActionsEditKey),
+          _lightRow,
+          _Shape.rounded,
+          radius: _roomRadius,
+        ),
+        _Row(
+          'More',
+          find.byKey(logActionsMoreKey),
+          _lightRow,
+          _Shape.rounded,
+          radius: _roomRadius,
         ),
         _Row(
           'Previous log',
@@ -470,28 +461,28 @@ void main() {
 
       await mouse.moveTo(Offset.zero);
       _view(tester, _phone);
-      await _openFrom(tester, TargetPlatform.android, _openSheet);
+      await _openFrom(tester, TargetPlatform.android, _openRoom);
       await _expectRows(tester, mouse, <_Row>[
         _Row(
           'Close',
           find.byKey(logViewerBackKey),
           _lightRow,
           _Shape.rounded,
-          radius: 14,
+          radius: _leaveRadius,
         ),
         _Row(
           'Edit note',
           find.byKey(logActionsEditKey),
-          _dark,
-          _Shape.rounded,
-          radius: 14,
-        ),
-        _Row(
-          'Delete',
-          find.byKey(logActionsDeleteKey),
           _lightRow,
           _Shape.rounded,
-          radius: Shapes.radiusSm,
+          radius: _roomRadius,
+        ),
+        _Row(
+          'More',
+          find.byKey(logActionsMoreKey),
+          _lightRow,
+          _Shape.rounded,
+          radius: _roomRadius,
         ),
       ]);
 

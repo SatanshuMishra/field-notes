@@ -1,5 +1,6 @@
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/services/note_writer.dart';
+import 'package:field_notes/features/capture/core/capture_day_line.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
@@ -56,12 +57,30 @@ Future<void> _open(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Widget _desktopSheet({ComposerExit exit = ComposerExit.cancel}) {
+const CaptureDayLine _sundayLine = (lead: 'today', date: 'Sunday, July 19');
+
+const String _widePrivacyLine = 'Private · only you will read this';
+const String _compactPrivacyLine = 'Only you will read this';
+
+Widget _desktopSheet({
+  ComposerExit exit = ComposerExit.cancel,
+  CaptureDayLine? dayLine,
+}) {
   return MaterialApp(
     theme: ThemeData(platform: TargetPlatform.macOS),
-    home: TextComposerSheet(onSave: (String _) {}, onCancel: () {}, exit: exit),
+    home: TextComposerSheet(
+      onSave: (String _) {},
+      onCancel: () {},
+      exit: exit,
+      dayLine: dayLine,
+    ),
   );
 }
+
+double _dayLineCentre(WidgetTester tester, CaptureDayLine line) =>
+    (tester.getTopLeft(find.text(line.lead)).dx +
+        tester.getTopRight(find.text(line.date)).dx) /
+    2;
 
 void _useDesktopWindow(WidgetTester tester) {
   tester.view.physicalSize = const Size(1280, 900);
@@ -70,11 +89,11 @@ void _useDesktopWindow(WidgetTester tester) {
 }
 
 void main() {
-  testWidgets('the desktop band says Leave, the privacy line and the keys', (
+  testWidgets('the desktop band says Leave, the day line and the keys', (
     WidgetTester tester,
   ) async {
     _useDesktopWindow(tester);
-    await tester.pumpWidget(_desktopSheet());
+    await tester.pumpWidget(_desktopSheet(dayLine: _sundayLine));
 
     expect(
       find.descendant(
@@ -83,13 +102,12 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Private · only you will read this'), findsOneWidget);
+    expect(find.text(_sundayLine.lead), findsOneWidget);
+    expect(find.text(_sundayLine.date), findsOneWidget);
+    expect(find.text(_widePrivacyLine), findsNothing);
     expect(find.text('⌘ Return'), findsOneWidget);
     expect(find.text('Esc'), findsOneWidget);
-    expect(
-      tester.getCenter(find.text('Private · only you will read this')).dx,
-      closeTo(640, 12),
-    );
+    expect(_dayLineCentre(tester, _sundayLine), closeTo(640, 12));
   });
 
   testWidgets('Windows reads the keep key as Ctrl Enter', (
@@ -107,19 +125,56 @@ void main() {
     expect(find.text('⌘ Return'), findsNothing);
   });
 
-  testWidgets('the phone band is an icon and the short privacy line', (
+  testWidgets('the phone band is an icon and the same day line', (
     WidgetTester tester,
   ) async {
     final SemanticsHandle semantics = tester.ensureSemantics();
     await tester.pumpWidget(
-      captureHarness(TextComposerSheet(onSave: (String _) {}, onCancel: () {})),
+      captureHarness(
+        TextComposerSheet(
+          onSave: (String _) {},
+          onCancel: () {},
+          dayLine: _sundayLine,
+        ),
+      ),
     );
 
     expect(find.text('Leave'), findsNothing);
     expect(find.bySemanticsLabel('Leave'), findsOneWidget);
-    expect(find.text('Only you will read this'), findsOneWidget);
+    expect(find.text(_sundayLine.lead), findsOneWidget);
+    expect(find.text(_sundayLine.date), findsOneWidget);
+    expect(find.text(_compactPrivacyLine), findsNothing);
     expect(find.text('Esc'), findsNothing);
     semantics.dispose();
+  });
+
+  testWidgets('a new note for today says today and the date in its band', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _composerApp(date: '2026-07-19', now: DateTime(2026, 7, 19, 14, 30)),
+    );
+    await _open(tester);
+
+    expect(find.text('today'), findsOneWidget);
+    expect(find.text('Sunday, July 19'), findsOneWidget);
+    expect(find.text(_widePrivacyLine), findsNothing);
+    expect(find.text(_compactPrivacyLine), findsNothing);
+  });
+
+  testWidgets('a new note for a past day says it is adding to that day', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _composerApp(date: '2026-07-15', now: DateTime(2026, 7, 19, 14, 30)),
+    );
+    await _open(tester);
+
+    expect(find.text('adding to'), findsOneWidget);
+    expect(find.text('Wednesday, July 15'), findsOneWidget);
+    expect(find.text('today'), findsNothing);
+    expect(find.text(_widePrivacyLine), findsNothing);
+    expect(find.text(_compactPrivacyLine), findsNothing);
   });
 
   testWidgets('a Back exit says Back with a chevron', (

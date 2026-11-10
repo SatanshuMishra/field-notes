@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -8,10 +9,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
+    show ComposerTitleSlot;
 import 'package:field_notes/features/entry_cards/entry_cards.dart'
-    show NoteBody;
+    show NoteBody, logActionsMoreKey, logActionsRenameKey;
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
+import 'package:field_notes/features/log_viewer/note_reading_room.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
     show viewerTitleFieldKey;
 import 'package:field_notes/features/notes/notes.dart'
@@ -96,20 +100,25 @@ Future<FakeJournalRepository> _open(
   return repository;
 }
 
-String _shownTitle(WidgetTester tester) => tester
-    .widget<TextField>(
-      find.descendant(
-        of: find.byType(LogViewerPanel),
-        matching: find.byKey(viewerTitleFieldKey),
+String _shownTitle(WidgetTester tester) => <String>[
+  for (final Text text in tester.widgetList<Text>(
+    find.descendant(
+      of: find.descendant(
+        of: find.byType(NoteReadingRoom),
+        matching: find.byType(ComposerTitleSlot),
       ),
-    )
-    .controller!
-    .text;
+      matching: find.byType(Text),
+    ),
+  ))
+    text.data ?? '',
+].join();
 
 Future<void> _rename(WidgetTester tester, String title) async {
+  await tester.tap(find.byKey(logActionsMoreKey));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(logActionsRenameKey));
+  await tester.pumpAndSettle();
   final Finder field = find.byKey(viewerTitleFieldKey);
-  await tester.tap(field);
-  await tester.pump();
   await tester.enterText(field, title);
   await tester.testTextInput.receiveAction(TextInputAction.done);
   await tester.pump();
@@ -126,7 +135,12 @@ void main() {
 
     expect(find.text('Afternoon note'), findsNothing);
     expect(_shownTitle(tester), isEmpty);
-    expect(find.text('Sunday, July 19'), findsOneWidget);
+    expect(
+      find.text(
+        defaultTargetPlatform == TargetPlatform.macOS ? 'Sunday' : 'Sun',
+      ),
+      findsOneWidget,
+    );
     expect(
       find.byWidgetPredicate((Widget w) => w is NoteBody && w.text == _elm),
       findsOneWidget,

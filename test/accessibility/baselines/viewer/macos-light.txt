@@ -26,10 +26,12 @@ text-contrast | d13-change-mood-dialog-sidebar | Feeling Calm | <root> # measure
 text-contrast | d13-change-mood-dialog-sidebar | Lavender · today's bloom | <root> # measured: 5.76:1 by token arithmetic
 text-contrast | d13-change-mood-dialog-sidebar@2x | Change | Feeling Calm / Lavender · today's bloom # measured: 5.76:1 by token arithmetic
 text-contrast | d13-change-mood-dialog-sidebar@2x | Lavender · today's bloom | <root> # measured: 5.76:1 by token arithmetic
-text-contrast | d14-delete-entry-dialog-sidebar | 9:30 AM | Friday, September 18 # measured: 6.53:1 by token arithmetic
-text-contrast | d14-delete-entry-dialog-sidebar | Add a title | Friday, September 18 # measured: 6.54:1 by token arithmetic
-text-contrast | d14-delete-entry-dialog-sidebar | Close | Friday, September 18 # measured: 9.41:1 by token arithmetic
-text-contrast | d14-delete-entry-dialog-sidebar | Friday, September 18 | <root> # measured: 6.53:1 by token arithmetic
-text-contrast | d14-delete-entry-dialog-sidebar@2x | 9:30 AM | Friday, September 18 # measured: 6.53:1 by token arithmetic
-text-contrast | d14-delete-entry-dialog-sidebar@2x | Close | Friday, September 18 # measured: 9.41:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | Close | <root> # measured: 7.64:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | Edit | <root> # measured: 7.64:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | Friday | <root> # measured: 5.12:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar | September 18 · 9:30 AM | <root> # measured: 6.38:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar@2x | Close | <root> # measured: 7.64:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar@2x | Edit | <root> # measured: 7.64:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar@2x | Friday | <root> # measured: 5.12:1 by token arithmetic
+text-contrast | d14-delete-entry-dialog-sidebar@2x | September 18 · 9:30 AM | <root> # measured: 6.38:1 by token arithmetic
 truncated-text | d5-reader-menu-sidebar@2x | Select All | <root> # Flutter's own control

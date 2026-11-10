@@ -537,9 +537,10 @@ void main() {
           tester,
           find.descendant(
             of: find.byType(LogViewerPanel),
-            matching: find.byKey(logActionsDeleteKey),
+            matching: find.byKey(logActionsMoreKey),
           ),
         );
+        await _tap(tester, find.byKey(logActionsDeleteKey));
         _expectDark(
           tester,
           find.byKey(confirmDialogConfirmKey),

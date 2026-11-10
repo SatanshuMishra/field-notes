@@ -18,5 +18,7 @@ small-target | c9-selection-menu@2x | <unlabelled> | <root> # Flutter's own cont
 small-target | c9-selection-menu@2x | Copy | <root> # Flutter's own control
 small-target | c9-selection-menu@2x | Cut | <root> # Flutter's own control
 text-contrast | c10-discard-dialog | Add a title | 6 words # measured: 6.38:1 by token arithmetic
-text-contrast | c10-discard-dialog | Only you will read this | 6 words # measured: 6.38:1 by token arithmetic
-text-contrast | c10-discard-dialog@2x | Only you will read this | 6 words # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog | Friday, September 18 | 6 words # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog | today | 6 words # measured: 5.12:1 by token arithmetic
+text-contrast | c10-discard-dialog@2x | Friday, September 18 | 6 words # measured: 6.38:1 by token arithmetic
+text-contrast | c10-discard-dialog@2x | today | 6 words # measured: 5.12:1 by token arithmetic

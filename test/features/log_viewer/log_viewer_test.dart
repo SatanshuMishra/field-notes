@@ -21,8 +21,7 @@ import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/entry_cards/transport/transport_bar.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
-import 'package:field_notes/features/log_viewer/note_panel_view.dart';
-import 'package:field_notes/features/log_viewer/note_sheet_view.dart';
+import 'package:field_notes/features/log_viewer/note_reading_room.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
     show viewerTitleFieldKey;
@@ -450,7 +449,11 @@ Future<_Mixed> _openMixed(
   return session;
 }
 
-Finder _noteView() => find.byType(_sidebar ? NotePanelView : NoteSheetView);
+Finder _noteView() => find.byType(NoteReadingRoom);
+
+String get _weekday => _sidebar ? 'Sunday' : 'Sun';
+
+String _dayAt(String clock) => '${_sidebar ? 'July' : 'Jul'} 19 · $clock';
 
 void _expectUnboxed(WidgetTester tester, Finder media) {
   expect(media, findsOneWidget);
@@ -472,7 +475,7 @@ void main() {
   ) async {
     await _open(tester, entryId: 'entry-2');
 
-    final Finder title = find.text('Sunday, July 19');
+    final Finder title = find.text(_weekday);
     expect(title, findsOneWidget);
     final TextStyle style = DefaultTextStyle.of(tester.element(title)).style;
     expect(style.decoration ?? TextDecoration.none, TextDecoration.none);
@@ -531,7 +534,7 @@ void main() {
 
       expect(session.repository.noteSaves, hasLength(1));
       expect(driver.find, findsNothing);
-      expect(find.byKey(viewerTitleFieldKey), findsOneWidget);
+      expect(_inPanel(_noteView()), findsOneWidget);
       expect(_noteText('a better day'), findsOneWidget);
       expect(find.byKey(logViewerPanelKey), findsOneWidget);
       expect(session.outcomes, isEmpty);
@@ -590,6 +593,8 @@ void main() {
   ) async {
     final _Session session = await _open(tester, entryId: 'entry-2');
 
+    await tester.tap(find.byKey(logActionsMoreKey));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(logActionsDeleteKey));
     await tester.pumpAndSettle();
 
@@ -631,7 +636,7 @@ void main() {
     expect(find.byKey(logViewerPanelKey), findsNothing);
   }, variant: _bothLayouts);
 
-  testWidgets('a scrim tap closes view mode and reports closing everything', (
+  testWidgets('a note fills the window, so a tap at its edge keeps it open', (
     WidgetTester tester,
   ) async {
     final _Session session = await _open(tester);
@@ -639,8 +644,8 @@ void main() {
     await tester.tapAt(const Offset(4, 4));
     await tester.pumpAndSettle();
 
-    expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.closedAll]);
-    expect(find.byKey(logViewerPanelKey), findsNothing);
+    expect(session.outcomes, isEmpty);
+    expect(_inPanel(_noteView()), findsOneWidget);
   }, variant: _bothLayouts);
 
   testWidgets('a voice log shows the voice player and no Edit', (
@@ -686,13 +691,13 @@ void main() {
     _useClockFormat(tester, twentyFourHour: false);
     await _open(tester, entryId: 'entry-2');
 
-    expect(find.text('2:30 PM'), findsOneWidget);
+    expect(find.text(_dayAt('2:30 PM')), findsOneWidget);
     expect(find.text('8:12 AM · note'), findsOneWidget);
 
     _useClockFormat(tester, twentyFourHour: true);
     await tester.pumpAndSettle();
 
-    expect(find.text('14:30'), findsOneWidget);
+    expect(find.text(_dayAt('14:30')), findsOneWidget);
     expect(find.text('08:12 · note'), findsOneWidget);
   }, variant: _bothLayouts);
 
@@ -702,8 +707,7 @@ void main() {
     await _openMixed(tester, entryId: 'voice-log');
     expect(_inPanel(find.byType(VoicePlayerView)), findsOneWidget);
     expect(find.byType(VideoViewerView), findsNothing);
-    expect(find.byType(NoteSheetView), findsNothing);
-    expect(find.byType(NotePanelView), findsNothing);
+    expect(_noteView(), findsNothing);
 
     await _openMixed(tester, entryId: 'video-log');
     expect(_inPanel(find.byType(VideoViewerView)), findsOneWidget);
@@ -711,7 +715,6 @@ void main() {
 
     await _openMixed(tester, entryId: 'note-log');
     expect(_inPanel(_noteView()), findsOneWidget);
-    expect(find.byType(_sidebar ? NoteSheetView : NotePanelView), findsNothing);
     expect(find.byType(VoicePlayerView), findsNothing);
     expect(find.byType(VideoViewerView), findsNothing);
   }, variant: _bothLayouts);
@@ -809,11 +812,11 @@ void main() {
 
       if (_sidebar) {
         expect(find.byType(LogViewerPanel), findsNothing);
-        expect(find.byType(NotePanelView), findsNothing);
+        expect(_noteView(), findsNothing);
         expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.returned]);
         expect(session.readNotes, <String>['note-log']);
       } else {
-        expect(_inPanel(find.byType(NoteSheetView)), findsOneWidget);
+        expect(_inPanel(_noteView()), findsOneWidget);
         expect(session.outcomes, isEmpty);
         expect(session.readNotes, isEmpty);
       }
@@ -929,13 +932,13 @@ void main() {
       entryId: 'note-log',
       theme: fieldNotesTheme(platform: TargetPlatform.macOS),
     );
-    expect(_inPanel(find.byType(NotePanelView)), findsOneWidget);
+    expect(_inPanel(_noteView()), findsOneWidget);
 
     final List<(LogicalKeyboardKey, Type)> steps = <(LogicalKeyboardKey, Type)>[
       (LogicalKeyboardKey.pageUp, VoicePlayerView),
-      (LogicalKeyboardKey.pageDown, NotePanelView),
+      (LogicalKeyboardKey.pageDown, NoteReadingRoom),
       (LogicalKeyboardKey.pageDown, VideoViewerView),
-      (LogicalKeyboardKey.pageUp, NotePanelView),
+      (LogicalKeyboardKey.pageUp, NoteReadingRoom),
       (LogicalKeyboardKey.pageUp, VoicePlayerView),
     ];
     for (final (LogicalKeyboardKey key, Type view) in steps) {

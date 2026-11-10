@@ -93,11 +93,6 @@ const List<_AllowedSite> _allowedSites = <_AllowedSite>[
     'barrier',
   ),
   _AllowedSite(
-    'lib/features/log_viewer/log_viewer_panel.dart',
-    'GestureDetector',
-    'barrier',
-  ),
-  _AllowedSite(
     'lib/features/sync/ui/add_device_sheet.dart',
     'GestureDetector',
     'barrier',
@@ -156,11 +151,6 @@ const List<_AllowedSite> _allowedSites = <_AllowedSite>[
   ),
   _AllowedSite(
     'lib/features/garden/scene/meadow_stage.dart',
-    'Listener',
-    'pointer',
-  ),
-  _AllowedSite(
-    'lib/features/log_viewer/log_viewer_panel.dart',
     'Listener',
     'pointer',
   ),

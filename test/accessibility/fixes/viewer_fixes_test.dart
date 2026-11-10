@@ -71,7 +71,7 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('the log sheet buttons can be pressed and are 48 dp', (
+  testWidgets('the note room buttons can be pressed and are 48 dp', (
     WidgetTester tester,
   ) async {
     final List<String> ids = await _idsIn(
@@ -82,10 +82,10 @@ void main() {
     _expectNone(ids, 'small-target', 'd1-viewer-todos', <String>[
       'Close |',
       'Edit note |',
-      'Delete |',
+      'More |',
     ]);
     final SemanticsHandle handle = tester.ensureSemantics();
-    for (final String label in <String>['Close', 'Edit note', 'Delete']) {
+    for (final String label in <String>['Close', 'Edit note', 'More']) {
       final List<SemanticsNode> nodes = _nodes(
         tester,
         (SemanticsNode node) => node.label == label,

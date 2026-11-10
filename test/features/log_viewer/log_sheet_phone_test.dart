@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
-import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
@@ -18,17 +18,13 @@ import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/entry_cards/transport/transport_bar.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
-import 'package:field_notes/features/log_viewer/note_panel_view.dart';
-import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
-    show viewerTitleFieldKey;
+import 'package:field_notes/features/log_viewer/note_reading_room.dart';
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
 import '../../support/composer_room.dart';
-import '../../support/note_editor_driver.dart';
-import '../capture/core/capture_test_support.dart'
-    show FakeDraftStore, draftIdleDebounceForTest;
+import '../capture/core/capture_test_support.dart' show FakeDraftStore;
 import '../day_detail/support/day_detail_harness.dart';
 
 const Size _phone = Size(384, 832);
@@ -36,7 +32,6 @@ const Size _desktop = Size(1280, 900);
 const double _statusBar = 34;
 const double _gestureBar = 24;
 const String _date = '2026-07-19';
-const String _dayTitle = 'Sunday, July 19';
 const String _roses = 'Roses at dawn';
 
 void _usePhone(WidgetTester tester) {
@@ -201,17 +196,12 @@ Future<_Session> _openLog(
   return session;
 }
 
-Finder _inSheet(Finder finder) =>
-    find.descendant(of: find.byType(PhoneSheet), matching: finder);
+Finder _inRoom(Finder finder) =>
+    find.descendant(of: find.byType(NoteReadingRoom), matching: finder);
 
-Finder _inFooter(Finder finder) =>
-    find.descendant(of: find.byKey(phoneSheetFooterKey), matching: finder);
-
-Finder _buttonOf(Finder label) =>
-    find.ancestor(of: label, matching: find.byType(Container)).first;
-
-Finder _faceOf(Finder action) =>
-    find.descendant(of: action, matching: find.byType(Container)).first;
+Finder _noteBody(String text) => find.byWidgetPredicate(
+  (Widget widget) => widget is NoteBody && widget.text == text,
+);
 
 Future<void> _drainToast(WidgetTester tester) async {
   await tester.pump(kToastLifetime);
@@ -220,77 +210,50 @@ Future<void> _drainToast(WidgetTester tester) async {
 
 void main() {
   testWidgets(
-    'a phone log opens as a sheet with back and edit in its footer and delete in its header',
+    'a phone note opens full window with Back, Edit and More in its top bar',
     (WidgetTester tester) async {
       _usePhone(tester);
       await _openLog(tester);
 
-      expect(find.byType(PhoneSheet), findsOneWidget);
-      expect(find.byKey(phoneSheetGrabberKey), findsOneWidget);
-      expect(
-        tester.widget<PhoneSheet>(find.byType(PhoneSheet)).color!.toARGB32(),
-        FieldNotesColors.light.composerPaper.toARGB32(),
-      );
+      expect(find.byType(PhoneSheet), findsNothing);
       expect(find.byKey(logViewerPanelKey), findsOneWidget);
-      final Text eyebrow = tester.widget<Text>(_inSheet(find.text(_dayTitle)));
-      expect(eyebrow.style!.fontSize, 13);
-      expect(eyebrow.maxLines, isNull);
-      final Finder title = _inSheet(find.byKey(viewerTitleFieldKey));
-      final EditableText heading = tester.widget<EditableText>(
-        find.descendant(of: title, matching: find.byType(EditableText)),
-      );
-      expect(heading.controller.text, _roses);
-      expect(heading.style.fontSize, 21);
-      expect(heading.style.height, 1.1);
-      expect(
-        _inSheet(
-          find.byWidgetPredicate(
-            (Widget widget) =>
-                widget is NoteBody && widget.text == 'Watered the roses.',
-          ),
-        ),
-        findsOneWidget,
-      );
+      expect(tester.getSize(find.byKey(composerPanelKey)), _phone);
+      expect(_inRoom(find.text(_roses)), findsOneWidget);
+      expect(_inRoom(find.text('Sun')), findsOneWidget);
+      expect(_inRoom(find.text('Jul 19 · 8:12 AM')), findsOneWidget);
+      expect(_inRoom(_noteBody('Watered the roses.')), findsOneWidget);
       expect(find.byType(LogActionsPill), findsNothing);
-
-      expect(find.text('Back'), findsOneWidget);
-      final Rect back = tester.getRect(_buttonOf(_inFooter(find.text('Back'))));
-      final Rect edit = tester.getRect(
-        _inFooter(find.byKey(logActionsEditKey)),
-      );
-      expect(_inFooter(find.byKey(logActionsDeleteKey)), findsNothing);
-      final Rect delete = tester.getRect(
-        _inSheet(find.byKey(logActionsDeleteKey)),
-      );
-      final Rect headingRect = tester.getRect(title);
-      expect(back.height, 48);
-      expect(edit.height, 48);
-      expect(delete.width, greaterThanOrEqualTo(48));
-      expect(delete.height, greaterThanOrEqualTo(48));
-      expect(back.left, phoneSheetFooterPadding.left);
-      expect(edit.left, back.right + phoneSheetActionGap);
-      expect(edit.right, _phone.width - phoneSheetFooterPadding.right);
-      expect(delete.left, greaterThan(headingRect.right));
+      expect(find.byKey(logActionsDeleteKey), findsNothing);
       expect(
-        delete.bottom,
-        lessThan(tester.getRect(find.byKey(phoneSheetFooterKey)).top),
+        tester.widget<Pressable>(find.byKey(logViewerBackKey)).label,
+        'Back',
       );
-      final BoxDecoration editFace =
-          tester
-                  .widget<Container>(_faceOf(find.byKey(logActionsEditKey)))
-                  .decoration!
-              as BoxDecoration;
-      expect(editFace.color!.toARGB32(), Palette.coral.toARGB32());
 
-      final Rect footer = tester.getRect(find.byKey(phoneSheetFooterKey));
+      final Rect back = tester.getRect(find.byKey(logViewerBackKey));
+      final Rect edit = tester.getRect(find.byKey(logActionsEditKey));
+      final Rect more = tester.getRect(find.byKey(logActionsMoreKey));
+      for (final Rect control in <Rect>[back, edit, more]) {
+        expect(control.width, greaterThanOrEqualTo(48));
+        expect(control.height, greaterThanOrEqualTo(48));
+        expect(control.top, greaterThanOrEqualTo(_statusBar));
+        expect(control.center.dy, closeTo(back.center.dy, 1));
+      }
+      expect(back.right, lessThan(_phone.width / 2));
+      expect(edit.left, greaterThan(_phone.width / 2));
+      expect(more.left, greaterThanOrEqualTo(edit.right));
+
       for (final Key key in <Key>[logViewerEarlierKey, logViewerLaterKey]) {
-        final Finder step = _inSheet(find.byKey(key));
+        final Finder step = _inRoom(find.byKey(key));
         expect(step, findsOneWidget, reason: '$key');
         final Rect rect = tester.getRect(step);
         expect(rect.height, greaterThanOrEqualTo(44), reason: '$key');
-        expect(rect.bottom, lessThanOrEqualTo(footer.top), reason: '$key');
+        expect(
+          rect.bottom,
+          lessThanOrEqualTo(_phone.height - _gestureBar),
+          reason: '$key',
+        );
       }
-      expect(_inSheet(find.text('1 of 3')), findsOneWidget);
+      expect(_inRoom(find.text('1 of 3')), findsOneWidget);
     },
   );
 
@@ -325,28 +288,28 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('Back returns and a scrim tap reports closing everything', (
+  testWidgets('Back and the system back gesture both return', (
     WidgetTester tester,
   ) async {
     _usePhone(tester);
     final _Session session = await _openLog(tester);
 
-    await tester.tap(_inFooter(find.text('Back')));
+    await tester.tap(find.byKey(logViewerBackKey));
     await tester.pumpAndSettle();
 
     expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.returned]);
-    expect(find.byType(PhoneSheet), findsNothing);
+    expect(find.byType(LogViewerPanel), findsNothing);
 
     await tester.tap(find.text('open log'));
     await tester.pumpAndSettle();
-    await tester.tapAt(const Offset(4, _statusBar + 4));
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     expect(session.outcomes, <LogViewerOutcome>[
       LogViewerOutcome.returned,
-      LogViewerOutcome.closedAll,
+      LogViewerOutcome.returned,
     ]);
-    expect(find.byType(PhoneSheet), findsNothing);
+    expect(find.byType(LogViewerPanel), findsNothing);
   });
 
   testWidgets('previous and next step through the day', (
@@ -358,30 +321,24 @@ void main() {
     await tester.tap(find.byKey(logViewerLaterKey));
     await tester.pumpAndSettle();
 
-    expect(
-      _inSheet(
-        find.byWidgetPredicate(
-          (Widget widget) =>
-              widget is NoteBody && widget.text == 'Tea under the elm.',
-        ),
-      ),
-      findsOneWidget,
-    );
-    expect(_inSheet(find.text('2 of 3')), findsOneWidget);
+    expect(_inRoom(_noteBody('Tea under the elm.')), findsOneWidget);
+    expect(_inRoom(find.text('2 of 3')), findsOneWidget);
 
     await tester.tap(find.byKey(logViewerEarlierKey));
     await tester.pumpAndSettle();
 
-    expect(_inSheet(find.text(_roses)), findsOneWidget);
+    expect(_inRoom(find.text(_roses)), findsOneWidget);
   });
 
-  testWidgets('Delete asks first, then deletes the log and leaves', (
+  testWidgets('Delete waits in More, asks first, then deletes and leaves', (
     WidgetTester tester,
   ) async {
     _usePhone(tester);
     final _Session session = await _openLog(tester);
 
-    await tester.tap(_inSheet(find.byKey(logActionsDeleteKey)));
+    await tester.tap(find.byKey(logActionsMoreKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(logActionsDeleteKey));
     await tester.pumpAndSettle();
 
     expect(find.text('Delete this log?'), findsOneWidget);
@@ -396,52 +353,25 @@ void main() {
     await _drainToast(tester);
   });
 
-  testWidgets('Edit opens the note editor and closing it returns to the log', (
+  testWidgets('Edit turns the note into the editor and leaving returns to it', (
     WidgetTester tester,
   ) async {
     _usePhone(tester);
     final _Session session = await _openLog(tester);
 
-    await tester.tap(_inFooter(find.byKey(logActionsEditKey)));
+    await tester.tap(find.byKey(logActionsEditKey));
     await tester.pumpAndSettle();
 
     expect(composerTitled('Editing morning note'), findsOneWidget);
+    expect(find.byType(NoteReadingRoom), findsNothing);
+    expect(tester.getSize(find.byKey(composerPanelKey)), _phone);
 
     await tester.tap(find.byKey(composerCloseKey));
     await tester.pumpAndSettle();
 
     expect(composerTitled('Editing morning note'), findsNothing);
-    expect(_inSheet(find.text(_roses)), findsOneWidget);
+    expect(_inRoom(find.text(_roses)), findsOneWidget);
     expect(session.outcomes, isEmpty);
-  });
-
-  testWidgets('an expanded note sheet stays expanded after an edit is saved', (
-    WidgetTester tester,
-  ) async {
-    _usePhone(tester);
-    final NoteEditorDriver driver = NoteEditorDriver(tester);
-    final _Session session = await _openLog(tester);
-    final double resting = tester.getSize(find.byType(PhoneSheet)).height;
-
-    await tester.tap(find.byKey(phoneSheetGrabberToggleKey));
-    await tester.pumpAndSettle();
-    expect(tester.widget<PhoneSheet>(find.byType(PhoneSheet)).expanded, isTrue);
-    final double expanded = tester.getSize(find.byType(PhoneSheet)).height;
-    expect(expanded, greaterThan(resting));
-
-    await tester.tap(_inFooter(find.byKey(logActionsEditKey)));
-    await tester.pumpAndSettle();
-    await driver.enterText('Watered the roses twice.');
-    await tester.pump(draftIdleDebounceForTest);
-    await tester.tap(find.text(editNoteSaveLabel));
-    await tester.pumpAndSettle();
-
-    expect(session.repository.noteSaves, hasLength(1));
-    expect(composerTitled('Editing morning note'), findsNothing);
-    expect(tester.widget<PhoneSheet>(find.byType(PhoneSheet)).expanded, isTrue);
-    expect(tester.getSize(find.byType(PhoneSheet)).height, expanded);
-    expect(session.outcomes, isEmpty);
-    await _drainToast(tester);
   });
 
   testWidgets('a log opened from the day sheet hands back to the day', (
@@ -455,29 +385,28 @@ void main() {
     await tester.tap(find.text('8:12 AM · morning · note'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(PhoneSheet), findsOneWidget);
-    expect(find.byType(LogViewerPanel), findsOneWidget);
+    expect(find.byType(NoteReadingRoom), findsOneWidget);
     expect(find.byType(DayDetailPanel), findsNothing);
-    expect(_inFooter(find.text('Back')), findsOneWidget);
+    expect(
+      tester.widget<Pressable>(find.byKey(logViewerBackKey)).label,
+      'Back',
+    );
 
-    await tester.tap(_inFooter(find.text('Back')));
+    await tester.tap(find.byKey(logViewerBackKey));
     await tester.pumpAndSettle();
 
     expect(find.byType(LogViewerPanel), findsNothing);
     expect(find.byType(DayDetailPanel), findsOneWidget);
-    expect(_inSheet(find.text('3 logs that day')), findsOneWidget);
-
-    await tester.tap(find.text('8:12 AM · morning · note'));
-    await tester.pumpAndSettle();
-    await tester.tapAt(const Offset(4, _statusBar + 4));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(LogViewerPanel), findsNothing);
-    expect(find.byType(DayDetailPanel, skipOffstage: false), findsNothing);
-    expect(find.byType(PhoneSheet, skipOffstage: false), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(PhoneSheet),
+        matching: find.text('3 logs that day'),
+      ),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('on macOS a note opens the note panel and its header toolbar', (
+  testWidgets('on macOS a note opens full window with Edit and More', (
     WidgetTester tester,
   ) async {
     _useDesktop(tester);
@@ -486,19 +415,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(PhoneSheet), findsNothing);
-    expect(find.byKey(composerPanelKey), findsOneWidget);
-    expect(find.byType(LogActionsPill), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(LogActionsPill),
-        matching: find.byKey(logActionsEditKey),
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Back'), findsOneWidget);
-    expect(
-      tester.getSize(find.byKey(composerPanelKey)).width,
-      notePanelWidthFor(_desktop.width),
-    );
+    expect(find.byType(LogActionsPill), findsNothing);
+    expect(tester.getSize(find.byKey(composerPanelKey)), _desktop);
+    expect(_inRoom(find.text('Back')), findsOneWidget);
+    expect(_inRoom(find.text(noteReadingEditLabel)), findsOneWidget);
+    expect(_inRoom(find.byKey(logActionsMoreKey)), findsOneWidget);
   });
 }

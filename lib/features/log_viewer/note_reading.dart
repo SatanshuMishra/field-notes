@@ -70,12 +70,14 @@ class NoteReadingBody extends StatelessWidget {
     required this.resolver,
     required this.dayTitle,
     this.onToggleTask,
+    this.showsMeta = true,
   });
 
   final Entry entry;
   final MediaResolver resolver;
   final String dayTitle;
   final ValueChanged<int>? onToggleTask;
+  final bool showsMeta;
 
   void _openPhoto(BuildContext context, int index) {
     showPhotoViewer(
@@ -95,15 +97,17 @@ class NoteReadingBody extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text(
-          logMetaFor(context, entry),
-          style: context.textStyles.captureLabelSans.copyWith(
-            fontSize: _metaSize,
-            letterSpacing: _metaLetterSpacing,
-            color: context.colors.muted,
+        if (showsMeta) ...<Widget>[
+          Text(
+            logMetaFor(context, entry),
+            style: context.textStyles.captureLabelSans.copyWith(
+              fontSize: _metaSize,
+              letterSpacing: _metaLetterSpacing,
+              color: context.colors.muted,
+            ),
           ),
-        ),
-        const SizedBox(height: _metaGap),
+          const SizedBox(height: _metaGap),
+        ],
         KeyedSubtree(
           key: ValueKey<String>('log-viewer-content-${entry.id}'),
           child: _NoteFocusRing(
@@ -131,6 +135,7 @@ class LogStepFooter extends StatelessWidget {
     required this.later,
     required this.onEarlier,
     required this.onLater,
+    this.positionColor,
   });
 
   final int index;
@@ -139,6 +144,7 @@ class LogStepFooter extends StatelessWidget {
   final Entry? later;
   final VoidCallback? onEarlier;
   final VoidCallback? onLater;
+  final Color? positionColor;
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +175,9 @@ class LogStepFooter extends StatelessWidget {
             ),
             child: Text(
               '${index + 1} of $count',
-              style: context.textStyles.promptAccent,
+              style: context.textStyles.promptAccent.copyWith(
+                color: positionColor,
+              ),
             ),
           ),
           Expanded(
