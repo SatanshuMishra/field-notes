@@ -1,12 +1,14 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show SemanticsNode;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/focus/focus_ring.dart' show focusRingKey;
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
@@ -1099,6 +1101,38 @@ void main() {
 
     expect(find.byKey(photoToolbarKey), findsNothing);
     expect(harness.focusNode.hasPrimaryFocus, isTrue);
+  });
+
+  testWidgets('a mouse press clears the ring Tab drew on the marked size', (
+    WidgetTester tester,
+  ) async {
+    await _pump(tester, '${_lines(10)}\n$a');
+    await _selectPhoto(tester);
+    final Finder medium = find.byKey(photoToolbarSizeKey(MdPhotoSize.medium));
+    final Finder ring = find.descendant(
+      of: medium,
+      matching: find.byKey(focusRingKey),
+      matchRoot: true,
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+
+    expect(
+      _hasPrimaryFocus(tester, photoToolbarSizeKey(MdPhotoSize.medium)),
+      isTrue,
+    );
+    expect(ring, findsOneWidget);
+
+    await tester.tap(medium, kind: PointerDeviceKind.mouse);
+    await tester.pump();
+
+    expect(
+      _hasPrimaryFocus(tester, photoToolbarSizeKey(MdPhotoSize.medium)),
+      isTrue,
+    );
+    expect(ring, findsNothing);
   });
 
   testWidgets('Tab lands on the overflow control when it leads a narrow bar', (
