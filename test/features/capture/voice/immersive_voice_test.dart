@@ -689,6 +689,7 @@ void main() {
       await tester.tapAt(const Offset(12, 300));
       await tester.pump();
       await tester.pump(_step);
+      await tester.pump(_fade);
 
       expect(find.byType(LetGoPanel), findsNothing);
       expect(rig.recorder.cancelCalls, 0);

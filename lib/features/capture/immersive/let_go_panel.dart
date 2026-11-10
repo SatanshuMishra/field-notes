@@ -29,7 +29,7 @@ const double _wideActionsGap = 26;
 const double _compactActionsGap = 12;
 const double _buttonGap = 8;
 
-class LetGoPanel extends StatelessWidget {
+class LetGoPanel extends StatefulWidget {
   const LetGoPanel({
     super.key,
     required this.onKeepGoing,
@@ -46,20 +46,34 @@ class LetGoPanel extends StatelessWidget {
   final Key? letGoKey;
 
   @override
+  State<LetGoPanel> createState() => _LetGoPanelState();
+}
+
+class _LetGoPanelState extends State<LetGoPanel> {
+  bool _answered = false;
+
+  void _answer(VoidCallback choice) {
+    setState(() => _answered = true);
+    choice();
+  }
+
+  bool get compact => widget.compact;
+
+  @override
   Widget build(BuildContext context) {
     final List<Widget> choices = confirmChoicesInOrder(
       Theme.of(context).platform,
       safe: ConfirmChoiceButton.safe(
-        buttonKey: keepGoingKey,
+        buttonKey: widget.keepGoingKey,
         label: letGoKeepGoingLabel,
         ground: StickerGround.media,
-        onPressed: onKeepGoing,
+        onPressed: () => _answer(widget.onKeepGoing),
       ),
       action: ConfirmChoiceButton.action(
-        buttonKey: letGoKey,
+        buttonKey: widget.letGoKey,
         label: letGoConfirmLabel,
         ground: StickerGround.media,
-        onPressed: onLetGo,
+        onPressed: () => _answer(widget.onLetGo),
       ),
     );
     return Semantics(
@@ -69,8 +83,9 @@ class LetGoPanel extends StatelessWidget {
       namesRoute: true,
       label: letGoTitle,
       child: TapRegion(
+        enabled: !_answered,
         consumeOutsideTaps: true,
-        onTapOutside: (PointerDownEvent _) => onKeepGoing(),
+        onTapOutside: (PointerDownEvent _) => _answer(widget.onKeepGoing),
         child: _TabCanLeaveFocusScope(
           child: DecoratedBox(
             decoration: const BoxDecoration(

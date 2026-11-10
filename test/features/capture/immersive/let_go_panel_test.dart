@@ -277,6 +277,49 @@ void main() {
     expect(letGo, 1);
   });
 
+  testWidgets('an answered panel lets taps through while it fades away', (
+    WidgetTester tester,
+  ) async {
+    int keepGoing = 0;
+    int underneath = 0;
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+        home: Scaffold(
+          backgroundColor: recorderStageColor,
+          body: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              TextButton(
+                onPressed: () => underneath++,
+                child: const Text('Underneath'),
+              ),
+              LetGoPanel(
+                compact: false,
+                keepGoingKey: _keepGoingKey,
+                letGoKey: _letGoKey,
+                onKeepGoing: () => keepGoing++,
+                onLetGo: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(_keepGoingKey));
+    await tester.pump();
+    await tester.tap(find.text('Underneath'));
+    await tester.pump();
+
+    expect(keepGoing, 1);
+    expect(underneath, 1);
+  });
+
   testWidgets('the panel is a semantics scope named Let this one go?', (
     WidgetTester tester,
   ) async {
