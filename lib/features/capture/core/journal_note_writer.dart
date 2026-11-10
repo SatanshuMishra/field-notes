@@ -36,6 +36,11 @@ final class NoteSourceParts {
 String titledNoteSource({required String title, required String body}) =>
     '$_titledSourceMarker${title.trim()}\n$body';
 
+String composeNoteSource({String? title, required String body}) =>
+    title == null && !body.startsWith(_titledSourceMarker)
+    ? body
+    : titledNoteSource(title: title ?? '', body: body);
+
 NoteSourceParts readTitledNoteSource(String source) {
   if (!source.startsWith(_titledSourceMarker)) {
     return NoteSourceParts(title: '', body: source);

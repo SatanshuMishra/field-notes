@@ -12,7 +12,7 @@ import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/core/journal_note_writer.dart'
-    show NoteSourceParts, readTitledNoteSource, titledNoteSource;
+    show NoteSourceParts, composeNoteSource, readTitledNoteSource;
 import 'package:field_notes/features/capture/core/note_draft_controller.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
@@ -37,11 +37,8 @@ String editNoteTitleFor(Entry entry) {
   return 'Editing ${partOfDayFor(createdAt.hour)} note';
 }
 
-String _editableSourceOf(Entry entry) {
-  final String body = entry.textContent ?? '';
-  final String? title = entry.title;
-  return title == null ? body : titledNoteSource(title: title, body: body);
-}
+String _editableSourceOf(Entry entry) =>
+    composeNoteSource(title: entry.title, body: entry.textContent ?? '');
 
 class EditNoteConnector extends ConsumerStatefulWidget {
   const EditNoteConnector({

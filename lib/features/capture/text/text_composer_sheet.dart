@@ -23,7 +23,7 @@ import 'package:field_notes/domain/services/capture_service.dart'
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
 import 'package:field_notes/features/capture/core/journal_note_writer.dart'
-    show NoteSourceParts, splitNoteSource, titledNoteSource;
+    show NoteSourceParts, composeNoteSource, splitNoteSource;
 import 'package:field_notes/features/capture/immersive/stage_phase.dart'
     show stageLayoutOf;
 import 'package:field_notes/features/note_engine/note_engine.dart'
@@ -305,10 +305,13 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     }
   }
 
+  String? _keptTitle(String title) =>
+      title.trim().isEmpty && !_origin.carriesTitle ? null : title;
+
   void _mirrorOut(String title, String body) {
-    final String composed = title == _origin.title
+    final String composed = title == _origin.title && _origin.carriesTitle
         ? '${_origin.lead}$body'
-        : titledNoteSource(title: title, body: body);
+        : composeNoteSource(title: _keptTitle(title), body: body);
     if (_source.text == composed) {
       return;
     }
@@ -383,11 +386,8 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
       showTransientToast(context, emptySaveGuardMessage);
       return;
     }
-    final String title = _titleController.text.trim();
     widget.onSave(
-      title.isEmpty && !_origin.carriesTitle
-          ? body
-          : titledNoteSource(title: title, body: body),
+      composeNoteSource(title: _keptTitle(_titleController.text), body: body),
     );
   }
 

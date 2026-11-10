@@ -158,6 +158,40 @@ void main() {
     expect(repository.noteSaves.single.source, 'a good day');
   });
 
+  testWidgets('a stored body that begins with a private-use mark opens whole '
+      'in the page and saves untitled', (WidgetTester tester) async {
+    const String body = 'Dear diary\nToday...';
+    final Entry entry = Entry(
+      id: 'entry-1',
+      dayId: 'day-1',
+      type: EntryType.text,
+      textContent: body,
+      createdAt: DateTime(2026, 7, 2, 14, 30).millisecondsSinceEpoch,
+      updatedAt: 0,
+    );
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[entry],
+    );
+    await tester.pumpWidget(
+      _app(
+        repository: repository,
+        child: _EditTrigger(entry: entry, onResult: (bool? _) {}),
+      ),
+    );
+    await tester.tap(find.text('open editor'));
+    await tester.pumpAndSettle();
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
+
+    expect(driver.title, isEmpty);
+    expect(driver.source, body);
+
+    await tester.tap(find.text(editNoteSaveLabel));
+    await tester.pumpAndSettle();
+
+    expect(repository.noteSaveTitles.single, anyOf(isNull, isEmpty));
+    expect(repository.noteSaves.single.source, body);
+  });
+
   testWidgets("editing a note is titled for its part of day under the day's "
       'kicker', (WidgetTester tester) async {
     final Entry entry = _afternoonNote();

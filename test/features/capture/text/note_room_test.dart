@@ -261,6 +261,55 @@ void main() {
       expect(writer.saves.single.source, 'went walking');
       expect(writer.saves.single.title, 'Tuesday');
     });
+
+    for (final ({String name, String pasted}) paste
+        in <({String name, String pasted})>[
+          (name: 'ahead of words', pasted: 'Dear diary\nToday...'),
+          (name: 'on its own', pasted: ''),
+        ]) {
+      testWidgets(
+        'a pasted private-use mark ${paste.name} stays body text when kept '
+        'and when its draft comes back',
+        (WidgetTester tester) async {
+          final FakeDraftStore drafts = FakeDraftStore();
+          final FakeNoteWriter kept = FakeNoteWriter();
+          await tester.pumpWidget(_composerApp(writer: kept, drafts: drafts));
+          await tester.tap(find.text('open'));
+          await tester.pumpAndSettle();
+
+          await NoteEditorDriver(tester).enterText(paste.pasted);
+          await tester.pump(draftIdleDebounceForTest);
+          final Map<String, String> left = Map<String, String>.of(
+            drafts.drafts,
+          );
+          await _pressChord(
+            tester,
+            LogicalKeyboardKey.controlLeft,
+            LogicalKeyboardKey.enter,
+          );
+          await tester.pumpAndSettle();
+
+          expect(kept.saves.single.title, isNull);
+          expect(kept.saves.single.source, paste.pasted);
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pumpAndSettle();
+          await tester.pumpWidget(
+            _composerApp(
+              writer: FakeNoteWriter(),
+              drafts: FakeDraftStore(drafts: left),
+            ),
+          );
+          await tester.tap(find.text('open'));
+          await tester.pumpAndSettle();
+          final NoteEditorDriver driver = NoteEditorDriver(tester);
+
+          expect(find.byType(DraftRestoredChip), findsOneWidget);
+          expect(driver.title, isEmpty);
+          expect(driver.source, paste.pasted);
+        },
+      );
+    }
   });
 
   group('a note that begins with a heading', () {
