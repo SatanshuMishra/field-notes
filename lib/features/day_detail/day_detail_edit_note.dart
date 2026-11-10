@@ -11,6 +11,8 @@ import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
+import 'package:field_notes/features/capture/core/journal_note_writer.dart'
+    show titledNoteSource;
 import 'package:field_notes/features/capture/core/note_draft_controller.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
@@ -32,6 +34,12 @@ String editNoteTitleFor(Entry entry) {
   final DateTime createdAt =
       DateTime.fromMillisecondsSinceEpoch(entry.createdAt).toLocal();
   return 'Editing ${partOfDayFor(createdAt.hour)} note';
+}
+
+String _editableSourceOf(Entry entry) {
+  final String body = entry.textContent ?? '';
+  final String? title = entry.title;
+  return title == null ? body : titledNoteSource(title: title, body: body);
 }
 
 class EditNoteConnector extends ConsumerStatefulWidget {
@@ -65,7 +73,7 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
   void initState() {
     super.initState();
     _kicker = _composeKicker();
-    final String initialText = widget.entry.textContent ?? '';
+    final String initialText = _editableSourceOf(widget.entry);
     _controller = TextEditingController(text: initialText);
     _draft = NoteDraftController(
       key: widget.entry.id,

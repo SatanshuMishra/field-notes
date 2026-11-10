@@ -122,6 +122,47 @@ Future<FakeJournalRepository> _openAndEdit(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('a stored title opens in the title field and can be cleared', (
+    WidgetTester tester,
+  ) async {
+    final Entry entry = Entry(
+      id: 'entry-1',
+      dayId: 'day-1',
+      type: EntryType.text,
+      textContent: 'a good day',
+      createdAt: DateTime(2026, 7, 2, 14, 30).millisecondsSinceEpoch,
+      updatedAt: 0,
+      title: 'River walk',
+    );
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[entry],
+    );
+    await tester.pumpWidget(
+      _app(
+        repository: repository,
+        child: _EditTrigger(entry: entry, onResult: (bool? _) {}),
+      ),
+    );
+    await tester.tap(find.text('open editor'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextField>(find.byKey(composerTitleFieldKey))
+          .controller!
+          .text,
+      'River walk',
+    );
+
+    await tester.enterText(find.byKey(composerTitleFieldKey), '');
+    await tester.pump(draftIdleDebounceForTest);
+    await tester.tap(find.text(editNoteSaveLabel));
+    await tester.pumpAndSettle();
+
+    expect(repository.noteSaveTitles.single, '');
+    expect(repository.noteSaves.single.source, 'a good day');
+  });
+
   testWidgets("editing a note is titled for its part of day under the day's "
       'kicker', (WidgetTester tester) async {
     final Entry entry = _afternoonNote();
