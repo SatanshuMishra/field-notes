@@ -1,7 +1,7 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-10T22:57:58.573Z
-Next ids: c4 D7 R2 S1
+Updated: 2026-11-10T22:58:05.641Z
+Next ids: c4 D8 R2 S1
 
 ## Goal
 
@@ -32,6 +32,7 @@ Needs: D1, D2, D3, D4, D5, R1.
 - D3 Late-night fill-ins count until 4 AM, grandfathering past days: Owner approved as recommended on 2026-11-10: strict 4 AM grace; each day stores when its bloom was first picked; days that already existed are grandfathered.
 - D5 The voice room follows the app theme; the video recorder stays dark: Owner approved as recommended on 2026-11-10.
 - D6 Rail boxes share 44 px width; late night is all sage: Owner, 2026-11-10: collapsed rail boxes all 44 wide; status, settings and sound 44 tall; streak 56 tall with the same inner padding; in late-night mode the border, flame, count, second line and moon are all sage #A9C2A9. Canvas Version 19.
+- D7 Sidebar sync status is its own box that opens Sync and storage: Owner approved option A on 2026-11-10; the server address is removed. Rail sizes are in D6.
 
 ## Open risks
 
