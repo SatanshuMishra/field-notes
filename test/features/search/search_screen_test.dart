@@ -29,9 +29,14 @@ class _FakeResolver implements MediaResolver {
       const ResolvedMedia.missing();
 }
 
+final TargetPlatformVariant _phoneAndDesktop = TargetPlatformVariant(
+  <TargetPlatform>{TargetPlatform.android, TargetPlatform.macOS},
+);
+
 void main() {
-  testWidgets('shows a loading caption before days arrive',
-      (WidgetTester tester) async {
+  testWidgets('shows the shared loading block before days arrive', (
+    WidgetTester tester,
+  ) async {
     final StreamController<List<Day>> controller =
         StreamController<List<Day>>();
     addTearDown(controller.close);
@@ -45,37 +50,93 @@ void main() {
       ),
     );
 
-    expect(find.text('Loading your days…'), findsOneWidget);
-  });
+    expect(
+      find.widgetWithText(StateBlock, 'Loading your days…'),
+      findsOneWidget,
+    );
+  }, variant: _phoneAndDesktop);
 
-  testWidgets('shows the empty-journal state when there are no days',
-      (WidgetTester tester) async {
+  testWidgets('shows the empty-journal state when there are no days', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       searchHarness(
         const SearchScreen(),
         overrides: <Override>[
-          allDaysProvider.overrideWith((_) => Stream<List<Day>>.value(
-                const <Day>[],
-              )),
+          allDaysProvider.overrideWith(
+            (_) => Stream<List<Day>>.value(const <Day>[]),
+          ),
         ],
       ),
     );
     await tester.pump();
 
-    expect(find.byType(EmptyStatePlaceholder), findsOneWidget);
-    expect(find.textContaining('No days yet'), findsOneWidget);
-  });
+    expect(find.widgetWithText(StateBlock, 'No days yet.'), findsOneWidget);
+    expect(
+      find.text('Start journaling and your days appear here.'),
+      findsOneWidget,
+    );
+  }, variant: _phoneAndDesktop);
 
-  testWidgets('renders a tile per day with count and preview',
-      (WidgetTester tester) async {
+  testWidgets('a failed load offers a retry that reloads the days', (
+    WidgetTester tester,
+  ) async {
+    int loads = 0;
+    bool databaseHealed = false;
     await tester.pumpWidget(
       searchHarness(
         const SearchScreen(),
         overrides: <Override>[
-          allDaysProvider.overrideWith((_) => Stream<List<Day>>.value(<Day>[
-                dayOf('2026-07-15', id: 'd1', mood: Mood.happy),
-                dayOf('2026-07-14', id: 'd2', mood: Mood.calm),
-              ])),
+          allDaysProvider.overrideWith((_) {
+            loads++;
+            return databaseHealed
+                ? Stream<List<Day>>.value(<Day>[dayOf('2026-07-15', id: 'd1')])
+                : Stream<List<Day>>.error(StateError('db gone'));
+          }),
+          searchAllEntriesProvider.overrideWith(
+            (_) => Stream<List<Entry>>.value(<Entry>[
+              entryOf(dayId: 'd1', textContent: 'Rainy walk'),
+            ]),
+          ),
+        ],
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.widgetWithText(
+        StateBlock,
+        'Your days could not be loaded right now.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(SearchDayTile), findsNothing);
+
+    databaseHealed = true;
+    final int loadsBeforeRetry = loads;
+    await tester.tap(find.text('Try again'));
+    await tester.pump();
+    expect(loads, loadsBeforeRetry + 1);
+
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(StateBlock), findsNothing);
+    expect(find.text('Rainy walk'), findsOneWidget);
+  }, variant: _phoneAndDesktop);
+
+  testWidgets('renders a tile per day with count and preview', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      searchHarness(
+        const SearchScreen(),
+        overrides: <Override>[
+          allDaysProvider.overrideWith(
+            (_) => Stream<List<Day>>.value(<Day>[
+              dayOf('2026-07-15', id: 'd1', mood: Mood.happy),
+              dayOf('2026-07-14', id: 'd2', mood: Mood.calm),
+            ]),
+          ),
           searchAllEntriesProvider.overrideWith(
             (_) => Stream<List<Entry>>.value(<Entry>[
               entryOf(dayId: 'd1', id: 'e1', textContent: 'Rainy walk'),
@@ -93,16 +154,19 @@ void main() {
     expect(find.text('Sunny picnic'), findsOneWidget);
   });
 
-  testWidgets('filters the list to matching days, then shows no-match state',
-      (WidgetTester tester) async {
+  testWidgets('filters the list to matching days, then shows no-match state', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       searchHarness(
         const SearchScreen(),
         overrides: <Override>[
-          allDaysProvider.overrideWith((_) => Stream<List<Day>>.value(<Day>[
-                dayOf('2026-07-15', id: 'd1', mood: Mood.happy),
-                dayOf('2026-07-14', id: 'd2', mood: Mood.calm),
-              ])),
+          allDaysProvider.overrideWith(
+            (_) => Stream<List<Day>>.value(<Day>[
+              dayOf('2026-07-15', id: 'd1', mood: Mood.happy),
+              dayOf('2026-07-14', id: 'd2', mood: Mood.calm),
+            ]),
+          ),
           searchAllEntriesProvider.overrideWith(
             (_) => Stream<List<Entry>>.value(<Entry>[
               entryOf(dayId: 'd1', id: 'e1', textContent: 'Rainy walk'),
@@ -122,18 +186,23 @@ void main() {
     await tester.enterText(find.byType(TextField), 'zzz');
     await tester.pump();
     expect(find.byType(SearchDayTile), findsNothing);
-    expect(find.textContaining('No days match'), findsOneWidget);
-  });
+    expect(
+      find.widgetWithText(StateBlock, 'No days match "zzz".'),
+      findsOneWidget,
+    );
+  }, variant: _phoneAndDesktop);
 
-  testWidgets('tapping a day opens the Day-detail modal',
-      (WidgetTester tester) async {
+  testWidgets('tapping a day opens the Day-detail modal', (
+    WidgetTester tester,
+  ) async {
     final db = newTestDatabase();
     addTearDown(db.close);
     final container = newTestContainer(
       db,
       overrides: <Override>[
-        dayDetailMediaResolverProvider
-            .overrideWith((_) async => const _FakeResolver()),
+        dayDetailMediaResolverProvider.overrideWith(
+          (_) async => const _FakeResolver(),
+        ),
       ],
     );
     final JournalRepository repo = container.read(journalRepositoryProvider);

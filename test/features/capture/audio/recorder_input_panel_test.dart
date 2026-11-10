@@ -420,8 +420,11 @@ void main() {
     expect(find.byType(InputPanel), findsNothing);
     expect(find.byType(SettingsScreen), findsOneWidget);
     expect(
-      tester.widget<Text>(find.byKey(settingsContentTitleKey)).data,
-      'Voice',
+      find.descendant(
+        of: find.byKey(settingsContentTitleKey),
+        matching: find.text('Voice'),
+      ),
+      findsOneWidget,
     );
     expect(
       tester.getSemantics(find.byKey(settingsTabKey(SettingsTab.voice))),
