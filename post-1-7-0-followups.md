@@ -1,7 +1,7 @@
 # post-1-7-0-followups: Post-1.7.0 follow-ups: privacy line, note title focus, note viewer and editor parity, voice button, week garden, overnight Today, day modal
 Status: active
-Updated: 2026-11-10T18:18:45.152Z
-Next ids: c4 D1 R1 S1
+Updated: 2026-11-10T18:30:52.853Z
+Next ids: c4 D1 R2 S1
 
 ## Goal
 
@@ -19,11 +19,13 @@ Not started.
 
 ## Next step
 
-Read the code behind a to g, reproduce the overnight Today bug (f) with a failing test, and publish the prototypes for approval.
+Wait for the owner's approval of the three boards on the canvas's 1.7 follow-ups page (NoteRoom for a, b, c; VoiceButton for d; TodayDay for e, g) and their picks for a and d, then plan the leaves with fanout from worktree .claude/worktrees/post-1-7-0 (branch research/post-1-7-0), which holds the red overnight test test/features/today/today_day_change_test.dart.
 
 ## Decisions in force
 
 ## Open risks
+
+- R1 Overnight cause: todayDateProvider, thisWeekCellsProvider and onThisDayMemoryProvider compute once and nothing refreshes them at midnight, while the Today header calls the clock on every rebuild; the shell's New log and the mood dock read the same stale key, so a log or mood made after midnight may be filed under yesterday (inferred from code, not yet tested). A Dart timer can fire late after the Mac sleeps, so the fix also needs a check when the app resumes. Bears on c2.
 
 ## Settled, do not reopen
 
