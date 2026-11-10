@@ -474,9 +474,6 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       ),
     );
     final FieldNotesColors colors = context.colors;
-    final Entry? steppedFrom = resolver != null && entries.length > 1
-        ? selected
-        : null;
 
     return ViewerKeys(
       onLeft: selected == null ? null : () => _stepFrom(selected, -1),
@@ -541,7 +538,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
                         ],
                       ),
                     ),
-                    if (steppedFrom != null) ...<Widget>[
+                    if (listed.length > 1) ...<Widget>[
                       DashedDivider(
                         thickness: _paneRuleThickness,
                         color: colors.ink25,
@@ -550,10 +547,16 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
                         padding: EdgeInsetsDirectional.only(
                           start: listWidth + _paneRuleThickness,
                         ),
-                        child: DayStepFooter(
-                          entries: entries,
-                          entry: steppedFrom,
-                          onStep: _stepTo,
+                        child: Visibility(
+                          visible: selected != null,
+                          maintainState: true,
+                          maintainAnimation: true,
+                          maintainSize: true,
+                          child: DayStepFooter(
+                            entries: listed,
+                            entry: selected ?? listed.first,
+                            onStep: _stepTo,
+                          ),
                         ),
                       ),
                     ],
@@ -614,7 +617,6 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       resolver: resolver,
       onEdit: _edit,
       onDelete: _delete,
-      onStep: _stepTo,
       onOpenFull: _openFull,
       onToggleTask: selected == null
           ? null

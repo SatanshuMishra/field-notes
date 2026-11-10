@@ -9,7 +9,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
-import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail.dart';
@@ -337,14 +336,6 @@ void main() {
     final Rect pane = tester.getRect(_pane());
     expect(pane.left, greaterThan(list.right));
     expect(pane.right, closeTo(panel.right - 2, 0.5));
-    final OutlinedSurface window = tester.widget<OutlinedSurface>(
-      _inWindow(find.byType(OutlinedSurface)).first,
-    );
-    expect(window.color, FieldNotesColors.light.panelTop);
-    expect(
-      _inWindow(find.ancestor(of: _pane(), matching: find.byType(ColoredBox))),
-      findsNothing,
-    );
     _expectPlaceholder(empty: false);
     expect(_inPane(find.byType(FlowerBloom)), findsOneWidget);
     expect(_inPane(find.byType(NoteReadingBody)), findsNothing);

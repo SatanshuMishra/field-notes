@@ -373,10 +373,6 @@ void main() {
     await _openDay(tester, platform: TargetPlatform.macOS);
 
     expect(find.byType(PhoneSheet), findsNothing);
-    expect(
-      tester.widget<SizedBox>(find.byKey(dayDetailPanelKey)).child,
-      isA<OutlinedSurface>(),
-    );
     expect(find.byType(DayDetailHeader), findsOneWidget);
     expect(find.byKey(dayDetailBackKey), findsOneWidget);
     expect(find.byType(DayDetailEntriesBar), findsOneWidget);

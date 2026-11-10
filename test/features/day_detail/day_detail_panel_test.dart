@@ -24,7 +24,7 @@ import 'package:field_notes/features/day_detail/day_note_pane.dart'
     show DayPaneFrame, dayNotePaneKey;
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/note_reading.dart'
-    show LogStepFooter;
+    show LogStepFooter, NoteReadingBody;
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
@@ -221,6 +221,72 @@ void main() {
     expect(
       left.bottom,
       panel.top + 2 + dayDetailHeaderHeight + dayDetailHeaderRuleThickness,
+    );
+  }, variant: _mac);
+
+  testWidgets('choosing a card at the foot of the list keeps it in view', (
+    WidgetTester tester,
+  ) async {
+    _useDesktopWindow(tester);
+    await tester.pumpWidget(
+      _windowApp(
+        FakeJournalRepository(
+          entries: <Entry>[
+            for (int i = 0; i < 10; i++)
+              entryOf(
+                id: 'entry-$i',
+                type: EntryType.text,
+                textContent: 'journal note number $i for the day',
+              ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    const double shownSlice = 36;
+    final Finder list = find
+        .descendant(
+          of: find.byKey(dayDetailListPaneKey),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    final Finder card = find.descendant(
+      of: find.byKey(const ValueKey<String>('entry-6'), skipOffstage: false),
+      matching: find.byType(CompactLogCard, skipOffstage: false),
+    );
+    final ScrollPosition position = tester
+        .state<ScrollableState>(list)
+        .position;
+    position.jumpTo(
+      position.pixels +
+          tester.getRect(card).top -
+          (tester.getRect(list).bottom - shownSlice),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(list).bottom - tester.getRect(card).top,
+      closeTo(shownSlice, 0.5),
+    );
+
+    await tester.tapAt(tester.getTopLeft(card) + const Offset(24, 18));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<NoteReadingBody>(
+            find.descendant(
+              of: find.byKey(dayNotePaneKey),
+              matching: find.byType(NoteReadingBody),
+            ),
+          )
+          .entry
+          .id,
+      'entry-6',
+    );
+    expect(
+      tester.getRect(list).bottom - tester.getRect(card).top,
+      greaterThanOrEqualTo(shownSlice - 0.5),
     );
   }, variant: _mac);
 

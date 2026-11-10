@@ -58,7 +58,6 @@ class DayNotePane extends StatelessWidget {
     required this.resolver,
     required this.onEdit,
     required this.onDelete,
-    required this.onStep,
     this.onOpenFull,
     this.onToggleTask,
   });
@@ -70,7 +69,6 @@ class DayNotePane extends StatelessWidget {
   final MediaResolver? resolver;
   final ValueChanged<Entry> onEdit;
   final ValueChanged<Entry> onDelete;
-  final ValueChanged<Entry> onStep;
   final ValueChanged<Entry>? onOpenFull;
   final ValueChanged<int>? onToggleTask;
 
@@ -129,13 +127,10 @@ class DayNotePane extends StatelessWidget {
   Widget _reading(BuildContext context, Entry note, MediaResolver media) {
     final ValueChanged<Entry>? openFull = onOpenFull;
     return DayPaneFrame(
-      entries: entries,
-      entry: note,
       title: logOwnTitle(note),
       onOpenFull: openFull == null ? null : () => openFull(note),
       onEdit: () => onEdit(note),
       onDelete: () => onDelete(note),
-      onStep: onStep,
       body: SingleChildScrollView(
         key: ValueKey<String>('day-note-pane-${note.id}'),
         padding: _bodyPadding,
@@ -161,21 +156,15 @@ class DayNotePane extends StatelessWidget {
 class DayPaneFrame extends StatelessWidget {
   const DayPaneFrame({
     super.key,
-    required this.entries,
-    required this.entry,
     this.title,
     required this.onDelete,
-    required this.onStep,
     required this.body,
     this.onEdit,
     this.onOpenFull,
   });
 
-  final List<Entry> entries;
-  final Entry entry;
   final String? title;
   final VoidCallback onDelete;
-  final ValueChanged<Entry> onStep;
   final Widget body;
   final VoidCallback? onEdit;
   final VoidCallback? onOpenFull;
