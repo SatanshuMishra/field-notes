@@ -36,6 +36,7 @@ class UpdateController extends _$UpdateController {
   DateTime? _lastChecked;
   DateTime? _lastAttempt;
   DateTime? _retryAfter;
+  bool _retryPending = false;
   bool _ready = false;
   bool _automatic = false;
   bool _installing = false;
@@ -153,9 +154,9 @@ class UpdateController extends _$UpdateController {
     );
     if (!atLaunch) {
       _evaluate();
-    } else if (_isDue(_now())) {
+    } else {
       _launchTimer?.cancel();
-      _launchTimer = Timer(automaticCheckDelay, _evaluate);
+      _launchTimer = Timer(automaticCheckDelay, _checkAtLaunch);
     }
   }
 
@@ -171,6 +172,12 @@ class UpdateController extends _$UpdateController {
     _evaluationTimer = null;
   }
 
+  void _checkAtLaunch() {
+    if (ref.mounted && _ready && _automatic) {
+      unawaited(check());
+    }
+  }
+
   bool _isDue(DateTime now) {
     final DateTime? retryAfter = _retryAfter;
     if (retryAfter != null && now.isBefore(retryAfter)) {
@@ -178,8 +185,10 @@ class UpdateController extends _$UpdateController {
     }
     final DateTime? lastAttempt = _lastAttempt;
     return lastAttempt == null ||
+        _retryPending ||
         lastAttempt.isAfter(now) ||
-        now.difference(lastAttempt) >= automaticCheckInterval;
+        now.difference(lastAttempt) >=
+            automaticCheckInterval - automaticCheckEvaluation;
   }
 
   void _evaluate() {
@@ -206,6 +215,8 @@ class UpdateController extends _$UpdateController {
       state = _knownOr(UpdateCheckFailed(_lastChecked, null, retryAfter));
       return;
     }
+    final bool isRetry = _retryPending;
+    _retryPending = false;
     state = UpdateChecking(_lastChecked);
     ReleaseLookup lookup;
     try {
@@ -234,6 +245,7 @@ class UpdateController extends _$UpdateController {
       case LookupFailed(:final LookupFailure reason):
         _retryAfter = null;
         _lastAttempt = now;
+        _retryPending = !isRetry;
         state = _knownOr(UpdateCheckFailed(_lastChecked, reason, null));
         await _record(() => _store.recordAttempt(now));
     }
@@ -244,6 +256,7 @@ class UpdateController extends _$UpdateController {
     _lastChecked = now;
     _lastAttempt = now;
     _retryAfter = null;
+    _retryPending = false;
   }
 
   UpdateStatus _knownOr(UpdateCheckFailed failed) {

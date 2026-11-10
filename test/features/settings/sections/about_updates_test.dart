@@ -584,7 +584,9 @@ void main() {
 
     expect(find.text('Check automatically'), findsOneWidget);
     expect(
-      find.text('Once a day. Nothing installs until you choose.'),
+      find.text(
+        'Checks when Field Notes opens and once a day after that. Nothing installs until you choose.',
+      ),
       findsOneWidget,
     );
     expect(find.text('Release notes'), findsOneWidget);

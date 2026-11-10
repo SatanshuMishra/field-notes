@@ -217,11 +217,11 @@ void main() {
         store.record.lastCheckedAt,
         _at(const Duration(seconds: 10)).toUtc(),
       );
-      async.elapse(const Duration(hours: 24) - const Duration(seconds: 10));
+      async.elapse(const Duration(hours: 23));
       expect(source.calls, 1);
       async.elapse(const Duration(hours: 1));
       expect(source.calls, 2);
-      expect(launch.state, UpdateCurrent(_at(const Duration(hours: 25))));
+      expect(launch.state, UpdateCurrent(_at(const Duration(hours: 24))));
       launch.dispose();
     });
 
@@ -233,14 +233,38 @@ void main() {
         source: source,
       )..start();
       expect(fresh.state, UpdateCurrent(_fresh));
-      expect(async.nonPeriodicTimerCount, 0);
+      expect(async.nonPeriodicTimerCount, 1);
       expect(async.periodicTimerCount, 1);
-      async.elapse(const Duration(hours: 21));
+      async.elapse(const Duration(seconds: 9));
       expect(source.calls, 0);
-      async.elapse(const Duration(hours: 1));
+      async.elapse(const Duration(seconds: 1));
       expect(source.calls, 1);
-      expect(fresh.state, UpdateCurrent(_at(const Duration(hours: 22))));
+      expect(fresh.state, UpdateCurrent(_at(const Duration(seconds: 10))));
+      async.elapse(const Duration(hours: 23));
+      expect(source.calls, 1);
+      async.elapse(const Duration(hours: 1));
+      expect(source.calls, 2);
       fresh.dispose();
+    });
+
+    fakeAsync((FakeAsync async) {
+      final _Source source = _Source(const LookupFailed(LookupFailure.offline));
+      final _Harness failing = _Harness(
+        async,
+        store: MemoryUpdateRecordStore(UpdateRecord(lastCheckedAt: _fresh)),
+        source: source,
+      )..start();
+      async.elapse(const Duration(seconds: 10));
+      expect(source.calls, 1);
+      source.answer = const NoRelease();
+      async.elapse(const Duration(minutes: 59));
+      expect(source.calls, 1);
+      async.elapse(const Duration(minutes: 1));
+      expect(source.calls, 2);
+      expect(failing.state, UpdateCurrent(_at(const Duration(hours: 1))));
+      async.elapse(const Duration(hours: 22));
+      expect(source.calls, 2);
+      failing.dispose();
     });
 
     fakeAsync((FakeAsync async) {
@@ -390,6 +414,7 @@ void main() {
             UpdateRecord(lastCheckedAt: checked, lastAvailable: known),
           ),
           source: source,
+          automatic: false,
         )..start();
         expect(restarted.state, expected, reason: '${known.version}');
         async.elapse(const Duration(minutes: 1));
@@ -481,10 +506,12 @@ void main() {
       expect(known.state, UpdateAvailable(_r13, _stale));
       expect(store.record.lastAvailable, _r13);
       expect(store.record.lastCheckedAt, _at(const Duration(hours: 2)).toUtc());
-      async.elapse(const Duration(hours: 23));
-      expect(source.calls, 2);
       async.elapse(const Duration(hours: 1));
       expect(source.calls, 3);
+      async.elapse(const Duration(hours: 22));
+      expect(source.calls, 3);
+      async.elapse(const Duration(hours: 1));
+      expect(source.calls, 4);
       expect(known.state, UpdateAvailable(_r13, _stale));
       known.dispose();
     });
@@ -520,9 +547,9 @@ void main() {
       final DateTime failedAt = _at(const Duration(minutes: 5)).toUtc();
       expect(second.state, UpdateAvailable(_r13, failedAt));
       async.elapse(const Duration(minutes: 1));
-      expect(source.calls, 2);
-      second.check();
       expect(source.calls, 3);
+      second.check();
+      expect(source.calls, 4);
       expect(second.state, UpdateAvailable(_r13, failedAt));
       expect(store.record.lastAvailable, _r13);
       second.dispose();
@@ -928,7 +955,11 @@ void main() {
             (Ref ref) async => const InstalledApp(version: '1.2.0'),
           ),
           appSettingsProvider.overrideWith(
-            (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
+            (Ref ref) => Stream<AppSettings>.value(
+              AppSettings.defaults.copyWith(
+                checkForUpdatesAutomatically: false,
+              ),
+            ),
           ),
         ],
       );
