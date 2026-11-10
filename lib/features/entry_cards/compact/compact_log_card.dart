@@ -911,6 +911,9 @@ class _CardTitleFieldState extends State<_CardTitleField> {
           extentOffset: widget.initial.length,
         );
   final FocusNode _focus = FocusNode(debugLabel: 'log title');
+  final Map<Type, Action<Intent>> _fieldKeepsKeys = <Type, Action<Intent>>{
+    ActivateIntent: DoNothingAction(consumesKey: false),
+  };
   bool _settled = false;
 
   @override
@@ -975,24 +978,29 @@ class _CardTitleFieldState extends State<_CardTitleField> {
             bindings: <ShortcutActivator, VoidCallback>{
               const SingleActivator(LogicalKeyboardKey.escape): _cancel,
             },
-            child: Semantics(
-              label: compactLogTitleFieldLabel,
-              child: Material(
-                type: MaterialType.transparency,
-                child: TextField(
-                  key: compactLogTitleFieldKey,
-                  controller: _controller,
-                  focusNode: _focus,
-                  style: widget.style,
-                  cursorColor: colors.accentInk,
-                  maxLines: 1,
-                  textInputAction: TextInputAction.done,
-                  decoration: InputDecoration.collapsed(
-                    hintText: logActionsAddTitleLabel,
-                    hintStyle: widget.style.copyWith(color: colors.placeholder),
+            child: Actions(
+              actions: _fieldKeepsKeys,
+              child: Semantics(
+                label: compactLogTitleFieldLabel,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: TextField(
+                    key: compactLogTitleFieldKey,
+                    controller: _controller,
+                    focusNode: _focus,
+                    style: widget.style,
+                    cursorColor: colors.accentInk,
+                    maxLines: 1,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration.collapsed(
+                      hintText: logActionsAddTitleLabel,
+                      hintStyle: widget.style.copyWith(
+                        color: colors.placeholder,
+                      ),
+                    ),
+                    onSubmitted: (String text) => _commit(),
+                    onTapOutside: (PointerDownEvent event) => _commit(),
                   ),
-                  onSubmitted: (String text) => _commit(),
-                  onTapOutside: (PointerDownEvent event) => _commit(),
                 ),
               ),
             ),

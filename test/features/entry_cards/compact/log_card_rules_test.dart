@@ -207,6 +207,43 @@ Future<void> _chooseRename(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 400));
 }
 
+String _titleFieldText(WidgetTester tester) => tester
+    .widget<TextField>(find.byKey(compactLogTitleFieldKey))
+    .controller!
+    .text;
+
+LogicalKeyboardKey _keyTyping(String character) => character == ' '
+    ? LogicalKeyboardKey.space
+    : LogicalKeyboardKey.findKeyByKeyId(character.toLowerCase().codeUnitAt(0))!;
+
+Future<void> _typeIntoTitleField(WidgetTester tester, String text) async {
+  await tester.showKeyboard(find.byKey(compactLogTitleFieldKey));
+  for (final String character in text.split('')) {
+    final bool keptByApp = await tester.sendKeyEvent(
+      _keyTyping(character),
+      character: character,
+    );
+    if (!keptByApp) {
+      final TextEditingValue typed = tester
+          .widget<TextField>(find.byKey(compactLogTitleFieldKey))
+          .controller!
+          .value;
+      tester.testTextInput.updateEditingValue(
+        typed.replaced(typed.selection, character),
+      );
+    }
+    await tester.pump();
+  }
+}
+
+Future<void> _pressEnterInTitleField(WidgetTester tester) async {
+  final bool keptByApp = await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+  if (!keptByApp) {
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+  }
+  await tester.pump();
+}
+
 File _videoFile() => videoFixtureFile(prefix: 'log_card_rules');
 
 final Map<Key, String> _namedControls = <Key, String>{
@@ -621,16 +658,20 @@ void main() {
   });
 
   group('rename', () {
-    testWidgets('a new title saves through the repository and shows', (
+    testWidgets('a title typed with Space and Enter saves and never opens', (
       WidgetTester tester,
     ) async {
       final _Card card = await _pump(tester, _video());
 
       await _chooseRename(tester);
-      await tester.enterText(find.byKey(compactLogTitleFieldKey), ' The pier ');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pump();
+      await _typeIntoTitleField(tester, ' The pier ');
 
+      expect(card.opens, 0);
+      expect(_titleFieldText(tester), ' The pier ');
+
+      await _pressEnterInTitleField(tester);
+
+      expect(card.opens, 0);
       expect(card.repository.titleUpdates.single.id, 'e1');
       expect(card.repository.titleUpdates.single.title, 'The pier');
       expect(find.byKey(compactLogTitleFieldKey), findsNothing);
@@ -638,8 +679,7 @@ void main() {
         tester.widget<Text>(find.byKey(compactLogTitleKey)).data,
         'The pier',
       );
-      expect(card.opens, 0);
-    });
+    }, variant: _mac);
 
     testWidgets('an existing title starts in the field and can be cleared', (
       WidgetTester tester,
