@@ -224,6 +224,42 @@ void main() {
     expect(repository.noteSaves.single.source, '# Groceries');
   });
 
+  testWidgets('a draft of a note whose heading opened as its title comes '
+      'back with that title', (WidgetTester tester) async {
+    final Entry entry = Entry(
+      id: 'entry-1',
+      dayId: 'day-1',
+      type: EntryType.text,
+      textContent: '# Groceries\n\nmilk',
+      createdAt: DateTime(2026, 7, 2, 14, 30).millisecondsSinceEpoch,
+      updatedAt: 0,
+    );
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[entry],
+    );
+    await tester.pumpWidget(
+      _app(
+        repository: repository,
+        drafts: FakeDraftStore(
+          drafts: <String, String>{'entry-1': '# Groceries\n\nmilk and eggs'},
+        ),
+        child: _EditTrigger(entry: entry, onResult: (bool? _) {}),
+      ),
+    );
+    await tester.tap(find.text('open editor'));
+    await tester.pumpAndSettle();
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
+
+    expect(driver.title, 'Groceries');
+    expect(driver.source, 'milk and eggs');
+
+    await tester.tap(find.text(editNoteSaveLabel));
+    await tester.pumpAndSettle();
+
+    expect(repository.noteSaveTitles.single, 'Groceries');
+    expect(repository.noteSaves.single.source, 'milk and eggs');
+  });
+
   testWidgets("editing a note is titled for its part of day under the day's "
       'kicker', (WidgetTester tester) async {
     final Entry entry = _afternoonNote();

@@ -23,7 +23,11 @@ import 'package:field_notes/domain/services/capture_service.dart'
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
 import 'package:field_notes/features/capture/core/journal_note_writer.dart'
-    show NoteSourceParts, composeNoteSource, splitNoteSource;
+    show
+        NoteSourceParts,
+        composeNoteSource,
+        readTitledNoteSource,
+        splitNoteSource;
 import 'package:field_notes/features/capture/immersive/stage_phase.dart'
     show stageLayoutOf;
 import 'package:field_notes/features/note_engine/note_engine.dart'
@@ -172,7 +176,7 @@ class TextComposerSheet extends StatefulWidget {
 class _TextComposerSheetState extends State<TextComposerSheet> {
   late final TextEditingController _source;
   late final bool _ownsSource;
-  late NoteSourceParts _origin;
+  late final NoteSourceParts _origin;
   late final TextEditingController _titleController;
   late final TextEditingController _bodySource;
   late final NoteEditorController _controller;
@@ -268,13 +272,27 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     }
   }
 
+  NoteSourceParts _partsOf(String source) {
+    final NoteSourceParts titled = readTitledNoteSource(source);
+    if (titled.carriesTitle) {
+      return titled;
+    }
+    final NoteSourceParts opening = _origin;
+    return opening.carriesTitle && source.startsWith(opening.lead)
+        ? NoteSourceParts(
+            title: opening.title,
+            body: source.substring(opening.lead.length),
+            lead: opening.lead,
+          )
+        : NoteSourceParts(title: '', body: source);
+  }
+
   void _followSource() {
     if (_mirroring) {
       return;
     }
-    final NoteSourceParts parts = splitNoteSource(_source.text);
+    final NoteSourceParts parts = _partsOf(_source.text);
     _mirroring = true;
-    _origin = parts;
     if (_titleController.text != parts.title) {
       _titleController.text = parts.title;
     }

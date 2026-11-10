@@ -248,13 +248,14 @@ void main() {
   );
 
   testWidgets(
-    'a new-note draft left by a crash is restored when the composer reopens '
-    'for the same date',
+    'a new-note draft left by a crash comes back exactly as typed when the '
+    'composer reopens for the same date',
     (WidgetTester tester) async {
+      const String typed = '# Morning **light**\n\nleft by a crash';
       final NoteEditorDriver driver = NoteEditorDriver(tester);
       final FakeNoteWriter writer = FakeNoteWriter();
       final FakeDraftStore drafts = FakeDraftStore(
-        drafts: <String, String>{'new-2026-07-19': 'left by a crash'},
+        drafts: <String, String>{'new-2026-07-19': typed},
       );
       String? result = 'unset';
 
@@ -269,14 +270,16 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
-      expect(driver.source, 'left by a crash');
+      expect(driver.title, isEmpty);
+      expect(driver.source, typed);
       expect(find.byType(DraftRestoredChip), findsOneWidget);
 
       await tester.tap(find.text('Keep this'));
       await tester.pumpAndSettle();
 
       expect(writer.saves.single.draftKey, 'new-2026-07-19');
-      expect(writer.saves.single.source, 'left by a crash');
+      expect(writer.saves.single.title, isNull);
+      expect(writer.saves.single.source, typed);
       expect(result, 'entry-1');
     },
   );
