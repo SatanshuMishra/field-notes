@@ -506,12 +506,10 @@ void main() {
       expect(known.state, UpdateAvailable(_r13, _stale));
       expect(store.record.lastAvailable, _r13);
       expect(store.record.lastCheckedAt, _at(const Duration(hours: 2)).toUtc());
+      async.elapse(const Duration(hours: 23));
+      expect(source.calls, 2);
       async.elapse(const Duration(hours: 1));
       expect(source.calls, 3);
-      async.elapse(const Duration(hours: 22));
-      expect(source.calls, 3);
-      async.elapse(const Duration(hours: 1));
-      expect(source.calls, 4);
       expect(known.state, UpdateAvailable(_r13, _stale));
       known.dispose();
     });
@@ -553,6 +551,88 @@ void main() {
       expect(second.state, UpdateAvailable(_r13, failedAt));
       expect(store.record.lastAvailable, _r13);
       second.dispose();
+    });
+  });
+
+  test(
+    'a rate-limited launch check is retried at the first tick after the reset',
+    () {
+      fakeAsync((FakeAsync async) {
+        final _Source source = _Source(
+          LookupRateLimited(_at(const Duration(minutes: 40))),
+        );
+        final _Harness limited = _Harness(
+          async,
+          store: MemoryUpdateRecordStore(UpdateRecord(lastCheckedAt: _fresh)),
+          source: source,
+        )..start();
+        async.elapse(const Duration(seconds: 10));
+        expect(source.calls, 1);
+        source.answer = const NoRelease();
+        async.elapse(const Duration(minutes: 59));
+        expect(source.calls, 1);
+        async.elapse(const Duration(minutes: 1));
+        expect(source.calls, 2);
+        expect(limited.state, UpdateCurrent(_at(const Duration(hours: 1))));
+        limited.dispose();
+      });
+    },
+  );
+
+  test('a check started by hand before the launch check is not repeated', () {
+    fakeAsync((FakeAsync async) {
+      final _Source source = _Source(const NoRelease());
+      final _Harness early = _Harness(
+        async,
+        store: MemoryUpdateRecordStore(UpdateRecord(lastCheckedAt: _fresh)),
+        source: source,
+      )..start();
+      async.elapse(const Duration(seconds: 4));
+      early.check();
+      expect(source.calls, 1);
+      async.elapse(const Duration(seconds: 6));
+      expect(source.calls, 1);
+      early.dispose();
+    });
+  });
+
+  test('the Play route keeps the once a day gate and skips launch checks', () {
+    fakeAsync((FakeAsync async) {
+      final _Source source = _Source(const NoRelease());
+      final _Harness play = _Harness(
+        async,
+        store: MemoryUpdateRecordStore(
+          UpdateRecord(
+            lastCheckedAt: _start.subtract(const Duration(hours: 1)),
+          ),
+        ),
+        source: source,
+        installer: Future<UpdateInstaller>.value(
+          _Installer(InstallRoute.googlePlay),
+        ),
+      )..start();
+      async.elapse(const Duration(seconds: 30));
+      expect(source.calls, 0);
+      async.elapse(const Duration(hours: 22));
+      expect(source.calls, 0);
+      async.elapse(const Duration(hours: 2));
+      expect(source.calls, 1);
+      play.dispose();
+    });
+
+    fakeAsync((FakeAsync async) {
+      final _Source source = _Source(const NoRelease());
+      final _Harness play = _Harness(
+        async,
+        store: MemoryUpdateRecordStore(UpdateRecord(lastCheckedAt: _stale)),
+        source: source,
+        installer: Future<UpdateInstaller>.value(
+          _Installer(InstallRoute.googlePlay),
+        ),
+      )..start();
+      async.elapse(const Duration(seconds: 10));
+      expect(source.calls, 1);
+      play.dispose();
     });
   });
 
@@ -946,7 +1026,7 @@ void main() {
     );
   });
 
-  test('the quiet overrides settle on up to date without a check', () {
+  test('the quiet overrides stay on up to date through the launch check', () {
     fakeAsync((FakeAsync async) {
       final ProviderContainer container = ProviderContainer(
         overrides: [
@@ -955,11 +1035,7 @@ void main() {
             (Ref ref) async => const InstalledApp(version: '1.2.0'),
           ),
           appSettingsProvider.overrideWith(
-            (Ref ref) => Stream<AppSettings>.value(
-              AppSettings.defaults.copyWith(
-                checkForUpdatesAutomatically: false,
-              ),
-            ),
+            (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
           ),
         ],
       );
@@ -974,6 +1050,12 @@ void main() {
       );
       expect(container.read(updateNoticeProvider), isNull);
       expect(container.read(updateGreetingProvider), isNull);
+      expect(async.nonPeriodicTimerCount, 1);
+      async.elapse(const Duration(seconds: 10));
+      expect(
+        container.read(updateControllerProvider),
+        UpdateCurrent(updateQuietNow),
+      );
       expect(async.nonPeriodicTimerCount, 0);
       container.dispose();
       expect(async.pendingTimers, isEmpty);
