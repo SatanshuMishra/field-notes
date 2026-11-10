@@ -1,6 +1,6 @@
 # post-1-7-0-followups: Post-1.7.0 follow-ups: privacy line, note title focus, note viewer and editor parity, voice button, week garden, overnight Today, day modal
 Status: active
-Updated: 2026-11-10T19:02:08.518Z
+Updated: 2026-11-10T19:08:52.070Z
 Next ids: c4 D1 R2 S1
 
 ## Goal
@@ -10,7 +10,7 @@ Prototype the owner's seven 1.7.0 follow-ups (a to g) on the design canvas, get 
 ## Done when
 
 - [x] c1 The owner approves prototypes for a, b, c, d, e and g evidence: Owner, 2026-11-10: "Approve as recommended" for the NoteRoom, VoiceButton and TodayDay boards, with a = the day line and d = flat coral in the cream ring
-- [ ] c2 The overnight Today bug (f) is reproduced by a test that fails before the fix and passes after
+- [x] c2 The overnight Today bug (f) is reproduced by a test that fails before the fix and passes after evidence: today_day_change_test on branch fix/today-day-change (#365) fails with the fix taken out (the late note stays) and passes with it; the provider, resume and New log tests do the same
 - [ ] c3 Every approved change is open as a pull request with its tests passing
 
 ## Where things stand
