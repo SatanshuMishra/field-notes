@@ -1068,6 +1068,11 @@ class ViewerControlsFade extends StatefulWidget {
 }
 
 class _ViewerControlsFadeState extends State<ViewerControlsFade> {
+  final FocusNode _within = FocusNode(
+    debugLabel: 'viewer controls',
+    canRequestFocus: false,
+    skipTraversal: true,
+  );
   Timer? _idle;
   Timer? _pictureTap;
   bool _hidden = false;
@@ -1076,6 +1081,12 @@ class _ViewerControlsFadeState extends State<ViewerControlsFade> {
   Set<int> _pressed = const <int>{};
   int? _controlPointer;
   _Stroke? _stroke;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_onFocusMoved);
+  }
 
   @override
   void didChangeDependencies() {
@@ -1098,9 +1109,17 @@ class _ViewerControlsFadeState extends State<ViewerControlsFade> {
 
   @override
   void dispose() {
+    FocusManager.instance.removeListener(_onFocusMoved);
+    _within.dispose();
     _idle?.cancel();
     _pictureTap?.cancel();
     super.dispose();
+  }
+
+  void _onFocusMoved() {
+    if (mounted && _within.hasFocus) {
+      _wake();
+    }
   }
 
   bool get _canHide => canAutoHideVideoControls(
@@ -1225,7 +1244,11 @@ class _ViewerControlsFadeState extends State<ViewerControlsFade> {
                 child: NoSwipe(
                   behavior: HitTestBehavior.deferToChild,
                   onPointerDown: (int pointer) => _controlPointer = pointer,
-                  child: widget.child,
+                  child: Focus(
+                    focusNode: _within,
+                    includeSemantics: false,
+                    child: widget.child,
+                  ),
                 ),
               ),
             ),

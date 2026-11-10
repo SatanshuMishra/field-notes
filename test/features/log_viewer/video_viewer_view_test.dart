@@ -461,7 +461,7 @@ void main() {
     expect(_controlsShown(tester), isTrue);
   });
 
-  testWidgets('Mac controls return on hover and hold during a press', (
+  testWidgets('Mac controls return on hover and Tab and hold during a press', (
     WidgetTester tester,
   ) async {
     _mac(tester);
@@ -491,6 +491,12 @@ void main() {
     expect(_controlsShown(tester), isTrue);
     await tester.pump(const Duration(milliseconds: 200));
     expect(_controlsShown(tester), isFalse);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(_controlsShown(tester), isTrue);
+    await tester.pump(viewerControlsIdle + const Duration(milliseconds: 200));
+    expect(_controlsShown(tester), isTrue);
   });
 
   testWidgets('the phone video viewer follows the shared dock', (
