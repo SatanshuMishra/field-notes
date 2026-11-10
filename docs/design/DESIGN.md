@@ -30,13 +30,14 @@ Using the same container everywhere is false consistency. Real consistency is th
 - Show what the task needs and nothing else. Date and mood are one quiet line, and actions sit on glass controls.
 - Content fills the space it is given. Width is limited only for reading comfort, at about 68 characters.
 - Primary actions stay solid rose #B8566A. Glass is only for controls floating over a scene.
-- On the phone, primary controls sit in the bottom third, about 70 to 150 points above the bottom edge, never in the far corners and never against the gesture bar. Hit targets are at least 44 points, and 48 for primary controls. Layouts respect the status bar and gesture bar insets.
+- On the phone, primary controls sit in the bottom third, about 70 to 150 points above the bottom edge, never in the far corners and never against the gesture bar. Layouts respect the status bar and gesture bar insets.
+- The smallest hit target is 48 dp on Android, 40 px on Windows, and on macOS 32 points for an icon and 36 for a button.
 - Anything with its own drag behaviour (waveforms, scrubbers, sliders, text fields) never also triggers page swipes.
 - Each log type has its own viewer. A note opens in a content-sized sheet or panel. A photo, a video and a voice log open in a full-screen view. There is no transcript.
 
 ## Dark glass
 
-Over media and the camera, use GlassTone.media with these values. The voice and video recorders are the one exception: by decision they keep the scene glass until the owner settles whether they move to media glass.
+Over media and the camera, use GlassTone.media with these values. The voice and video recorders are one exception: by decision they keep the scene glass until the owner settles whether they move to media glass. Viewer controls are the other: see Viewer controls below.
 
 - Fill rgba(28,22,16,.38).
 - Blur 18 with saturation 1.5.
@@ -46,6 +47,36 @@ Over media and the camera, use GlassTone.media with these values. The voice and 
 - Light text #F3E6D1.
 
 On the phone, every dark full-screen surface asks for light status bar icons.
+
+## Viewer controls
+
+The controls of the voice and video viewers take the theme's own colours: the top bar, the edge arrows, the transport, the speed menu and the time preview. This replaces dark glass over media for viewer controls only. Everything else over media and the camera keeps the dark glass above, and photo viewing does not change.
+
+- In Dark the controls fade into rgba(28,25,25).
+- In Light they fade into paper, rgba(251,243,228), with dark ink on top.
+- Colours come from the media tokens on FieldNotesColors, never from values written in a feature.
+
+## Tilt
+
+Things you collect tilt. Things you read closely or could regret stay straight.
+
+- Tilted: feed cards, the chooser's scraps, tape.
+- Straight: confirmations, the editor, players, day sheets, search results.
+- A card's tilt comes from the log, so it stays put.
+- Tilt switches off when someone enlarges their text.
+
+## One focus rule
+
+Tab into a control and it gets one ring. Click, tap or type and it gets none. This holds for every control, including a button that takes focus by itself when a dialog opens.
+
+## Confirmations
+
+Every confirmation is one component, a straight sticker dialog on desktop and a sheet on the phone. Only the words change.
+
+- The safe button always says what stays, such as Keep going, Keep it or Keep my journal.
+- The safe button takes focus, so Enter is harmless, and it shows a ring only after Tab.
+- Escape or tapping outside means safe.
+- Button order follows the platform: on macOS safe then action, on Windows action then safe, and on Android a sheet with action above safe.
 
 ## Where the surfaces sit
 

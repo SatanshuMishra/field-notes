@@ -1,5 +1,6 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -24,6 +25,7 @@ class Pressable extends StatefulWidget {
     this.shape = HoverShape.rounded,
     this.paintsHover = true,
     this.tooltip,
+    this.iconOnly = false,
     this.value,
     this.hint,
     this.selected,
@@ -52,6 +54,7 @@ class Pressable extends StatefulWidget {
   final HoverShape shape;
   final bool paintsHover;
   final String? tooltip;
+  final bool iconOnly;
   final String? value;
   final String? hint;
   final bool? selected;
@@ -86,6 +89,15 @@ class _PressableState extends State<Pressable> {
   void _pressAt(Offset localPosition) {
     widget.onPressed?.call();
     widget.onPressedAt?.call(localPosition);
+  }
+
+  String? _tooltipMessage() {
+    if (!widget.iconOnly) {
+      return widget.tooltip;
+    }
+    return isDesktopPlatform(Theme.of(context).platform)
+        ? widget.tooltip ?? widget.label
+        : null;
   }
 
   void _pressAtCentre() {
@@ -141,7 +153,7 @@ class _PressableState extends State<Pressable> {
         ),
       ),
     );
-    final String? tooltip = widget.tooltip;
+    final String? tooltip = _tooltipMessage();
     return Semantics(
       container: true,
       button: widget.readsAsButton,

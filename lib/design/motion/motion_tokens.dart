@@ -1,6 +1,9 @@
 import 'package:flutter/animation.dart';
 
 abstract final class Motion {
+  static const Duration press = Duration(milliseconds: 120);
+  static const Duration stage = Duration(milliseconds: 420);
+
   static const Duration blink = Duration(milliseconds: 900);
   static const Duration pulse = Duration(milliseconds: 1500);
   static const Duration bob = Duration(milliseconds: 700);

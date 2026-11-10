@@ -10,10 +10,7 @@ import 'widget_harness.dart';
 
 BoxDecoration _buttonDecoration(WidgetTester tester) {
   final DecoratedBox box = tester.widget<DecoratedBox>(
-    find.descendant(
-      of: find.byType(StickerButton),
-      matching: faceBoxes(),
-    ),
+    find.descendant(of: find.byType(StickerButton), matching: faceBoxes()),
   );
   return box.decoration as BoxDecoration;
 }
@@ -45,22 +42,17 @@ double _opacity(WidgetTester tester) {
 }
 
 Widget _button(StickerButtonVariant variant) {
-  return StickerButton(
-    label: 'Go',
-    variant: variant,
-    onPressed: () {},
-  );
+  return StickerButton(label: 'Go', variant: variant, onPressed: () {});
 }
 
 void main() {
   group('StickerButton', () {
-    testWidgets('renders its label and invokes onPressed when tapped',
-        (WidgetTester tester) async {
+    testWidgets('renders its label and invokes onPressed when tapped', (
+      WidgetTester tester,
+    ) async {
       int taps = 0;
       await tester.pumpWidget(
-        stickerHarness(
-          StickerButton(label: 'Save', onPressed: () => taps++),
-        ),
+        stickerHarness(StickerButton(label: 'Save', onPressed: () => taps++)),
       );
 
       expect(find.text('Save'), findsOneWidget);
@@ -70,20 +62,20 @@ void main() {
       expect(taps, 1);
     });
 
-    testWidgets('is inert and dimmed when disabled',
-        (WidgetTester tester) async {
+    testWidgets('is inert and dimmed when disabled', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
-        stickerHarness(
-          const StickerButton(label: 'Save', onPressed: null),
-        ),
+        stickerHarness(const StickerButton(label: 'Save', onPressed: null)),
       );
 
       expect(_opacity(tester), 0.5);
       await tester.tap(find.byType(StickerButton), warnIfMissed: false);
     });
 
-    testWidgets('Enter and Space press a focused sticker button',
-        (WidgetTester tester) async {
+    testWidgets('Enter and Space press a focused sticker button', (
+      WidgetTester tester,
+    ) async {
       int presses = 0;
       await tester.pumpWidget(
         stickerHarness(
@@ -106,21 +98,23 @@ void main() {
       expect(presses, 2);
     });
 
-    testWidgets('outlines every variant in 1.5px ink',
-        (WidgetTester tester) async {
+    testWidgets('outlines every variant in 1.5px ink', (
+      WidgetTester tester,
+    ) async {
       for (final StickerButtonVariant variant in StickerButtonVariant.values) {
         await tester.pumpWidget(stickerHarness(_button(variant)));
 
         final Border border = _buttonDecoration(tester).border! as Border;
-        expect(
-          border.top.color,
-          switch (variant) {
-            StickerButtonVariant.primary ||
-            StickerButtonVariant.secondary => FieldNotesColors.light.line,
-            StickerButtonVariant.danger => FieldNotesColors.light.dangerInk,
-          },
-          reason: '$variant border colour',
-        );
+        expect(border.top.color, switch (variant) {
+          StickerButtonVariant.primary ||
+          StickerButtonVariant.secondary => FieldNotesColors.light.line,
+          StickerButtonVariant.danger => FieldNotesColors.light.dangerInk,
+          StickerButtonVariant.quiet ||
+          StickerButtonVariant.keep => const Color(0x00000000),
+          StickerButtonVariant.softAccent => Palette.coral,
+          StickerButtonVariant.stageSoft =>
+            FieldNotesColors.light.mediaCta.withValues(alpha: 0.42),
+        }, reason: '$variant border colour');
         expect(
           border.top.width,
           Shapes.outlineWidth,
@@ -129,8 +123,9 @@ void main() {
       }
     });
 
-    testWidgets('lifts the default primary variant on the emphasis shadow',
-        (WidgetTester tester) async {
+    testWidgets('lifts the default primary variant on the emphasis shadow', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         stickerHarness(StickerButton(label: 'Go', onPressed: () {})),
       );
@@ -149,8 +144,9 @@ void main() {
       );
     });
 
-    testWidgets('drops the shadow entirely for the secondary variant',
-        (WidgetTester tester) async {
+    testWidgets('drops the shadow entirely for the secondary variant', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         stickerHarness(_button(StickerButtonVariant.secondary)),
       );
@@ -166,8 +162,9 @@ void main() {
       );
     });
 
-    testWidgets('draws the danger variant in danger ink with no fill',
-        (WidgetTester tester) async {
+    testWidgets('draws the danger variant in danger ink with no fill', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         stickerHarness(_button(StickerButtonVariant.danger)),
       );
