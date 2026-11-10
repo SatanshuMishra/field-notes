@@ -36,11 +36,24 @@ const Size _sidebarWindow = Size(1280, 800);
 const Size _phoneWindow = Size(360, 740);
 const Duration _step = Duration(milliseconds: 50);
 
+class _GatedTitleJournal extends FakeJournalRepository {
+  _GatedTitleJournal(this.gate);
+
+  final Future<void> gate;
+
+  @override
+  Future<void> setEntryTitle(String entryId, String? title) async {
+    await gate;
+    return super.setEntryTitle(entryId, title);
+  }
+}
+
 class _Rig {
-  _Rig(this.kind);
+  _Rig(this.kind, {FakeJournalRepository? journal})
+    : journal = journal ?? FakeJournalRepository();
 
   final _Recorder kind;
-  final FakeJournalRepository journal = FakeJournalRepository();
+  final FakeJournalRepository journal;
   final FakeCaptureService service = FakeCaptureService();
   final CameraOffVoiceRecorder voice = CameraOffVoiceRecorder();
   final FakeVideoRecorder video = FakeVideoRecorder(supportsPause: true);
@@ -71,12 +84,16 @@ Future<void> _settle(WidgetTester tester) async {
   }
 }
 
-Future<_Rig> _open(WidgetTester tester, _Recorder kind) async {
+Future<_Rig> _open(
+  WidgetTester tester,
+  _Recorder kind, {
+  FakeJournalRepository? journal,
+}) async {
   debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
   tester.view.physicalSize = _sidebarWindow;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final _Rig rig = _Rig(kind);
+  final _Rig rig = _Rig(kind, journal: journal);
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
@@ -305,6 +322,32 @@ void main() {
       (id: 'entry-1', title: _title),
     ]);
     expect(find.byKey(toastTitleFieldKey), findsNothing);
+  });
+
+  testWidgets('video: the camera is released before a slow title write ends', (
+    WidgetTester tester,
+  ) async {
+    final Completer<void> titleWrite = Completer<void>();
+    final _Rig rig = await _open(
+      tester,
+      _Recorder.video,
+      journal: _GatedTitleJournal(titleWrite.future),
+    );
+    await tester.enterText(find.byKey(recorderTitleFieldKey), _title);
+    await _startTake(tester, rig);
+    await _keep(tester, rig);
+
+    expect(rig.journal.titleUpdates, isEmpty);
+    expect(rig.video.releaseCalls, 1);
+
+    titleWrite.complete();
+    await _settle(tester);
+
+    expect(rig.journal.titleUpdates, <({String id, String? title})>[
+      (id: 'entry-1', title: _title),
+    ]);
+    expect(rig.results, <String?>['entry-1']);
+    await _finish(tester);
   });
 
   _forEachRecorder('Space typed in the title does not start a take', (

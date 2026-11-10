@@ -637,13 +637,17 @@ class _VideoComposerConnectorState
     _closing = true;
     _wakeHold.update(live: false);
     final String title = _title.text;
+    final ProviderContainer scope = ProviderScope.containerOf(
+      context,
+      listen: false,
+    );
+    await _release();
     final bool named = await nameRecordedLog(
-      ProviderScope.containerOf(context, listen: false),
+      scope,
       entryId: entryId,
       title: title,
       timeout: widget.saveTimeout,
     );
-    await _release();
     if (!mounted) {
       return;
     }
