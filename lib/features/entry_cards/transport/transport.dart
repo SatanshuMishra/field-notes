@@ -33,6 +33,12 @@ const double _viewerVoiceMaxWidth = 880;
 const double _fadeStop = 0.62;
 const Alignment _readoutAlignment = Alignment(0, -0.08);
 const EdgeInsets _viewerVideoPadding = EdgeInsets.fromLTRB(24, 72, 24, 16);
+const double _fitSidePadding = 24;
+const double _fitNarrowSidePadding = 16;
+const double _fitFixedTargets = 6;
+const double _fitPlayGap = 4;
+const double _fitVolumeTrack = 82;
+const double _fitTimeAllowance = 100;
 const EdgeInsets _viewerVideoCompactPadding = EdgeInsets.fromLTRB(
   16,
   56,
@@ -64,6 +70,7 @@ class Transport extends StatefulWidget {
     this.mediaPath,
     this.tuning,
     this.compact,
+    this.fitWidth = false,
     this.autofocus = false,
     this.playKey,
     this.onFullScreen,
@@ -80,6 +87,7 @@ class Transport extends StatefulWidget {
   final String? mediaPath;
   final PlaybackTuning? tuning;
   final bool? compact;
+  final bool fitWidth;
   final bool autofocus;
   final Key? playKey;
   final VoidCallback? onFullScreen;
@@ -269,6 +277,7 @@ class _TransportState extends State<Transport> {
     BuildContext context,
     TransportPalette palette,
     bool compact,
+    _Fit fit,
   ) {
     final PlaybackTuning tuning = _tuning;
     if (_inViewer && compact) {
@@ -288,7 +297,8 @@ class _TransportState extends State<Transport> {
       tuning: tuning,
       face: _playFace,
       rail: palette.rail,
-      volumeAlwaysOpen: _inViewer,
+      volumeAlwaysOpen: _inViewer && fit.volumeOpen,
+      showSpeed: fit.speed,
       onBack10: _onBack10,
       onForward10: _onForward10,
       playKey: widget.playKey,
@@ -297,7 +307,7 @@ class _TransportState extends State<Transport> {
     );
   }
 
-  Widget _track(BuildContext context, bool compact) {
+  Widget _track(BuildContext context, bool compact, _Fit fit) {
     final FieldNotesColors colors = context.colors;
     final TransportPalette palette = _inViewer
         ? TransportPalette.viewer(colors)
@@ -310,12 +320,36 @@ class _TransportState extends State<Transport> {
         SizedBox(
           height: _inViewer && !_isVideo ? _viewerVoiceGap : _timelineGap,
         ),
-        _controls(context, palette, compact),
+        _controls(context, palette, compact, fit),
       ],
     );
   }
 
-  Widget _viewerVideo(BuildContext context, Widget track, bool compact) {
+  _Fit _fitFor(BuildContext context, double width) {
+    if (!widget.fitWidth) {
+      return _Fit.roomy;
+    }
+    final double target = minIconTargetOn(Theme.of(context).platform);
+    final double time =
+        _fitTimeAllowance * MediaQuery.textScalerOf(context).scale(1);
+    final double base = _fitFixedTargets * target + _fitPlayGap + time;
+    final double roomy = width - 2 * _fitSidePadding;
+    if (roomy >= base + _fitVolumeTrack) {
+      return _Fit.roomy;
+    }
+    final double narrow = width - 2 * _fitNarrowSidePadding;
+    if (narrow >= base) {
+      return _Fit.closedVolume;
+    }
+    return _Fit.bare;
+  }
+
+  Widget _viewerVideo(
+    BuildContext context,
+    Widget track,
+    bool compact,
+    _Fit fit,
+  ) {
     final FieldNotesColors colors = context.colors;
     return Stack(
       fit: StackFit.expand,
@@ -336,7 +370,10 @@ class _TransportState extends State<Transport> {
             child: Padding(
               padding: compact
                   ? _viewerVideoCompactPadding
-                  : _viewerVideoPadding,
+                  : _viewerVideoPadding.copyWith(
+                      left: fit.sidePadding,
+                      right: fit.sidePadding,
+                    ),
               child: track,
             ),
           ),
@@ -388,30 +425,48 @@ class _TransportState extends State<Transport> {
   @override
   Widget build(BuildContext context) {
     final bool compact = _compactIn(context);
-    return ListenableBuilder(
-      listenable: _tuning,
-      builder: (BuildContext context, Widget? child) {
-        final Widget track = _track(context, compact);
-        final Widget laidOut = switch ((widget.mode, widget.kind)) {
-          (TransportMode.card, _) => track,
-          (TransportMode.viewer, TransportKind.video) => _viewerVideo(
-            context,
-            track,
-            compact,
-          ),
-          (TransportMode.viewer, TransportKind.voice) => _viewerVoice(
-            track,
-            compact,
-          ),
-        };
-        return TransportKeys(
-          bindings: _bindings(context),
-          takesFocus: _inViewer,
-          autofocus: widget.autofocus,
-          onHandled: _announceActivity,
-          child: laidOut,
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final _Fit fit = _fitFor(context, constraints.maxWidth);
+        return ListenableBuilder(
+          listenable: _tuning,
+          builder: (BuildContext context, Widget? child) {
+            final Widget track = _track(context, compact, fit);
+            final Widget laidOut = switch ((widget.mode, widget.kind)) {
+              (TransportMode.card, _) => track,
+              (TransportMode.viewer, TransportKind.video) => _viewerVideo(
+                context,
+                track,
+                compact,
+                fit,
+              ),
+              (TransportMode.viewer, TransportKind.voice) => _viewerVoice(
+                track,
+                compact,
+              ),
+            };
+            return TransportKeys(
+              bindings: _bindings(context),
+              takesFocus: _inViewer,
+              autofocus: widget.autofocus,
+              onHandled: _announceActivity,
+              child: laidOut,
+            );
+          },
         );
       },
     );
   }
+}
+
+enum _Fit {
+  roomy(_fitSidePadding, true, true),
+  closedVolume(_fitNarrowSidePadding, false, true),
+  bare(_fitNarrowSidePadding, false, false);
+
+  const _Fit(this.sidePadding, this.volumeOpen, this.speed);
+
+  final double sidePadding;
+  final bool volumeOpen;
+  final bool speed;
 }

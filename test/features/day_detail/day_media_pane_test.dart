@@ -1,6 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
+import 'package:flutter/foundation.dart'
+    show debugDefaultTargetPlatformOverride;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -18,6 +21,8 @@ import 'package:field_notes/features/log_viewer/note_reading.dart'
     show LogStepFooter;
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
+import 'package:field_notes/features/entry_cards/transport/transport.dart'
+    show Transport;
 import 'package:field_notes/features/notes/notes.dart'
     show notesMediaResolverProvider;
 import 'package:field_notes/features/today/today_providers.dart';
@@ -151,8 +156,11 @@ class _Launcher extends StatelessWidget {
 Future<_Players> _openDay(
   WidgetTester tester, {
   required List<Entry> entries,
+  Size window = _window,
+  TargetPlatform platform = TargetPlatform.macOS,
+  double textScale = 1,
 }) async {
-  tester.view.physicalSize = _window;
+  tester.view.physicalSize = window;
   tester.view.devicePixelRatio = 1;
   tester.view.padding = FakeViewPadding.zero;
   tester.view.viewPadding = FakeViewPadding.zero;
@@ -182,7 +190,12 @@ Future<_Players> _openDay(
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+        theme: fieldNotesTheme(platform: platform),
+        builder: (BuildContext context, Widget? child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         home: const _Launcher(),
       ),
     ),
@@ -303,6 +316,76 @@ void main() {
     expect(player.seekCalls.last, const Duration(seconds: 15));
     handle.dispose();
   }, variant: _mac);
+
+  for (final TargetPlatform platform in <TargetPlatform>[
+    TargetPlatform.macOS,
+    TargetPlatform.windows,
+  ]) {
+    for (final double scale in <double>[1, 2]) {
+      testWidgets(
+        'the video controls fit the narrowest window on ${platform.name} at '
+        'text $scale',
+        (WidgetTester tester) async {
+          debugDefaultTargetPlatformOverride = platform;
+          try {
+            final _Players players = await _openDay(
+              tester,
+              entries: <Entry>[_video(durationMs: 60000)],
+              window: const Size(720, 600),
+              platform: platform,
+              textScale: scale,
+            );
+            await tester.scrollUntilVisible(
+              _card('video-1'),
+              100,
+              scrollable: find.byType(Scrollable).first,
+            );
+            await tester.ensureVisible(_card('video-1'));
+            await tester.pumpAndSettle();
+            await tester.tap(_card('video-1'));
+            await tester.pumpAndSettle();
+            players.video.single.emitState(VideoPlaybackState.paused);
+            await tester.pump();
+
+            expect(tester.takeException(), isNull);
+            final Finder time = _inPane(find.textContaining('0:00'));
+            expect(time, findsWidgets);
+            expect(tester.getSize(time.first).width, greaterThan(0));
+          } finally {
+            debugDefaultTargetPlatformOverride = null;
+          }
+        },
+      );
+    }
+  }
+
+  testWidgets(
+    'Page Down with focus in the video controls steps to the next log',
+    (WidgetTester tester) async {
+      await _openDay(
+        tester,
+        entries: <Entry>[_video(durationMs: 60000), _voice(hour: 13)],
+      );
+      await tester.tap(_inCard('video-1', find.text('11:12 AM · morning')));
+      await tester.pumpAndSettle();
+      Focus.of(tester.element(_inPane(find.byKey(transportForward10Key))))
+          .requestFocus();
+      await tester.pump();
+      expect(_inPane(find.byType(VideoViewerView)), findsOneWidget);
+      expect(
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<Transport>(),
+        isNotNull,
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+      await tester.pumpAndSettle();
+
+      expect(_inPane(find.byType(VoicePlayerView)), findsOneWidget);
+      expect(_inPane(find.byType(VideoViewerView)), findsNothing);
+    },
+    variant: _mac,
+  );
 
   testWidgets('the left column plays nothing', (WidgetTester tester) async {
     final _Players players = await _openDay(tester, entries: <Entry>[_voice()]);

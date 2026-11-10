@@ -988,8 +988,10 @@ class TransportBar extends StatelessWidget {
     this.playKey,
     this.onFullScreen,
     this.fullScreen = false,
+    this.showSpeed = true,
   });
 
+  final bool showSpeed;
   final TransportValue value;
   final PlaybackTuning tuning;
   final TransportPlayFace face;
@@ -1045,7 +1047,7 @@ class TransportBar extends StatelessWidget {
               rail: rail,
               alwaysOpen: volumeAlwaysOpen,
             ),
-          TransportSpeedButton(tuning: tuning),
+          if (showSpeed) TransportSpeedButton(tuning: tuning),
           if (full != null)
             TransportIconButton(
               key: transportFullScreenKey,

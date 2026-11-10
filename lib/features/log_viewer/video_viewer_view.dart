@@ -141,6 +141,8 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
     if (widget.embedded) {
       return ViewerKeys(
         onSpace: _toggle,
+        onPageUp: scene.onEarlier,
+        onPageDown: scene.onLater,
         child: _body(platform, _embeddedControls),
       );
     }
@@ -180,6 +182,7 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
       kind: TransportKind.video,
       mode: TransportMode.viewer,
       compact: false,
+      fitWidth: true,
       value: state.transport,
       mediaPath: state.mediaPath,
       tuning: state.tuning,
