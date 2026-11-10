@@ -29,7 +29,9 @@ Future<String> seedBlob(
   final file = File(p.join(root.path, relPath));
   await file.parent.create(recursive: true);
   await file.writeAsBytes(bytes, flush: true);
-  await db.into(db.mediaBlobs).insert(
+  await db
+      .into(db.mediaBlobs)
+      .insert(
         MediaBlobsCompanion.insert(
           id: id,
           relPath: relPath,
@@ -68,56 +70,77 @@ void main() {
     }
   });
 
-  test('buildBundle captures every row, tombstones, and media bytes',
-      () async {
+  test('buildBundle captures every row, tombstones, and media bytes', () async {
     final photoBytes = [1, 2, 3, 4];
     final audioBytes = [9, 9];
     final photoId = await seedBlob(db, root, photoBytes, 'image/jpeg', 'photo');
     final audioId = await seedBlob(db, root, audioBytes, 'audio/aac', 'audio');
 
-    await db.into(db.days).insert(DaysCompanion.insert(
-          id: 'd1',
-          date: '2026-07-14',
-          moodId: const Value('happy'),
-          createdAt: 100,
-          updatedAt: 100,
-        ));
-    await db.into(db.days).insert(DaysCompanion.insert(
-          id: 'd2',
-          date: '2026-07-13',
-          createdAt: 90,
-          updatedAt: 95,
-          deletedAt: const Value(96),
-        ));
-    await db.into(db.entries).insert(EntriesCompanion.insert(
-          id: 'e1',
-          dayId: 'd1',
-          type: 'text',
-          textContent: const Value('hello world'),
-          createdAt: 110,
-          updatedAt: 110,
-        ));
-    await db.into(db.entries).insert(EntriesCompanion.insert(
-          id: 'e2',
-          dayId: 'd1',
-          type: 'voice',
-          mediaId: Value(audioId),
-          durationMs: const Value(3000),
-          createdAt: 120,
-          updatedAt: 120,
-        ));
-    await db.into(db.entryPhotos).insert(EntryPhotosCompanion.insert(
-          id: 'ph1',
-          entryId: 'e1',
-          mediaId: photoId,
-          sortOrder: 0,
-          createdAt: 130,
-          updatedAt: 130,
-        ));
-    await db.into(db.settings).insert(
-        SettingsCompanion.insert(key: 'text_size', value: '2'));
-    await db.into(db.settings).insert(
-        SettingsCompanion.insert(key: 'sound_enabled', value: 'false'));
+    await db
+        .into(db.days)
+        .insert(
+          DaysCompanion.insert(
+            id: 'd1',
+            date: '2026-07-14',
+            moodId: const Value('happy'),
+            createdAt: 100,
+            updatedAt: 100,
+          ),
+        );
+    await db
+        .into(db.days)
+        .insert(
+          DaysCompanion.insert(
+            id: 'd2',
+            date: '2026-07-13',
+            createdAt: 90,
+            updatedAt: 95,
+            deletedAt: const Value(96),
+          ),
+        );
+    await db
+        .into(db.entries)
+        .insert(
+          EntriesCompanion.insert(
+            id: 'e1',
+            dayId: 'd1',
+            type: 'text',
+            textContent: const Value('hello world'),
+            createdAt: 110,
+            updatedAt: 110,
+          ),
+        );
+    await db
+        .into(db.entries)
+        .insert(
+          EntriesCompanion.insert(
+            id: 'e2',
+            dayId: 'd1',
+            type: 'voice',
+            mediaId: Value(audioId),
+            durationMs: const Value(3000),
+            createdAt: 120,
+            updatedAt: 120,
+          ),
+        );
+    await db
+        .into(db.entryPhotos)
+        .insert(
+          EntryPhotosCompanion.insert(
+            id: 'ph1',
+            entryId: 'e1',
+            mediaId: photoId,
+            sortOrder: 0,
+            createdAt: 130,
+            updatedAt: 130,
+          ),
+        );
+    await db
+        .into(db.settings)
+        .insert(SettingsCompanion.insert(key: 'text_size', value: '2'));
+    await db
+        .into(db.settings)
+        .insert(SettingsCompanion.insert(key: 'sound_enabled', value: 'false'));
 
     final bundle = await service.buildBundle();
 
@@ -142,12 +165,12 @@ void main() {
     expect(voice['mediaId'], audioId);
     expect(voice['durationMs'], 3000);
 
-    final photos =
-        (journal['entryPhotos'] as List).cast<Map<String, Object?>>();
+    final photos = (journal['entryPhotos'] as List)
+        .cast<Map<String, Object?>>();
     expect(photos.single['mediaId'], photoId);
 
-    final mediaBlobs =
-        (journal['mediaBlobs'] as List).cast<Map<String, Object?>>();
+    final mediaBlobs = (journal['mediaBlobs'] as List)
+        .cast<Map<String, Object?>>();
     expect(mediaBlobs.map((b) => b['id']), containsAll([photoId, audioId]));
     final audioBlob = mediaBlobs.firstWhere((b) => b['id'] == audioId);
     expect(audioBlob['mime'], 'audio/aac');
@@ -163,13 +186,19 @@ void main() {
     expect(settings['sound_enabled'], 'false');
 
     expect(
-      bundle.mediaFiles[
-          relPathForBlob(id: photoId, mime: 'image/jpeg', kind: MediaKind.photo)],
+      bundle.mediaFiles[relPathForBlob(
+        id: photoId,
+        mime: 'image/jpeg',
+        kind: MediaKind.photo,
+      )],
       photoBytes,
     );
     expect(
-      bundle.mediaFiles[
-          relPathForBlob(id: audioId, mime: 'audio/aac', kind: MediaKind.audio)],
+      bundle.mediaFiles[relPathForBlob(
+        id: audioId,
+        mime: 'audio/aac',
+        kind: MediaKind.audio,
+      )],
       audioBytes,
     );
     for (final key in bundle.mediaFiles.keys) {
@@ -177,16 +206,18 @@ void main() {
     }
     final expectedLocal = DateTime.fromMillisecondsSinceEpoch(1751000000000);
     String two(int v) => v.toString().padLeft(2, '0');
-    final expectedStamp = 'field-notes-export-${expectedLocal.year}'
+    final expectedStamp =
+        'field-notes-export-${expectedLocal.year}'
         '${two(expectedLocal.month)}${two(expectedLocal.day)}'
         '-${two(expectedLocal.hour)}${two(expectedLocal.minute)}'
         '${two(expectedLocal.second)}.zip';
     expect(bundle.suggestedFileName, expectedStamp);
   });
 
-  test('buildBundle skips a media row whose file is missing on disk',
-      () async {
-    await db.into(db.mediaBlobs).insert(
+  test('buildBundle skips a media row whose file is missing on disk', () async {
+    await db
+        .into(db.mediaBlobs)
+        .insert(
           MediaBlobsCompanion.insert(
             id: 'a1b2c3',
             relPath: relPathForId('a1b2c3'),
@@ -196,28 +227,40 @@ void main() {
             createdAt: 0,
           ),
         );
-    await db.into(db.days).insert(DaysCompanion.insert(
-          id: 'd1',
-          date: '2026-07-14',
-          createdAt: 1,
-          updatedAt: 1,
-        ));
-    await db.into(db.entries).insert(EntriesCompanion.insert(
-          id: 'e1',
-          dayId: 'd1',
-          type: 'text',
-          textContent: const Value('a note with a photo'),
-          createdAt: 2,
-          updatedAt: 2,
-        ));
-    await db.into(db.entryPhotos).insert(EntryPhotosCompanion.insert(
-          id: 'ph1',
-          entryId: 'e1',
-          mediaId: 'a1b2c3',
-          sortOrder: 0,
-          createdAt: 3,
-          updatedAt: 3,
-        ));
+    await db
+        .into(db.days)
+        .insert(
+          DaysCompanion.insert(
+            id: 'd1',
+            date: '2026-07-14',
+            createdAt: 1,
+            updatedAt: 1,
+          ),
+        );
+    await db
+        .into(db.entries)
+        .insert(
+          EntriesCompanion.insert(
+            id: 'e1',
+            dayId: 'd1',
+            type: 'text',
+            textContent: const Value('a note with a photo'),
+            createdAt: 2,
+            updatedAt: 2,
+          ),
+        );
+    await db
+        .into(db.entryPhotos)
+        .insert(
+          EntryPhotosCompanion.insert(
+            id: 'ph1',
+            entryId: 'e1',
+            mediaId: 'a1b2c3',
+            sortOrder: 0,
+            createdAt: 3,
+            updatedAt: 3,
+          ),
+        );
 
     final bundle = await service.buildBundle();
 
@@ -226,74 +269,106 @@ void main() {
     expect(bundle.skippedMediaIds, ['a1b2c3']);
   });
 
-  test('buildBundle exports a blob whose row still points at the legacy path',
-      () async {
-    final bytes = [4, 4, 4, 4];
-    final id = sha256Hex(bytes);
-    final migrated =
-        relPathForBlob(id: id, mime: 'video/quicktime', kind: MediaKind.video);
-    final file = File(p.join(root.path, migrated));
-    await file.parent.create(recursive: true);
-    await file.writeAsBytes(bytes, flush: true);
-    await db.into(db.mediaBlobs).insert(
-          MediaBlobsCompanion.insert(
-            id: id,
-            relPath: relPathForId(id),
-            mime: 'video/quicktime',
-            kind: 'video',
-            bytes: bytes.length,
-            createdAt: 0,
-          ),
-        );
-    await db.into(db.days).insert(DaysCompanion.insert(
-          id: 'd1',
-          date: '2026-07-14',
-          createdAt: 1,
-          updatedAt: 1,
-        ));
-    await db.into(db.entries).insert(EntriesCompanion.insert(
-          id: 'e1',
-          dayId: 'd1',
-          type: 'video',
-          mediaId: Value(id),
-          createdAt: 2,
-          updatedAt: 2,
-        ));
+  test(
+    'buildBundle exports a blob whose row still points at the legacy path',
+    () async {
+      final bytes = [4, 4, 4, 4];
+      final id = sha256Hex(bytes);
+      final migrated = relPathForBlob(
+        id: id,
+        mime: 'video/quicktime',
+        kind: MediaKind.video,
+      );
+      final file = File(p.join(root.path, migrated));
+      await file.parent.create(recursive: true);
+      await file.writeAsBytes(bytes, flush: true);
+      await db
+          .into(db.mediaBlobs)
+          .insert(
+            MediaBlobsCompanion.insert(
+              id: id,
+              relPath: relPathForId(id),
+              mime: 'video/quicktime',
+              kind: 'video',
+              bytes: bytes.length,
+              createdAt: 0,
+            ),
+          );
+      await db
+          .into(db.days)
+          .insert(
+            DaysCompanion.insert(
+              id: 'd1',
+              date: '2026-07-14',
+              createdAt: 1,
+              updatedAt: 1,
+            ),
+          );
+      await db
+          .into(db.entries)
+          .insert(
+            EntriesCompanion.insert(
+              id: 'e1',
+              dayId: 'd1',
+              type: 'video',
+              mediaId: Value(id),
+              createdAt: 2,
+              updatedAt: 2,
+            ),
+          );
 
-    final bundle = await service.buildBundle();
+      final bundle = await service.buildBundle();
 
-    expect(bundle.skippedMediaIds, isEmpty);
-    expect(bundle.mediaFiles[migrated], bytes);
-    expect(p.extension(bundle.mediaFiles.keys.single), '.mov');
-  });
+      expect(bundle.skippedMediaIds, isEmpty);
+      expect(bundle.mediaFiles[migrated], bytes);
+      expect(p.extension(bundle.mediaFiles.keys.single), '.mov');
+    },
+  );
 
   test('export leaves out photos that no live note uses', () async {
     final kept = await seedBlob(db, root, [1, 1, 1], 'image/jpeg', 'photo');
     final removed = await seedBlob(db, root, [2, 2, 2], 'image/jpeg', 'photo');
-    final discarded =
-        await seedBlob(db, root, [3, 3, 3], 'image/jpeg', 'photo');
-    await db.into(db.days).insert(DaysCompanion.insert(
-          id: 'd1',
-          date: '2026-09-29',
-          createdAt: 1,
-          updatedAt: 1,
-        ));
-    await db.into(db.entries).insert(EntriesCompanion.insert(
-          id: 'e1',
-          dayId: 'd1',
-          type: 'text',
-          textContent: const Value('a note with one photo left'),
-          createdAt: 2,
-          updatedAt: 2,
-        ));
-    await db.into(db.entryPhotos).insert(EntryPhotosCompanion.insert(
-          id: 'ph1',
-          entryId: 'e1',
-          mediaId: kept,
-          sortOrder: 0,
-          createdAt: 3,
-          updatedAt: 3,
-        ));
+    final discarded = await seedBlob(
+      db,
+      root,
+      [3, 3, 3],
+      'image/jpeg',
+      'photo',
+    );
+    await db
+        .into(db.days)
+        .insert(
+          DaysCompanion.insert(
+            id: 'd1',
+            date: '2026-09-29',
+            createdAt: 1,
+            updatedAt: 1,
+          ),
+        );
+    await db
+        .into(db.entries)
+        .insert(
+          EntriesCompanion.insert(
+            id: 'e1',
+            dayId: 'd1',
+            type: 'text',
+            textContent: const Value('a note with one photo left'),
+            createdAt: 2,
+            updatedAt: 2,
+          ),
+        );
+    await db
+        .into(db.entryPhotos)
+        .insert(
+          EntryPhotosCompanion.insert(
+            id: 'ph1',
+            entryId: 'e1',
+            mediaId: kept,
+            sortOrder: 0,
+            createdAt: 3,
+            updatedAt: 3,
+          ),
+        );
 
     final bundle = await service.buildBundle();
 
@@ -305,9 +380,9 @@ void main() {
     expect(bundle.manifest.stats.mediaBlobCount, 1);
     final journal = jsonDecode(bundle.journalJson) as Map<String, Object?>;
     expect(
-      (journal['mediaBlobs'] as List)
-          .cast<Map<String, Object?>>()
-          .map((b) => b['id']),
+      (journal['mediaBlobs'] as List).cast<Map<String, Object?>>().map(
+        (b) => b['id'],
+      ),
       [kept],
     );
   });
