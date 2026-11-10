@@ -236,8 +236,8 @@ Finder get _play => find.byType(TransportPlayButton);
 bool _controlsShown(WidgetTester tester) {
   final AnimatedOpacity fade = tester.widget<AnimatedOpacity>(
     find
-        .ancestor(
-          of: find.byType(ViewerLogBar),
+        .descendant(
+          of: find.byType(ViewerControlsFade),
           matching: find.byType(AnimatedOpacity),
         )
         .first,

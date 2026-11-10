@@ -51,6 +51,11 @@ final TargetPlatformVariant _bothLayouts = TargetPlatformVariant(
   <TargetPlatform>{TargetPlatform.android, TargetPlatform.macOS},
 );
 
+const Set<TargetPlatform> _keyboardPlatforms = <TargetPlatform>{
+  TargetPlatform.macOS,
+  TargetPlatform.windows,
+};
+
 String _longNote() {
   final StringBuffer buffer = StringBuffer('An afternoon by the pond');
   int word = 0;
@@ -1018,4 +1023,51 @@ void main() {
     ]);
     await _drainToast(tester);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('F toggles full screen, but not while typing a title', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = FakeViewPadding.zero;
+    tester.view.viewPadding = FakeViewPadding.zero;
+    addTearDown(tester.view.reset);
+    final _Mixed session = await _openMixed(
+      tester,
+      entryId: 'video-log',
+      theme: fieldNotesTheme(platform: defaultTargetPlatform),
+    );
+    final Finder title = find.byKey(viewerTitleFieldKey);
+    final Finder earlier = find.byKey(logViewerEarlierKey);
+    String fullScreenLabel() => tester
+        .widget<TransportIconButton>(find.byKey(transportFullScreenKey))
+        .label;
+    Future<void> press(LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+    }
+
+    await press(LogicalKeyboardKey.keyF);
+    expect(title.hitTestable(), findsNothing);
+    expect(earlier.hitTestable(), findsNothing);
+    expect(fullScreenLabel(), 'Exit full screen');
+
+    await press(LogicalKeyboardKey.keyF);
+    expect(title.hitTestable(), findsOneWidget);
+    expect(earlier.hitTestable(), findsOneWidget);
+    expect(fullScreenLabel(), 'Full screen');
+
+    await press(LogicalKeyboardKey.keyF);
+    await press(LogicalKeyboardKey.escape);
+    expect(title.hitTestable(), findsOneWidget);
+    expect(fullScreenLabel(), 'Full screen');
+    expect(session.outcomes, isEmpty);
+
+    await tester.tap(title);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.pump();
+    expect(title.hitTestable(), findsOneWidget);
+    expect(fullScreenLabel(), 'Full screen');
+  }, variant: TargetPlatformVariant(_keyboardPlatforms));
 }

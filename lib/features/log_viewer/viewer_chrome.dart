@@ -1344,6 +1344,34 @@ class ViewerEdgeArrows extends StatelessWidget {
   }
 }
 
+class ViewerFullScreenHide extends StatelessWidget {
+  const ViewerFullScreenHide({
+    super.key,
+    required this.fullScreen,
+    required this.child,
+  });
+
+  final bool fullScreen;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    return ExcludeFocus(
+      excluding: fullScreen,
+      child: IgnorePointer(
+        ignoring: fullScreen,
+        child: AnimatedOpacity(
+          opacity: fullScreen ? 0 : 1,
+          duration: still ? Duration.zero : Motion.fade,
+          curve: Motion.fadeCurve,
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
 @immutable
 final class _EdgeArrowColors {
   const _EdgeArrowColors({

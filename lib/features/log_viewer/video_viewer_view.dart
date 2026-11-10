@@ -156,7 +156,7 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
     }
     return ViewerKeys(
       autofocus: false,
-      onEscape: scene.onBack,
+      onEscape: scene.onEscape,
       onPageUp: scene.onEarlier,
       onPageDown: scene.onLater,
       child: ViewerStage(
@@ -180,6 +180,7 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
       handle: _handle,
       focus: widget.focus,
       controlModel: resolveVideoControlModel(platform),
+      onFullScreen: scene.onFullScreen,
       controls: controls,
     );
   }
@@ -259,9 +260,22 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
             onBack: scene.onBack,
             backLabel: scene.exitLabel,
             onMore: () => showViewerLogSheet(context, scene),
+            onFullScreen: scene.onFullScreen,
+            fullScreen: scene.fullScreen,
           ),
-          ViewerLogBar(scene: scene, fades: true),
-          ViewerEdgeArrows(onPrevious: scene.onEarlier, onNext: scene.onLater),
+          ViewerFullScreenHide(
+            fullScreen: scene.fullScreen,
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                ViewerLogBar(scene: scene, fades: true),
+                ViewerEdgeArrows(
+                  onPrevious: scene.onEarlier,
+                  onNext: scene.onLater,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

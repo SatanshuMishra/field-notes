@@ -9,6 +9,7 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart'
     show composerPanelKey;
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
@@ -83,6 +84,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   bool _deleting = false;
   bool _left = false;
   bool _stepped = false;
+  bool _fullScreen = false;
   int _viewGeneration = 0;
   int? _scrimPointer;
 
@@ -156,6 +158,8 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   void _back() => _leave(LogViewerOutcome.returned);
 
   void _closeAll() => _leave(LogViewerOutcome.closedAll);
+
+  void _toggleFullScreen() => setState(() => _fullScreen = !_fullScreen);
 
   void _onPopInvoked(bool didPop, Object? result) {
     if (didPop || _editing) {
@@ -383,6 +387,9 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     final Entry entry = entries[index];
     final Entry? earlier = index > 0 ? entries[index - 1] : null;
     final Entry? later = index + 1 < entries.length ? entries[index + 1] : null;
+    final bool offersFullScreen =
+        entry.type != EntryType.text &&
+        isDesktopPlatform(Theme.of(context).platform);
     return LogViewerScene(
       entry: entry,
       date: widget.date,
@@ -399,6 +406,8 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       onDelete: () => _delete(entry),
       onEdit: entry.type == EntryType.text ? () => _edit(entry) : null,
       onRename: (String? title) => _rename(entry, title),
+      fullScreen: offersFullScreen && _fullScreen,
+      onFullScreen: offersFullScreen ? _toggleFullScreen : null,
     );
   }
 

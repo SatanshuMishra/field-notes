@@ -137,7 +137,7 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
     }
     return ViewerKeys(
       autofocus: false,
-      onEscape: scene.onBack,
+      onEscape: scene.onEscape,
       onPageUp: scene.onEarlier,
       onPageDown: scene.onLater,
       child: ViewerStage(
@@ -224,6 +224,8 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
             onBack: scene.onBack,
             backLabel: scene.exitLabel,
             onMore: () => showViewerLogSheet(context, scene),
+            onFullScreen: scene.onFullScreen,
+            fullScreen: scene.fullScreen,
           ),
         ),
         if (playback.unavailable)
@@ -240,8 +242,19 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
               ),
             ),
           ),
-        ViewerLogBar(scene: scene),
-        ViewerEdgeArrows(onPrevious: scene.onEarlier, onNext: scene.onLater),
+        ViewerFullScreenHide(
+          fullScreen: scene.fullScreen,
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              ViewerLogBar(scene: scene),
+              ViewerEdgeArrows(
+                onPrevious: scene.onEarlier,
+                onNext: scene.onLater,
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
