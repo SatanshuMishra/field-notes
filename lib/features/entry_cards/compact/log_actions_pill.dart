@@ -1,38 +1,78 @@
 import 'dart:math' as math;
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/scheduler.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show CustomSemanticsAction;
 
+import '../../../design/feedback/dialog_host.dart';
+import '../../../design/motion/motion_tokens.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/icon_sticker_button.dart';
+import '../../../design/widgets/phone_sheet.dart';
 import '../../../design/widgets/sticker_button.dart';
+import '../../../domain/platform/desktop_platform.dart';
+import '../transport/transport_bar.dart'
+    show TransportGlyph, TransportGlyphIcon;
 
 const Key logActionsPillKey = ValueKey<String>('log-actions-pill');
 const Key logActionsEditKey = ValueKey<String>('log-actions-edit');
 const Key logActionsDeleteKey = ValueKey<String>('log-actions-delete');
+const Key logActionsOpenKey = ValueKey<String>('log-actions-open');
+const Key logActionsMoreKey = ValueKey<String>('log-actions-more');
+const Key logActionsRenameKey = ValueKey<String>('log-actions-rename');
+const Key logActionsMenuKey = ValueKey<String>('log-actions-menu');
 
 const String logActionsEditLabel = 'Edit note';
 const String logActionsDeleteLabel = 'Delete entry';
+const String logActionsOpenLabel = 'Open';
+const String logActionsOpenTooltip = 'Open full view';
+const String logActionsMoreLabel = 'More';
+const String logActionsRenameLabel = 'Rename';
+const String logActionsAddTitleLabel = 'Add a title';
+const String logMenuDeleteLabel = 'Delete log';
 
 const double _pillPadding = 4;
 const double _pillGap = 2;
-const double _pillRise = 15;
-const double _pillInset = 12;
-const double _hiddenDrop = 4;
 const double _glyphExtent = 14;
 const double _defaultButtonExtent = 28;
 const double _tapTarget = 48;
-const Duration _revealDuration = Duration(milliseconds: 140);
+
+const double _cardActionGap = 2;
+const double _cardGlyphExtent = 20;
+const double _strokeWidth = 1.7;
+const double _glyphViewBox = 24;
+
+const double _menuWidth = 216;
+const double _menuGap = 4;
+const double _menuScreenMargin = 8;
+const double _menuRowInset = 10;
+const double _menuRowGlyphGap = 10;
+const double _menuRowGlyph = 18;
+const double _menuPhoneRowHeight = 52;
+const double _menuLabelSize = 14;
+const EdgeInsets _menuPadding = EdgeInsets.all(4);
+const EdgeInsets _menuSheetPadding = EdgeInsets.fromLTRB(12, 2, 12, 12);
+const Radius _openGlyphCorner = Radius.circular(1.5);
 
 final Color _actionHoverFill = Palette.onAccent.withValues(alpha: 0.14);
 
+final FocusTraversalPolicy _cardTabOrder = _TreeOrderTraversalPolicy();
+
 const BorderRadius _pillRadius = BorderRadius.all(Radius.circular(10));
 const BorderRadius _buttonRadius = BorderRadius.all(Radius.circular(7));
+const BorderRadius _cardActionRadius = BorderRadius.all(
+  Radius.circular(Shapes.radius8),
+);
+const BorderRadius _menuRadius = BorderRadius.all(
+  Radius.circular(Shapes.radius12),
+);
+const BorderRadius _menuRowRadius = BorderRadius.all(
+  Radius.circular(Shapes.radius8),
+);
 
 EdgeInsets logActionsPillTapInset({
   double buttonExtent = _defaultButtonExtent,
@@ -43,13 +83,6 @@ EdgeInsets logActionsPillTapInset({
   paired: withEdit,
   growDown: growDown,
 ).pillInset;
-
-const CustomSemanticsAction _editAction = CustomSemanticsAction(
-  label: logActionsEditLabel,
-);
-const CustomSemanticsAction _deleteAction = CustomSemanticsAction(
-  label: logActionsDeleteLabel,
-);
 
 class LogActionsPill extends StatelessWidget {
   const LogActionsPill({
@@ -167,80 +200,6 @@ final class _PillGeometry {
     _outer,
     _bottom,
   );
-
-  Size get size => Size(
-    rowPadding.horizontal +
-        (paired ? leadingMargin.horizontal + buttonExtent : 0) +
-        trailingMargin.horizontal +
-        buttonExtent,
-    rowPadding.vertical + _top + buttonExtent + _bottom,
-  );
-}
-
-class _PillReach extends SingleChildRenderObjectWidget {
-  const _PillReach({
-    required this.reach,
-    required this.semanticIndex,
-    required super.child,
-  });
-
-  final Rect? reach;
-  final int? semanticIndex;
-
-  @override
-  _RenderPillReach createRenderObject(BuildContext context) =>
-      _RenderPillReach(reach, semanticIndex);
-
-  @override
-  void updateRenderObject(BuildContext context, _RenderPillReach renderObject) {
-    renderObject
-      ..reach = reach
-      ..semanticIndex = semanticIndex;
-  }
-}
-
-class _RenderPillReach extends RenderProxyBox {
-  _RenderPillReach(this._reach, this._semanticIndex);
-
-  Rect? _reach;
-  int? _semanticIndex;
-
-  set semanticIndex(int? value) {
-    if (value == _semanticIndex) {
-      return;
-    }
-    _semanticIndex = value;
-    markNeedsSemanticsUpdate();
-  }
-
-  set reach(Rect? value) {
-    if (value == _reach) {
-      return;
-    }
-    _reach = value;
-    markNeedsSemanticsUpdate();
-    parent?.markNeedsSemanticsUpdate();
-  }
-
-  @override
-  Rect get semanticBounds {
-    final Rect card = Offset.zero & size;
-    final Rect? reach = _reach;
-    if (reach == null) {
-      return card;
-    }
-    return card.expandToInclude(reach.shift(Offset(size.width, 0)));
-  }
-
-  @override
-  void describeSemanticsConfiguration(SemanticsConfiguration config) {
-    super.describeSemanticsConfiguration(config);
-    config.isSemanticBoundary = true;
-    final int? index = _semanticIndex;
-    if (index != null) {
-      config.indexInParent = index;
-    }
-  }
 }
 
 class _LogActionButton extends StatefulWidget {
@@ -334,429 +293,531 @@ class _LogActionButtonState extends State<_LogActionButton> {
   }
 }
 
-class LogActionsCorner extends StatelessWidget {
-  const LogActionsCorner({super.key, required this.child});
+class LogCardHighlight extends InheritedWidget {
+  const LogCardHighlight({
+    super.key,
+    required this.active,
+    required super.child,
+  });
 
-  final Widget child;
+  final bool active;
 
-  @override
-  Widget build(BuildContext context) {
-    final bool covered =
-        context.dependOnInheritedWidgetOfExactType<_LogActionsShown>()?.shown ??
-        false;
-    return AnimatedOpacity(
-      opacity: covered ? 0 : 1,
-      duration: _revealDuration,
-      alwaysIncludeSemantics: true,
-      child: child,
-    );
-  }
-}
-
-class _LogActionsShown extends InheritedWidget {
-  const _LogActionsShown({required this.shown, required super.child});
-
-  final bool shown;
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<LogCardHighlight>()?.active ??
+      false;
 
   @override
-  bool updateShouldNotify(_LogActionsShown oldWidget) =>
-      shown != oldWidget.shown;
+  bool updateShouldNotify(LogCardHighlight oldWidget) =>
+      active != oldWidget.active;
 }
 
-class LogActionsReveal extends StatefulWidget {
-  const LogActionsReveal({
+class LogCardFrame extends StatelessWidget {
+  const LogCardFrame({
     super.key,
     required this.builder,
     required this.onOpen,
-    this.onEdit,
-    required this.onDelete,
+    required this.onLongPress,
+    this.semanticActions = const <CustomSemanticsAction, VoidCallback>{},
     this.semanticIndex,
     this.borderRadius = BorderRadius.zero,
   });
 
   final PressableBuilder builder;
   final VoidCallback onOpen;
-  final BorderRadius borderRadius;
-  final VoidCallback? onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback onLongPress;
+  final Map<CustomSemanticsAction, VoidCallback> semanticActions;
   final int? semanticIndex;
+  final BorderRadius borderRadius;
 
   @override
-  State<LogActionsReveal> createState() => _LogActionsRevealState();
+  Widget build(BuildContext context) {
+    final Widget card = Pressable(
+      label: '',
+      onPressed: onOpen,
+      paintsHover: false,
+      excludeSemantics: false,
+      borderRadius: borderRadius,
+      builder: (BuildContext context, bool hovered) => Semantics(
+        onLongPress: onLongPress,
+        customSemanticsActions: semanticActions,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          excludeFromSemantics: true,
+          onLongPress: onLongPress,
+          child: builder(context, hovered),
+        ),
+      ),
+    );
+    final Widget ordered = FocusTraversalGroup(
+      policy: _cardTabOrder,
+      child: card,
+    );
+    final int? index = semanticIndex;
+    return index == null
+        ? ordered
+        : IndexedSemantics(index: index, child: ordered);
+  }
 }
 
-class _LogActionsRevealState extends State<LogActionsReveal>
-    with SingleTickerProviderStateMixin {
-  final FocusNode _cardFocus = FocusNode(debugLabel: 'log card');
-  static final ValueNotifier<_LogActionsRevealState?> _shown =
-      ValueNotifier<_LogActionsRevealState?>(null);
+final class _TreeOrderTraversalPolicy extends FocusTraversalPolicy
+    with DirectionalFocusTraversalPolicyMixin {
+  @override
+  Iterable<FocusNode> sortDescendants(
+    Iterable<FocusNode> descendants,
+    FocusNode currentNode,
+  ) {
+    final Map<FocusNode, List<Element>> lineages = <FocusNode, List<Element>>{
+      for (final FocusNode node in descendants) node: _lineageOf(node.context),
+    };
+    return <FocusNode>[...descendants]..sort(
+      (FocusNode a, FocusNode b) =>
+          _compareLineages(lineages[a]!, lineages[b]!),
+    );
+  }
+}
 
-  final LayerLink _link = LayerLink();
-  final OverlayPortalController _portal = OverlayPortalController();
-  late final AnimationController _reveal = AnimationController(
-    vsync: this,
-    duration: _revealDuration,
+List<Element> _lineageOf(BuildContext? context) {
+  if (context is! Element) {
+    return const <Element>[];
+  }
+  final List<Element> upward = <Element>[context];
+  context.visitAncestorElements((Element ancestor) {
+    upward.add(ancestor);
+    return true;
+  });
+  return upward.reversed.toList(growable: false);
+}
+
+int _compareLineages(List<Element> first, List<Element> second) {
+  final int shared = math.min(first.length, second.length);
+  int depth = 0;
+  while (depth < shared && identical(first[depth], second[depth])) {
+    depth += 1;
+  }
+  if (depth == shared || depth == 0) {
+    return first.length.compareTo(second.length);
+  }
+  int order = 0;
+  first[depth - 1].visitChildren((Element child) {
+    if (order == 0 && identical(child, first[depth])) {
+      order = -1;
+    } else if (order == 0 && identical(child, second[depth])) {
+      order = 1;
+    }
+  });
+  return order;
+}
+
+class LogCardActions extends StatelessWidget {
+  const LogCardActions({
+    super.key,
+    required this.onOpen,
+    required this.onMore,
+    this.moreAnchorKey,
+  });
+
+  final VoidCallback onOpen;
+  final VoidCallback onMore;
+  final GlobalKey? moreAnchorKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        _CardActionButton(
+          key: logActionsOpenKey,
+          label: logActionsOpenLabel,
+          tooltip: logActionsOpenTooltip,
+          highlighted: LogCardHighlight.of(context),
+          onPressed: onOpen,
+          glyph: (Color color) => _StrokeGlyphIcon(
+            glyph: _StrokeGlyph.open,
+            color: color,
+            size: _cardGlyphExtent,
+          ),
+        ),
+        const SizedBox(width: _cardActionGap),
+        KeyedSubtree(
+          key: moreAnchorKey,
+          child: _CardActionButton(
+            key: logActionsMoreKey,
+            label: logActionsMoreLabel,
+            tooltip: logActionsMoreLabel,
+            onPressed: onMore,
+            glyph: (Color color) => TransportGlyphIcon(
+              glyph: TransportGlyph.more,
+              color: color,
+              size: _cardGlyphExtent,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CardActionButton extends StatelessWidget {
+  const _CardActionButton({
+    super.key,
+    required this.label,
+    required this.tooltip,
+    required this.onPressed,
+    required this.glyph,
+    this.highlighted = false,
+  });
+
+  final String label;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final Widget Function(Color color) glyph;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    return Pressable(
+      label: label,
+      tooltip: tooltip,
+      iconOnly: true,
+      onPressed: onPressed,
+      borderRadius: _cardActionRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) {
+        final bool lit = hovered || highlighted;
+        return HoverFill(
+          hovered: lit,
+          borderRadius: _cardActionRadius,
+          position: DecorationPosition.background,
+          child: SizedBox.square(
+            dimension: minIconTargetOn(Theme.of(context).platform),
+            child: Center(child: glyph(lit ? colors.ink : colors.inkSoft)),
+          ),
+        );
+      },
+    );
+  }
+}
+
+enum _StrokeGlyph { open, title }
+
+class _StrokeGlyphIcon extends StatelessWidget {
+  const _StrokeGlyphIcon({
+    required this.glyph,
+    required this.color,
+    required this.size,
+  });
+
+  final _StrokeGlyph glyph;
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    size: Size.square(size),
+    painter: _StrokeGlyphPainter(glyph: glyph, color: color),
   );
-  late final Animation<double> _progress = CurvedAnimation(
-    parent: _reveal,
-    curve: Curves.ease,
-  );
+}
 
-  ScrollPosition? _scroll;
-  Size? _window;
-  bool _cardHovered = false;
-  bool _awaitingMove = false;
-  bool _pillHovered = false;
-  bool _focusInside = false;
-  bool _focusInPill = false;
-  bool _pinned = false;
-  bool _suppressed = false;
-  bool _topInView = true;
-  bool _viewCheckScheduled = false;
+class _StrokeGlyphPainter extends CustomPainter {
+  const _StrokeGlyphPainter({required this.glyph, required this.color});
 
-  bool get _wanted =>
-      (_cardHovered && !_awaitingMove) ||
-      _pillHovered ||
-      _focusInside ||
-      _focusInPill ||
-      _pinned;
+  final _StrokeGlyph glyph;
+  final Color color;
 
-  bool get _visible => !_suppressed && _topInView && _wanted;
-
-  bool get _pointerIsStill =>
-      SchedulerBinding.instance.schedulerPhase ==
-      SchedulerPhase.postFrameCallbacks;
-
-  @override
-  void initState() {
-    super.initState();
-    _cardFocus.addListener(_onCardFocus);
-    _shown.addListener(_onShownChanged);
-    _reveal.addStatusListener(_onRevealStatus);
-  }
-
-  void _onCardFocus() {
-    if (_cardFocus.hasFocus != _focusInside) {
-      _onFocusChange(_cardFocus.hasFocus);
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final ScrollPosition? scroll = Scrollable.maybeOf(context)?.position;
-    if (scroll != _scroll) {
-      _scroll?.removeListener(_onScrolled);
-      _scroll = scroll;
-      _scroll?.addListener(_onScrolled);
-    }
-    final Size? window = MediaQuery.maybeSizeOf(context);
-    if (window != _window) {
-      _window = window;
-      _scheduleViewCheck();
-    }
-  }
-
-  @override
-  void dispose() {
-    _cardFocus
-      ..removeListener(_onCardFocus)
-      ..dispose();
-    _scroll?.removeListener(_onScrolled);
-    _shown.removeListener(_onShownChanged);
-    if (_shown.value == this) {
-      _shown.value = null;
-    }
-    _reveal.dispose();
-    super.dispose();
-  }
-
-  void _update(VoidCallback change) {
-    if (!mounted) {
-      return;
-    }
-    setState(change);
-    if (_visible) {
-      _shown.value = this;
-      if (!_portal.isShowing) {
-        _portal.show();
-      }
-      _reveal.forward();
-    } else {
-      if (_shown.value == this) {
-        _shown.value = null;
-      }
-      _reveal.reverse();
-    }
-  }
-
-  void _onRevealStatus(AnimationStatus status) {
-    if (status.isDismissed && !_visible && _portal.isShowing) {
-      _pillHovered = false;
-      _focusInPill = false;
-      _portal.hide();
-    }
-  }
-
-  void _onShownChanged() {
-    final _LogActionsRevealState? shown = _shown.value;
-    if (shown != null && shown != this && _visible) {
-      _update(_hide);
-    }
-  }
-
-  void _onScrolled() {
-    _scheduleViewCheck();
-    if (_pinned) {
-      _update(() => _pinned = false);
-    }
-  }
-
-  bool _cardTopInView() {
-    final RenderObject? card = context.findRenderObject();
-    final RenderObject? viewport = RenderAbstractViewport.maybeOf(card);
-    if (card is! RenderBox ||
-        viewport is! RenderBox ||
-        !card.hasSize ||
-        !viewport.hasSize) {
-      return true;
-    }
-    final double top = card.localToGlobal(Offset.zero, ancestor: viewport).dy;
-    return top >= -precisionErrorTolerance &&
-        top <= viewport.size.height + precisionErrorTolerance;
-  }
-
-  void _scheduleViewCheck() {
-    if (_viewCheckScheduled || !_wanted) {
-      return;
-    }
-    _viewCheckScheduled = true;
-    SchedulerBinding.instance.addPostFrameCallback((Duration _) {
-      _viewCheckScheduled = false;
-      _recheckView();
-    });
-  }
-
-  void _recheckView() {
-    if (!mounted) {
-      return;
-    }
-    final bool inView = _cardTopInView();
-    if (inView == _topInView) {
-      return;
-    }
-    _update(() => _topInView = inView);
-    if (!inView) {
-      _reveal.value = 0;
-    }
-  }
-
-  void _hide() {
-    _pinned = false;
-    _suppressed = true;
-  }
-
-  void _choose(VoidCallback action) {
-    _update(_hide);
-    action();
-  }
-
-  void _onCardEnter(PointerEnterEvent event) {
-    final bool still = _pointerIsStill;
-    _update(() {
-      _cardHovered = true;
-      _awaitingMove = still;
-      _suppressed = false;
-      _topInView = _cardTopInView();
-    });
-  }
-
-  void _onCardMove(PointerHoverEvent event) {
-    if (_awaitingMove) {
-      _update(() {
-        _awaitingMove = false;
-        _topInView = _cardTopInView();
-      });
-    }
-  }
-
-  void _onCardExit(PointerExitEvent event) {
-    _update(() {
-      _cardHovered = false;
-      _awaitingMove = false;
-    });
-  }
-
-  void _onPillHover(bool hovered) {
-    _update(() => _pillHovered = hovered);
-  }
-
-  bool get _focusMovedElsewhere => switch (FocusManager.instance.primaryFocus) {
-    final FocusNode now => now is! FocusScopeNode,
-    null => false,
+  Path get _path => switch (glyph) {
+    _StrokeGlyph.open =>
+      Path()
+        ..moveTo(14, 5)
+        ..lineTo(19, 5)
+        ..lineTo(19, 10)
+        ..moveTo(19, 5)
+        ..lineTo(11.5, 12.5)
+        ..moveTo(10, 5.5)
+        ..lineTo(7, 5.5)
+        ..arcToPoint(
+          const Offset(5.5, 7),
+          radius: _openGlyphCorner,
+          clockwise: false,
+        )
+        ..lineTo(5.5, 17)
+        ..arcToPoint(
+          const Offset(7, 18.5),
+          radius: _openGlyphCorner,
+          clockwise: false,
+        )
+        ..lineTo(17, 18.5)
+        ..arcToPoint(
+          const Offset(18.5, 17),
+          radius: _openGlyphCorner,
+          clockwise: false,
+        )
+        ..lineTo(18.5, 14),
+    _StrokeGlyph.title =>
+      Path()
+        ..moveTo(5, 6.5)
+        ..lineTo(19, 6.5)
+        ..moveTo(12, 6.5)
+        ..lineTo(12, 18.5)
+        ..moveTo(9, 18.5)
+        ..lineTo(15, 18.5),
   };
 
-  void _onFocusChange(bool focused) {
-    if (!focused && !_focusMovedElsewhere) {
-      return;
-    }
-    _update(() {
-      _focusInside = focused;
-      if (focused) {
-        _suppressed = false;
-        _topInView = _cardTopInView();
-      }
-    });
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.shortestSide / _glyphViewBox);
+    canvas.drawPath(
+      _path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _strokeWidth
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+    canvas.restore();
   }
 
-  void _onPillFocusChange(bool focused) {
-    if (!focused && !_focusMovedElsewhere) {
-      return;
-    }
-    _update(() => _focusInPill = focused);
-  }
+  @override
+  bool shouldRepaint(_StrokeGlyphPainter oldDelegate) =>
+      glyph != oldDelegate.glyph || color != oldDelegate.color;
+}
 
-  void _onLongPress() {
-    _update(() {
-      _pinned = true;
-      _suppressed = false;
-      _topInView = _cardTopInView();
-    });
-  }
+enum LogMenuGlyph { title, edit, trash }
 
-  void _onTapOutside(PointerDownEvent event) {
-    if (_pinned) {
-      _update(() => _pinned = false);
-    }
-  }
+@immutable
+final class LogMenuItem {
+  const LogMenuItem({
+    required this.key,
+    required this.label,
+    required this.glyph,
+    required this.onSelected,
+    this.danger = false,
+  });
 
-  Map<CustomSemanticsAction, VoidCallback> _semanticActions() {
-    final VoidCallback? edit = widget.onEdit;
-    return <CustomSemanticsAction, VoidCallback>{
-      if (edit != null) _editAction: () => _choose(edit),
-      _deleteAction: () => _choose(widget.onDelete),
-    };
-  }
+  final Key key;
+  final String label;
+  final LogMenuGlyph glyph;
+  final VoidCallback onSelected;
+  final bool danger;
+}
 
-  _PillGeometry get _geometry => _PillGeometry(
-    buttonExtent: _defaultButtonExtent,
-    paired: widget.onEdit != null,
-    growDown: true,
+Future<void> showLogActionsMenu(
+  BuildContext anchor, {
+  required List<LogMenuItem> items,
+}) async {
+  final LogMenuItem? chosen = isDesktopPlatform(Theme.of(anchor).platform)
+      ? await _showAnchoredMenu(anchor, items)
+      : await _showMenuSheet(anchor, items);
+  chosen?.onSelected();
+}
+
+Future<LogMenuItem?> _showAnchoredMenu(
+  BuildContext anchor,
+  List<LogMenuItem> items,
+) {
+  final RenderBox box = anchor.findRenderObject()! as RenderBox;
+  final Rect from = MatrixUtils.transformRect(
+    box.getTransformTo(null),
+    Offset.zero & box.size,
   );
-
-  Offset _pillCorner(_PillGeometry geometry) => Offset(
-    geometry.pillInset.right - _pillInset,
-    -geometry.pillInset.top - _pillRise,
+  final bool still = MediaQuery.maybeDisableAnimationsOf(anchor) ?? false;
+  return showGeneralDialog<LogMenuItem>(
+    context: anchor,
+    barrierDismissible: true,
+    barrierLabel: 'Dismiss',
+    barrierColor: const Color(0x00000000),
+    transitionDuration: still ? Duration.zero : Motion.press,
+    pageBuilder:
+        (
+          BuildContext context,
+          Animation<double> animation,
+          Animation<double> secondaryAnimation,
+        ) => DialogHost(
+          child: CustomSingleChildLayout(
+            delegate: _AnchoredMenuLayout(anchor: from),
+            child: _AnchoredMenu(items: items),
+          ),
+        ),
+    transitionBuilder:
+        (
+          BuildContext context,
+          Animation<double> animation,
+          Animation<double> secondaryAnimation,
+          Widget child,
+        ) => FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Motion.fadeCurve),
+          child: child,
+        ),
   );
+}
 
-  Rect _pillReach() {
-    final _PillGeometry geometry = _geometry;
-    final Offset corner = _pillCorner(geometry);
-    final Size size = geometry.size;
-    return Rect.fromLTRB(
-      corner.dx - size.width,
-      corner.dy,
-      corner.dx,
-      corner.dy + size.height,
+Future<LogMenuItem?> _showMenuSheet(
+  BuildContext anchor,
+  List<LogMenuItem> items,
+) => showPhoneSheet<LogMenuItem>(
+  anchor,
+  builder: (BuildContext context) => PhoneSheet(
+    key: logActionsMenuKey,
+    color: context.colors.panelTop,
+    child: Padding(
+      padding: _menuSheetPadding,
+      child: _MenuRows(items: items, rowHeight: _menuPhoneRowHeight),
+    ),
+  ),
+);
+
+class _AnchoredMenuLayout extends SingleChildLayoutDelegate {
+  const _AnchoredMenuLayout({required this.anchor});
+
+  final Rect anchor;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      const BoxConstraints.tightFor(width: _menuWidth).copyWith(
+        maxHeight: math.max(0, constraints.maxHeight - 2 * _menuScreenMargin),
+      );
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final double furthestLeft = math.max(
+      _menuScreenMargin,
+      size.width - childSize.width - _menuScreenMargin,
+    );
+    final double furthestTop = math.max(
+      _menuScreenMargin,
+      size.height - childSize.height - _menuScreenMargin,
+    );
+    final double below = anchor.bottom + _menuGap;
+    final double top = below <= furthestTop
+        ? below
+        : anchor.top - _menuGap - childSize.height;
+    return Offset(
+      (anchor.right - childSize.width).clamp(_menuScreenMargin, furthestLeft),
+      top.clamp(_menuScreenMargin, furthestTop),
     );
   }
 
-  Widget _buildPill(BuildContext context) {
-    final VoidCallback? edit = widget.onEdit;
-    final bool visible = _visible;
-    return Align(
-      alignment: AlignmentDirectional.topStart,
-      child: CompositedTransformFollower(
-        link: _link,
-        showWhenUnlinked: false,
-        targetAnchor: Alignment.topRight,
-        followerAnchor: Alignment.topRight,
-        offset: _pillCorner(_geometry),
-        child: IgnorePointer(
-          ignoring: !visible,
-          child: TapRegion(
-            groupId: this,
-            child: MouseRegion(
-              onEnter: (PointerEnterEvent event) => _onPillHover(true),
-              onExit: (PointerExitEvent event) => _onPillHover(false),
-              child: Focus(
-                canRequestFocus: false,
-                skipTraversal: true,
-                includeSemantics: false,
-                onFocusChange: _onPillFocusChange,
-                child: ExcludeFocus(
-                  excluding: !visible,
-                  child: ExcludeSemantics(
-                    excluding: !visible,
-                    child: AnimatedBuilder(
-                      animation: _progress,
-                      builder: (BuildContext context, Widget? child) {
-                        return Opacity(
-                          opacity: _progress.value,
-                          child: Transform.translate(
-                            offset: Offset(
-                              0,
-                              _hiddenDrop * (1 - _progress.value),
-                            ),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: LogActionsPill(
-                        key: logActionsPillKey,
-                        onEdit: edit == null ? null : () => _choose(edit),
-                        onDelete: () => _choose(widget.onDelete),
-                        growDown: true,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+  @override
+  bool shouldRelayout(_AnchoredMenuLayout oldDelegate) =>
+      anchor != oldDelegate.anchor;
+}
+
+class _AnchoredMenu extends StatelessWidget {
+  const _AnchoredMenu({required this.items});
+
+  final List<LogMenuItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      key: logActionsMenuKey,
+      decoration: BoxDecoration(
+        color: context.colors.cardBright,
+        border: context.shadows.outline,
+        borderRadius: _menuRadius,
+        boxShadow: context.shadows.hero,
+      ),
+      child: Padding(
+        padding: _menuPadding,
+        child: _MenuRows(
+          items: items,
+          rowHeight: minButtonTargetOn(Theme.of(context).platform),
         ),
       ),
     );
   }
+}
+
+class _MenuRows extends StatelessWidget {
+  const _MenuRows({required this.items, required this.rowHeight});
+
+  final List<LogMenuItem> items;
+  final double rowHeight;
 
   @override
   Widget build(BuildContext context) {
-    return _PillReach(
-      reach: _visible ? _pillReach() : null,
-      semanticIndex: widget.semanticIndex,
-      child: OverlayPortal(
-        controller: _portal,
-        overlayChildBuilder: _buildPill,
-        child: CompositedTransformTarget(
-          link: _link,
-          child: TapRegion(
-            groupId: this,
-            onTapOutside: _onTapOutside,
-            child: MouseRegion(
-              onEnter: _onCardEnter,
-              onHover: _onCardMove,
-              onExit: _onCardExit,
-              child: Pressable(
-                label: '',
-                focusNode: _cardFocus,
-                onPressed: widget.onOpen,
-                paintsHover: false,
-                excludeSemantics: false,
-                borderRadius: widget.borderRadius,
-                builder: (BuildContext context, bool hovered) => Semantics(
-                  onLongPress: _onLongPress,
-                  customSemanticsActions: _semanticActions(),
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    excludeFromSemantics: true,
-                    onLongPress: _onLongPress,
-                    child: _LogActionsShown(
-                      shown: _visible,
-                      child: widget.builder(context, hovered),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        for (final LogMenuItem item in items)
+          _MenuRow(item: item, height: rowHeight),
+      ],
+    );
+  }
+}
+
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({required this.item, required this.height});
+
+  final LogMenuItem item;
+  final double height;
+
+  Widget _glyph(Color color) => switch (item.glyph) {
+    LogMenuGlyph.title => _StrokeGlyphIcon(
+      glyph: _StrokeGlyph.title,
+      color: color,
+      size: _menuRowGlyph,
+    ),
+    LogMenuGlyph.edit => IconStickerGlyphIcon(
+      glyph: IconStickerGlyph.edit,
+      color: color,
+      size: _menuRowGlyph,
+    ),
+    LogMenuGlyph.trash => IconStickerGlyphIcon(
+      glyph: IconStickerGlyph.trash,
+      color: color,
+      size: _menuRowGlyph,
+    ),
+  };
+
+  Color? _hoverFill(BuildContext context, bool hovered) {
+    if (!hovered) {
+      return null;
+    }
+    return item.danger
+        ? context.colors.dangerSurface
+        : HoverStyle.of(context, FocusRingSurface.light, HoverShape.rounded);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    return Pressable(
+      key: item.key,
+      label: item.label,
+      onPressed: () => Navigator.of(context).pop(item),
+      borderRadius: _menuRowRadius,
+      placement: FocusRingPlacement.edge,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => DecoratedBox(
+        decoration: HoverStyle.decoration(
+          color: _hoverFill(context, hovered),
+          shape: HoverShape.rounded,
+          borderRadius: _menuRowRadius,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: height),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: _menuRowInset),
+            child: Row(
+              children: <Widget>[
+                _glyph(item.danger ? colors.dangerInk : colors.inkSoft),
+                const SizedBox(width: _menuRowGlyphGap),
+                Expanded(
+                  child: Text(
+                    item.label,
+                    style: TextStyle(
+                      fontFamily: TypographyTokens.sans,
+                      fontSize: _menuLabelSize,
+                      fontWeight: FontWeight.w600,
+                      color: item.danger ? colors.dangerInk : colors.ink,
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ),

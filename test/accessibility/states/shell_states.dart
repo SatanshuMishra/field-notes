@@ -480,14 +480,9 @@ A11yPumpBody _searchFor(String query) =>
       await tester.pump();
     };
 
-final Finder _revealedPill = find.descendant(
-  of: find.byKey(logActionsPillKey),
-  matching: find.byElementPredicate(
-    (Element element) =>
-        element is RenderObjectElement &&
-        element.renderObject.debugSemantics?.label == logActionsDeleteLabel,
-    description: 'a revealed "$logActionsDeleteLabel" button',
-  ),
+final Finder _openLogMenuDelete = find.descendant(
+  of: find.byKey(logActionsMenuKey),
+  matching: find.byKey(logActionsDeleteKey),
 );
 
 final Finder _journaledCell = find.descendant(
@@ -573,7 +568,7 @@ final List<A11yState> shellStates = <A11yState>[
   A11yState(
     id: 'a2-today-feed',
     pump: _pumpFeed,
-    proof: <A11yProof>[A11yProof(find.byType(CompactLogCard), count: 4)],
+    proof: <A11yProof>[A11yProof(find.byType(CompactLogCard), count: 3)],
   ),
   A11yState(
     id: 'a3-card-actions',
@@ -581,9 +576,9 @@ final List<A11yState> shellStates = <A11yState>[
       await _pumpFeed(tester, variant);
       await tester.longPress(find.byType(CompactLogCard).first);
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump(const Duration(milliseconds: 400));
     },
-    proof: <A11yProof>[A11yProof(_revealedPill)],
+    proof: <A11yProof>[A11yProof(_openLogMenuDelete)],
   ),
   ...a11yInBothLayouts(
     id: 'a4-calendar-month',

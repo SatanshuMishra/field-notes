@@ -41,20 +41,25 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('the card reveal keeps its long press and custom actions', (
+  testWidgets('the card frame keeps its long press and custom actions', (
     WidgetTester tester,
   ) async {
     final SemanticsHandle handle = tester.ensureSemantics();
     int edits = 0;
     int deletes = 0;
+    int longPresses = 0;
     await tester.pumpWidget(
       MaterialApp(
         home: Material(
           child: Center(
-            child: LogActionsReveal(
+            child: LogCardFrame(
               onOpen: () {},
-              onEdit: () => edits++,
-              onDelete: () => deletes++,
+              onLongPress: () => longPresses++,
+              semanticActions: <CustomSemanticsAction, VoidCallback>{
+                const CustomSemanticsAction(label: 'Edit note'): () => edits++,
+                const CustomSemanticsAction(label: 'Delete log'): () =>
+                    deletes++,
+              },
               builder: (BuildContext context, bool hovered) =>
                   const SizedBox(width: 200, height: 100),
             ),
@@ -64,24 +69,27 @@ void main() {
     );
     await tester.pump();
 
-    final FinderBase<SemanticsNode> reveal = find.semantics.byPredicate(
+    final FinderBase<SemanticsNode> frame = find.semantics.byPredicate(
       (SemanticsNode node) =>
           node.getSemanticsData().hasAction(SemanticsAction.customAction) &&
           node.getSemanticsData().hasAction(SemanticsAction.longPress),
     );
-    expect(reveal, findsOne);
+    expect(frame, findsOne);
     tester.semantics.customAction(
-      reveal,
+      frame,
       const CustomSemanticsAction(label: 'Edit note'),
     );
     await tester.pump();
     tester.semantics.customAction(
-      reveal,
-      const CustomSemanticsAction(label: 'Delete entry'),
+      frame,
+      const CustomSemanticsAction(label: 'Delete log'),
     );
+    await tester.pump();
+    tester.semantics.longPress(frame);
     await tester.pump();
     expect(edits, 1);
     expect(deletes, 1);
+    expect(longPresses, 1);
     handle.dispose();
   });
 }

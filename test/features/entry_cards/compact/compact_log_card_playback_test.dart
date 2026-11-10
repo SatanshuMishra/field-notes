@@ -160,12 +160,14 @@ void main() {
       addTearDown(mouse.removePointer);
 
       final Offset center = tester.getCenter(find.byType(VoiceBody));
+      final Offset stamp = tester.getCenter(find.textContaining('morning'));
       await mouse.moveTo(center);
       await tester.pump();
       await tester.pump();
-      expectStillPlaying(restingTop - 1);
+      expectStillPlaying(restingTop);
 
-      await mouse.moveTo(center + const Offset(6, 0));
+      await mouse.moveTo(stamp);
+      await tester.pump();
       await tester.pump();
       expectStillPlaying(restingTop - 1);
 
@@ -174,7 +176,7 @@ void main() {
       await tester.pump();
       expectStillPlaying(restingTop);
 
-      await mouse.moveTo(center);
+      await mouse.moveTo(stamp);
       await tester.pump();
       await tester.pump();
       expectStillPlaying(restingTop - 1);
@@ -220,6 +222,14 @@ void main() {
         of: find.byKey(const ValueKey<String>('feed')),
         matching: find.byType(VoiceBody),
       );
+      final Finder dayStamp = find.descendant(
+        of: find.byKey(const ValueKey<String>('day')),
+        matching: find.textContaining('morning'),
+      );
+      final Finder feedStamp = find.descendant(
+        of: find.byKey(const ValueKey<String>('feed')),
+        matching: find.textContaining('morning'),
+      );
       final double dayTop = tester.getTopLeft(dayBody).dy;
       final double feedTop = tester.getTopLeft(feedBody).dy;
       final State<StatefulWidget> dayState = tester.state(dayBody);
@@ -231,14 +241,14 @@ void main() {
       await mouse.addPointer(location: const Offset(1, 1));
       addTearDown(mouse.removePointer);
 
-      await mouse.moveTo(tester.getCenter(dayBody));
+      await mouse.moveTo(tester.getCenter(dayStamp));
       await tester.pump();
       await tester.pump();
       expect(tester.getTopLeft(dayBody).dy, dayTop - 1);
       expect(tester.state(dayBody), same(dayState));
       expect(tester.getTopLeft(feedBody).dy, feedTop);
 
-      await mouse.moveTo(tester.getCenter(feedBody));
+      await mouse.moveTo(tester.getCenter(feedStamp));
       await tester.pump();
       await tester.pump();
       expect(tester.getTopLeft(feedBody).dy, feedTop);

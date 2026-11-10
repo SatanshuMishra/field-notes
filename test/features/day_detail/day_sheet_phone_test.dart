@@ -387,7 +387,7 @@ void main() {
 
       expect(find.byType(CompactLogCard), findsOneWidget);
       final Rect quiet = tester.getRect(find.byType(PhoneSheet));
-      expect(quiet.height, lessThan(_phone.height / 2));
+      expect(quiet.height, lessThan(_phone.height * 0.6));
       expect(quiet.bottom, _phone.height);
 
       await tester.pumpWidget(const SizedBox());

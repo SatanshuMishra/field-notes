@@ -78,17 +78,21 @@ FakeJournalRepository _twoNotes() => FakeJournalRepository(
 );
 
 void main() {
-  testWidgets('a revealed day pill lies inside every reading-order frame', (
+  testWidgets('the day card actions lie inside every reading-order frame', (
     WidgetTester tester,
   ) async {
     final SemanticsHandle semantics = tester.ensureSemantics();
     await tester.pumpWidget(_panelApp(_twoNotes()));
     await tester.pumpAndSettle();
 
+    expectInsideEveryReadingFrame(tester, logActionsOpenLabel);
+    expectInsideEveryReadingFrame(tester, logActionsMoreLabel);
     for (int card = 0; card < 2; card += 1) {
       await _revealPillOn(tester, find.byType(CompactLogCard).at(card));
       expectInsideEveryReadingFrame(tester, logActionsEditLabel);
-      expectInsideEveryReadingFrame(tester, logActionsDeleteLabel);
+      expectInsideEveryReadingFrame(tester, logMenuDeleteLabel);
+      await tester.tapAt(const Offset(4, 4));
+      await tester.pumpAndSettle();
     }
     semantics.dispose();
   });

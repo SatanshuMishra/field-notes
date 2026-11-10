@@ -59,7 +59,7 @@ void main() {
       expect(preview.isLong, isFalse);
     });
 
-    test('a long note leads with its first sentence cut at 72 characters', () {
+    test('a note with no heading has no title and keeps its first sentence', () {
       final String firstSentence = '${_words(99)}.';
       const String secondSentence = 'Second thoughts arrived after breakfast.';
       final Entry entry = _textEntry(
@@ -69,9 +69,57 @@ void main() {
 
       final LogPreview preview = logPreviewOf(entry);
 
-      expect(preview.lead.length, lessThanOrEqualTo(73));
-      expect(preview.lead, endsWith('…'));
-      expect(preview.snippet, startsWith('Second thoughts'));
+      expect(preview.title, isEmpty);
+      expect(preview.snippet, '$firstSentence $secondSentence');
+    });
+
+    test('a long title is cut at 72 characters', () {
+      final Entry entry = _textEntry(
+        id: 'e2b',
+        textContent: '# ${_words(99)}\n\nThe body.',
+      );
+
+      final LogPreview preview = logPreviewOf(entry);
+
+      expect(preview.title.length, lessThanOrEqualTo(73));
+      expect(preview.title, endsWith('…'));
+      expect(preview.snippet, 'The body.');
+    });
+
+    test('a saved title stands above the whole note, heading included', () {
+      const String paragraph = 'The garden was quiet this morning.';
+      final int at = _createdAt(hour: 9, minute: 0);
+      final Entry entry = Entry(
+        id: 'e2c',
+        dayId: 'd1',
+        type: EntryType.text,
+        title: 'Saved name',
+        textContent: '# Lorem ipsum\n\n$paragraph',
+        createdAt: at,
+        updatedAt: at,
+      );
+
+      final LogPreview preview = logPreviewOf(entry);
+
+      expect(preview.title, 'Saved name');
+      expect(preview.snippet, 'Lorem ipsum $paragraph');
+    });
+
+    test('voice and video logs carry only a title they were given', () {
+      final int at = _createdAt(hour: 21, minute: 0);
+      Entry media(EntryType type, String? title) => Entry(
+        id: 'm-$type-$title',
+        dayId: 'd1',
+        type: type,
+        title: title,
+        createdAt: at,
+        updatedAt: at,
+      );
+
+      expect(logPreviewOf(media(EntryType.video, null)).title, isEmpty);
+      expect(logPreviewOf(media(EntryType.voice, '   ')).title, isEmpty);
+      expect(logPreviewOf(media(EntryType.video, ' Pier ')).title, 'Pier');
+      expect(logPreviewOf(media(EntryType.voice, 'Walk')).title, 'Walk');
     });
 
     test('a note with a photo is long however short its text', () {
@@ -98,12 +146,12 @@ void main() {
 
       final LogPreview preview = logPreviewOf(entry);
 
-      expect(preview.lead, 'Lorem ipsum');
+      expect(preview.title, 'Lorem ipsum');
       expect(preview.snippet, paragraph);
     });
 
     test(
-        'photo captions never reach the lead, the snippet or the word count',
+        'photo captions never reach the title, the snippet or the word count',
         () {
       final String caption =
           List<String>.generate(80, (int i) => 'caption$i').join(' ');
@@ -116,7 +164,7 @@ void main() {
 
       final LogPreview preview = logPreviewOf(entry);
 
-      expect(preview.lead, isNot(contains('caption')));
+      expect(preview.title, isNot(contains('caption')));
       expect(preview.snippet, isNot(contains('caption')));
       expect(preview.meta, isNot(contains('min read')));
     });

@@ -1,2 +1,4 @@
+missing-role | a3-card-actions | Dismiss | <root> # Flutter's own control
+missing-role | a3-card-actions@2x | Dismiss | <root> # Flutter's own control
 missing-role | a5-calendar-picker | Dismiss month picker | <root> # Flutter's own control
 missing-role | a5-calendar-picker@2x | Dismiss month picker | <root> # Flutter's own control

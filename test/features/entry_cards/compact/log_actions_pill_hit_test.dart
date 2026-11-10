@@ -2,68 +2,26 @@ import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const Key _cardKey = ValueKey<String>('card');
-
-Future<List<String>> _pumpCards(WidgetTester tester) async {
-  final List<String> taps = <String>[];
-  await tester.pumpWidget(
-    MaterialApp(
-      home: Scaffold(
-        body: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: <Widget>[
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => taps.add('above'),
-                child: const SizedBox(width: 371, height: 120),
-              ),
-              const SizedBox(height: 12),
-              LogActionsReveal(
-                onOpen: () {},
-                onEdit: () => taps.add('edit'),
-                onDelete: () => taps.add('delete'),
-                builder: (BuildContext context, bool hovered) =>
-                    GestureDetector(
-                      key: _cardKey,
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => taps.add('card'),
-                      child: const SizedBox(width: 371, height: 139),
-                    ),
-              ),
-            ],
+void main() {
+  testWidgets('a pill that grows down reaches no higher than its painted top', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: LogActionsPill(
+              key: logActionsPillKey,
+              onEdit: () {},
+              onDelete: () {},
+              growDown: true,
+            ),
           ),
         ),
       ),
-    ),
-  );
-  await tester.pump();
-  return taps;
-}
+    );
+    await tester.pump();
 
-void main() {
-  testWidgets('a hidden pill does not swallow taps on the card', (
-    WidgetTester tester,
-  ) async {
-    final List<String> taps = await _pumpCards(tester);
-    final Rect card = tester.getRect(find.byKey(_cardKey));
-    for (final Offset point in <Offset>[
-      card.topRight + const Offset(-85, 10),
-      card.topRight + const Offset(-20, 5),
-      card.topRight + const Offset(-60, 30),
-    ]) {
-      await tester.tapAt(point);
-      await tester.pump(const Duration(milliseconds: 400));
-    }
-    expect(taps, <String>['card', 'card', 'card']);
-  });
-
-  testWidgets('a shown pill reaches no higher than its painted top', (
-    WidgetTester tester,
-  ) async {
-    await _pumpCards(tester);
-    await tester.longPress(find.byKey(_cardKey));
-    await tester.pumpAndSettle();
     final Rect pill = tester.getRect(find.byKey(logActionsPillKey));
     final Rect painted = tester.getRect(
       find

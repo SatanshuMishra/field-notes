@@ -247,7 +247,7 @@ void main() {
   testWidgets('a video card opens paused', (WidgetTester tester) async {
     final _Players players = await _openDay(tester, entries: <Entry>[_video()]);
 
-    await tester.tap(_inCard('video-1', find.text('A video from the morning')));
+    await tester.tap(_inCard('video-1', find.text('Watch ›')));
     await tester.pumpAndSettle();
 
     expect(_inPane(find.byType(VideoViewerView)), findsOneWidget);

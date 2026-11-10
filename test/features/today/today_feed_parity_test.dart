@@ -10,7 +10,6 @@ import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/today/today_entry_feed.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -82,12 +81,10 @@ Finder _cardFor(String text) => find.ancestor(
       matching: find.byType(CompactLogCard),
     );
 
-Future<void> _hover(WidgetTester tester, Finder card) async {
-  final TestGesture mouse =
-      await tester.createGesture(kind: PointerDeviceKind.mouse);
-  addTearDown(mouse.removePointer);
-  await mouse.addPointer(location: Offset.zero);
-  await mouse.moveTo(tester.getCenter(card));
+Future<void> _openMore(WidgetTester tester, Finder card) async {
+  await tester.tap(
+    find.descendant(of: card, matching: find.byKey(logActionsMoreKey)),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -115,7 +112,7 @@ void main() {
     expect(find.byType(DayDetailPanel), findsNothing);
   });
 
-  testWidgets('the feed lists compact cards with the manage pill',
+  testWidgets('the feed lists compact cards with a More menu',
       (WidgetTester tester) async {
     await pumpToday(
       tester,
@@ -129,7 +126,7 @@ void main() {
         tester.widget<CompactLogCard>(_cardFor('morning walk'));
     expect(card.density, CompactLogDensity.feed);
 
-    await _hover(tester, _cardFor('morning walk'));
+    await _openMore(tester, _cardFor('morning walk'));
 
     expect(find.byKey(logActionsDeleteKey).hitTestable(), findsOneWidget);
   });
@@ -145,7 +142,7 @@ void main() {
       overrides: _overrides(repository),
     );
 
-    await _hover(tester, _cardFor('coffee on the porch'));
+    await _openMore(tester, _cardFor('coffee on the porch'));
     await tester.tap(find.byKey(logActionsDeleteKey).hitTestable());
     await tester.pumpAndSettle();
 
@@ -164,7 +161,7 @@ void main() {
     await _drainToast(tester);
   });
 
-  testWidgets("the pill's Edit opens edit mode directly with Cancel",
+  testWidgets("the More menu's Edit opens edit mode directly with Cancel",
       (WidgetTester tester) async {
     await pumpToday(
       tester,
@@ -173,7 +170,7 @@ void main() {
       overrides: _overrides(FakeJournalRepository(entries: _entries())),
     );
 
-    await _hover(tester, _cardFor('coffee on the porch'));
+    await _openMore(tester, _cardFor('coffee on the porch'));
     await tester.tap(find.byKey(logActionsEditKey).hitTestable());
     await tester.pumpAndSettle();
 
