@@ -9,7 +9,7 @@ import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart'
-    show MediaResolver, logPreviewOf, videoSlotsProvider;
+    show MediaResolver, logOwnTitle, videoSlotsProvider;
 import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
@@ -140,7 +140,7 @@ class _DayMediaPaneState extends ConsumerState<DayMediaPane> {
       child: DayPaneFrame(
         entries: widget.entries,
         entry: entry,
-        title: logPreviewOf(entry).heading,
+        title: logOwnTitle(entry),
         actions: <Widget>[_FullScreenButton(onPressed: _openFullScreen)],
         onDelete: () => widget.onDelete(entry),
         onStep: widget.onStep,

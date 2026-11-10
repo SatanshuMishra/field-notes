@@ -274,7 +274,6 @@ void main() {
           .id,
       'voice-1',
     );
-    expect(_inPane(find.text('Morning voice log')), findsOneWidget);
     final _TrackingAudioPlayer resumed = players.voice.last;
     expect(resumed.seekCalls, <Duration>[const Duration(seconds: 42)]);
     expect(resumed.playCalls, 0);

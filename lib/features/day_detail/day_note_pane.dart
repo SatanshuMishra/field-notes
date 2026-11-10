@@ -7,7 +7,7 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart'
-    show LogActionsPill, MediaResolver, logActionsPillTapInset, logPreviewOf;
+    show LogActionsPill, MediaResolver, logActionsPillTapInset, logOwnTitle;
 import 'package:field_notes/features/log_viewer/note_reading.dart';
 
 const String dayNotePanePrompt = 'Choose a log to read it here.';
@@ -112,7 +112,7 @@ class DayNotePane extends StatelessWidget {
     return DayPaneFrame(
       entries: entries,
       entry: note,
-      title: logPreviewOf(note).heading,
+      title: logOwnTitle(note),
       onEdit: () => onEdit(note),
       onDelete: () => onDelete(note),
       onStep: onStep,
@@ -143,7 +143,7 @@ class DayPaneFrame extends StatelessWidget {
     super.key,
     required this.entries,
     required this.entry,
-    required this.title,
+    this.title,
     required this.onDelete,
     required this.onStep,
     required this.body,
@@ -153,7 +153,7 @@ class DayPaneFrame extends StatelessWidget {
 
   final List<Entry> entries;
   final Entry entry;
-  final String title;
+  final String? title;
   final VoidCallback onDelete;
   final ValueChanged<Entry> onStep;
   final Widget body;
@@ -200,6 +200,7 @@ class DayPaneFrame extends StatelessWidget {
       0,
       _headerVerticalPadding - reach.top,
     );
+    final String? shownTitle = title;
     return Padding(
       padding: EdgeInsetsDirectional.only(
         start: _headerHorizontalPadding,
@@ -208,23 +209,25 @@ class DayPaneFrame extends StatelessWidget {
       child: Row(
         children: <Widget>[
           Expanded(
-            child: Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(
-                0,
-                _headerVerticalPadding,
-                math.max<double>(0, _headerGap - reach.left),
-                _headerVerticalPadding,
-              ),
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.textStyles.headlineSerif.copyWith(
-                  fontSize: _titleSize,
-                  height: _titleLineHeight,
-                ),
-              ),
-            ),
+            child: shownTitle == null
+                ? const SizedBox.shrink()
+                : Padding(
+                    padding: EdgeInsetsDirectional.fromSTEB(
+                      0,
+                      _headerVerticalPadding,
+                      math.max<double>(0, _headerGap - reach.left),
+                      _headerVerticalPadding,
+                    ),
+                    child: Text(
+                      shownTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textStyles.headlineSerif.copyWith(
+                        fontSize: _titleSize,
+                        height: _titleLineHeight,
+                      ),
+                    ),
+                  ),
           ),
           for (final Widget action in actions)
             Padding(

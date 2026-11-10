@@ -59,6 +59,7 @@ Entry _entry({
   required String id,
   required EntryType type,
   required int hour,
+  String? title,
   String? textContent,
   String? mediaId,
   int? durationMs,
@@ -67,6 +68,7 @@ Entry _entry({
     id: id,
     dayId: 'day-1',
     type: type,
+    title: title,
     textContent: textContent,
     mediaId: mediaId,
     durationMs: durationMs,
@@ -86,10 +88,11 @@ Entry _voice({int hour = 9}) => _entry(
   durationMs: 65000,
 );
 
-Entry _video({int hour = 11}) => _entry(
+Entry _video({int hour = 11, String? title}) => _entry(
   id: 'video-1',
   type: EntryType.video,
   hour: hour,
+  title: title,
   mediaId: _videoMedia,
   durationMs: 4000,
 );
@@ -278,7 +281,14 @@ void main() {
   testWidgets("the media pane has the note pane's chrome once", (
     WidgetTester tester,
   ) async {
-    await _openDay(tester, entries: <Entry>[_note(), _voice(), _video()]);
+    await _openDay(
+      tester,
+      entries: <Entry>[
+        _note(),
+        _voice(),
+        _video(title: 'Harbour swim'),
+      ],
+    );
 
     await tester.tap(
       _inCard('voice-1', find.text('9:12 AM · morning · voice')),
@@ -286,7 +296,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_inPane(find.byType(VoicePlayerView)), findsOneWidget);
-    expect(_inPane(find.text('Morning voice log')), findsOneWidget);
+    expect(_inPane(find.text('Morning voice log')), findsNothing);
     expect(_inPane(find.byTooltip('Full screen')), findsOneWidget);
     expect(_inPane(find.byKey(logActionsDeleteKey)), findsOneWidget);
     expect(_inPane(find.byType(LogStepFooter)), findsOneWidget);
@@ -295,6 +305,13 @@ void main() {
     expect(_inPane(find.text('2 of 3')), findsOneWidget);
     expect(find.byKey(logViewerBackKey), findsNothing);
     expect(find.text(logViewerBackLabel), findsNothing);
+
+    await tester.tap(_inPane(find.byKey(logViewerLaterKey)));
+    await tester.pumpAndSettle();
+
+    expect(_inPane(find.byType(VideoViewerView)), findsOneWidget);
+    expect(_inPane(find.text('Harbour swim')), findsOneWidget);
+    expect(_inPane(find.text('Morning video')), findsNothing);
   }, variant: _mac);
   testWidgets('card play on a finished video starts it over', (
     WidgetTester tester,

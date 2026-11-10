@@ -141,7 +141,15 @@ void main() {
       _darkInk,
     );
 
-    final Entry entry = _note('Watered the roses.');
+    const Entry entry = Entry(
+      id: 'e1',
+      dayId: 'd1',
+      type: EntryType.text,
+      title: 'Rose bed',
+      textContent: 'Watered the roses.',
+      createdAt: 0,
+      updatedAt: 0,
+    );
     for (final TargetPlatform platform in <TargetPlatform>[
       TargetPlatform.macOS,
       TargetPlatform.android,
@@ -184,7 +192,7 @@ void main() {
                 .color;
       expect(paper, _darkPaper, reason: '$platform');
       expect(
-        _textColour(tester, logPreviewOf(entry).heading),
+        _textColour(tester, logOwnTitle(entry)!),
         _darkInk,
         reason: '$platform',
       );

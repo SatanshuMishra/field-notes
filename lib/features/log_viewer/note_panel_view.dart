@@ -11,7 +11,7 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart'
-    show LogActionsPill, MediaResolver, logActionsPillTapInset, logPreviewOf;
+    show LogActionsPill, MediaResolver, logActionsPillTapInset, logOwnTitle;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show logViewerBackKey;
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
@@ -213,7 +213,7 @@ class NotePanelView extends StatelessWidget {
             ),
           ),
           Text(
-            logPreviewOf(scene.entry).heading,
+            logOwnTitle(scene.entry) ?? '',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: textStyles.headlineSerif.copyWith(

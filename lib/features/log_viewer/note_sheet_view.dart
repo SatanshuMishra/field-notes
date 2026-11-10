@@ -13,7 +13,7 @@ import 'package:field_notes/features/entry_cards/entry_cards.dart'
         logActionsDeleteKey,
         logActionsEditKey,
         logActionsEditLabel,
-        logPreviewOf;
+        logOwnTitle;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show logViewerBackKey, logViewerDeleteLabel;
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
@@ -158,7 +158,7 @@ class NoteSheetView extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      logPreviewOf(scene.entry).heading,
+                      logOwnTitle(scene.entry) ?? '',
                       style: textStyles.headlineSerif.copyWith(
                         fontSize: _titleSize,
                         height: _titleLineHeight,

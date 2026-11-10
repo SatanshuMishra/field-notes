@@ -18,6 +18,8 @@ import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show LogViewerPanel;
+import 'package:field_notes/features/log_viewer/note_reading.dart'
+    show NoteReadingBody;
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
@@ -65,6 +67,10 @@ List<Entry> _threeNotes() {
     _entry(id: 'entry-3', hour: 19, textContent: 'Fireflies at dusk.'),
   ];
 }
+
+Finder _reading(String entryId) => find.byWidgetPredicate(
+  (Widget widget) => widget is NoteReadingBody && widget.entry.id == entryId,
+);
 
 class _DayOpener extends StatelessWidget {
   const _DayOpener();
@@ -308,14 +314,14 @@ void main() {
     await tester.tap(find.text('8:12 AM · morning · note'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(_reading('entry-1'), findsOneWidget);
     expect(_dayTitleInPanel(), findsNothing);
     expect(find.byType(DayDetailPanel), findsNothing);
 
     await tester.tap(find.text('Back'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Morning note'), findsNothing);
+    expect(_reading('entry-1'), findsNothing);
     expect(_dayTitleInPanel(), findsOneWidget);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
@@ -330,7 +336,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(dayNotePaneKey),
-        matching: find.text('Morning note'),
+        matching: _reading('entry-1'),
       ),
       findsOneWidget,
     );
@@ -345,12 +351,12 @@ void main() {
 
     await tester.tap(find.text('8:12 AM · morning · note'));
     await tester.pumpAndSettle();
-    expect(find.text('Morning note'), findsOneWidget);
+    expect(_reading('entry-1'), findsOneWidget);
 
     await tester.tapAt(const Offset(4, 4));
     await tester.pumpAndSettle();
 
-    expect(find.text('Morning note'), findsNothing);
+    expect(_reading('entry-1'), findsNothing);
     expect(find.byType(DayDetailPanel, skipOffstage: false), findsNothing);
     expect(find.text('open day'), findsOneWidget);
   }, variant: _bothLayouts);

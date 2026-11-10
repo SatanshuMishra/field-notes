@@ -67,7 +67,6 @@ final class LogPreview {
     required this.firstPhotoReference,
     required this.meta,
     required this.openLabel,
-    required this.heading,
   });
 
   final bool isLong;
@@ -77,14 +76,12 @@ final class LogPreview {
   final String? firstPhotoReference;
   final String meta;
   final String openLabel;
-  final String heading;
 }
 
 LogPreview logPreviewOf(Entry entry) {
-  final String heading = _headingFor(entry);
   switch (entry.type) {
     case EntryType.text:
-      return _textPreview(entry, heading);
+      return _textPreview(entry);
     case EntryType.voice:
       return LogPreview(
         isLong: false,
@@ -94,7 +91,6 @@ LogPreview logPreviewOf(Entry entry) {
         firstPhotoReference: null,
         meta: '',
         openLabel: '',
-        heading: heading,
       );
     case EntryType.video:
       return LogPreview(
@@ -107,24 +103,11 @@ LogPreview logPreviewOf(Entry entry) {
             ? formatMediaDuration(entry.durationMs)
             : '',
         openLabel: 'Watch',
-        heading: heading,
       );
   }
 }
 
-String _headingFor(Entry entry) {
-  final DateTime at = DateTime.fromMillisecondsSinceEpoch(entry.createdAt);
-  final String part = partOfDayFor(at.hour);
-  final String capitalisedPart = part[0].toUpperCase() + part.substring(1);
-  final String kind = switch (entry.type) {
-    EntryType.text => 'note',
-    EntryType.voice => 'voice log',
-    EntryType.video => 'video',
-  };
-  return '$capitalisedPart $kind';
-}
-
-LogPreview _textPreview(Entry entry, String heading) {
+LogPreview _textPreview(Entry entry) {
   final String source = entry.textContent ?? '';
   final MdTree tree = parseNoteTree(source, tables: tablesEnabled);
   final List<NotePhoto> photos = notePhotosOf(tree);
@@ -174,7 +157,6 @@ LogPreview _textPreview(Entry entry, String heading) {
     firstPhotoReference: firstPhoto?.reference,
     meta: metaParts.join(' · '),
     openLabel: 'Read',
-    heading: heading,
   );
 }
 
