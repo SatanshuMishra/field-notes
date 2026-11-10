@@ -5,8 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
 import 'audio_playback.dart';
+import 'video_playback.dart' show TunablePlayer;
 
-class JustAudioEntryPlayer implements EntryAudioPlayer {
+const double _fullTrackVolume = 1.0;
+
+class JustAudioEntryPlayer implements EntryAudioPlayer, TunablePlayer {
   JustAudioEntryPlayer({AudioPlayer? player, ValueListenable<double>? volume})
     : _player = player ?? AudioPlayer(),
       _volume = volume ?? playbackVolume {
@@ -16,10 +19,20 @@ class JustAudioEntryPlayer implements EntryAudioPlayer {
 
   final AudioPlayer _player;
   final ValueListenable<double> _volume;
+  double _trackVolume = _fullTrackVolume;
 
   void _applyVolume() {
-    unawaited(_player.setVolume(_volume.value));
+    unawaited(_player.setVolume(_volume.value * _trackVolume));
   }
+
+  @override
+  Future<void> setVolume(double volume) {
+    _trackVolume = volume;
+    return _player.setVolume(_volume.value * _trackVolume);
+  }
+
+  @override
+  Future<void> setSpeed(double speed) => _player.setSpeed(speed);
 
   @override
   Future<void> load(String filePath) async {

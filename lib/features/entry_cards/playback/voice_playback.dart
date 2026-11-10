@@ -8,6 +8,8 @@ import 'package:field_notes/features/entry_cards/media/live_media.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/audio_playback.dart';
 import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
+import 'package:field_notes/features/entry_cards/playback/video_playback.dart'
+    show PlaybackTuning, applyPlaybackTuning, playbackTuning;
 
 class VoicePlayback extends ChangeNotifier {
   VoicePlayback({
@@ -15,12 +17,16 @@ class VoicePlayback extends ChangeNotifier {
     required this._resolver,
     required this._playerFactory,
     PlaybackFocus? focus,
-  }) : _focus = focus ?? playbackFocus {
+    PlaybackTuning? tuning,
+  }) : _focus = focus ?? playbackFocus,
+       _tuning = tuning ?? playbackTuning {
+    _tuning.addListener(_applyTuning);
     _startPrepare();
   }
 
   final EntryAudioPlayerFactory _playerFactory;
   final PlaybackFocus _focus;
+  final PlaybackTuning _tuning;
   final MediaArrivalWatch _arrivals = MediaArrivalWatch();
   Entry _entry;
   MediaResolver _resolver;
@@ -35,6 +41,8 @@ class VoicePlayback extends ChangeNotifier {
   int _generation = 0;
 
   AudioPlaybackState get state => _state;
+
+  PlaybackTuning get tuning => _tuning;
 
   Duration get position => _position;
 
@@ -133,6 +141,7 @@ class VoicePlayback extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _generation += 1;
+    _tuning.removeListener(_applyTuning);
     _arrivals.cancel();
     _teardownPlayer();
     super.dispose();
@@ -224,9 +233,12 @@ class VoicePlayback extends ChangeNotifier {
     if (!_isCurrent(gen)) {
       return;
     }
+    _applyTuning();
     _ready = true;
     notifyListeners();
   }
+
+  void _applyTuning() => applyPlaybackTuning(_player, _tuning);
 
   bool _isCurrent(int gen) => !_disposed && gen == _generation;
 

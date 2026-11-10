@@ -10,6 +10,7 @@ import 'video_playback.dart';
 
 const double _fallbackAspectRatio = 1.0;
 const double _fallbackSurfaceHeight = 1000.0;
+const double _fullTrackVolume = 1.0;
 
 VideoPlaybackState videoStateFromValue({
   required bool hasError,
@@ -30,7 +31,7 @@ VideoPlaybackState videoStateFromValue({
   return isPlaying ? VideoPlaybackState.playing : VideoPlaybackState.paused;
 }
 
-class VideoPlayerEntryPlayer implements EntryVideoPlayer {
+class VideoPlayerEntryPlayer implements EntryVideoPlayer, TunablePlayer {
   VideoPlayerEntryPlayer({ValueListenable<double>? volume})
     : _volume = volume ?? playbackVolume {
     _volume.addListener(_applyVolume);
@@ -44,6 +45,7 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
       StreamController<Duration>.broadcast();
   VideoPlaybackState _state = VideoPlaybackState.idle;
   Duration? _lastPosition;
+  double _trackVolume = _fullTrackVolume;
 
   @override
   VideoPlaybackState get state => _state;
@@ -74,7 +76,18 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
     if (controller == null) {
       return;
     }
-    unawaited(controller.setVolume(_volume.value));
+    unawaited(controller.setVolume(_volume.value * _trackVolume));
+  }
+
+  @override
+  Future<void> setVolume(double volume) async {
+    _trackVolume = volume;
+    await _controller?.setVolume(_volume.value * _trackVolume);
+  }
+
+  @override
+  Future<void> setSpeed(double speed) async {
+    await _controller?.setPlaybackSpeed(speed);
   }
 
   void _onValue() {
