@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail_header.dart';
@@ -277,12 +278,44 @@ void main() {
       final Rect rect = tester.getRect(card);
       expect(rect.left, greaterThanOrEqualTo(sheet.left), reason: id);
       expect(rect.right, lessThanOrEqualTo(sheet.right), reason: id);
-      final Rect delete = tester.getRect(find.byKey(daySheetDeleteKeyFor(id)));
-      expect(delete.right, lessThanOrEqualTo(rect.right), reason: id);
-      expect(delete.top, lessThan(rect.top), reason: id);
-      expect(delete.bottom, greaterThan(rect.top), reason: id);
+      final Rect more = tester.getRect(
+        find.descendant(of: card, matching: find.byKey(logActionsMoreKey)),
+      );
+      expect(more.left, greaterThanOrEqualTo(rect.left), reason: id);
+      expect(more.right, lessThanOrEqualTo(rect.right), reason: id);
+      expect(more.top, greaterThanOrEqualTo(rect.top), reason: id);
     }
     expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('on the phone a log offers Edit and Delete only in its More', (
+    WidgetTester tester,
+  ) async {
+    _useWindow(tester, const Size(360, 740));
+    await _openDay(
+      tester,
+      entries: <Entry>[
+        _entry(id: 'entry-1', hour: 8, textContent: 'Watered the roses.'),
+      ],
+    );
+    Finder pressableLabelled(String label) => find.byWidgetPredicate(
+      (Widget widget) => widget is Pressable && widget.label == label,
+    );
+
+    expect(find.byType(PhoneSheet), findsOneWidget);
+    expect(pressableLabelled(logActionsEditLabel), findsNothing);
+    expect(pressableLabelled(logActionsDeleteLabel), findsNothing);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(CompactLogCard),
+        matching: find.byKey(logActionsMoreKey),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(logActionsEditLabel), findsOneWidget);
+    expect(find.text(logMenuDeleteLabel), findsOneWidget);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets('the day modal lists compact cards', (WidgetTester tester) async {

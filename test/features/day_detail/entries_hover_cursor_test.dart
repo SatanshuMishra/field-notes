@@ -470,20 +470,6 @@ void main() {
 
       await _expectRows(tester, mouse, <_Row>[
         _Row(
-          'Edit note',
-          find.byKey(daySheetEditKeyFor(_noteId)),
-          _lightRow,
-          _Shape.rounded,
-          radius: 10,
-        ),
-        _Row(
-          'Delete entry',
-          find.byKey(daySheetDeleteKeyFor(_noteId)),
-          _lightRow,
-          _Shape.rounded,
-          radius: 10,
-        ),
-        _Row(
           'Close',
           find.byKey(daySheetCloseKey),
           _lightRow,
