@@ -80,16 +80,26 @@ typedef SidebarSyncStatusBuilder = Widget Function(
   bool collapsed,
 );
 
+const Key sidebarSyncStatusKey = ValueKey<String>('sidebar-sync-status');
 const Key sidebarSyncDotKey = ValueKey<String>('sidebar-sync-dot');
+const Key sidebarSyncSpinnerKey = ValueKey<String>('sidebar-sync-spinner');
 const Key settingsBadgeKey = ValueKey<String>('settings-badge');
-const Key sidebarSyncLineKey = ValueKey<String>('sidebar-sync-line');
 
+const double sidebarRailBoxExtent = 44;
+const double sidebarSyncBoxMinHeight = 40;
+
+const double _railGlyphExtent = 18;
 const double _syncGap = 8;
+const double _syncBoxPadding = 10;
+const double _syncMarkSlot = 12;
+const double _syncMarkGap = 7;
 const double _syncDotSize = 8;
-const double _syncLineDotSize = 6;
-const double _syncLineDotGap = 6;
-const double _syncAddressGap = 2;
+const double _syncSpinnerStroke = 1.8;
 const double _windowTitleMaxTextScale = 1.5;
+
+const BorderRadius _syncBoxRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusIconButton),
+);
 
 double sidebarOpenWidth(TextScaler scaler) =>
     scaler.scale(shellSidebarOpenWidth);
@@ -485,6 +495,13 @@ class _SidebarShellState extends State<SidebarShell> {
     final FieldNotesColors colors = context.colors;
     final bool settingsSelected = widget.selected == ShellDestination.settings;
     final bool soundOn = widget.soundOn;
+    final bool collapsed = _collapsed;
+    final double extent = collapsed
+        ? sidebarRailBoxExtent
+        : iconStickerButtonExtent;
+    final double glyphExtent = collapsed
+        ? _railGlyphExtent
+        : iconStickerGlyphExtent;
     final List<Widget> buttons = <Widget>[
       SettingsBadged(
         badged: widget.settingsBadge,
@@ -496,6 +513,8 @@ class _SidebarShellState extends State<SidebarShell> {
           semanticLabel: settingsSemanticLabel(badged: widget.settingsBadge),
           selected: settingsSelected,
           onPressed: () => widget.onSelect(ShellDestination.settings),
+          extent: extent,
+          glyphExtent: glyphExtent,
         ),
       ),
       IconStickerButton(
@@ -505,9 +524,11 @@ class _SidebarShellState extends State<SidebarShell> {
         background: soundOn ? colors.cardLight : colors.cardWarm,
         semanticLabel: soundOn ? _soundOnLabel : _soundOffLabel,
         onPressed: widget.onSound,
+        extent: extent,
+        glyphExtent: glyphExtent,
       ),
     ];
-    if (_collapsed) {
+    if (collapsed) {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -746,85 +767,123 @@ class _PanelGlowScale extends GradientTransform {
   }
 }
 
-class SidebarSyncLine extends StatelessWidget {
-  const SidebarSyncLine({
+class SidebarSyncBox extends StatelessWidget {
+  const SidebarSyncBox({
     super.key,
-    required this.status,
+    required this.headline,
     required this.tone,
     required this.collapsed,
-    this.address,
+    required this.onPressed,
+    this.detail,
+    this.busy = false,
   });
 
-  final String status;
+  final String headline;
+  final String? detail;
   final Color tone;
+  final bool busy;
   final bool collapsed;
-  final String? address;
+  final VoidCallback onPressed;
+
+  String get words => switch (detail) {
+    final String detail => '$headline · $detail',
+    null => headline,
+  };
 
   @override
   Widget build(BuildContext context) {
-    final Widget dot = DecoratedBox(
-      decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
-      child: SizedBox.square(
-        dimension: collapsed ? _syncDotSize : _syncLineDotSize,
-      ),
-    );
-    if (collapsed) {
-      return Padding(
-        padding: const EdgeInsets.only(top: _syncGap),
-        child: Center(
-          child: Semantics(
-            label: status,
-            container: true,
-            child: Tooltip(
-              key: sidebarSyncDotKey,
-              message: status,
-              excludeFromSemantics: true,
-              child: dot,
+    final FieldNotesColors colors = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(top: _syncGap),
+      child: Pressable(
+        key: sidebarSyncStatusKey,
+        label: words,
+        iconOnly: collapsed,
+        onPressed: onPressed,
+        borderRadius: _syncBoxRadius,
+        paintsHover: false,
+        builder: (BuildContext context, bool hovered) => DecoratedBox(
+          position: DecorationPosition.foreground,
+          decoration: BoxDecoration(
+            border: context.shadows.outline,
+            borderRadius: _syncBoxRadius,
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.cardLight,
+              borderRadius: _syncBoxRadius,
+            ),
+            child: HoverFill(
+              hovered: hovered,
+              borderRadius: _syncBoxRadius,
+              position: DecorationPosition.background,
+              child: collapsed ? _railFace(context) : _openFace(context),
             ),
           ),
         ),
-      );
-    }
-    final String? address = this.address;
-    return Padding(
-      key: sidebarSyncLineKey,
-      padding: const EdgeInsets.only(top: _syncGap),
-      child: MergeSemantics(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+    );
+  }
+
+  Widget _railFace(BuildContext context) => SizedBox.square(
+    dimension: sidebarRailBoxExtent,
+    child: Center(child: _mark(context)),
+  );
+
+  Widget _openFace(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final TextStyle headlineStyle = context.textStyles.caption11Sans.copyWith(
+      color: colors.ink,
+    );
+    final String? detail = this.detail;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: sidebarSyncBoxMinHeight),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: _syncBoxPadding),
+        child: Row(
           children: <Widget>[
-            Row(
-              children: <Widget>[
-                dot,
-                const SizedBox(width: _syncLineDotGap),
-                Expanded(
-                  child: Text(
-                    status,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.textStyles.syncPrimarySans,
-                  ),
+            _mark(context),
+            const SizedBox(width: _syncMarkGap),
+            Flexible(
+              child: Text.rich(
+                TextSpan(
+                  children: <InlineSpan>[
+                    TextSpan(text: headline, style: headlineStyle),
+                    if (detail != null)
+                      TextSpan(
+                        text: ' · $detail',
+                        style: headlineStyle.copyWith(
+                          color: colors.muted,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                  ],
                 ),
-              ],
-            ),
-            if (address != null) ...<Widget>[
-              const SizedBox(height: _syncAddressGap),
-              Padding(
-                padding: const EdgeInsets.only(
-                  left: _syncLineDotSize + _syncLineDotGap,
-                ),
-                child: Text(
-                  address,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textStyles.syncSecondarySans,
-                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
+            ),
           ],
         ),
       ),
     );
   }
+
+  Widget _mark(BuildContext context) => SizedBox.square(
+    dimension: _syncMarkSlot,
+    child: busy
+        ? CircularProgressIndicator(
+            key: sidebarSyncSpinnerKey,
+            color: tone,
+            backgroundColor: context.colors.ink16,
+            strokeWidth: _syncSpinnerStroke,
+          )
+        : Center(
+            child: DecoratedBox(
+              key: sidebarSyncDotKey,
+              decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
+              child: const SizedBox.square(dimension: _syncDotSize),
+            ),
+          ),
+  );
 }

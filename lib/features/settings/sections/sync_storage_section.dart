@@ -98,9 +98,10 @@ String lastChangeSentLabel(DateTime at, DateTime now) =>
 Color syncStatusTone(SyncStatus status, FieldNotesColors colors) =>
     switch (status) {
       SyncedStatus() => colors.sage,
+      SyncingStatus() => colors.inkSoft,
       WaitingStatus() || UploadingStatus() => colors.accentInk,
       AttentionStatus() => colors.dangerInk,
-      OfflineStatus() || PausedStatus() => colors.muted,
+      OfflineStatus() || PausedStatus() || NotSyncedYetStatus() => colors.muted,
     };
 
 class SyncClockRefresh extends StatefulWidget {

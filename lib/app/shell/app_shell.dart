@@ -13,12 +13,14 @@ import 'package:field_notes/features/reminders/reminder_lifecycle.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
+import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/features/sound/sound_providers.dart';
 import 'package:field_notes/features/today/today.dart';
 import 'package:field_notes/features/updates/ui/update_greeting.dart';
 import 'package:field_notes/features/updates/ui/update_rail_chip.dart';
 import 'package:field_notes/features/updates/update_providers.dart';
 import 'package:field_notes/state/journal_providers.dart';
+import 'package:field_notes/state/settings_section_request.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 import 'package:field_notes/state/sync_providers.dart';
 
@@ -156,10 +158,44 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 }
 
+typedef SidebarSyncWords = ({String headline, String? detail});
+
+SidebarSyncWords sidebarSyncWords(SyncStatus status, DateTime now) =>
+    switch (status) {
+      SyncedStatus(:final DateTime at) => (
+        headline: 'Synced',
+        detail: shortSyncTime(at, now),
+      ),
+      OfflineStatus() => (headline: 'Offline', detail: 'will sync later'),
+      AttentionStatus(
+        reason: AttentionReason.unreachable ||
+            AttentionReason.newServerUnreachable,
+      ) =>
+        (headline: "Can't reach server", detail: null),
+      AttentionStatus(:final AttentionReason reason) => (
+        headline: 'Needs attention',
+        detail: reason.label,
+      ),
+      SyncingStatus() ||
+      PausedStatus() ||
+      WaitingStatus() ||
+      UploadingStatus() ||
+      NotSyncedYetStatus() => (headline: status.label(now), detail: null),
+    };
+
 class SidebarSyncStatus extends ConsumerWidget {
   const SidebarSyncStatus({super.key, required this.collapsed});
 
   final bool collapsed;
+
+  void _openSyncSettings(WidgetRef ref) {
+    ref
+        .read(settingsSectionRequestProvider.notifier)
+        .request(SettingsTab.syncStorage);
+    ref
+        .read(shellNavigationProvider.notifier)
+        .select(ShellDestination.settings);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -170,14 +206,21 @@ class SidebarSyncStatus extends ConsumerWidget {
     if (status == null) {
       return const SizedBox.shrink();
     }
-    final String? address = ref.watch(relayAddressProvider).value;
     return SyncClockRefresh(
-      builder: (BuildContext context) => SidebarSyncLine(
-        status: status.label(DateTime.now().toUtc()),
-        tone: syncStatusTone(status, context.colors),
-        collapsed: collapsed,
-        address: address,
-      ),
+      builder: (BuildContext context) {
+        final SidebarSyncWords words = sidebarSyncWords(
+          status,
+          DateTime.now().toUtc(),
+        );
+        return SidebarSyncBox(
+          headline: words.headline,
+          detail: words.detail,
+          tone: syncStatusTone(status, context.colors),
+          busy: status is SyncingStatus,
+          collapsed: collapsed,
+          onPressed: () => _openSyncSettings(ref),
+        );
+      },
     );
   }
 }

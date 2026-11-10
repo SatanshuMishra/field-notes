@@ -57,6 +57,7 @@ void main() {
                   uploadCount: uploads,
                   paused: paused,
                   attention: attention,
+                  syncing: false,
                   lastSyncedAt: syncedAt,
                 ),
               );
@@ -131,4 +132,43 @@ void main() {
       'This device was removed from your journal.',
     );
   });
+
+  test(
+    'a running sync and a journal never synced each have their own state',
+    () {
+      final DateTime now = DateTime.utc(2026, 10, 5, 9);
+      SyncStatus statusFor({
+        bool syncing = false,
+        bool online = true,
+        int outbox = 0,
+        DateTime? lastSyncedAt,
+      }) => syncStatusFor(
+        SyncStatusInputs(
+          outboxCount: outbox,
+          online: online,
+          uploadCount: 0,
+          paused: false,
+          attention: null,
+          syncing: syncing,
+          lastSyncedAt: lastSyncedAt,
+        ),
+      );
+
+      expect(statusFor(), const NotSyncedYetStatus());
+      expect(statusFor().label(now), 'Not synced yet');
+      expect(statusFor(syncing: true, outbox: 2), const SyncingStatus());
+      expect(statusFor(syncing: true).label(now), 'Syncing…');
+      expect(statusFor(syncing: true, online: false), const OfflineStatus());
+      expect(statusFor(lastSyncedAt: now), SyncedStatus(now));
+      expect(
+        shortSyncTime(now.subtract(const Duration(minutes: 4)), now),
+        '4 min ago',
+      );
+      expect(shortSyncTime(now, now), 'just now');
+      expect(
+        shortSyncTime(now.subtract(const Duration(hours: 2)), now),
+        '2 hours ago',
+      );
+    },
+  );
 }

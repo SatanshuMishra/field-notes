@@ -331,6 +331,7 @@ final class SyncTestDevice {
     JournalWiper? wipe,
     BackgroundTransferSource? background,
     LeaveRule leaveRule = LeaveRule.hidden,
+    Duration syncingShownFor = Duration.zero,
     Random? random,
   }) {
     final SyncEngine created = SyncEngine(
@@ -348,6 +349,7 @@ final class SyncTestDevice {
       backgroundSource: background,
       pullPageSize: pullPageSize,
       leaveRule: leaveRule,
+      syncingShownFor: syncingShownFor,
       random: random ?? NoJitter(),
     );
     _engines.add(created);

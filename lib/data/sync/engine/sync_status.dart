@@ -52,6 +52,13 @@ String relativeSyncTime(DateTime at, DateTime now) {
 String _ago(int count, String unit) =>
     count == 1 ? '1 $unit ago' : '$count ${unit}s ago';
 
+String shortSyncTime(DateTime at, DateTime now) {
+  final int minutes = now.difference(at).inMinutes;
+  return minutes >= 1 && minutes < Duration.minutesPerHour
+      ? '$minutes min ago'
+      : relativeSyncTime(at, now);
+}
+
 sealed class SyncStatus {
   const SyncStatus();
 
@@ -71,6 +78,32 @@ final class SyncedStatus extends SyncStatus {
 
   @override
   int get hashCode => at.hashCode;
+}
+
+final class SyncingStatus extends SyncStatus {
+  const SyncingStatus();
+
+  @override
+  String label(DateTime now) => 'Syncing…';
+
+  @override
+  bool operator ==(Object other) => other is SyncingStatus;
+
+  @override
+  int get hashCode => (SyncingStatus).hashCode;
+}
+
+final class NotSyncedYetStatus extends SyncStatus {
+  const NotSyncedYetStatus();
+
+  @override
+  String label(DateTime now) => 'Not synced yet';
+
+  @override
+  bool operator ==(Object other) => other is NotSyncedYetStatus;
+
+  @override
+  int get hashCode => (NotSyncedYetStatus).hashCode;
 }
 
 final class WaitingStatus extends SyncStatus {
@@ -158,6 +191,7 @@ final class SyncStatusInputs {
     required this.uploadCount,
     required this.paused,
     required this.attention,
+    required this.syncing,
     required this.lastSyncedAt,
   });
 
@@ -166,7 +200,8 @@ final class SyncStatusInputs {
   final int uploadCount;
   final bool paused;
   final AttentionReason? attention;
-  final DateTime lastSyncedAt;
+  final bool syncing;
+  final DateTime? lastSyncedAt;
 }
 
 SyncStatus syncStatusFor(SyncStatusInputs inputs) {
@@ -180,11 +215,17 @@ SyncStatus syncStatusFor(SyncStatusInputs inputs) {
   if (!inputs.online) {
     return const OfflineStatus();
   }
+  if (inputs.syncing) {
+    return const SyncingStatus();
+  }
   if (inputs.outboxCount > 0) {
     return WaitingStatus(inputs.outboxCount);
   }
   if (inputs.uploadCount > 0) {
     return UploadingStatus(inputs.uploadCount);
   }
-  return SyncedStatus(inputs.lastSyncedAt);
+  final DateTime? lastSyncedAt = inputs.lastSyncedAt;
+  return lastSyncedAt == null
+      ? const NotSyncedYetStatus()
+      : SyncedStatus(lastSyncedAt);
 }
