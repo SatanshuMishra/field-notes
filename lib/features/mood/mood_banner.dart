@@ -58,7 +58,7 @@ class MoodBanner extends StatelessWidget {
                 Text(
                   isToday
                       ? '${current.flower.label} · your bloom for the day'
-                      : "${current.flower.label} · the day's bloom",
+                      : current.flower.label,
                   style: textStyles.captionSans,
                 ),
               ],

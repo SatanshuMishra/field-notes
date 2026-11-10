@@ -7,13 +7,12 @@ import 'package:field_notes/features/mood/mood_banner.dart';
 import 'support/mood_harness.dart';
 
 void main() {
-  testWidgets('shows the prompt when no mood is set and reports change taps',
-      (WidgetTester tester) async {
+  testWidgets('shows the prompt when no mood is set and reports change taps', (
+    WidgetTester tester,
+  ) async {
     int taps = 0;
     await tester.pumpWidget(
-      moodHarness(
-        MoodBanner(mood: null, onChangeMood: () => taps++),
-      ),
+      moodHarness(MoodBanner(mood: null, onChangeMood: () => taps++)),
     );
 
     expect(find.text('How are you feeling today?'), findsOneWidget);
@@ -23,13 +22,12 @@ void main() {
     expect(taps, 1);
   });
 
-  testWidgets('shows the flower, label and change button when a mood is set',
-      (WidgetTester tester) async {
+  testWidgets('shows the flower, label and change button when a mood is set', (
+    WidgetTester tester,
+  ) async {
     int taps = 0;
     await tester.pumpWidget(
-      moodHarness(
-        MoodBanner(mood: Mood.calm, onChangeMood: () => taps++),
-      ),
+      moodHarness(MoodBanner(mood: Mood.calm, onChangeMood: () => taps++)),
     );
 
     expect(find.text('Feeling Calm today'), findsOneWidget);
@@ -40,12 +38,34 @@ void main() {
     expect(taps, 1);
   });
 
-  testWidgets('is a non-button when onChangeMood is null',
-      (WidgetTester tester) async {
+  testWidgets('a past day names only its flower while today keeps its bloom', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       moodHarness(
-        const MoodBanner(mood: null, onChangeMood: null),
+        MoodBanner(mood: Mood.angry, onChangeMood: () {}, isToday: false),
       ),
+    );
+
+    expect(find.text('Felt Angry'), findsOneWidget);
+    expect(find.text('Red Spider Lily'), findsOneWidget);
+    expect(find.textContaining("the day's bloom"), findsNothing);
+
+    await tester.pumpWidget(
+      moodHarness(MoodBanner(mood: Mood.angry, onChangeMood: () {})),
+    );
+
+    expect(
+      find.text('Red Spider Lily · your bloom for the day'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('is a non-button when onChangeMood is null', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      moodHarness(const MoodBanner(mood: null, onChangeMood: null)),
     );
 
     expect(find.text('How are you feeling today?'), findsOneWidget);

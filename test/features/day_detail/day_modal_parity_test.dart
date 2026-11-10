@@ -195,7 +195,8 @@ void main() {
     final Finder banner = find.byType(MoodBanner);
     expect(banner, findsOneWidget);
     expect(find.text('Felt Angry'), findsOneWidget);
-    expect(find.text("Red Spider Lily · the day's bloom"), findsOneWidget);
+    expect(find.text('Red Spider Lily'), findsOneWidget);
+    expect(find.textContaining("the day's bloom"), findsNothing);
     expect(find.text('Change mood'), findsNothing);
     final Rect bannerRect = tester.getRect(banner);
     final Rect felt = tester.getRect(find.text('Felt Angry'));

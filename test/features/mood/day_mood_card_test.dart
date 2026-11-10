@@ -84,7 +84,7 @@ List<String> _labelParts(String label) => <String>[
 ];
 
 void main() {
-  testWidgets("a past day with a mood reads Felt and the day's bloom", (
+  testWidgets('a past day with a mood reads Felt and the flower name', (
     WidgetTester tester,
   ) async {
     final FakeJournalRepository fake = FakeJournalRepository(
@@ -99,7 +99,8 @@ void main() {
     await tester.pump();
 
     expect(find.text('Felt Calm'), findsOneWidget);
-    expect(find.text("Lavender · the day's bloom"), findsOneWidget);
+    expect(find.text('Lavender'), findsOneWidget);
+    expect(find.textContaining("the day's bloom"), findsNothing);
     expect(find.text('Feeling Calm today'), findsNothing);
   });
 
