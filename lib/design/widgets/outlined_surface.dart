@@ -13,6 +13,7 @@ class OutlinedSurface extends StatelessWidget {
     this.borderWidth = Shapes.outlineWidth,
     this.color,
     this.boxShadow,
+    this.padding = EdgeInsets.zero,
   });
 
   final Widget child;
@@ -21,6 +22,7 @@ class OutlinedSurface extends StatelessWidget {
   final double borderWidth;
   final Color? color;
   final List<BoxShadow>? boxShadow;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +43,7 @@ class OutlinedSurface extends StatelessWidget {
             borderRadius: borderRadius,
             borderWidth: borderWidth,
           ),
-          child: child,
+          child: Padding(padding: padding, child: child),
         ),
       ),
     );

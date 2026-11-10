@@ -244,7 +244,7 @@ void main() {
     );
     expect(image, findsOneWidget);
     expect(find.text(_caption), findsNothing);
-    final Rect card = tester.getRect(find.byType(StickerCard));
+    final Rect card = tester.getRect(find.byType(OutlinedSurface));
     final Rect painted = tester.getRect(image);
     expect(painted.width, card.width);
     expect(painted.height, 82);

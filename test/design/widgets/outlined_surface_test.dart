@@ -34,16 +34,22 @@ Future<void> _pump(WidgetTester tester, Widget surface) {
   );
 }
 
-Future<Color> _topRightArcPixel(WidgetTester tester) async {
+Future<Color> _topRightArcPixel(WidgetTester tester) {
+  const double centreOffset = _radius - _borderWidth / 2;
+  final double angle = math.pi / 4;
+  return _pixelAt(
+    tester,
+    (_side - _radius + centreOffset * math.cos(angle)).floor(),
+    (_radius - centreOffset * math.sin(angle)).floor(),
+  );
+}
+
+Future<Color> _pixelAt(WidgetTester tester, int x, int y) async {
   final RenderRepaintBoundary boundary =
       tester.renderObject(find.byKey(_boundaryKey)) as RenderRepaintBoundary;
   final Color? pixel = await tester.runAsync<Color>(() async {
     final ui.Image image = await boundary.toImage();
     final ByteData data = (await image.toByteData())!;
-    const double centreOffset = _radius - _borderWidth / 2;
-    final double angle = math.pi / 4;
-    final int x = (_side - _radius + centreOffset * math.cos(angle)).floor();
-    final int y = (_radius - centreOffset * math.sin(angle)).floor();
     final int offset = (y * image.width + x) * 4;
     final Color sampled = Color.fromARGB(
       data.getUint8(offset + 3),
@@ -117,5 +123,51 @@ void main() {
     );
 
     expect(tester.getSize(find.byType(OutlinedSurface)), const Size(40, 30));
+  });
+
+  testWidgets('OutlinedSurface clips the child inside the border band', (
+    WidgetTester tester,
+  ) async {
+    const Color halfBorder = Color(0x800033CC);
+    await _pump(
+      tester,
+      const OutlinedSurface(
+        borderRadius: _borderRadius,
+        borderColor: halfBorder,
+        borderWidth: _borderWidth,
+        child: ColoredBox(color: _childColor),
+      ),
+    );
+
+    final Color bandPixel = await _pixelAt(tester, (_side / 2).floor(), 1);
+    final Color overBackdrop = Color.alphaBlend(halfBorder, _backdrop);
+
+    expect(_near(bandPixel, overBackdrop), isTrue);
+  });
+
+  testWidgets('OutlinedSurface insets the child by its padding', (
+    WidgetTester tester,
+  ) async {
+    const Key childKey = ValueKey<String>('child');
+    await tester.pumpWidget(
+      const Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(
+          child: SizedBox(
+            width: 100,
+            height: 60,
+            child: OutlinedSurface(
+              borderRadius: _borderRadius,
+              borderColor: _borderColor,
+              padding: EdgeInsets.all(_borderWidth),
+              child: SizedBox.expand(key: childKey),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final Rect surface = tester.getRect(find.byType(OutlinedSurface));
+    expect(tester.getRect(find.byKey(childKey)), surface.deflate(_borderWidth));
   });
 }

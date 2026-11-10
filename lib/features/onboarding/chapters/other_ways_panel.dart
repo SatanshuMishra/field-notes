@@ -360,8 +360,6 @@ class _Waveform extends StatelessWidget {
   }
 }
 
-const double _viewfinderBorderWidth = 1.5;
-
 class _Viewfinder extends StatelessWidget {
   const _Viewfinder();
 
@@ -374,52 +372,49 @@ class _Viewfinder extends StatelessWidget {
       child: OutlinedSurface(
         borderRadius: radius,
         borderColor: _bracket.withValues(alpha: 0.3),
-        borderWidth: _viewfinderBorderWidth,
-        child: Padding(
-          padding: const EdgeInsets.all(_viewfinderBorderWidth),
-          child: CustomPaint(
-            painter: const _StripePainter(),
-            child: Stack(
-              children: <Widget>[
-                for (final Alignment corner in const <Alignment>[
-                  Alignment.topLeft,
-                  Alignment.topRight,
-                  Alignment.bottomLeft,
-                  Alignment.bottomRight,
-                ])
-                  Positioned(
-                    left: corner.x < 0 ? 7 : null,
-                    right: corner.x > 0 ? 7 : null,
-                    top: corner.y < 0 ? 7 : null,
-                    bottom: corner.y > 0 ? 7 : null,
-                    width: 12,
-                    height: 12,
-                    child: CustomPaint(painter: _BracketPainter(corner)),
-                  ),
-                const Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 44,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      _BreathingDot(),
-                      SizedBox(width: 5),
-                      Text(
-                        _videoLength,
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontFamily: TypographyTokens.sans,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: _bracket,
-                        ),
-                      ),
-                    ],
-                  ),
+        padding: const EdgeInsets.all(Shapes.outlineWidth),
+        child: CustomPaint(
+          painter: const _StripePainter(),
+          child: Stack(
+            children: <Widget>[
+              for (final Alignment corner in const <Alignment>[
+                Alignment.topLeft,
+                Alignment.topRight,
+                Alignment.bottomLeft,
+                Alignment.bottomRight,
+              ])
+                Positioned(
+                  left: corner.x < 0 ? 7 : null,
+                  right: corner.x > 0 ? 7 : null,
+                  top: corner.y < 0 ? 7 : null,
+                  bottom: corner.y > 0 ? 7 : null,
+                  width: 12,
+                  height: 12,
+                  child: CustomPaint(painter: _BracketPainter(corner)),
                 ),
-              ],
-            ),
+              const Positioned(
+                left: 0,
+                right: 0,
+                top: 44,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    _BreathingDot(),
+                    SizedBox(width: 5),
+                    Text(
+                      _videoLength,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontFamily: TypographyTokens.sans,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: _bracket,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
