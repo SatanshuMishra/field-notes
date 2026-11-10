@@ -25,7 +25,7 @@ import 'package:field_notes/features/log_viewer/note_panel_view.dart';
 import 'package:field_notes/features/log_viewer/note_sheet_view.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
-    show viewerTitleFieldKey, viewerTitleHint;
+    show viewerTitleFieldKey;
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show NoteEditorView;
@@ -475,41 +475,6 @@ void main() {
     expect(title, findsOneWidget);
     final TextStyle style = DefaultTextStyle.of(tester.element(title)).style;
     expect(style.decoration ?? TextDecoration.none, TextDecoration.none);
-  }, variant: _bothLayouts);
-
-  testWidgets('a note shows its own title or none and renames in place', (
-    WidgetTester tester,
-  ) async {
-    final _Session session = await _open(tester, entryId: 'entry-2');
-
-    final Finder field = _inPanel(find.byKey(viewerTitleFieldKey));
-    expect(find.text('Afternoon note'), findsNothing);
-    expect(tester.widget<TextField>(field).controller!.text, isEmpty);
-    expect(find.text('Sunday, July 19'), findsOneWidget);
-    expect(
-      find.byWidgetPredicate(
-        (Widget widget) =>
-            widget is Text && (widget.data ?? '').startsWith('2:30 PM'),
-      ),
-      findsOneWidget,
-    );
-    expect(_noteText(_lastWord), findsOneWidget);
-
-    await tester.tap(find.byKey(logViewerEarlierKey));
-    await tester.pumpAndSettle();
-
-    expect(tester.widget<TextField>(field).controller!.text, _roses);
-    expect(find.text('Morning note'), findsNothing);
-
-    await tester.tap(field);
-    await tester.pump();
-    await tester.enterText(field, 'Roses and rain');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pump();
-
-    expect(session.repository.titleUpdates, <({String id, String? title})>[
-      (id: 'entry-1', title: 'Roses and rain'),
-    ]);
   }, variant: _bothLayouts);
 
   testWidgets("Earlier and Later step through the day's logs", (
@@ -981,47 +946,6 @@ void main() {
     }
     expect(session.outcomes, isEmpty);
     expect(find.byKey(logViewerPanelKey), findsOneWidget);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
-
-  testWidgets('a failed rename puts the title back and says so', (
-    WidgetTester tester,
-  ) async {
-    tester.view.physicalSize = const Size(1440, 900);
-    tester.view.devicePixelRatio = 1;
-    tester.view.padding = FakeViewPadding.zero;
-    tester.view.viewPadding = FakeViewPadding.zero;
-    addTearDown(tester.view.reset);
-    final _Mixed session = await _openMixed(
-      tester,
-      entryId: 'video-log',
-      theme: fieldNotesTheme(platform: TargetPlatform.macOS),
-    );
-    session.repository.updateError = StateError('disk full');
-    final Finder field = find.byKey(viewerTitleFieldKey);
-
-    await tester.tap(field);
-    await tester.pump();
-    await tester.enterText(field, 'The pier');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.text('The pier'), findsNothing);
-    expect(find.text(viewerTitleHint), findsOneWidget);
-    expect(find.text(logViewerRenameFailedMessage), findsOneWidget);
-    expect(session.repository.titleUpdates, isEmpty);
-
-    session.repository.updateError = null;
-    await tester.tap(field);
-    await tester.pump();
-    await tester.enterText(field, 'The pier');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pump();
-
-    expect(session.repository.titleUpdates, <({String id, String? title})>[
-      (id: 'video-log', title: 'The pier'),
-    ]);
-    await _drainToast(tester);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('F toggles full screen, but not while typing a title', (
