@@ -34,6 +34,7 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     required this.dashMuted,
     required this.windowTitle,
     required this.sage,
+    required this.lateNight,
     required this.accentInk,
     required this.coralLink,
     required this.accentInkStrong,
@@ -93,6 +94,7 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     dashMuted: Color(0xFFC3B39A),
     windowTitle: Color(0xFF705A46),
     sage: Color(0xFF4C5B4C),
+    lateNight: Color(0xFF4F6A4F),
     accentInk: Color(0xFF903B4C),
     coralLink: Color(0xFF8F3C4C),
     accentInkStrong: Color(0xFF9B4255),
@@ -152,6 +154,7 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     dashMuted: Color(0xFF574F4F),
     windowTitle: Color(0xFF8F8382),
     sage: Color(0xFFA0B9A0),
+    lateNight: Color(0xFFA9C2A9),
     accentInk: Color(0xFFE692A0),
     coralLink: Color(0xFFE38F9D),
     accentInkStrong: Color(0xFFE692A0),
@@ -213,6 +216,7 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
   final Color dashMuted;
   final Color windowTitle;
   final Color sage;
+  final Color lateNight;
   final Color accentInk;
   final Color coralLink;
   final Color accentInkStrong;
@@ -289,6 +293,7 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     Color? dashMuted,
     Color? windowTitle,
     Color? sage,
+    Color? lateNight,
     Color? accentInk,
     Color? coralLink,
     Color? accentInkStrong,
@@ -347,6 +352,7 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
       dashMuted: dashMuted ?? this.dashMuted,
       windowTitle: windowTitle ?? this.windowTitle,
       sage: sage ?? this.sage,
+      lateNight: lateNight ?? this.lateNight,
       accentInk: accentInk ?? this.accentInk,
       coralLink: coralLink ?? this.coralLink,
       accentInkStrong: accentInkStrong ?? this.accentInkStrong,
@@ -423,6 +429,7 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
       dashMuted: Color.lerp(dashMuted, other.dashMuted, t)!,
       windowTitle: Color.lerp(windowTitle, other.windowTitle, t)!,
       sage: Color.lerp(sage, other.sage, t)!,
+      lateNight: Color.lerp(lateNight, other.lateNight, t)!,
       accentInk: Color.lerp(accentInk, other.accentInk, t)!,
       coralLink: Color.lerp(coralLink, other.coralLink, t)!,
       accentInkStrong: Color.lerp(accentInkStrong, other.accentInkStrong, t)!,
@@ -483,6 +490,7 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     dashMuted,
     windowTitle,
     sage,
+    lateNight,
     accentInk,
     coralLink,
     accentInkStrong,
