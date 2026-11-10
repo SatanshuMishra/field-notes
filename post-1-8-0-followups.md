@@ -1,7 +1,7 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-10T22:52:57.687Z
-Next ids: c4 D4 R2 S1
+Updated: 2026-11-10T22:53:01.642Z
+Next ids: c4 D5 R2 S1
 
 ## Goal
 
@@ -28,6 +28,7 @@ Wait for the owner's answer on the 1.8 follow-ups boards and the four questions,
 - D1 Owner on g: the capture rooms lose the central gradient; stars stay subtle and mostly still, comets are rare, the sky has some randomness per opening, and resource use must not spike on weak devices.
 - D2 A streak day needs a bloom and at least one log: Owner approved as recommended on 2026-11-10: a day counts toward the streak only with a bloom and at least one log.
 - D3 Late-night fill-ins count until 4 AM, grandfathering past days: Owner approved as recommended on 2026-11-10: strict 4 AM grace; each day stores when its bloom was first picked; days that already existed are grandfathered.
+- D4 Sidebar sync status is its own box; collapsed rail boxes are 44 by 44: Owner approved option A on 2026-11-10. Owner tweaks the same day: in the collapsed rail the streak, status, settings and sound boxes are all 44 by 44 (the rail's full inner width, flame stacked over the count), and the expanded late-night pill shows the moon badge at its top right like the collapsed one.
 
 ## Open risks
 
