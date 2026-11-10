@@ -1,6 +1,6 @@
 # post-1-7-0-followups: Post-1.7.0 follow-ups: privacy line, note title focus, note viewer and editor parity, voice button, week garden, overnight Today, day modal
 Status: active
-Updated: 2026-11-10T18:34:17.830Z
+Updated: 2026-11-10T18:40:29.198Z
 Next ids: c4 D1 R2 S1
 
 ## Goal
@@ -15,11 +15,11 @@ Prototype the owner's seven 1.7.0 follow-ups (a to g) on the design canvas, get 
 
 ## Where things stand
 
-Prototypes for a, b, c, d, e and g are published on the canvas's 1.7 follow-ups page and wait for the owner's approval; recommended picks are a = the day line (replaces the privacy line) and d = flat coral in the cream ring. The overnight bug is reproduced: today_day_change_test fails on main with the header on the new day while yesterday's note stays in the feed. Nothing is built.
+Five agents are building the five pull requests fanout planned, each in its own worktree cut from 6af4e271: note room (b, a for notes, c), recorders (a for recordings, d), overnight Today (f), week garden (e), day modal (g). Nothing is committed to a pushed branch yet. The overnight bug is reproduced: today_day_change_test fails on main with the header on the new day while yesterday's note stays in the feed.
 
 ## Next step
 
-Wait for the owner's approval of the three boards on the canvas's 1.7 follow-ups page (NoteRoom for a, b, c; VoiceButton for d; TodayDay for e, g) and their picks for a and d, then plan the leaves with fanout from worktree .claude/worktrees/post-1-7-0 (branch research/post-1-7-0), which holds the red overnight test test/features/today/today_day_change_test.dart.
+As each agent returns, review its branch diff, run its tests, confirm both capture branches carry the byte-identical capture_day_line.dart (sha256 1eb5f153...), then push and open one pull request per branch assigned to the owner.
 
 ## Decisions in force
 
