@@ -4,12 +4,11 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/note_photos.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/entry_cards/transport/transport_bar.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/log_viewer/note_reading.dart';
 import 'package:field_notes/features/log_viewer/photo_viewer.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
-import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
-import 'package:field_notes/features/log_viewer/viewer_waveform.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -141,12 +140,6 @@ Future<void> _openMiddle(WidgetTester tester, _Viewer viewer) async {
   await tester.pump();
 }
 
-Finder _content(_Viewer viewer) => switch (viewer) {
-  _Viewer.note || _Viewer.noteWithPhoto => find.byType(NoteReadingBody),
-  _Viewer.voice => find.byType(ViewerWaveform),
-  _Viewer.video => find.byKey(videoFrameKey),
-};
-
 Finder _filledInside(Finder scope) => find.descendant(
   of: scope,
   matching: find.byWidgetPredicate(
@@ -201,8 +194,31 @@ Future<void> _openPhotoViewer(WidgetTester tester) async {
 }
 
 void main() {
+  group('phone media viewers keep the top read-only with delete in More', () {
+    for (final _Viewer viewer in <_Viewer>[_Viewer.voice, _Viewer.video]) {
+      testWidgets('${viewer.name} viewer', (WidgetTester tester) async {
+        await _open(tester, viewer);
+
+        expect(find.byKey(logActionsDeleteKey), findsNothing);
+        await tester.tap(find.byKey(transportDockMoreKey));
+        await tester.pumpAndSettle();
+
+        final Rect delete = tester.getRect(find.byKey(logActionsDeleteKey));
+        final double height =
+            tester.view.physicalSize.height / tester.view.devicePixelRatio;
+        expect(delete.height, greaterThanOrEqualTo(52));
+        expect(delete.bottom, greaterThan(height * 0.75));
+        expect(find.bySemanticsLabel(viewerDeleteLogLabel), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  });
+
   group('phone viewers put delete in the top bar', () {
-    for (final _Viewer viewer in _Viewer.values) {
+    for (final _Viewer viewer in <_Viewer>[
+      _Viewer.note,
+      _Viewer.noteWithPhoto,
+    ]) {
       testWidgets('${viewer.name} viewer', (WidgetTester tester) async {
         await _open(tester, viewer);
 
@@ -211,7 +227,7 @@ void main() {
         expect(find.bySemanticsLabel('Delete'), findsOneWidget);
         final Rect deleteRect = tester.getRect(delete);
         final Rect closeRect = tester.getRect(find.byKey(logViewerBackKey));
-        final Rect contentRect = _rectOf(tester, _content(viewer));
+        final Rect contentRect = _rectOf(tester, find.byType(NoteReadingBody));
         final double width =
             tester.view.physicalSize.width / tester.view.devicePixelRatio;
 
@@ -259,11 +275,9 @@ void main() {
           'close is secondary, and no edit', (WidgetTester tester) async {
         await _open(tester, viewer);
 
-        final Finder viewerRoot = find.byType(LogViewerPanel);
-        expect(_filledInside(viewerRoot), findsOneWidget);
-        expect(_filledInside(find.byType(ViewerPrimaryButton)), findsOneWidget);
+        expect(find.byType(TransportPlayButton), findsOneWidget);
         expect(find.bySemanticsLabel('Play'), findsOneWidget);
-        expect(_filledInside(find.byKey(logViewerBackKey)), findsNothing);
+        expect(_filledInside(find.byKey(transportDockBackKey)), findsNothing);
         expect(find.bySemanticsLabel('Close'), findsOneWidget);
         expect(find.byKey(logActionsEditKey), findsNothing);
         expect(find.bySemanticsLabel('Edit note'), findsNothing);
@@ -292,19 +306,21 @@ void main() {
         await _openMiddle(tester, viewer);
         expect(tester.takeException(), isNull);
 
+        final bool note = viewer == _Viewer.note;
         final Finder position = find.text('2 of 3');
-        final Finder play = find.byType(ViewerPrimaryButton);
-        final Finder scrubberBar = find.byKey(videoScrubberBarKey);
         final Map<String, Rect> parts = <String, Rect>{
           'earlier': tester.getRect(find.byKey(logViewerEarlierKey)),
           'later': tester.getRect(find.byKey(logViewerLaterKey)),
-          'delete': tester.getRect(find.byKey(logActionsDeleteKey)),
-          'close': tester.getRect(find.byKey(logViewerBackKey)),
           if (position.evaluate().isNotEmpty)
             'position': tester.getRect(position),
-          if (play.evaluate().isNotEmpty) 'play': tester.getRect(play),
-          if (scrubberBar.evaluate().isNotEmpty)
-            'scrubber': tester.getRect(scrubberBar),
+          if (note) ...<String, Rect>{
+            'delete': tester.getRect(find.byKey(logActionsDeleteKey)),
+            'close': tester.getRect(find.byKey(logViewerBackKey)),
+          } else ...<String, Rect>{
+            'close': tester.getRect(find.byKey(transportDockBackKey)),
+            'more': tester.getRect(find.byKey(transportDockMoreKey)),
+            'play': tester.getRect(find.byType(TransportPlayButton)),
+          },
         };
         final List<String> names = parts.keys.toList();
         for (int first = 0; first < names.length; first++) {

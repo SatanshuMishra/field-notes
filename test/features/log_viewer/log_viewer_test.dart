@@ -16,13 +16,14 @@ import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
     show composerCloseKey;
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
+import 'package:field_notes/features/entry_cards/cards/voice_waveform.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/entry_cards/transport/transport_bar.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/log_viewer/note_panel_view.dart';
 import 'package:field_notes/features/log_viewer/note_sheet_view.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
-import 'package:field_notes/features/log_viewer/viewer_waveform.dart';
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show NoteEditorView;
@@ -259,6 +260,8 @@ Finder _inPanel(Finder matching) =>
     find.descendant(of: find.byType(LogViewerPanel), matching: matching);
 
 bool get _sidebar => defaultTargetPlatform == TargetPlatform.macOS;
+
+Key get _exitKey => _sidebar ? logViewerBackKey : transportDockBackKey;
 
 List<Entry> _mixedEntries() {
   return <Entry>[
@@ -653,8 +656,11 @@ void main() {
     await _open(tester, entryId: 'entry-3', exit: LogViewerExit.close);
 
     expect(_inPanel(find.byType(VoicePlayerView)), findsOneWidget);
-    expect(find.text('Close'), findsOneWidget);
-    expect(find.byKey(logActionsDeleteKey), findsOneWidget);
+    expect(find.byKey(_exitKey), findsOneWidget);
+    expect(
+      find.byKey(logActionsDeleteKey),
+      _sidebar ? findsOneWidget : findsNothing,
+    );
     expect(find.byKey(logActionsEditKey), findsNothing);
   }, variant: _bothLayouts);
 
@@ -719,7 +725,7 @@ void main() {
 
   testWidgets('no viewer boxes its media', (WidgetTester tester) async {
     await _openMixed(tester, entryId: 'voice-log');
-    _expectUnboxed(tester, _inPanel(find.byType(ViewerWaveform)));
+    _expectUnboxed(tester, _inPanel(find.byType(VoiceWaveform)));
 
     await _openMixed(tester, entryId: 'video-log');
     _expectUnboxed(tester, _inPanel(find.byKey(videoFrameKey)));
@@ -748,14 +754,15 @@ void main() {
   testWidgets('delete asks first and Back or Close follows the origin', (
     WidgetTester tester,
   ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
     _Mixed session = await _openMixed(
       tester,
       entryId: 'voice-log',
       exit: LogViewerExit.back,
     );
-    expect(find.text(logViewerBackLabel), findsOneWidget);
-    expect(find.text(logViewerCloseLabel), findsNothing);
-    await tester.tap(find.byKey(logViewerBackKey));
+    expect(find.bySemanticsLabel(logViewerBackLabel), findsOneWidget);
+    expect(find.bySemanticsLabel(logViewerCloseLabel), findsNothing);
+    await tester.tap(find.byKey(_exitKey));
     await tester.pumpAndSettle();
     expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.returned]);
     expect(find.byType(LogViewerPanel), findsNothing);
@@ -765,14 +772,18 @@ void main() {
       entryId: 'voice-log',
       exit: LogViewerExit.close,
     );
-    expect(find.text(logViewerCloseLabel), findsOneWidget);
-    expect(find.text(logViewerBackLabel), findsNothing);
-    await tester.tap(find.byKey(logViewerBackKey));
+    expect(find.bySemanticsLabel(logViewerCloseLabel), findsOneWidget);
+    expect(find.bySemanticsLabel(logViewerBackLabel), findsNothing);
+    await tester.tap(find.byKey(_exitKey));
     await tester.pumpAndSettle();
     expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.returned]);
     expect(find.byType(LogViewerPanel), findsNothing);
 
     session = await _openMixed(tester, entryId: 'voice-log');
+    if (!_sidebar) {
+      await tester.tap(find.byKey(transportDockMoreKey));
+      await tester.pumpAndSettle();
+    }
     await tester.tap(find.byKey(logActionsDeleteKey));
     await tester.pumpAndSettle();
 
@@ -787,6 +798,7 @@ void main() {
     expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.deleted]);
     expect(find.byType(LogViewerPanel), findsNothing);
     await _drainToast(tester);
+    semantics.dispose();
   }, variant: _bothLayouts);
 
   testWidgets(
@@ -859,7 +871,7 @@ void main() {
       expect(own.loadCalls, hasLength(1));
       expect(own.disposeCalls, 0);
 
-      await tester.tap(find.byKey(logViewerBackKey));
+      await tester.tap(find.byKey(_exitKey));
       await tester.pumpAndSettle();
 
       expect(find.byType(LogViewerPanel), findsNothing);
@@ -911,7 +923,7 @@ void main() {
     await _drainToast(tester);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
-  testWidgets('arrow keys step across note, voice and video and back', (
+  testWidgets('Page keys step across note, voice and video and back', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(1440, 900);
@@ -927,11 +939,11 @@ void main() {
     expect(_inPanel(find.byType(NotePanelView)), findsOneWidget);
 
     final List<(LogicalKeyboardKey, Type)> steps = <(LogicalKeyboardKey, Type)>[
-      (LogicalKeyboardKey.arrowLeft, VoicePlayerView),
-      (LogicalKeyboardKey.arrowRight, NotePanelView),
-      (LogicalKeyboardKey.arrowRight, VideoViewerView),
-      (LogicalKeyboardKey.arrowLeft, NotePanelView),
-      (LogicalKeyboardKey.arrowLeft, VoicePlayerView),
+      (LogicalKeyboardKey.pageUp, VoicePlayerView),
+      (LogicalKeyboardKey.pageDown, NotePanelView),
+      (LogicalKeyboardKey.pageDown, VideoViewerView),
+      (LogicalKeyboardKey.pageUp, NotePanelView),
+      (LogicalKeyboardKey.pageUp, VoicePlayerView),
     ];
     for (final (LogicalKeyboardKey key, Type view) in steps) {
       await tester.sendKeyEvent(key);

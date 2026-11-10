@@ -37,8 +37,8 @@ const String logViewerDeleteLabel = 'Delete';
 const String logViewerDeletedMessage = 'Entry deleted';
 const String logViewerDeleteFailedMessage =
     "Couldn't delete that entry. Please try again.";
-const String logViewerEarlierLabel = 'Earlier log';
-const String logViewerLaterLabel = 'Later log';
+const String logViewerEarlierLabel = 'Previous log';
+const String logViewerLaterLabel = 'Next log';
 const String logViewerBackLabel = 'Back';
 const String logViewerCloseLabel = 'Close';
 const String logViewerRenameFailedMessage =

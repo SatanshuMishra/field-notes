@@ -3,13 +3,13 @@ import 'dart:io';
 import 'package:field_notes/data/sync/media/download_service.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/note_photos.dart';
-import 'package:field_notes/features/entry_cards/cards/video_scrubber.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/entry_cards/media/live_media.dart';
+import 'package:field_notes/features/entry_cards/transport/transport.dart';
+import 'package:field_notes/features/entry_cards/transport/transport_bar.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/log_viewer/photo_viewer.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
-import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -288,9 +288,9 @@ final List<A11yState> mediaStates = <A11yState>[
     id: 'm3-video-controls',
     pump: _pumpVideoControls,
     proof: <A11yProof>[
-      A11yProof(_inViewer(find.byType(ViewerPrimaryButton))),
-      A11yProof(_inViewer(find.byType(VideoScrubber))),
-      A11yProof(_inViewer(find.text('0:21'))),
+      A11yProof(_inViewer(find.byType(TransportPlayButton))),
+      A11yProof(_inViewer(find.byKey(transportVideoTimelineKey))),
+      A11yProof(_inViewer(find.textContaining('0:21', findRichText: true))),
     ],
   ),
   A11yState(

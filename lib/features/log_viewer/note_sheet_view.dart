@@ -59,6 +59,8 @@ class NoteSheetView extends StatelessWidget {
       onLeft: scene.onEarlier,
       onRight: scene.onLater,
       onEscape: scene.onBack,
+      onPageUp: scene.onEarlier,
+      onPageDown: scene.onLater,
       child: PhoneSheet(
         color: context.colors.composerPaper,
         expanded: expanded,

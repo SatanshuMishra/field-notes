@@ -15,10 +15,10 @@ import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
     show composerCloseKey;
 import 'package:field_notes/features/day_detail/day_detail.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/entry_cards/transport/transport_bar.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/log_viewer/note_panel_view.dart';
-import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
@@ -298,25 +298,21 @@ void main() {
       ),
       findsOneWidget,
     );
-    final Finder dock = find.byType(ViewerDock);
-    expect(find.descendant(of: dock, matching: find.text('Close')), findsOne);
-    expect(find.text('Back'), findsNothing);
-    expect(find.byKey(logActionsEditKey), findsNothing);
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    final Finder dock = find.byType(TransportDock);
     expect(
-      find.descendant(of: dock, matching: find.byKey(logActionsDeleteKey)),
-      findsNothing,
-    );
-    expect(
-      find.descendant(
-        of: find.byType(ViewerTopBar),
-        matching: find.byKey(logActionsDeleteKey),
-      ),
+      find.descendant(of: dock, matching: find.byKey(transportDockBackKey)),
       findsOneWidget,
     );
-    expect(
-      tester.getRect(find.byKey(logActionsDeleteKey)).bottom,
-      lessThan(tester.getRect(find.byKey(logViewerBackKey)).top),
-    );
+    expect(find.bySemanticsLabel('Close'), findsOneWidget);
+    expect(find.bySemanticsLabel('Back'), findsNothing);
+    expect(find.byKey(logActionsEditKey), findsNothing);
+    expect(find.byKey(logActionsDeleteKey), findsNothing);
+
+    await tester.tap(find.byKey(transportDockMoreKey));
+    await tester.pumpAndSettle();
+    expect(find.byKey(logActionsDeleteKey), findsOneWidget);
+    semantics.dispose();
   });
 
   testWidgets('Back returns and a scrim tap reports closing everything', (

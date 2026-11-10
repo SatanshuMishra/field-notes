@@ -2,66 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show FutureProviderFamily;
 
-import 'package:field_notes/app/shell/shell_layout.dart';
-import 'package:field_notes/design/glass/glass.dart';
-import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart';
 import 'package:field_notes/features/entry_cards/cards/video_controls_overlay.dart';
 import 'package:field_notes/features/entry_cards/cards/video_scrubber.dart';
-import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart'
-    show logActionsDeleteKey;
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
 import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
 import 'package:field_notes/features/entry_cards/playback/video_slots.dart';
+import 'package:field_notes/features/entry_cards/transport/transport.dart';
 import 'package:field_notes/features/entry_cards/util/duration_format.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart'
-    show LogViewerExit, LogViewerPlace;
-import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
-    show
-        logViewerBackKey,
-        logViewerEarlierKey,
-        logViewerEarlierLabel,
-        logViewerLaterKey,
-        logViewerLaterLabel;
+    show LogViewerPlace;
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
 import 'package:field_notes/state/media_provider.dart';
 
-const String _earlierLabel = 'Earlier';
-const String _laterLabel = 'Later';
-const String _playLabel = 'Play';
-const String _pauseLabel = 'Pause';
-
-const double _dockGlyphSize = 18;
-const double _stepGlyphSize = 15;
-
-const double _phonePrimary = 68;
-const double _phoneScrubberHeight = 44;
-const double _phoneScrubberReach = (scrubberHeight - _phoneScrubberHeight) / 2;
-const BorderRadius _phoneScrubberRadius = BorderRadius.all(
-  Radius.circular(_phoneScrubberHeight / 2),
-);
-const EdgeInsets _phoneScrubberPadding = EdgeInsets.symmetric(horizontal: 16);
 const double _timeGap = 12;
 
-const double _macPrimary = 48;
-const double _macStepFace = 40;
-const double _macStepSlot = 48;
-const double _macCapsuleGap = 6;
-const double _macCapsuleMaxWidth = 780;
-const double _macCapsuleBottom = 24;
-const double _macCapsuleSide = 24;
-
 const double _embeddedPrimary = 44;
+const double _embeddedCapsuleMaxWidth = 780;
 const double _embeddedCapsuleBottom = 16;
 const double _embeddedCapsuleSide = 16;
-
-const Key videoScrubberBarKey = ValueKey<String>('video-scrubber-bar');
 
 final FutureProviderFamily<double?, String> videoAspectProvider = FutureProvider
     .autoDispose
@@ -183,7 +148,6 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
   Widget build(BuildContext context) {
     final LogViewerScene scene = widget.scene;
     final TargetPlatform platform = Theme.of(context).platform;
-    final bool sidebar = resolveShellLayout(platform) == ShellLayout.sidebar;
     if (widget.embedded) {
       return ViewerKeys(
         onSpace: _toggle,
@@ -191,15 +155,15 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
       );
     }
     return ViewerKeys(
-      onSpace: _toggle,
-      onLeft: scene.onEarlier,
-      onRight: scene.onLater,
+      autofocus: false,
       onEscape: scene.onBack,
+      onPageUp: scene.onEarlier,
+      onPageDown: scene.onLater,
       child: ViewerStage(
         ground: ViewerGround.media,
         onSwipeNext: scene.onLater,
         onSwipePrevious: scene.onEarlier,
-        child: _body(platform, sidebar ? _macControls : _phoneControls),
+        child: _body(platform, _viewerControls),
       ),
     );
   }
@@ -230,7 +194,7 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
           bottom: _embeddedCapsuleBottom,
           child: Center(
             child: ViewerCapsule(
-              maxWidth: _macCapsuleMaxWidth,
+              maxWidth: _embeddedCapsuleMaxWidth,
               children: <Widget>[
                 ViewerPrimaryButton(
                   playing: state.isPlaying,
@@ -251,11 +215,6 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
         ),
       ],
     );
-  }
-
-  Widget _quietLine(BuildContext context) {
-    final LogViewerScene scene = widget.scene;
-    return ViewerQuietLine(mood: scene.mood, text: scene.quietLine(context));
   }
 
   Widget _time(BuildContext context, Duration? time) {
@@ -280,241 +239,31 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
     );
   }
 
-  Widget _phoneControls(BuildContext context, VideoControlsState state) {
+  Widget _viewerControls(BuildContext context, VideoControlsState state) {
     final LogViewerScene scene = widget.scene;
-    return Stack(
-      children: <Widget>[
-        const Positioned.fill(child: ViewerOverlayShade(top: true)),
-        const Positioned.fill(child: ViewerOverlayShade(top: false)),
-        Positioned.fill(
-          child: ViewerTopBar(
-            centre: _quietLine(context),
-            onDelete: scene.onDelete,
-            deleteKey: logActionsDeleteKey,
+    return ViewerControlsFade(
+      ready: state.ready,
+      playing: state.isPlaying,
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          if (!isDesktopPlatform(Theme.of(context).platform))
+            const ViewerDockBacking(),
+          Transport(
+            kind: TransportKind.video,
+            mode: TransportMode.viewer,
+            value: state.transport,
+            mediaPath: state.mediaPath,
+            tuning: state.tuning,
+            autofocus: true,
+            onBack: scene.onBack,
+            backLabel: scene.exitLabel,
+            onMore: () => showViewerLogSheet(context, scene),
           ),
-        ),
-        Positioned.fill(
-          child: ViewerDock(
-            slots: _phoneSlots(state),
-            above: SizedBox(
-              height: scrubberHeight,
-              child: _PhoneScrubberBar(
-                elapsed: _time(context, state.position),
-                scrubber: NoSwipe(child: _scrubber(state)),
-                total: _time(context, state.total),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  List<ViewerDockSlot?> _phoneSlots(VideoControlsState state) {
-    final LogViewerScene scene = widget.scene;
-    final VoidCallback? onEarlier = scene.onEarlier;
-    final VoidCallback? onLater = scene.onLater;
-    final bool playing = state.isPlaying;
-    return <ViewerDockSlot?>[
-      ViewerDockSlot(
-        label: scene.exitLabel,
-        control: ViewerGlassCircle(
-          grouped: true,
-          key: logViewerBackKey,
-          label: scene.exitLabel,
-          glyph: _exitGlyph(scene.exit),
-          onPressed: scene.onBack,
-        ),
+          ViewerLogBar(scene: scene, fades: true),
+          ViewerEdgeArrows(onPrevious: scene.onEarlier, onNext: scene.onLater),
+        ],
       ),
-      if (onEarlier == null)
-        null
-      else
-        ViewerDockSlot(
-          label: _earlierLabel,
-          control: ViewerGlassCircle(
-            grouped: true,
-            key: logViewerEarlierKey,
-            label: logViewerEarlierLabel,
-            glyph: const ChevronGlyph(
-              pointsBack: true,
-              color: Palette.mediaInk,
-            ),
-            onPressed: onEarlier,
-          ),
-        ),
-      ViewerDockSlot(
-        label: playing ? _pauseLabel : _playLabel,
-        control: ViewerPrimaryButton(
-          playing: playing,
-          diameter: _phonePrimary,
-          onPressed: state.onToggle,
-          download: state.download,
-        ),
-      ),
-      if (onLater == null)
-        null
-      else
-        ViewerDockSlot(
-          label: _laterLabel,
-          control: ViewerGlassCircle(
-            grouped: true,
-            key: logViewerLaterKey,
-            label: logViewerLaterLabel,
-            glyph: const ChevronGlyph(
-              pointsBack: false,
-              color: Palette.mediaInk,
-            ),
-            onPressed: onLater,
-          ),
-        ),
-    ];
-  }
-
-  Widget _exitGlyph(LogViewerExit exit) {
-    return switch (exit) {
-      LogViewerExit.back => const ChevronGlyph(
-        pointsBack: true,
-        color: Palette.mediaInk,
-      ),
-      LogViewerExit.close => const IconStickerGlyphIcon(
-        glyph: IconStickerGlyph.close,
-        color: Palette.mediaInk,
-        size: _dockGlyphSize,
-      ),
-    };
-  }
-
-  Widget _macControls(BuildContext context, VideoControlsState state) {
-    final LogViewerScene scene = widget.scene;
-    return Stack(
-      children: <Widget>[
-        const Positioned.fill(child: ViewerOverlayShade(top: true)),
-        Positioned.fill(
-          child: ViewerTopBar(
-            exitLabel: scene.exitLabel,
-            onExit: scene.onBack,
-            centre: _quietLine(context),
-            onDelete: scene.onDelete,
-            exitKey: logViewerBackKey,
-            deleteKey: logActionsDeleteKey,
-          ),
-        ),
-        Positioned(
-          left: _macCapsuleSide,
-          right: _macCapsuleSide,
-          bottom: _macCapsuleBottom,
-          child: Center(child: _macCapsule(context, state)),
-        ),
-      ],
-    );
-  }
-
-  Widget _macCapsule(BuildContext context, VideoControlsState state) {
-    final LogViewerScene scene = widget.scene;
-    final VoidCallback? onEarlier = scene.onEarlier;
-    final VoidCallback? onLater = scene.onLater;
-    return ViewerCapsule(
-      maxWidth: _macCapsuleMaxWidth,
-      children: <Widget>[
-        _macStep(
-          onEarlier == null
-              ? null
-              : ViewerGlassCircle(
-                  key: logViewerEarlierKey,
-                  label: logViewerEarlierLabel,
-                  face: _macStepFace,
-                  glyph: const ChevronGlyph(
-                    pointsBack: true,
-                    color: Palette.mediaInk,
-                    size: _stepGlyphSize,
-                  ),
-                  onPressed: onEarlier,
-                ),
-        ),
-        const SizedBox(width: _macCapsuleGap),
-        ViewerPrimaryButton(
-          playing: state.isPlaying,
-          diameter: _macPrimary,
-          onPressed: state.onToggle,
-          download: state.download,
-        ),
-        const SizedBox(width: _macCapsuleGap),
-        _macStep(
-          onLater == null
-              ? null
-              : ViewerGlassCircle(
-                  key: logViewerLaterKey,
-                  label: logViewerLaterLabel,
-                  face: _macStepFace,
-                  glyph: const ChevronGlyph(
-                    pointsBack: false,
-                    color: Palette.mediaInk,
-                    size: _stepGlyphSize,
-                  ),
-                  onPressed: onLater,
-                ),
-        ),
-        const SizedBox(width: _timeGap),
-        _time(context, state.position),
-        const SizedBox(width: _timeGap),
-        Expanded(child: _scrubber(state)),
-        const SizedBox(width: _timeGap),
-        _time(context, state.total),
-        const SizedBox(width: _timeGap),
-      ],
-    );
-  }
-
-  Widget _macStep(Widget? control) {
-    return SizedBox.square(
-      dimension: _macStepSlot,
-      child: Center(
-        child: control ?? const SizedBox.square(dimension: _macStepFace),
-      ),
-    );
-  }
-}
-
-class _PhoneScrubberBar extends StatelessWidget {
-  const _PhoneScrubberBar({
-    required this.elapsed,
-    required this.scrubber,
-    required this.total,
-  });
-
-  final Widget elapsed;
-  final Widget scrubber;
-  final Widget total;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: <Widget>[
-        const Positioned.fill(
-          top: _phoneScrubberReach,
-          bottom: _phoneScrubberReach,
-          child: GlassSurface(
-            key: videoScrubberBarKey,
-            grouped: true,
-            tone: GlassTone.media,
-            tint: Palette.mediaScrim,
-            borderRadius: _phoneScrubberRadius,
-            child: SizedBox.expand(),
-          ),
-        ),
-        Padding(
-          padding: _phoneScrubberPadding,
-          child: Row(
-            children: <Widget>[
-              elapsed,
-              const SizedBox(width: _timeGap),
-              Expanded(child: scrubber),
-              const SizedBox(width: _timeGap),
-              total,
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
