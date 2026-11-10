@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-10T22:22:40.296Z
+Updated: 2026-11-10T22:22:42.459Z
 Next ids: c4 D1 R1 S1
 
 ## Goal
@@ -28,3 +28,6 @@ Trace each item a to h in the code, find the root causes of the top-corner outli
 ## Settled, do not reopen
 
 ## Where the details live
+
+- Owner's request: 2026-11-10 message with ten screenshots, items a to h
+- Prototype canvas: https://claude.ai/artifact/6Jhnx5E1BxCPH9DgNu9R1m, local copy in the session scratchpad artifact-files folder
