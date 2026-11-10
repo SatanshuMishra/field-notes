@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-10T22:53:04.126Z
+Updated: 2026-11-10T22:53:06.052Z
 Next ids: c4 D6 R2 S1
 
 ## Goal
@@ -9,7 +9,7 @@ Prototype the owner's eight 1.8.0 follow-ups (a to h) on the design canvas, get 
 
 ## Done when
 
-- [ ] c1 The owner approves prototypes for a to h on the canvas's 1.8 follow-ups page
+- [x] c1 The owner approves prototypes for a to h on the canvas's 1.8 follow-ups page evidence: Owner, 2026-11-10: "Approved as recommended" with two tweaks (moon on the expanded late-night pill; equal collapsed rail boxes), both added to the canvas as Version 18
 - [ ] c2 The root causes of the broken top-corner outlines and the uneven hover padding are named with evidence and fixed in their shared primitives
 - [ ] c3 Every approved change is open as a pull request with its tests passing
 
@@ -21,7 +21,9 @@ Root causes found: rounded outlines break where an opaque child is clipped only 
 
 ## Next step
 
-Wait for the owner's answer on the 1.8 follow-ups boards and the four questions, then write fanout items from the approved boards and run fanout from origin/main.
+Write fanout items for a to h from the approved boards, plan with the fanout wrapper, then dispatch one build agent per MSP from origin/main.
+
+Needs: D1, D2, D3, D4, D5, R1.
 
 ## Decisions in force
 
