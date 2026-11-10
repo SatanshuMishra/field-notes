@@ -6,6 +6,27 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-10
+
+This release gives notes one calm place to be written, read and edited, and makes earlier days quicker to reach.
+
+### New
+
+- On Today, tap an earlier day in this week's garden to open that day straight away, without going through the Calendar.
+
+### Improved
+
+- Notes open full window in the same writing space you write them in. Reading a note shows its day and time at the top with Edit and More, and Edit, or the E key on Mac and Windows, turns the same page into the editor without anything moving. On Android, Close, Edit and More sit along the top, and Rename and Delete are in More.
+- A new note starts with the cursor in its title. Press Return or Tab to move on to the note itself.
+- The note editor and the voice and video recorders show the day your log goes into, "today" or "adding to" and the date, in place of the privacy line.
+- The voice recorder's button is a flat coral circle in a cream ring, matching the video recorder.
+- The window for an earlier day is shorter. Its mood sits on one line, as it does on Today, and on Mac and Windows each log is a compact two-line row. Clicking a row shows it beside the list, where a new full-screen button opens it full window.
+- The button that opens a log full window shows the same full-screen icon everywhere.
+
+### Fixed
+
+- If Field Notes stayed open past midnight, Today kept showing the previous day's logs until you restarted the app, and a log or mood added after midnight could be saved to the previous day. Today now moves to the new day at midnight and checks again whenever you come back to the app.
+
 ## [1.7.0] - 2026-11-09
 
 This release lets you give any log a title and brings voice notes and videos onto one set of player controls.
