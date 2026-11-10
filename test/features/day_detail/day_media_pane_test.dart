@@ -293,7 +293,7 @@ void main() {
 
     expect(_inPane(find.byType(VoicePlayerView)), findsOneWidget);
     expect(_inPane(find.text('Morning voice log')), findsNothing);
-    expect(_inPane(find.byTooltip('Full screen')), findsOneWidget);
+    expect(_inPane(find.byTooltip(logActionsOpenTooltip)), findsOneWidget);
     expect(_inPane(find.byKey(logActionsDeleteKey)), findsOneWidget);
     expect(_inPane(find.byType(LogStepFooter)), findsOneWidget);
     expect(_inPane(find.byKey(logViewerEarlierKey)), findsOneWidget);

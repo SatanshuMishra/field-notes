@@ -10,6 +10,8 @@ import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail.dart';
 import 'package:field_notes/features/day_detail/day_media_pane.dart';
+import 'package:field_notes/features/day_detail/day_note_pane.dart'
+    show dayPaneOpenFullKey;
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
@@ -223,7 +225,7 @@ void main() {
     await tester.pump();
     expect(_inPane(find.textContaining('0:19')), findsOneWidget);
 
-    await tester.tap(_inPane(find.byKey(dayMediaPaneFullScreenKey)));
+    await tester.tap(_inPane(find.byKey(dayPaneOpenFullKey)));
     for (int step = 0; step < 5; step++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
@@ -251,7 +253,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(_inPane(find.byType(VoicePlayerView)), findsOneWidget);
 
-    await tester.tap(_inPane(find.byKey(dayMediaPaneFullScreenKey)));
+    await tester.tap(_inPane(find.byKey(dayPaneOpenFullKey)));
     await tester.pumpAndSettle();
     expect(find.byType(LogViewerPanel), findsOneWidget);
     expect(players.voice, hasLength(2));
@@ -292,7 +294,7 @@ void main() {
       pane.emitState(AudioPlaybackState.playing);
       await tester.pump();
 
-      await tester.tap(_inPane(find.byKey(dayMediaPaneFullScreenKey)));
+      await tester.tap(_inPane(find.byKey(dayPaneOpenFullKey)));
       await tester.pumpAndSettle();
 
       expect(players.voice, hasLength(2));
@@ -322,7 +324,7 @@ void main() {
     expect(players.voice, hasLength(1));
     expect(players.voice.single.playCalls, 1);
 
-    final Finder fullScreen = _inPane(find.byKey(dayMediaPaneFullScreenKey));
+    final Finder fullScreen = _inPane(find.byKey(dayPaneOpenFullKey));
     expect(
       tester
           .getSemantics(fullScreen)

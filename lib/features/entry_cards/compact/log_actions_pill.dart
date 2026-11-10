@@ -57,7 +57,6 @@ const double _menuPhoneRowHeight = 52;
 const double _menuLabelSize = 14;
 const EdgeInsets _menuPadding = EdgeInsets.all(4);
 const EdgeInsets _menuSheetPadding = EdgeInsets.fromLTRB(12, 2, 12, 12);
-const Radius _openGlyphCorner = Radius.circular(1.5);
 
 final Color _actionHoverFill = Palette.onAccent.withValues(alpha: 0.14);
 
@@ -418,8 +417,8 @@ class LogCardActions extends StatelessWidget {
             tooltip: logActionsOpenTooltip,
             highlighted: LogCardHighlight.of(context),
             onPressed: open,
-            glyph: (Color color) => _StrokeGlyphIcon(
-              glyph: _StrokeGlyph.open,
+            glyph: (Color color) => TransportGlyphIcon(
+              glyph: TransportGlyph.fullScreen,
               color: color,
               size: _cardGlyphExtent,
             ),
@@ -487,7 +486,7 @@ class _CardActionButton extends StatelessWidget {
   }
 }
 
-enum _StrokeGlyph { open, title }
+enum _StrokeGlyph { title }
 
 class _StrokeGlyphIcon extends StatelessWidget {
   const _StrokeGlyphIcon({
@@ -514,33 +513,6 @@ class _StrokeGlyphPainter extends CustomPainter {
   final Color color;
 
   Path get _path => switch (glyph) {
-    _StrokeGlyph.open =>
-      Path()
-        ..moveTo(14, 5)
-        ..lineTo(19, 5)
-        ..lineTo(19, 10)
-        ..moveTo(19, 5)
-        ..lineTo(11.5, 12.5)
-        ..moveTo(10, 5.5)
-        ..lineTo(7, 5.5)
-        ..arcToPoint(
-          const Offset(5.5, 7),
-          radius: _openGlyphCorner,
-          clockwise: false,
-        )
-        ..lineTo(5.5, 17)
-        ..arcToPoint(
-          const Offset(7, 18.5),
-          radius: _openGlyphCorner,
-          clockwise: false,
-        )
-        ..lineTo(17, 18.5)
-        ..arcToPoint(
-          const Offset(18.5, 17),
-          radius: _openGlyphCorner,
-          clockwise: false,
-        )
-        ..lineTo(18.5, 14),
     _StrokeGlyph.title =>
       Path()
         ..moveTo(5, 6.5)

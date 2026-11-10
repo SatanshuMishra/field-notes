@@ -3,11 +3,21 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/flowers/flower_bloom.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart'
-    show LogActionsPill, MediaResolver, logActionsPillTapInset, logOwnTitle;
+    show
+        LogActionsPill,
+        MediaResolver,
+        logActionsOpenTooltip,
+        logActionsPillTapInset,
+        logOwnTitle;
+import 'package:field_notes/features/entry_cards/transport/transport_bar.dart'
+    show TransportGlyph, TransportGlyphIcon;
 import 'package:field_notes/features/log_viewer/note_reading.dart';
 
 const String dayNotePanePrompt = 'Choose a log to read it here.';
@@ -16,6 +26,7 @@ const String dayNotePaneEmptyTitle = 'Nothing logged this day yet.';
 const String dayNotePaneEmptyHint = "Add a note to start the day's page.";
 
 const Key dayNotePaneKey = ValueKey<String>('day-note-pane');
+const Key dayPaneOpenFullKey = ValueKey<String>('day-pane-open-full');
 
 const double _flowerSize = 56;
 const double _flowerGap = 16;
@@ -31,6 +42,10 @@ const double _headerActionGap = 10;
 const double _titleSize = 22;
 const double _titleLineHeight = 1.05;
 const EdgeInsets _bodyPadding = EdgeInsets.fromLTRB(28, 18, 28, 24);
+const double _openFullTarget = 48;
+const double _openFullFace = 38;
+const double _openFullGlyph = 24;
+const BorderRadius _openFullRadius = BorderRadius.all(Radius.circular(10));
 
 class DayNotePane extends StatelessWidget {
   const DayNotePane({
@@ -43,6 +58,7 @@ class DayNotePane extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onStep,
+    this.onOpenFull,
     this.onToggleTask,
   });
 
@@ -54,6 +70,7 @@ class DayNotePane extends StatelessWidget {
   final ValueChanged<Entry> onEdit;
   final ValueChanged<Entry> onDelete;
   final ValueChanged<Entry> onStep;
+  final ValueChanged<Entry>? onOpenFull;
   final ValueChanged<int>? onToggleTask;
 
   @override
@@ -109,10 +126,12 @@ class DayNotePane extends StatelessWidget {
   }
 
   Widget _reading(BuildContext context, Entry note, MediaResolver media) {
+    final ValueChanged<Entry>? openFull = onOpenFull;
     return DayPaneFrame(
       entries: entries,
       entry: note,
       title: logOwnTitle(note),
+      onOpenFull: openFull == null ? null : () => openFull(note),
       onEdit: () => onEdit(note),
       onDelete: () => onDelete(note),
       onStep: onStep,
@@ -148,7 +167,7 @@ class DayPaneFrame extends StatelessWidget {
     required this.onStep,
     required this.body,
     this.onEdit,
-    this.actions = const <Widget>[],
+    this.onOpenFull,
   });
 
   final List<Entry> entries;
@@ -158,7 +177,7 @@ class DayPaneFrame extends StatelessWidget {
   final ValueChanged<Entry> onStep;
   final Widget body;
   final VoidCallback? onEdit;
-  final List<Widget> actions;
+  final VoidCallback? onOpenFull;
 
   @override
   Widget build(BuildContext context) {
@@ -201,6 +220,7 @@ class DayPaneFrame extends StatelessWidget {
       _headerVerticalPadding - reach.top,
     );
     final String? shownTitle = title;
+    final VoidCallback? openFull = onOpenFull;
     return Padding(
       padding: EdgeInsetsDirectional.only(
         start: _headerHorizontalPadding,
@@ -229,12 +249,12 @@ class DayPaneFrame extends StatelessWidget {
                     ),
                   ),
           ),
-          for (final Widget action in actions)
+          if (openFull != null)
             Padding(
               padding: EdgeInsetsDirectional.only(
                 end: math.max<double>(0, _headerActionGap - reach.left),
               ),
-              child: action,
+              child: _OpenFullViewButton(onPressed: openFull),
             ),
           Padding(
             padding: EdgeInsets.symmetric(vertical: actionsTop),
@@ -245,6 +265,49 @@ class DayPaneFrame extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _OpenFullViewButton extends StatelessWidget {
+  const _OpenFullViewButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      key: dayPaneOpenFullKey,
+      label: logActionsOpenTooltip,
+      tooltip: logActionsOpenTooltip,
+      onPressed: onPressed,
+      borderRadius: _openFullRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox.square(
+        dimension: _openFullTarget,
+        child: Center(
+          child: HoverFill(
+            hovered: hovered,
+            surface: FocusRingSurface.dark,
+            borderRadius: _openFullRadius,
+            child: Container(
+              width: _openFullFace,
+              height: _openFullFace,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: Palette.toolbarInk,
+                borderRadius: _openFullRadius,
+                boxShadow: Shadows.toastLift,
+              ),
+              child: const TransportGlyphIcon(
+                glyph: TransportGlyph.fullScreen,
+                color: Palette.onAccent,
+                size: _openFullGlyph,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

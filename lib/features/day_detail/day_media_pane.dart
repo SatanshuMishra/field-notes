@@ -3,9 +3,6 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_fill.dart';
-import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart'
@@ -19,24 +16,12 @@ import 'package:field_notes/features/today/today_providers.dart';
 
 import 'day_note_pane.dart';
 
-const String dayMediaPaneFullScreenLabel = 'Full screen';
-
 const Key dayMediaPaneKey = ValueKey<String>('day-media-pane');
-const Key dayMediaPaneFullScreenKey = ValueKey<String>(
-  'day-media-pane-full-screen',
-);
 
 const EdgeInsets _stagePadding = EdgeInsets.fromLTRB(28, 18, 28, 24);
 const BorderRadius _stageRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusMd),
 );
-
-const double _fullScreenTarget = 48;
-const double _fullScreenFace = 38;
-const double _fullScreenGlyph = 14;
-const double _fullScreenStroke = 1.8;
-const double _fullScreenCorner = 0.36;
-const BorderRadius _fullScreenRadius = BorderRadius.all(Radius.circular(10));
 
 typedef DayMediaFullScreenClosed = void Function(
   Entry entry,
@@ -141,7 +126,7 @@ class _DayMediaPaneState extends ConsumerState<DayMediaPane> {
         entries: widget.entries,
         entry: entry,
         title: logOwnTitle(entry),
-        actions: <Widget>[_FullScreenButton(onPressed: _openFullScreen)],
+        onOpenFull: _openFullScreen,
         onDelete: () => widget.onDelete(entry),
         onStep: widget.onStep,
         body: Padding(
@@ -210,87 +195,4 @@ class _DayMediaPaneState extends ConsumerState<DayMediaPane> {
       onEdit: null,
     );
   }
-}
-
-class _FullScreenButton extends StatelessWidget {
-  const _FullScreenButton({required this.onPressed});
-
-  final VoidCallback? onPressed;
-
-  void _press() => onPressed?.call();
-
-  @override
-  Widget build(BuildContext context) {
-    return Pressable(
-      key: dayMediaPaneFullScreenKey,
-      label: dayMediaPaneFullScreenLabel,
-      tooltip: dayMediaPaneFullScreenLabel,
-      onPressed: _press,
-      borderRadius: _fullScreenRadius,
-      paintsHover: false,
-      builder: (BuildContext context, bool hovered) => SizedBox.square(
-        dimension: _fullScreenTarget,
-        child: Center(
-          child: HoverFill(
-            hovered: hovered,
-            surface: FocusRingSurface.dark,
-            borderRadius: _fullScreenRadius,
-            child: Container(
-              width: _fullScreenFace,
-              height: _fullScreenFace,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: Palette.toolbarInk,
-                borderRadius: _fullScreenRadius,
-                boxShadow: Shadows.toastLift,
-              ),
-              child: const CustomPaint(
-                size: Size.square(_fullScreenGlyph),
-                painter: _FullScreenGlyphPainter(color: Palette.onAccent),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FullScreenGlyphPainter extends CustomPainter {
-  const _FullScreenGlyphPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double arm = size.shortestSide * _fullScreenCorner;
-    final double right = size.width;
-    final double bottom = size.height;
-    final Path corners = Path()
-      ..moveTo(0, arm)
-      ..lineTo(0, 0)
-      ..lineTo(arm, 0)
-      ..moveTo(right - arm, 0)
-      ..lineTo(right, 0)
-      ..lineTo(right, arm)
-      ..moveTo(right, bottom - arm)
-      ..lineTo(right, bottom)
-      ..lineTo(right - arm, bottom)
-      ..moveTo(arm, bottom)
-      ..lineTo(0, bottom)
-      ..lineTo(0, bottom - arm);
-    canvas.drawPath(
-      corners,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = _fullScreenStroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_FullScreenGlyphPainter oldDelegate) =>
-      color != oldDelegate.color;
 }
