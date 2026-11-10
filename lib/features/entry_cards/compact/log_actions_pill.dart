@@ -57,7 +57,6 @@ const double _menuPhoneRowHeight = 52;
 const double _menuLabelSize = 14;
 const EdgeInsets _menuPadding = EdgeInsets.all(4);
 const EdgeInsets _menuSheetPadding = EdgeInsets.fromLTRB(12, 2, 12, 12);
-const Radius _openGlyphCorner = Radius.circular(1.5);
 
 final Color _actionHoverFill = Palette.onAccent.withValues(alpha: 0.14);
 
@@ -396,33 +395,36 @@ int _compareLineages(List<Element> first, List<Element> second) {
 class LogCardActions extends StatelessWidget {
   const LogCardActions({
     super.key,
-    required this.onOpen,
+    this.onOpen,
     required this.onMore,
     this.moreAnchorKey,
   });
 
-  final VoidCallback onOpen;
+  final VoidCallback? onOpen;
   final VoidCallback onMore;
   final GlobalKey? moreAnchorKey;
 
   @override
   Widget build(BuildContext context) {
+    final VoidCallback? open = onOpen;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        _CardActionButton(
-          key: logActionsOpenKey,
-          label: logActionsOpenLabel,
-          tooltip: logActionsOpenTooltip,
-          highlighted: LogCardHighlight.of(context),
-          onPressed: onOpen,
-          glyph: (Color color) => _StrokeGlyphIcon(
-            glyph: _StrokeGlyph.open,
-            color: color,
-            size: _cardGlyphExtent,
+        if (open != null) ...<Widget>[
+          _CardActionButton(
+            key: logActionsOpenKey,
+            label: logActionsOpenLabel,
+            tooltip: logActionsOpenTooltip,
+            highlighted: LogCardHighlight.of(context),
+            onPressed: open,
+            glyph: (Color color) => TransportGlyphIcon(
+              glyph: TransportGlyph.fullScreen,
+              color: color,
+              size: _cardGlyphExtent,
+            ),
           ),
-        ),
-        const SizedBox(width: _cardActionGap),
+          const SizedBox(width: _cardActionGap),
+        ],
         KeyedSubtree(
           key: moreAnchorKey,
           child: _CardActionButton(
@@ -484,7 +486,7 @@ class _CardActionButton extends StatelessWidget {
   }
 }
 
-enum _StrokeGlyph { open, title }
+enum _StrokeGlyph { title }
 
 class _StrokeGlyphIcon extends StatelessWidget {
   const _StrokeGlyphIcon({
@@ -511,33 +513,6 @@ class _StrokeGlyphPainter extends CustomPainter {
   final Color color;
 
   Path get _path => switch (glyph) {
-    _StrokeGlyph.open =>
-      Path()
-        ..moveTo(14, 5)
-        ..lineTo(19, 5)
-        ..lineTo(19, 10)
-        ..moveTo(19, 5)
-        ..lineTo(11.5, 12.5)
-        ..moveTo(10, 5.5)
-        ..lineTo(7, 5.5)
-        ..arcToPoint(
-          const Offset(5.5, 7),
-          radius: _openGlyphCorner,
-          clockwise: false,
-        )
-        ..lineTo(5.5, 17)
-        ..arcToPoint(
-          const Offset(7, 18.5),
-          radius: _openGlyphCorner,
-          clockwise: false,
-        )
-        ..lineTo(17, 18.5)
-        ..arcToPoint(
-          const Offset(18.5, 17),
-          radius: _openGlyphCorner,
-          clockwise: false,
-        )
-        ..lineTo(18.5, 14),
     _StrokeGlyph.title =>
       Path()
         ..moveTo(5, 6.5)

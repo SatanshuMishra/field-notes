@@ -216,9 +216,7 @@ void main() {
   testWidgets('a voice card opens paused', (WidgetTester tester) async {
     final _Players players = await _openDay(tester, entries: <Entry>[_voice()]);
 
-    await tester.tap(
-      _inCard('voice-1', find.text('9:12 AM · morning · voice')),
-    );
+    await tester.tap(_inCard('voice-1', find.text('9:12 AM · morning')));
     await tester.pumpAndSettle();
 
     expect(_inPane(find.byType(VoicePlayerView)), findsOneWidget);
@@ -250,7 +248,7 @@ void main() {
   testWidgets('a video card opens paused', (WidgetTester tester) async {
     final _Players players = await _openDay(tester, entries: <Entry>[_video()]);
 
-    await tester.tap(_inCard('video-1', find.text('Watch ›')));
+    await tester.tap(_inCard('video-1', find.text('11:12 AM · morning')));
     await tester.pumpAndSettle();
 
     expect(_inPane(find.byType(VideoViewerView)), findsOneWidget);
@@ -290,14 +288,12 @@ void main() {
       ],
     );
 
-    await tester.tap(
-      _inCard('voice-1', find.text('9:12 AM · morning · voice')),
-    );
+    await tester.tap(_inCard('voice-1', find.text('9:12 AM · morning')));
     await tester.pumpAndSettle();
 
     expect(_inPane(find.byType(VoicePlayerView)), findsOneWidget);
     expect(_inPane(find.text('Morning voice log')), findsNothing);
-    expect(_inPane(find.byTooltip('Full screen')), findsOneWidget);
+    expect(_inPane(find.byTooltip(logActionsOpenTooltip)), findsOneWidget);
     expect(_inPane(find.byKey(logActionsDeleteKey)), findsOneWidget);
     expect(_inPane(find.byType(LogStepFooter)), findsOneWidget);
     expect(_inPane(find.byKey(logViewerEarlierKey)), findsOneWidget);

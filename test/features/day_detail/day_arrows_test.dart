@@ -199,9 +199,7 @@ void main() {
     );
     expect(_inPanel(find.text('Thursday, October 15')), findsOneWidget);
 
-    await tester.tap(
-      _inCard('voice-15', find.text('9:12 AM · morning · voice')),
-    );
+    await tester.tap(_inCard('voice-15', find.text('9:12 AM · morning')));
     await tester.pumpAndSettle();
     expect(find.byKey(dayMediaPaneKey), findsOneWidget);
 
@@ -362,7 +360,7 @@ void main() {
       },
     );
 
-    await tester.tap(_inCard('note-a', find.text('8:30 AM · morning · note')));
+    await tester.tap(_inCard('note-a', find.text('8:30 AM · morning')));
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey<String>('day-note-pane-note-a')),

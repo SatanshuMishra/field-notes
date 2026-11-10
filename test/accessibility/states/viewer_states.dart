@@ -753,14 +753,14 @@ final List<A11yState> viewerStates = <A11yState>[
       pump: _pumpDayPastMood,
       proof: <A11yProof>[
         A11yProof(_daySheet),
-        A11yProof(find.byType(DayMoodCard)),
+        A11yProof(find.byType(MoodBanner)),
       ],
     ),
     desktop: A11yLayoutHalf(
       pump: _pumpDayPastMood,
       proof: <A11yProof>[
         A11yProof(_dayPanel),
-        A11yProof(find.byType(DayMoodCard)),
+        A11yProof(find.byType(MoodBanner)),
       ],
     ),
   ),

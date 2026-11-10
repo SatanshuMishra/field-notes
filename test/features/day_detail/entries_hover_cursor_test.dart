@@ -11,7 +11,8 @@ import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail.dart';
-import 'package:field_notes/features/day_detail/day_media_pane.dart';
+import 'package:field_notes/features/day_detail/day_note_pane.dart'
+    show dayPaneOpenFullKey;
 import 'package:field_notes/features/entry_cards/cards/video_controls_overlay.dart';
 import 'package:field_notes/features/entry_cards/cards/video_scrubber.dart';
 import 'package:field_notes/features/entry_cards/cards/voice_waveform.dart';
@@ -456,8 +457,8 @@ void main() {
 
       await _expectRows(tester, mouse, <_Row>[
         _Row(
-          'Full screen',
-          find.byKey(dayMediaPaneFullScreenKey),
+          logActionsOpenTooltip,
+          find.byKey(dayPaneOpenFullKey),
           _dark,
           _Shape.rounded,
           radius: 10,

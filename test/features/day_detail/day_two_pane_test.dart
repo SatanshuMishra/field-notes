@@ -17,7 +17,11 @@ import 'package:field_notes/features/day_detail/day_media_pane.dart';
 import 'package:field_notes/features/day_detail/day_note_pane.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
-    show LogViewerPanel, logViewerBackLabel, logViewerLaterKey;
+    show
+        LogViewerPanel,
+        logViewerBackKey,
+        logViewerBackLabel,
+        logViewerLaterKey;
 import 'package:field_notes/features/log_viewer/note_reading.dart';
 import 'package:field_notes/features/log_viewer/photo_viewer.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
@@ -306,12 +310,12 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Change mood'), findsOneWidget);
+    expect(find.text('change'), findsOneWidget);
     expect(find.text(dayDetailAddNoteLabel), findsOneWidget);
-    _expectOneLine(tester, 'Change mood');
+    _expectOneLine(tester, 'change');
     _expectOneLine(tester, dayDetailAddNoteLabel);
     expect(
-      tester.getRect(find.text('Change mood')).right,
+      tester.getRect(find.text('change')).right,
       lessThanOrEqualTo(list.right),
     );
     expect(
@@ -396,6 +400,47 @@ void main() {
     expect(_inPane(find.text('3 of 3')), findsOneWidget);
     expect(_outlinesOf(tester, 'note-3'), hasLength(1));
     expect(_outlinesOf(tester, 'note-2'), isEmpty);
+  }, variant: _mac);
+
+  testWidgets('the side pane opens the selected log full window', (
+    WidgetTester tester,
+  ) async {
+    await _openDay(tester, entries: _notes(), mood: Mood.calm);
+    await _tapCard(tester, 'note-2');
+
+    final Finder openFull = _inPane(find.byTooltip(logActionsOpenTooltip));
+    expect(openFull, findsOneWidget);
+    expect(
+      tester.getTopRight(openFull).dx,
+      lessThanOrEqualTo(
+        tester.getTopLeft(_inPane(find.byType(LogActionsPill))).dx,
+      ),
+    );
+
+    await tester.tap(openFull);
+    await tester.pumpAndSettle();
+
+    final Finder viewer = find.byType(LogViewerPanel);
+    expect(viewer, findsOneWidget);
+    expect(
+      find.descendant(
+        of: viewer,
+        matching: find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is NoteReadingBody && widget.entry.id == 'note-2',
+        ),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.descendant(of: viewer, matching: find.byKey(logViewerBackKey)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(viewer, findsNothing);
+    expect(find.byKey(dayDetailPanelKey), findsOneWidget);
+    expect(_readingId(tester), 'note-2');
   }, variant: _mac);
 
   testWidgets('voice and video open in the right column', (

@@ -71,32 +71,28 @@ Future<void> _openPastDaySheet(WidgetTester tester, Mood mood) async {
         ),
         todayClockProvider.overrideWithValue(() => DateTime(2026, 7, 19, 9)),
       ],
-      child: day_detail.dayDetailHarness(
-        const DayDetailPanel(date: _pastDate),
-      ),
+      child: day_detail.dayDetailHarness(const DayDetailPanel(date: _pastDate)),
     ),
   );
   await tester.pumpAndSettle();
 }
 
 List<String> _labelParts(String label) => <String>[
-      for (final String line in label.split('\n'))
-        for (final String part in line.split(', '))
-          if (part.trim().isNotEmpty) part.trim(),
-    ];
+  for (final String line in label.split('\n'))
+    for (final String part in line.split(', '))
+      if (part.trim().isNotEmpty) part.trim(),
+];
 
 void main() {
-  testWidgets("a past day with a mood reads Felt and the day's bloom",
-      (WidgetTester tester) async {
+  testWidgets("a past day with a mood reads Felt and the day's bloom", (
+    WidgetTester tester,
+  ) async {
     final FakeJournalRepository fake = FakeJournalRepository(
       initialDay: testDay(date: _pastDate, mood: Mood.calm),
     );
     await tester.pumpWidget(
       ProviderScope(
-        overrides: _overrides(
-          repository: fake,
-          player: FakeSoundPlayer(),
-        ),
+        overrides: _overrides(repository: fake, player: FakeSoundPlayer()),
         child: moodHarness(const MoodBannerForDate(date: _pastDate)),
       ),
     );
@@ -107,8 +103,9 @@ void main() {
     expect(find.text('Feeling Calm today'), findsNothing);
   });
 
-  testWidgets('a past day with a mood offers Change mood through the live flow',
-      (WidgetTester tester) async {
+  testWidgets('a past day with a mood offers change through the live flow', (
+    WidgetTester tester,
+  ) async {
     final FakeJournalRepository fake = FakeJournalRepository(
       initialDay: testDay(date: _pastDate, mood: Mood.calm),
     );
@@ -121,7 +118,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.text('Change mood'));
+    await tester.tap(find.text('change'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Happy'));
     await tester.pumpAndSettle();
@@ -137,35 +134,41 @@ void main() {
   });
 
   testWidgets(
-      'Change mood on a past day is a 48 dp target without moving the card',
-      (WidgetTester tester) async {
-    final SemanticsHandle handle = tester.ensureSemantics();
-    await _pumpPastDayCard(tester, Mood.grateful);
+    "a past day's change pill is a 48 dp target on the banner's one row",
+    (WidgetTester tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await _pumpPastDayCard(tester, Mood.grateful);
 
-    final Finder label = find.text('Change mood');
-    final Size hitArea = tester.getSize(
-      find.ancestor(of: label, matching: find.byType(GestureDetector)).first,
-    );
-    final Size node = tester.getSemantics(label).rect.size;
-    expect(hitArea.width, greaterThanOrEqualTo(48));
-    expect(hitArea.height, greaterThanOrEqualTo(48));
-    expect(node.width, greaterThanOrEqualTo(48));
-    expect(node.height, greaterThanOrEqualTo(48));
+      final Finder label = find.text('change');
+      final Size hitArea = tester.getSize(
+        find.ancestor(of: label, matching: find.byType(GestureDetector)).first,
+      );
+      final Size node = tester.getSemantics(label).rect.size;
+      expect(hitArea.width, greaterThanOrEqualTo(48));
+      expect(hitArea.height, greaterThanOrEqualTo(48));
+      expect(node.width, greaterThanOrEqualTo(48));
+      expect(node.height, greaterThanOrEqualTo(48));
 
-    final Rect card = tester.getRect(find.byType(DayMoodCard));
-    expect(card.height, 68);
-    expect(tester.getRect(find.text('Felt Grateful')).top - card.top, 15);
-    expect(tester.getRect(label).top - card.top, 25.5);
-    handle.dispose();
-  });
+      final Rect card = tester.getRect(find.byType(MoodBanner));
+      expect(
+        tester.getRect(label).left,
+        greaterThan(tester.getRect(find.text('Felt Grateful')).right),
+      );
+      expect(tester.getCenter(label).dy, closeTo(card.center.dy, 1));
+      handle.dispose();
+    },
+  );
 
-  testWidgets('the day card names the mood once and is not an image',
-      (WidgetTester tester) async {
+  testWidgets('the day card names the mood once and is not an image', (
+    WidgetTester tester,
+  ) async {
     final SemanticsHandle handle = tester.ensureSemantics();
     await _openPastDaySheet(tester, Mood.grateful);
 
-    expect(find.byType(DayMoodCard), findsOneWidget);
-    final String summary = tester.getSemantics(find.text('Felt Grateful')).label;
+    expect(find.byType(MoodBanner), findsOneWidget);
+    final String summary = tester
+        .getSemantics(find.text('Felt Grateful'))
+        .label;
     expect(
       _labelParts(summary).where((String part) => part.contains('Grateful')),
       hasLength(1),

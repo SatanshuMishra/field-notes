@@ -50,11 +50,15 @@ class MoodBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  'Feeling ${current.label} today',
+                  isToday
+                      ? 'Feeling ${current.label} today'
+                      : 'Felt ${current.label}',
                   style: textStyles.bannerSerif,
                 ),
                 Text(
-                  '${current.flower.label} · your bloom for the day',
+                  isToday
+                      ? '${current.flower.label} · your bloom for the day'
+                      : "${current.flower.label} · the day's bloom",
                   style: textStyles.captionSans,
                 ),
               ],
@@ -172,134 +176,6 @@ class _MoodChoosePill extends StatelessWidget {
           label,
           style: context.textStyles.caption11Sans.copyWith(
             color: Palette.onAccent,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-const double _dayMoodCardGap = 13;
-
-const double _dayMoodFlowerSize = 46;
-
-List<BoxShadow> _dayMoodCardShadow(FieldNotesColors colors) => <BoxShadow>[
-  BoxShadow(color: colors.shadowTint(0x33), offset: const Offset(2, 2)),
-];
-
-const BorderRadius _changeMoodButtonRadius = BorderRadius.all(
-  Radius.circular(Shapes.radiusSm),
-);
-
-BoxDecoration _changeMoodButtonDecoration(FieldNotesColors colors) =>
-    BoxDecoration(
-      color: colors.cardLight,
-      border: Border.fromBorderSide(
-        BorderSide(color: colors.line, width: Shapes.outlineWidth),
-      ),
-      borderRadius: _changeMoodButtonRadius,
-      boxShadow: <BoxShadow>[
-        BoxShadow(
-          color: colors.shadowTint(0x33),
-          offset: const Offset(1.5, 1.5),
-        ),
-      ],
-    );
-
-const EdgeInsets _changeMoodButtonPadding = EdgeInsets.symmetric(
-  vertical: 8,
-  horizontal: 14,
-);
-
-class DayMoodCard extends StatelessWidget {
-  const DayMoodCard({
-    super.key,
-    required this.mood,
-    required this.onChangeMood,
-    this.changeLabel = 'Change mood',
-  });
-
-  final Mood mood;
-  final VoidCallback? onChangeMood;
-  final String changeLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    final FieldNotesTextStyles textStyles = context.textStyles;
-    return StickerCard(
-      surface: colors.cardWarm,
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 13),
-      shadow: _dayMoodCardShadow(colors),
-      child: Row(
-        children: <Widget>[
-          ExcludeSemantics(
-            child: FlowerBloom.forMood(mood, size: _dayMoodFlowerSize),
-          ),
-          const SizedBox(width: _dayMoodCardGap),
-          Expanded(
-            child: OverflowBar(
-              alignment: MainAxisAlignment.spaceBetween,
-              spacing: _dayMoodCardGap,
-              overflowSpacing: _dayMoodCardGap,
-              children: <Widget>[
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text('Felt ${mood.label}', style: textStyles.sectionSerif),
-                    Text(
-                      "${mood.flower.label} · the day's bloom",
-                      style: textStyles.caption10Sans,
-                    ),
-                  ],
-                ),
-                _ChangeMoodButton(label: changeLabel, onTap: onChangeMood),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ChangeMoodButton extends StatelessWidget {
-  const _ChangeMoodButton({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    final bool isEnabled = onTap != null;
-    return Pressable(
-      label: label,
-      onPressed: onTap,
-      shape: HoverShape.pill,
-      borderRadius: _changeMoodButtonRadius,
-      paintsHover: false,
-      builder: (BuildContext context, bool hovered) => Opacity(
-        opacity: isEnabled ? 1.0 : 0.5,
-        child: _MinTapTarget(
-          child: DecoratedBox(
-            decoration: _changeMoodButtonDecoration(colors),
-            child: HoverFill(
-              hovered: hovered,
-              shape: HoverShape.pill,
-              borderRadius: _changeMoodButtonRadius,
-              child: Padding(
-                padding: _changeMoodButtonPadding,
-                child: Text(
-                  label,
-                  style: context.textStyles.caption11Sans.copyWith(
-                    fontSize: 12,
-                    color: colors.ink,
-                  ),
-                ),
-              ),
-            ),
           ),
         ),
       ),

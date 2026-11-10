@@ -87,7 +87,7 @@ void main() {
     await tester.pumpWidget(_panelApp(_twoNotes()));
     await tester.pumpAndSettle();
 
-    expectInsideEveryReadingFrame(tester, logActionsOpenLabel);
+    expect(find.bySemanticsLabel(logActionsOpenLabel), findsNothing);
     expectInsideEveryReadingFrame(tester, logActionsMoreLabel);
     for (int card = 0; card < 2; card += 1) {
       await _revealPillOn(tester, find.byType(CompactLogCard).at(card));
@@ -129,18 +129,15 @@ void main() {
     expect(find.text(dayDetailMoodPrompt), findsOneWidget);
     expect(find.text('2 logs that day'), findsOneWidget);
     expect(find.byType(CompactLogCard), findsNWidgets(2));
-    expect(
-      find.byWidgetPredicate(
-        (Widget w) => w is NoteBody && w.text == 'a good day',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (Widget w) => w is NoteBody && w.text == 'and a walk',
-      ),
-      findsOneWidget,
-    );
+    for (final String note in <String>['a good day', 'and a walk']) {
+      expect(
+        find.descendant(
+          of: find.byType(CompactLogCard),
+          matching: find.text(note),
+        ),
+        findsOneWidget,
+      );
+    }
   });
 
   testWidgets('shows the dashed empty state when the day has no entries', (
@@ -284,8 +281,9 @@ void main() {
     expect(repository.deletedEntryIds, isEmpty);
     expect(find.text(dayDetailDeleteErrorMessage), findsOneWidget);
     expect(
-      find.byWidgetPredicate(
-        (Widget w) => w is NoteBody && w.text == 'a good day',
+      find.descendant(
+        of: find.byType(CompactLogCard),
+        matching: find.text('a good day'),
       ),
       findsOneWidget,
     );
@@ -443,7 +441,7 @@ void main() {
     expect(card.left, panel.left + 2 + 18);
     expect(
       tester.widget<CompactLogCard>(find.byType(CompactLogCard)).density,
-      CompactLogDensity.day,
+      CompactLogDensity.row,
     );
   });
 
@@ -469,7 +467,7 @@ void main() {
     expect(tester.getSize(_panelCard()).height, 600 - 48);
   });
 
-  testWidgets('a long note reads as a compact lead with a Read link', (
+  testWidgets('a long note reads as a one-line snippet with no Read link', (
     WidgetTester tester,
   ) async {
     final String note = _longNote(0);
@@ -481,11 +479,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CompactLogCard), findsOneWidget);
-    expect(find.byKey(compactLogOpenLabelKey), findsOneWidget);
-    expect(
-      find.text('journal note number 0 word0 word1 word2 word3 word4…'),
-      findsNothing,
+    expect(find.byKey(compactLogOpenLabelKey), findsNothing);
+    final Text snippet = tester.widget<Text>(
+      find.textContaining('journal note number 0 word0'),
     );
+    expect(snippet.maxLines, 1);
+    expect(snippet.overflow, TextOverflow.ellipsis);
     expect(find.byType(NoteBody), findsNothing);
     expect(find.textContaining('word60'), findsNothing);
   });

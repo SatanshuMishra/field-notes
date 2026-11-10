@@ -244,6 +244,10 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       _select(entry.id);
       return;
     }
+    await _openFull(entry);
+  }
+
+  Future<void> _openFull(Entry entry) async {
     final LogViewerOutcome outcome = await _handOver(
       () => showLogViewer(
         context,
@@ -574,6 +578,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       onEdit: _edit,
       onDelete: _delete,
       onStep: _stepTo,
+      onOpenFull: _openFull,
       onToggleTask: selected == null
           ? null
           : (int boxOffset) => toggleTaskWithUndo(
@@ -693,7 +698,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       key: entry.id == widget.focusEntryId ? _focusedTile : null,
       entry: entry,
       resolver: resolver,
-      density: CompactLogDensity.day,
+      density: _sheet ? CompactLogDensity.day : CompactLogDensity.row,
       semanticIndex: semanticIndex,
       audioPlayerFactory: _sheet ? createJustAudioPlayer : null,
       onPlay: _sheet || entry.type == EntryType.text

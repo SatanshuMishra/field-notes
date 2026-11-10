@@ -22,10 +22,12 @@ import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show LogViewerPanel;
 import 'package:field_notes/features/log_viewer/note_reading.dart'
     show NoteReadingBody;
+import 'package:field_notes/features/mood/mood_banner.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
 import '../capture/core/capture_test_support.dart' show FakeDraftStore;
+import '../notes/support/notes_harness.dart' show photoIdA, photoLine;
 import 'support/day_detail_harness.dart';
 
 const String _date = '2026-07-19';
@@ -35,6 +37,7 @@ Entry _entry({
   required String id,
   required int hour,
   EntryType type = EntryType.text,
+  String? title,
   String? textContent,
   String? mediaId,
   int? durationMs,
@@ -43,6 +46,7 @@ Entry _entry({
     id: id,
     dayId: 'day-1',
     type: type,
+    title: title,
     textContent: textContent,
     mediaId: mediaId,
     durationMs: durationMs,
@@ -92,9 +96,13 @@ class _DayOpener extends StatelessWidget {
 Future<FakeJournalRepository> _openDay(
   WidgetTester tester, {
   required List<Entry> entries,
+  Mood? mood,
 }) async {
   final FakeJournalRepository repository = FakeJournalRepository(
     entries: entries,
+    day: mood == null
+        ? null
+        : Day(id: 'day-1', date: _date, mood: mood, createdAt: 0, updatedAt: 0),
   );
   await tester.pumpWidget(
     ProviderScope(
@@ -133,6 +141,13 @@ Finder _dayTitleInPanel() => find.descendant(
 
 Finder _panel() => find.byKey(dayDetailPanelKey);
 
+Finder _row(String id) => find.byWidgetPredicate(
+  (Widget widget) => widget is CompactLogCard && widget.entry.id == id,
+);
+
+Finder _inRow(String id, Finder matching) =>
+    find.descendant(of: _row(id), matching: matching);
+
 final TargetPlatformVariant _bothLayouts = TargetPlatformVariant(
   <TargetPlatform>{TargetPlatform.android, TargetPlatform.macOS},
 );
@@ -152,6 +167,93 @@ void main() {
     final TextStyle style = DefaultTextStyle.of(tester.element(title)).style;
     expect(style.decoration ?? TextDecoration.none, TextDecoration.none);
   }, variant: _bothLayouts);
+
+  testWidgets('the day modal shows the one-row banner and two-line rows with '
+      'no open icon and no Watch or Read link', (WidgetTester tester) async {
+    _useWindow(tester, const Size(1440, 900));
+    await _openDay(
+      tester,
+      mood: Mood.angry,
+      entries: <Entry>[
+        _entry(
+          id: 'video-1',
+          hour: 16,
+          type: EntryType.video,
+          title: "Pretending the truth isn't real",
+          mediaId: 'video-that-is-gone',
+          durationMs: 198000,
+        ),
+        _entry(
+          id: 'note-1',
+          hour: 23,
+          title: 'Night Cap',
+          textContent: 'This is a example note.\n\n${photoLine(photoIdA)}',
+        ),
+      ],
+    );
+
+    final Finder banner = find.byType(MoodBanner);
+    expect(banner, findsOneWidget);
+    expect(find.text('Felt Angry'), findsOneWidget);
+    expect(find.text("Red Spider Lily · the day's bloom"), findsOneWidget);
+    expect(find.text('Change mood'), findsNothing);
+    final Rect bannerRect = tester.getRect(banner);
+    final Rect felt = tester.getRect(find.text('Felt Angry'));
+    final Rect change = tester.getRect(
+      find.descendant(of: banner, matching: find.text('change')),
+    );
+    expect(change.left, greaterThan(felt.right));
+    expect(change.center.dy, closeTo(bannerRect.center.dy, 1));
+    expect(bannerRect.height, lessThanOrEqualTo(92));
+
+    expect(find.byType(CompactLogCard), findsNWidgets(2));
+    for (final String id in <String>['video-1', 'note-1']) {
+      expect(_inRow(id, find.byKey(logActionsOpenKey)), findsNothing);
+      expect(_inRow(id, find.byTooltip(logActionsOpenTooltip)), findsNothing);
+      expect(_inRow(id, find.byKey(logActionsMoreKey)), findsOneWidget);
+      expect(_inRow(id, find.byKey(compactLogOpenLabelKey)), findsNothing);
+      expect(_inRow(id, find.textContaining('Watch')), findsNothing);
+      expect(_inRow(id, find.textContaining('Read')), findsNothing);
+      expect(
+        tester.getSize(_row(id)).height,
+        lessThanOrEqualTo(84),
+        reason: id,
+      );
+    }
+
+    final Rect videoStamp = tester.getRect(
+      _inRow('video-1', find.text('4:12 PM · afternoon')),
+    );
+    expect(_inRow('video-1', find.text('VIDEO')), findsOneWidget);
+    expect(
+      tester
+          .getRect(
+            _inRow('video-1', find.text("Pretending the truth isn't real")),
+          )
+          .top,
+      greaterThanOrEqualTo(videoStamp.bottom),
+    );
+    expect(
+      tester.getSize(_inRow('video-1', find.byKey(compactLogThumbnailKey))),
+      const Size(72, 52),
+    );
+
+    final Rect noteStamp = tester.getRect(
+      _inRow('note-1', find.text('11:12 PM · night')),
+    );
+    expect(_inRow('note-1', find.text('NOTE')), findsOneWidget);
+    final Rect title = tester.getRect(_inRow('note-1', find.text('Night Cap')));
+    final Rect snippet = tester.getRect(
+      _inRow('note-1', find.text('This is a example note.')),
+    );
+    expect(title.top, greaterThanOrEqualTo(noteStamp.bottom));
+    expect(snippet.top, greaterThanOrEqualTo(title.bottom));
+    expect(
+      tester.getSize(_inRow('note-1', find.byKey(compactLogThumbnailKey))),
+      const Size(52, 52),
+    );
+    expect(tester.takeException(), isNull);
+  }, variant: _macOS);
 
   testWidgets('a long day stays inside 86 percent of the window under a '
       'fixed header', (WidgetTester tester) async {
@@ -204,10 +306,10 @@ void main() {
     final Rect panel = tester.getRect(_panel());
     expect(panel.width, lessThanOrEqualTo(360 - 48));
     for (final (String stamp, bool fitsWhole) in <(String, bool)>[
-      ('8:12 AM · morning · note', true),
-      ('12:12 PM · afternoon · note', true),
-      ('6:12 PM · evening · note', false),
-      ('8:12 PM · evening · voice', true),
+      ('8:12 AM · morning', true),
+      ('12:12 PM · afternoon', true),
+      ('6:12 PM · evening', false),
+      ('8:12 PM · evening', true),
     ]) {
       await tester.scrollUntilVisible(
         find.text(stamp),
@@ -332,7 +434,9 @@ void main() {
         find.descendant(
           of: find.byType(CompactLogCard),
           matching: find.byWidgetPredicate(
-            (Widget w) => w is NoteBody && w.text.contains(text),
+            (Widget w) =>
+                (w is NoteBody && w.text.contains(text)) ||
+                (w is Text && w.data == text),
           ),
         ),
         findsOneWidget,
@@ -365,7 +469,7 @@ void main() {
   ) async {
     await _openDay(tester, entries: _threeNotes());
 
-    await tester.tap(find.text('8:12 AM · morning · note'));
+    await tester.tap(find.text('8:12 AM · morning'));
     await tester.pumpAndSettle();
 
     expect(
@@ -388,7 +492,7 @@ void main() {
       (Widget widget) =>
           widget is LogViewerPanel || widget.key == dayNotePaneKey,
     );
-    await tester.tap(find.text('8:12 AM · morning · note'));
+    await tester.tap(find.textContaining('8:12 AM · morning'));
     await tester.pumpAndSettle();
     expect(reading, findsOneWidget);
 
