@@ -11,6 +11,8 @@ class HoverFill extends StatelessWidget {
     this.shape = HoverShape.rounded,
     this.borderRadius = BorderRadius.zero,
     this.position = DecorationPosition.foreground,
+    this.bleed = EdgeInsets.zero,
+    this.fillKey,
   });
 
   final bool hovered;
@@ -19,15 +21,40 @@ class HoverFill extends StatelessWidget {
   final HoverShape shape;
   final BorderRadius borderRadius;
   final DecorationPosition position;
+  final EdgeInsets bleed;
+  final Key? fillKey;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    position: position,
-    decoration: HoverStyle.decoration(
+  Widget build(BuildContext context) {
+    final Decoration decoration = HoverStyle.decoration(
       color: hovered ? HoverStyle.of(context, surface, shape) : null,
       shape: shape,
       borderRadius: borderRadius,
-    ),
-    child: child,
-  );
+    );
+    if (bleed == EdgeInsets.zero) {
+      return DecoratedBox(
+        key: fillKey,
+        position: position,
+        decoration: decoration,
+        child: child,
+      );
+    }
+    final Widget fill = Positioned(
+      left: -bleed.left,
+      top: -bleed.top,
+      right: -bleed.right,
+      bottom: -bleed.bottom,
+      child: IgnorePointer(
+        child: DecoratedBox(key: fillKey, decoration: decoration),
+      ),
+    );
+    return Stack(
+      fit: StackFit.passthrough,
+      clipBehavior: Clip.none,
+      children: switch (position) {
+        DecorationPosition.background => <Widget>[fill, child],
+        DecorationPosition.foreground => <Widget>[child, fill],
+      },
+    );
+  }
 }

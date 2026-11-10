@@ -387,4 +387,71 @@ void main() {
     );
     semantics.dispose();
   });
+
+  testWidgets(
+    'a row bleed paints the fill and the focus ring 12 px past the face on '
+    'both sides while the face keeps its place',
+    (WidgetTester tester) async {
+      const Key headingKey = ValueKey<String>('heading');
+      int presses = 0;
+      await _pump(
+        tester,
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const SizedBox(key: headingKey, width: 80, height: 20),
+            Pressable(
+              key: _rowKey,
+              label: 'Manage devices',
+              onPressed: () => presses++,
+              placement: FocusRingPlacement.edge,
+              borderRadius: _rowRadius,
+              bleed: HoverStyle.rowBleed,
+              child: _face(),
+            ),
+          ],
+        ),
+      );
+      expect(HoverStyle.rowBleed, const EdgeInsets.symmetric(horizontal: 12));
+      final Finder fill = find.descendant(
+        of: find.byKey(_rowKey),
+        matching: find.byKey(pressableHoverFillKey),
+      );
+      final TestGesture mouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        pointer: _mousePointerId,
+      );
+      await mouse.addPointer(location: Offset.zero);
+      await _hover(tester, mouse, _rowKey);
+
+      final Rect face = tester.getRect(find.byKey(_rowKey));
+      final Rect heading = tester.getRect(find.byKey(headingKey));
+      final Rect fillRect = tester.getRect(fill);
+      expect(face.size, _controlSize);
+      expect(face.left, heading.left);
+      expect(
+        fillRect,
+        Rect.fromLTRB(face.left - 12, face.top, face.right + 12, face.bottom),
+      );
+      final BoxDecoration row = _fillOf(tester, _rowKey);
+      expect(
+        row.color?.toARGB32(),
+        FieldNotesColors.light.ink.withValues(alpha: 0.06).toARGB32(),
+      );
+      expect(row.borderRadius, _rowRadius);
+
+      await mouse.removePointer();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final Finder ring = find.byKey(focusRingKey);
+      expect(ring, findsOneWidget);
+      expect(tester.getRect(ring), fillRect);
+
+      await tester.tapAt(tester.getCenter(find.text('Face')));
+      await tester.pump();
+      expect(presses, 1);
+    },
+  );
 }

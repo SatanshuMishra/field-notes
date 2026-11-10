@@ -42,6 +42,7 @@ class FocusRing extends StatefulWidget {
     this.includeFocusSemantics = true,
     this.placement = FocusRingPlacement.outside,
     this.paintsRing = true,
+    this.bleed = EdgeInsets.zero,
   });
 
   final VoidCallback? onPressed;
@@ -54,6 +55,7 @@ class FocusRing extends StatefulWidget {
   final bool includeFocusSemantics;
   final FocusRingPlacement placement;
   final bool paintsRing;
+  final EdgeInsets bleed;
 
   double get reach =>
       placement == FocusRingPlacement.outside ? 2 + surface.width : 0;
@@ -114,7 +116,11 @@ class _FocusRingState extends State<FocusRing> {
     }
     final RenderObject? box = context.findRenderObject();
     if (box is RenderBox && box.attached && box.hasSize) {
-      box.showOnScreen(rect: (Offset.zero & box.size).inflate(widget.reach));
+      box.showOnScreen(
+        rect: widget.bleed
+            .inflateRect(Offset.zero & box.size)
+            .inflate(widget.reach),
+      );
     }
   }
 
@@ -137,7 +143,7 @@ class _FocusRingState extends State<FocusRing> {
         borderRadius: widget.borderRadius,
         outset: widget.reach,
         child: widget.paintsRing
-            ? FocusRingFace(child: widget.child)
+            ? FocusRingFace(bleed: widget.bleed, child: widget.child)
             : widget.child,
       ),
     );
@@ -167,10 +173,16 @@ class _FocusRingScope extends InheritedWidget {
 }
 
 class FocusRingFace extends StatelessWidget {
-  const FocusRingFace({super.key, required this.child, this.borderRadius});
+  const FocusRingFace({
+    super.key,
+    required this.child,
+    this.borderRadius,
+    this.bleed = EdgeInsets.zero,
+  });
 
   final Widget child;
   final BorderRadius? borderRadius;
+  final EdgeInsets bleed;
 
   @override
   Widget build(BuildContext context) {
@@ -186,7 +198,11 @@ class FocusRingFace extends StatelessWidget {
       children: <Widget>[
         child,
         if (scope.highlighted)
-          Positioned.fill(
+          Positioned(
+            left: -bleed.left,
+            top: -bleed.top,
+            right: -bleed.right,
+            bottom: -bleed.bottom,
             child: CustomPaint(
               key: focusRingKey,
               painter: _FocusRingPainter(
