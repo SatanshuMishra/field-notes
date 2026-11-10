@@ -47,6 +47,7 @@ class ComposerGuard extends StatefulWidget {
     required this.onDiscard,
     required this.builder,
     this.popResult,
+    this.editingSavedNote = false,
     this.locked = false,
     this.onClose,
   });
@@ -55,6 +56,7 @@ class ComposerGuard extends StatefulWidget {
   final Future<void> Function() onDiscard;
   final ComposerGuardBuilder builder;
   final Object? popResult;
+  final bool editingSavedNote;
   final bool locked;
   final ValueChanged<Object?>? onClose;
 
@@ -112,13 +114,11 @@ class _ComposerGuardState extends State<ComposerGuard> {
     }
   }
 
-  bool get _editingSavedNote => widget.popResult == false;
-
   Future<bool> _confirmDiscard() async {
     _confirming = true;
     final bool discard = await _askToDiscard(
       context,
-      editing: _editingSavedNote,
+      editing: widget.editingSavedNote,
     );
     _confirming = false;
     if (!mounted) {

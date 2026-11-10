@@ -29,8 +29,9 @@ const String editNoteFailedMessage =
 const String editNoteUpdatedMessage = 'Entry updated';
 
 String editNoteTitleFor(Entry entry) {
-  final DateTime createdAt =
-      DateTime.fromMillisecondsSinceEpoch(entry.createdAt).toLocal();
+  final DateTime createdAt = DateTime.fromMillisecondsSinceEpoch(
+    entry.createdAt,
+  ).toLocal();
   return 'Editing ${partOfDayFor(createdAt.hour)} note';
 }
 
@@ -143,7 +144,8 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
 
   @override
   Widget build(BuildContext context) {
-    final bool spellCheck = spellCheckAvailable &&
+    final bool spellCheck =
+        spellCheckAvailable &&
         ref.exists(appSettingsProvider) &&
         ref.watch(spellCheckEnabledProvider);
     return ComposerMediaScope(
@@ -162,6 +164,7 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
           locked: _isSaving,
           onDiscard: _draft.discard,
           popResult: false,
+          editingSavedNote: true,
           onClose: onDone == null ? null : (Object? result) => onDone(false),
           builder: (BuildContext context, VoidCallback requestClose) {
             return TextComposerSheet(

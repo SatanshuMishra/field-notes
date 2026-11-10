@@ -57,13 +57,16 @@ Widget _opener(Future<bool> Function(BuildContext) ask, ValueChanged<bool> on) {
   );
 }
 
-Widget _guardOpener({required ValueChanged<bool> on, Object? popResult}) {
+Widget _guardOpener({
+  required ValueChanged<bool> on,
+  bool editingSavedNote = false,
+}) {
   return Navigator(
     onGenerateRoute: (RouteSettings settings) => MaterialPageRoute<void>(
       builder: (BuildContext _) => Scaffold(
         body: ComposerGuard(
           isDirty: () => true,
-          popResult: popResult,
+          editingSavedNote: editingSavedNote,
           onDiscard: () async => on(true),
           builder: (BuildContext context, VoidCallback requestClose) => Center(
             child: TextButton(
@@ -77,11 +80,14 @@ Widget _guardOpener({required ValueChanged<bool> on, Object? popResult}) {
   );
 }
 
-Widget _chipOpener({required ValueChanged<bool> on, Object? popResult}) {
+Widget _chipOpener({
+  required ValueChanged<bool> on,
+  bool editingSavedNote = false,
+}) {
   return Scaffold(
     body: ComposerGuard(
       isDirty: () => false,
-      popResult: popResult,
+      editingSavedNote: editingSavedNote,
       onDiscard: () async {},
       builder: (BuildContext context, VoidCallback requestClose) =>
           Center(child: DraftRestoredChip(onDiscard: () => on(true))),
@@ -123,7 +129,8 @@ final List<_Situation> _situations = <_Situation>[
     message: 'Your note stays as it was.',
     safe: 'Keep editing',
     action: 'Discard edits',
-    home: (ValueChanged<bool> on) => _guardOpener(on: on, popResult: false),
+    home: (ValueChanged<bool> on) =>
+        _guardOpener(on: on, editingSavedNote: true),
   ),
   _Situation(
     name: 'deleting the journal',
@@ -337,10 +344,10 @@ void main() {
   });
 
   group('the restored draft chip', () {
-    for (final (String name, Object? popResult, String title, String action)
-        in <(String, Object?, String, String)>[
-          ('a new note', null, 'Let this one go?', 'Let it go'),
-          ('an edit', false, 'Discard your edits?', 'Discard edits'),
+    for (final (String name, bool editing, String title, String action)
+        in <(String, bool, String, String)>[
+          ('a new note', false, 'Let this one go?', 'Let it go'),
+          ('an edit', true, 'Discard your edits?', 'Discard edits'),
         ]) {
       testWidgets('asks before discarding the draft of $name', (
         WidgetTester tester,
@@ -350,7 +357,7 @@ void main() {
           await _show(
             tester,
             TargetPlatform.macOS,
-            _chipOpener(on: discards.add, popResult: popResult),
+            _chipOpener(on: discards.add, editingSavedNote: editing),
           );
 
           await tester.tap(find.byKey(draftRestoredDiscardKey));
