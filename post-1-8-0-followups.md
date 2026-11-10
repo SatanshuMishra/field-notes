@@ -1,7 +1,7 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-10T22:53:06.052Z
-Next ids: c4 D6 R2 S1
+Updated: 2026-11-10T22:57:58.573Z
+Next ids: c4 D7 R2 S1
 
 ## Goal
 
@@ -30,8 +30,8 @@ Needs: D1, D2, D3, D4, D5, R1.
 - D1 Owner on g: the capture rooms lose the central gradient; stars stay subtle and mostly still, comets are rare, the sky has some randomness per opening, and resource use must not spike on weak devices.
 - D2 A streak day needs a bloom and at least one log: Owner approved as recommended on 2026-11-10: a day counts toward the streak only with a bloom and at least one log.
 - D3 Late-night fill-ins count until 4 AM, grandfathering past days: Owner approved as recommended on 2026-11-10: strict 4 AM grace; each day stores when its bloom was first picked; days that already existed are grandfathered.
-- D4 Sidebar sync status is its own box; collapsed rail boxes are 44 by 44: Owner approved option A on 2026-11-10. Owner tweaks the same day: in the collapsed rail the streak, status, settings and sound boxes are all 44 by 44 (the rail's full inner width, flame stacked over the count), and the expanded late-night pill shows the moon badge at its top right like the collapsed one.
 - D5 The voice room follows the app theme; the video recorder stays dark: Owner approved as recommended on 2026-11-10.
+- D6 Rail boxes share 44 px width; late night is all sage: Owner, 2026-11-10: collapsed rail boxes all 44 wide; status, settings and sound 44 tall; streak 56 tall with the same inner padding; in late-night mode the border, flame, count, second line and moon are all sage #A9C2A9. Canvas Version 19.
 
 ## Open risks
 
