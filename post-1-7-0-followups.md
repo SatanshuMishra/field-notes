@@ -1,6 +1,6 @@
 # post-1-7-0-followups: Post-1.7.0 follow-ups: privacy line, note title focus, note viewer and editor parity, voice button, week garden, overnight Today, day modal
 Status: active
-Updated: 2026-11-10T18:30:52.853Z
+Updated: 2026-11-10T18:31:20.746Z
 Next ids: c4 D1 R2 S1
 
 ## Goal
@@ -15,7 +15,7 @@ Prototype the owner's seven 1.7.0 follow-ups (a to g) on the design canvas, get 
 
 ## Where things stand
 
-Not started.
+Prototypes for a, b, c, d, e and g are published on the canvas's 1.7 follow-ups page and wait for the owner's approval; recommended picks are a = the day line (replaces the privacy line) and d = flat coral in the cream ring. The overnight bug is reproduced: today_day_change_test fails on main with the header on the new day while yesterday's note stays in the feed. Nothing is built.
 
 ## Next step
 
