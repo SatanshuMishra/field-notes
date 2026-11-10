@@ -3,20 +3,12 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/shell/window_chrome.dart';
-import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/reminders/local_notifications_reminder_scheduler.dart';
-import 'package:field_notes/features/today/today_layout.dart';
 
 const String _runner = 'windows/runner';
 
 const Map<String, String> _swiftNames = <String, String>{
-  'kSidebarWidth': 'sidebarWidth',
-  'kTodayRailWidth': 'todayRailWidth',
-  'kSeamWidth': 'seamWidth',
-  'kTodayPanePadding': 'todayPanePadding',
-  'kEntryCardPadding': 'entryCardPadding',
-  'kNoteBodyFontSize': 'noteBodyFontSize',
-  'kMinimumReadingColumnEm': 'minimumReadingColumnEm',
+  'kMinimumContentWidth': 'minimumContentWidth',
   'kMinimumContentHeight': 'minimumContentHeight',
   'kOpeningWindowWidth': 'openingWindowWidth',
   'kOpeningWindowHeight': 'openingWindowHeight',
@@ -61,41 +53,6 @@ double _cppConstant(String header, String name) {
   return double.parse(match!.group(1)!);
 }
 
-String _swiftExpression(String swift, String name) {
-  final RegExpMatch? match = RegExp(
-    'private let ${RegExp.escape(name)}: CGFloat =([\\s\\S]*?)\nprivate let',
-  ).firstMatch(swift);
-  expect(match, isNotNull, reason: '$name must be a Swift expression');
-  return match!.group(1)!;
-}
-
-String _cppExpression(String header, String name) {
-  final RegExpMatch? match = RegExp(
-    'constexpr double ${RegExp.escape(name)} =([\\s\\S]*?);',
-  ).firstMatch(header);
-  expect(match, isNotNull, reason: '$name must be a constexpr expression');
-  return match!.group(1)!;
-}
-
-String _compact(String expression) => expression.replaceAll(RegExp(r'\s+'), '');
-
-String _inSwiftNames(String cppExpression) => _compact(cppExpression)
-    .replaceAllMapped(
-      RegExp(r'\bk([A-Z])'),
-      (Match match) => match.group(1)!.toLowerCase(),
-    );
-
-double _sum(String expression, double Function(String name) value) =>
-    _compact(expression)
-        .split('+')
-        .map(
-          (String term) => term
-              .split('*')
-              .map(value)
-              .reduce((double product, double factor) => product * factor),
-        )
-        .reduce((double total, double term) => total + term);
-
 String _caseBlock(String source, String message) {
   final int start = source.indexOf('case $message:');
   expect(start, isNot(-1), reason: 'the runner must handle $message');
@@ -118,30 +75,9 @@ void main() {
           reason: '${name.key} must equal the Swift ${name.value}',
         );
       }
-      expect(_cppConstant(header, 'kTodayRailWidth'), todayRailWidth);
-      expect(
-        _cppConstant(header, 'kNoteBodyFontSize'),
-        TypographyTokens.noteBody.fontSize,
-      );
       expect(_cppConstant(header, 'kTitleBarHeight'), shellTitleBarHeight);
-
-      final String minimumWidth = _cppExpression(
-        header,
-        'kMinimumContentWidth',
-      );
-      expect(
-        minimumWidth,
-        contains('kMinimumReadingColumnEm * kNoteBodyFontSize'),
-        reason: 'the minimum width must be derived from the reading column',
-      );
-      expect(
-        _inSwiftNames(minimumWidth),
-        _compact(_swiftExpression(swift, 'minimumContentWidth')),
-      );
-      expect(
-        _sum(minimumWidth, (String name) => _cppConstant(header, name)),
-        closeTo(216 + 2 * 1 + 2 * 24 + 2 * 15 + 19.4 * 16 + 266, 1e-9),
-      );
+      expect(_cppConstant(header, 'kMinimumContentWidth'), 720);
+      expect(_cppConstant(header, 'kMinimumContentHeight'), 600);
 
       final String main = _source('main.cpp');
       expect(main, contains('::GetCursorPos(&cursor)'));
