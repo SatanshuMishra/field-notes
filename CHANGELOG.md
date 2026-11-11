@@ -8,7 +8,7 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [1.9.0] - 2026-11-11
 
-This release lets you choose when Field Notes reminds you, keeps your notes syncing on their own, and makes the app calmer while it sits open.
+This release lets you choose when Field Notes reminds you, keeps your notes syncing on their own, and adds a quiet night sky behind your notes.
 
 ### New
 
@@ -28,7 +28,6 @@ This release lets you choose when Field Notes reminds you, keeps your notes sync
 
 ### Fixed
 
-- With a bloom picked, the drifting petals kept the whole app redrawing even while you weren't using it. They now float across in occasional gusts with quiet pauses in between, so Field Notes rests while it sits open. Petals during setup fall as before.
 - Rounded outlines on cards such as On this day and the update notes no longer lose their corners.
 - Hover highlights in Settings, the steps of a day's logs and Cancel now leave room around their words.
 
