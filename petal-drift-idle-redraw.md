@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T04:34:36.252Z
+Updated: 2026-11-11T04:47:57.385Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Once today has a bloom, the drifting petals keep the whole app redrawing at the 
 
 ## Where things stand
 
-Full lane, interphase bug pathway, slug petal-drift-idle-redraw. Readiness is clear. The intent round (goal, why, success, do-not-flag closure) is with the owner, each with a recommended answer. Cause: PetalDrift's ticker runs every vsync while a flower is set, and each petal frame re-renders the whole page on Impeller, including the phone bottom bar's backdrop blur. A probe build with the ticker never started is built, to confirm the petals are the only driver.
+Full lane, interphase bug pathway, unattended after the intent round (owner: "Work autonomously. Complete the task."). Intent I1 to I4 are in the decisions file. Cause confirmed: PetalDrift's ticker runs every vsync while a flower is set, and each petal frame re-renders the whole page on Impeller; a probe with the ticker never started drew 0 idle frames with a bloom on Today, Calendar and Settings. The draft failing test (docs/specs/petal-drift-idle-redraw.repro.dart) fails on main with the idle app asking for frames on 100% of five minutes. Main is at b7ccaea2 with the 1.8.0 follow-ups merged; the guard snapshot was retaken there. The design being specified: over the app, petals fall in gusts with rests of four to five gust lengths; onboarding stays steady.
 
 ## Next step
 
