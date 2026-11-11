@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-11T01:21:43.575Z
+Updated: 2026-11-11T01:21:46.853Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Fanout split a to h into ten branches (one PR each) from origin/main f454ef02, e
 - Reviewed, fixed and ready: fix/outlined-surface 80df9212 (agent-a227d6afe19505c51); feat/update-launch-check 7aeff6dc (agent-aa28e60456c8b13a7; its new About wording retired one android-dark 2x contrast line); feat/day-modal-tidy 59756fe7 on 80df9212 (agent-a388bf42e55a1271b); feat/modal-video-transport bd9aba45 (agent-a1abc2d27eedfac3c); feat/night-sky 8979173b on 80df9212 (agent-aea935a14e5e1a0bc); feat/page-transitions 5fc52c4d (agent-a28aae361b473ae8f); feat/sync-status-box d49acdea (agent-aa8c967d5794cf1ff); feat/streak-late-night d5891f05 (agent-a8e2daa0103a1e7ab; the late-night tooltip link is a Pressable in a WidgetSpan, coral as before).
 - Also ready: fix/hover-padding 78552789 on feat/day-modal-tidy 59756fe7 (agent-a6532085534a30cd2; stacked so the day modal's OutlinedSurface keeps the Later hover fill inside the outline's corner; step glyph gap 2 px so a two-digit position keeps captions on one line; the sweep measures a bordered card's edge instead of its words).
 - feat/reminder-schedules b8e77623 on d5891f05 (agent-a00deb7378308fb28): review fixes done (failed bookings retried on the next trigger; a device-only settings row remembers bookings so a cold start with nothing changed makes no calls; 4:00 to 5:59 AM custom times pin to the timeline's morning start). Its builder is now making custom times from midnight to 3:59 AM the previous day's last call, per D3.
-- The eight ready branches merge cleanly in integ-180, and the other two merge cleanly on top. Every failure the full suite showed on the eight-branch merge is now fixed on its branch or already fails on main: natural_voice_chain_test and push_limits_test failed only under load and pass when rerun alone on the merge (7,579 passed, 9 failed in the full run). Five golden tests already fail on main with byte-identical images: note_float, three sticker_button and meadow_page (the last confirmed by running it on f454ef02's lib).
+- All ten branches (reminder-schedules at b8e77623) merge cleanly in integ-180 at ca21fe4d, flutter analyze on lib, test and integration_test is clean, and the full suite is running there; afterwards reminder-schedules' after-midnight commit needs the reminder and settings suites rerun on the merge. Timing tests (natural_voice_chain_test, push_limits_test) can fail under load and pass when rerun alone. Five golden tests already fail on main with byte-identical images: note_float, three sticker_button and meadow_page (the last confirmed by running it on f454ef02's lib).
 
 Root causes found: rounded outlines break where an opaque child is clipped only to the border's outer curve (day_detail_panel.dart:487-535 on f454ef02, and five other sites), fixed by OutlinedSurface; hover fills hug text because Pressable sizes its fill to its child and rows pad outside it (pressable.dart:116-129 on f454ef02), fixed by SettingsGutter.
 
