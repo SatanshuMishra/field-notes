@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-11T01:44:10.898Z
+Updated: 2026-11-11T01:45:13.856Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
@@ -30,7 +30,9 @@ Ten PRs are open from origin/main f454ef02, assigned to the owner, with Auto-fix
 | #378 | fix/hover-padding | feat/day-modal-tidy |
 | #379 | feat/reminder-schedules | feat/streak-late-night |
 
-Each branch's builder worktree under .claude/worktrees still holds it, for fixes. Not done: no device pass in the VM lab.
+Each branch's builder worktree under .claude/worktrees still holds it, for fixes. Not done: no device pass in the VM lab (offered to the owner).
+
+Follow-ups left for later, named in their PR bodies: the Microphone and Speaker rows (input_panel.dart _PanelRow) sit 6 px off their heading, fixable once #377 and #378 merge; the onboarding FakeJournalRepository in test/app/support/app_shell_harness.dart lacks setMoodForDate, as on main.
 
 ## Next step
 
