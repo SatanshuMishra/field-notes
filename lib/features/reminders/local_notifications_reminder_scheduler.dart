@@ -155,7 +155,7 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
   };
 
   @override
-  Future<void> schedule(List<ReminderBooking> bookings) async {
+  Future<bool> schedule(List<ReminderBooking> bookings) async {
     await _ensureInitialized();
     final Map<int, ReminderBooking> wanted = <int, ReminderBooking>{
       for (final ReminderBooking booking in bookings) booking.id: booking,
@@ -185,6 +185,7 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
       for (final ReminderBooking booking in fresh)
         if (!scheduled.contains(booking.id)) booking.id,
     });
+    return _unsettled.isEmpty;
   }
 
   Future<Set<int>> _scheduleEach(List<ReminderBooking> bookings) async {
@@ -229,12 +230,13 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
   }
 
   @override
-  Future<void> cancel() async {
+  Future<bool> cancel() async {
     await _ensureInitialized();
     final Set<int> held = <int>{..._unsettled, ..._booked.keys};
     final Set<int> cleared = await _cancelEach(held);
     _booked = const <int, ReminderBooking>{};
     _unsettled = Set<int>.unmodifiable(held.difference(cleared));
+    return _unsettled.isEmpty;
   }
 
   Future<Set<int>> _cancelEach(Set<int> ids) async {

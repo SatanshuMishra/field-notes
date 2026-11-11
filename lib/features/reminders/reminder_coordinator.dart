@@ -88,8 +88,8 @@ class ReminderCoordinator {
         return ReminderSyncResult.permissionDenied;
       }
       _applied = null;
-      await _scheduler.schedule(bookings);
-      _applied = bookings;
+      final bool settled = await _scheduler.schedule(bookings);
+      _applied = settled ? bookings : null;
       return ReminderSyncResult.scheduled;
     } catch (error, stackTrace) {
       _applied = null;
@@ -104,7 +104,7 @@ class ReminderCoordinator {
       return;
     }
     _applied = null;
-    await _scheduler.cancel();
-    _applied = const <ReminderBooking>[];
+    final bool settled = await _scheduler.cancel();
+    _applied = settled ? const <ReminderBooking>[] : null;
   }
 }

@@ -7,7 +7,7 @@ abstract interface class ReminderScheduler {
 
   Future<bool> requestPermission();
 
-  Future<void> schedule(List<ReminderBooking> bookings);
+  Future<bool> schedule(List<ReminderBooking> bookings);
 
-  Future<void> cancel();
+  Future<bool> cancel();
 }

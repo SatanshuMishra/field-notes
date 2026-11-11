@@ -230,6 +230,50 @@ void main() {
       expect(errors.first, isStateError);
     });
 
+    test('a booking that did not settle is tried again on the next sync, '
+        'then left alone once it settles', () async {
+      final FakeReminderScheduler scheduler = FakeReminderScheduler(
+        unsettledSchedules: 1,
+      );
+      final ReminderCoordinator coordinator = ReminderCoordinator(
+        scheduler: scheduler,
+      );
+
+      await _sync(coordinator);
+      await _sync(coordinator);
+      final List<String> afterRetry = List<String>.of(scheduler.calls);
+      await _sync(coordinator);
+
+      expect(afterRetry, <String>[
+        'permission',
+        'schedule',
+        'permission',
+        'schedule',
+      ]);
+      expect(scheduler.calls, afterRetry);
+    });
+
+    test(
+      'a cancel that did not settle is tried again while reminders stay off, '
+      'then left alone once it settles',
+      () async {
+        final FakeReminderScheduler scheduler = FakeReminderScheduler(
+          unsettledCancels: 1,
+        );
+        final ReminderCoordinator coordinator = ReminderCoordinator(
+          scheduler: scheduler,
+        );
+
+        await _sync(coordinator, enabled: false);
+        await _sync(coordinator, enabled: false);
+        final List<String> afterRetry = List<String>.of(scheduler.calls);
+        await _sync(coordinator, enabled: false);
+
+        expect(afterRetry, <String>['cancel', 'cancel']);
+        expect(scheduler.calls, afterRetry);
+      },
+    );
+
     test('drops a queued sync that a newer sync superseded', () async {
       final FakeReminderScheduler scheduler = FakeReminderScheduler();
       final ReminderCoordinator coordinator = ReminderCoordinator(

@@ -589,8 +589,9 @@ void main() {
       final LocalNotificationsReminderScheduler scheduler =
           LocalNotificationsReminderScheduler(plugin: plugin);
 
-      await scheduler.schedule(_fourBookings());
+      final bool settled = await scheduler.schedule(_fourBookings());
 
+      expect(settled, isFalse);
       expect(plugin.cancelled, ids.sublist(1));
       expect(plugin.scheduled, <int>[ids[1], ids[3]]);
     },
@@ -608,9 +609,13 @@ void main() {
     final LocalNotificationsReminderScheduler scheduler =
         LocalNotificationsReminderScheduler(plugin: plugin);
 
-    await scheduler.cancel();
+    final bool settled = await scheduler.cancel();
 
+    expect(settled, isFalse);
     expect(plugin.cancelled, <int>[...ids.sublist(0, 3), ...ids.sublist(4)]);
+    plugin.failingCancels.clear();
+    expect(await scheduler.cancel(), isTrue);
+    expect(plugin.cancelled.last, ids[3]);
   });
 
   test('when every call fails the app keeps going with no reminders', () async {
@@ -638,8 +643,11 @@ void main() {
       final List<ReminderBooking> bookings = _fourBookings();
       final (scheduler, plugin) = await _bookedOnMacOS(bookings);
 
-      await scheduler.schedule(List<ReminderBooking>.of(bookings));
+      final bool settled = await scheduler.schedule(
+        List<ReminderBooking>.of(bookings),
+      );
 
+      expect(settled, isTrue);
       expect(plugin.calls, isEmpty);
     });
 
@@ -715,12 +723,12 @@ void main() {
         final LocalNotificationsReminderScheduler scheduler =
             LocalNotificationsReminderScheduler(plugin: plugin);
         final List<ReminderBooking> bookings = _fourBookings();
-        await scheduler.schedule(bookings);
+        expect(await scheduler.schedule(bookings), isFalse);
         plugin.cancelled.clear();
         plugin.scheduled.clear();
         plugin.failingCancels.clear();
 
-        await scheduler.schedule(bookings);
+        expect(await scheduler.schedule(bookings), isTrue);
 
         expect(plugin.cancelled, <int>[ids[0]]);
         expect(plugin.scheduled, <int>[ids[0]]);

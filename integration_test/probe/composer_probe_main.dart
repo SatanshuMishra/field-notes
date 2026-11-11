@@ -416,10 +416,10 @@ final class _SilentReminderScheduler implements ReminderScheduler {
   Future<bool> requestPermission() async => false;
 
   @override
-  Future<void> schedule(List<ReminderBooking> bookings) async {}
+  Future<bool> schedule(List<ReminderBooking> bookings) async => true;
 
   @override
-  Future<void> cancel() async {}
+  Future<bool> cancel() async => true;
 }
 
 final class _PhotoRequest {
