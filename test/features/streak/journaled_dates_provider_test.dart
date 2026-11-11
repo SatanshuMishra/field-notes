@@ -1,4 +1,7 @@
+import 'package:field_notes/data/journal/drift_journal_repository.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/services/streak_service.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -119,5 +122,82 @@ void main() {
         '2026-07-14': 1,
       });
     });
+  });
+
+  group('streakDaysProvider', () {
+    test(
+      'lists each live day with logs, its bloom and first log time',
+      () async {
+        final db = newTestDatabase();
+        addTearDown(db.close);
+        int now = 1000;
+        final container = newTestContainer(db);
+        final repo = DriftJournalRepository(
+          db,
+          recorder: ChangeRecorder(db),
+          clock: () => now,
+        );
+
+        now = 2000;
+        final dayA = await repo.setMoodForDate(
+          date: '2026-07-15',
+          mood: Mood.happy,
+        );
+        now = 3000;
+        await repo.createEntry(
+          dayId: dayA.id,
+          type: EntryType.text,
+          textContent: 'a1',
+        );
+        now = 4000;
+        await repo.createEntry(
+          dayId: dayA.id,
+          type: EntryType.text,
+          textContent: 'a2',
+        );
+
+        now = 5000;
+        final dayB = await repo.createDay(date: '2026-07-14');
+        final gone = await repo.createEntry(
+          dayId: dayB.id,
+          type: EntryType.text,
+          textContent: 'gone',
+        );
+        now = 6000;
+        await repo.createEntry(
+          dayId: dayB.id,
+          type: EntryType.text,
+          textContent: 'b',
+        );
+        await repo.softDeleteEntry(gone.id);
+
+        await repo.setMoodForDate(date: '2026-07-13', mood: Mood.calm);
+
+        final sub = container.listen(
+          streakDaysProvider,
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        await pumpEventQueue();
+
+        expect(container.read(streakDaysProvider).value?.toSet(), <StreakDay>{
+          const StreakDay(
+            date: '2026-07-15',
+            hasBloom: true,
+            logCount: 2,
+            bloomPickedAt: 2000,
+            firstLogAt: 3000,
+          ),
+          const StreakDay(
+            date: '2026-07-14',
+            hasBloom: false,
+            logCount: 1,
+            firstLogAt: 6000,
+          ),
+        });
+      },
+    );
   });
 }

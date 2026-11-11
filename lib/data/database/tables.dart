@@ -12,6 +12,7 @@ class Days extends Table {
   IntColumn get updatedAt => integer()();
   IntColumn get deletedAt => integer().nullable()();
   TextColumn get fieldClocks => text().withDefault(const Constant('{}'))();
+  IntColumn get bloomPickedAt => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

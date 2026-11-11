@@ -735,6 +735,17 @@ class $DaysTable extends Days with TableInfo<$DaysTable, Day> {
     requiredDuringInsert: false,
     defaultValue: const Constant('{}'),
   );
+  static const VerificationMeta _bloomPickedAtMeta = const VerificationMeta(
+    'bloomPickedAt',
+  );
+  @override
+  late final GeneratedColumn<int> bloomPickedAt = GeneratedColumn<int>(
+    'bloom_picked_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -744,6 +755,7 @@ class $DaysTable extends Days with TableInfo<$DaysTable, Day> {
     updatedAt,
     deletedAt,
     fieldClocks,
+    bloomPickedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -807,6 +819,15 @@ class $DaysTable extends Days with TableInfo<$DaysTable, Day> {
         ),
       );
     }
+    if (data.containsKey('bloom_picked_at')) {
+      context.handle(
+        _bloomPickedAtMeta,
+        bloomPickedAt.isAcceptableOrUnknown(
+          data['bloom_picked_at']!,
+          _bloomPickedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -844,6 +865,10 @@ class $DaysTable extends Days with TableInfo<$DaysTable, Day> {
         DriftSqlType.string,
         data['${effectivePrefix}field_clocks'],
       )!,
+      bloomPickedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}bloom_picked_at'],
+      ),
     );
   }
 
@@ -861,6 +886,7 @@ class Day extends DataClass implements Insertable<Day> {
   final int updatedAt;
   final int? deletedAt;
   final String fieldClocks;
+  final int? bloomPickedAt;
   const Day({
     required this.id,
     required this.date,
@@ -869,6 +895,7 @@ class Day extends DataClass implements Insertable<Day> {
     required this.updatedAt,
     this.deletedAt,
     required this.fieldClocks,
+    this.bloomPickedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -884,6 +911,9 @@ class Day extends DataClass implements Insertable<Day> {
       map['deleted_at'] = Variable<int>(deletedAt);
     }
     map['field_clocks'] = Variable<String>(fieldClocks);
+    if (!nullToAbsent || bloomPickedAt != null) {
+      map['bloom_picked_at'] = Variable<int>(bloomPickedAt);
+    }
     return map;
   }
 
@@ -900,6 +930,9 @@ class Day extends DataClass implements Insertable<Day> {
           ? const Value.absent()
           : Value(deletedAt),
       fieldClocks: Value(fieldClocks),
+      bloomPickedAt: bloomPickedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bloomPickedAt),
     );
   }
 
@@ -916,6 +949,7 @@ class Day extends DataClass implements Insertable<Day> {
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
       deletedAt: serializer.fromJson<int?>(json['deletedAt']),
       fieldClocks: serializer.fromJson<String>(json['fieldClocks']),
+      bloomPickedAt: serializer.fromJson<int?>(json['bloomPickedAt']),
     );
   }
   @override
@@ -929,6 +963,7 @@ class Day extends DataClass implements Insertable<Day> {
       'updatedAt': serializer.toJson<int>(updatedAt),
       'deletedAt': serializer.toJson<int?>(deletedAt),
       'fieldClocks': serializer.toJson<String>(fieldClocks),
+      'bloomPickedAt': serializer.toJson<int?>(bloomPickedAt),
     };
   }
 
@@ -940,6 +975,7 @@ class Day extends DataClass implements Insertable<Day> {
     int? updatedAt,
     Value<int?> deletedAt = const Value.absent(),
     String? fieldClocks,
+    Value<int?> bloomPickedAt = const Value.absent(),
   }) => Day(
     id: id ?? this.id,
     date: date ?? this.date,
@@ -948,6 +984,9 @@ class Day extends DataClass implements Insertable<Day> {
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
     fieldClocks: fieldClocks ?? this.fieldClocks,
+    bloomPickedAt: bloomPickedAt.present
+        ? bloomPickedAt.value
+        : this.bloomPickedAt,
   );
   Day copyWithCompanion(DaysCompanion data) {
     return Day(
@@ -960,6 +999,9 @@ class Day extends DataClass implements Insertable<Day> {
       fieldClocks: data.fieldClocks.present
           ? data.fieldClocks.value
           : this.fieldClocks,
+      bloomPickedAt: data.bloomPickedAt.present
+          ? data.bloomPickedAt.value
+          : this.bloomPickedAt,
     );
   }
 
@@ -972,7 +1014,8 @@ class Day extends DataClass implements Insertable<Day> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
-          ..write('fieldClocks: $fieldClocks')
+          ..write('fieldClocks: $fieldClocks, ')
+          ..write('bloomPickedAt: $bloomPickedAt')
           ..write(')'))
         .toString();
   }
@@ -986,6 +1029,7 @@ class Day extends DataClass implements Insertable<Day> {
     updatedAt,
     deletedAt,
     fieldClocks,
+    bloomPickedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -997,7 +1041,8 @@ class Day extends DataClass implements Insertable<Day> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
-          other.fieldClocks == this.fieldClocks);
+          other.fieldClocks == this.fieldClocks &&
+          other.bloomPickedAt == this.bloomPickedAt);
 }
 
 class DaysCompanion extends UpdateCompanion<Day> {
@@ -1008,6 +1053,7 @@ class DaysCompanion extends UpdateCompanion<Day> {
   final Value<int> updatedAt;
   final Value<int?> deletedAt;
   final Value<String> fieldClocks;
+  final Value<int?> bloomPickedAt;
   final Value<int> rowid;
   const DaysCompanion({
     this.id = const Value.absent(),
@@ -1017,6 +1063,7 @@ class DaysCompanion extends UpdateCompanion<Day> {
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.fieldClocks = const Value.absent(),
+    this.bloomPickedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DaysCompanion.insert({
@@ -1027,6 +1074,7 @@ class DaysCompanion extends UpdateCompanion<Day> {
     required int updatedAt,
     this.deletedAt = const Value.absent(),
     this.fieldClocks = const Value.absent(),
+    this.bloomPickedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        date = Value(date),
@@ -1040,6 +1088,7 @@ class DaysCompanion extends UpdateCompanion<Day> {
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
     Expression<String>? fieldClocks,
+    Expression<int>? bloomPickedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1050,6 +1099,7 @@ class DaysCompanion extends UpdateCompanion<Day> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
       if (fieldClocks != null) 'field_clocks': fieldClocks,
+      if (bloomPickedAt != null) 'bloom_picked_at': bloomPickedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1062,6 +1112,7 @@ class DaysCompanion extends UpdateCompanion<Day> {
     Value<int>? updatedAt,
     Value<int?>? deletedAt,
     Value<String>? fieldClocks,
+    Value<int?>? bloomPickedAt,
     Value<int>? rowid,
   }) {
     return DaysCompanion(
@@ -1072,6 +1123,7 @@ class DaysCompanion extends UpdateCompanion<Day> {
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
       fieldClocks: fieldClocks ?? this.fieldClocks,
+      bloomPickedAt: bloomPickedAt ?? this.bloomPickedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1100,6 +1152,9 @@ class DaysCompanion extends UpdateCompanion<Day> {
     if (fieldClocks.present) {
       map['field_clocks'] = Variable<String>(fieldClocks.value);
     }
+    if (bloomPickedAt.present) {
+      map['bloom_picked_at'] = Variable<int>(bloomPickedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1116,6 +1171,7 @@ class DaysCompanion extends UpdateCompanion<Day> {
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('fieldClocks: $fieldClocks, ')
+          ..write('bloomPickedAt: $bloomPickedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5726,6 +5782,7 @@ typedef $$DaysTableCreateCompanionBuilder = DaysCompanion Function({
   required int updatedAt,
   Value<int?> deletedAt,
   Value<String> fieldClocks,
+  Value<int?> bloomPickedAt,
   Value<int> rowid,
 });
 typedef $$DaysTableUpdateCompanionBuilder = DaysCompanion Function({
@@ -5736,6 +5793,7 @@ typedef $$DaysTableUpdateCompanionBuilder = DaysCompanion Function({
   Value<int> updatedAt,
   Value<int?> deletedAt,
   Value<String> fieldClocks,
+  Value<int?> bloomPickedAt,
   Value<int> rowid,
 });
 
@@ -5779,6 +5837,11 @@ class $$DaysTableFilterComposer extends Composer<_$AppDatabase, $DaysTable> {
 
   ColumnFilters<String> get fieldClocks => $composableBuilder(
     column: $table.fieldClocks,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get bloomPickedAt => $composableBuilder(
+    column: $table.bloomPickedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5825,6 +5888,11 @@ class $$DaysTableOrderingComposer extends Composer<_$AppDatabase, $DaysTable> {
     column: $table.fieldClocks,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get bloomPickedAt => $composableBuilder(
+    column: $table.bloomPickedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DaysTableAnnotationComposer
@@ -5856,6 +5924,11 @@ class $$DaysTableAnnotationComposer
 
   GeneratedColumn<String> get fieldClocks => $composableBuilder(
     column: $table.fieldClocks,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get bloomPickedAt => $composableBuilder(
+    column: $table.bloomPickedAt,
     builder: (column) => column,
   );
 }
@@ -5895,6 +5968,7 @@ class $$DaysTableTableManager
                 Value<int> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
                 Value<String> fieldClocks = const Value.absent(),
+                Value<int?> bloomPickedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DaysCompanion(
                 id: id,
@@ -5904,6 +5978,7 @@ class $$DaysTableTableManager
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
                 fieldClocks: fieldClocks,
+                bloomPickedAt: bloomPickedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -5915,6 +5990,7 @@ class $$DaysTableTableManager
                 required int updatedAt,
                 Value<int?> deletedAt = const Value.absent(),
                 Value<String> fieldClocks = const Value.absent(),
+                Value<int?> bloomPickedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DaysCompanion.insert(
                 id: id,
@@ -5924,6 +6000,7 @@ class $$DaysTableTableManager
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
                 fieldClocks: fieldClocks,
+                bloomPickedAt: bloomPickedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

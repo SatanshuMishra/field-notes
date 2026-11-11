@@ -11,7 +11,7 @@ class _FutureSchemaDatabase extends AppDatabase {
   _FutureSchemaDatabase(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 }
 
 class _InterruptedAfterUpgrade extends AppDatabase {
@@ -125,6 +125,15 @@ const List<String> _versionTwoChanges = <String>[
   'UPDATE entries SET peaks = \'[0.1,0.9]\' WHERE id = \'entry-1\'',
 ];
 
+const List<String> _versionThreeChanges = <String>[
+  ..._versionTwoChanges,
+  'ALTER TABLE entries ADD COLUMN "title" TEXT NULL',
+  'UPDATE entries SET title = \'Morning walk\' WHERE id = \'entry-1\'',
+  'INSERT INTO days (id, date, mood_id, created_at, updated_at, field_clocks) '
+      'VALUES (\'day-2026-07-12\', \'2026-07-12\', NULL, 3000, 4000, '
+      '\'{"date":"c5"}\')',
+];
+
 Future<void> _writeHandBuiltFile(
   File file, {
   required int version,
@@ -204,6 +213,11 @@ Future<List<String>> _entryColumns(AppDatabase db) async {
   return rows.map((r) => r.read<String>('name')).toList();
 }
 
+Future<List<String>> _dayColumns(AppDatabase db) async {
+  final rows = await db.customSelect('PRAGMA table_info(days)').get();
+  return rows.map((r) => r.read<String>('name')).toList();
+}
+
 Future<void> _insertVoiceWithPeaks(AppDatabase db) async {
   await db
       .into(db.days)
@@ -243,10 +257,11 @@ void main() {
       await db.close();
     });
 
-    test('a fresh database reports schema version 3', () async {
-      expect(db.schemaVersion, 3);
-      expect(await _userVersion(db), 3);
+    test('a fresh database reports schema version 4', () async {
+      expect(db.schemaVersion, 4);
+      expect(await _userVersion(db), 4);
       expect(await _entryColumns(db), containsAll(<String>['peaks', 'title']));
+      expect(await _dayColumns(db), contains('bloom_picked_at'));
     });
 
     test(
@@ -430,13 +445,14 @@ void main() {
       await dir.delete(recursive: true);
     });
 
-    test('a version 1 database upgrades to 3 keeping its rows', () async {
+    test('a version 1 database upgrades to 4 keeping its rows', () async {
       await _writeHandBuiltFile(file, version: 1);
 
       final upgraded = AppDatabase(NativeDatabase(file));
       addTearDown(upgraded.close);
 
-      expect(await _userVersion(upgraded), 3);
+      expect(await _userVersion(upgraded), 4);
+      expect(await _dayColumns(upgraded), contains('bloom_picked_at'));
       expect(
         await _entryColumns(upgraded),
         containsAll(<String>['peaks', 'title']),
@@ -457,7 +473,7 @@ void main() {
       await _expectEveryVersionOneRowKept(upgraded);
     });
 
-    test('a version 2 database upgrades to 3 keeping its rows', () async {
+    test('a version 2 database upgrades to 4 keeping its rows', () async {
       await _writeHandBuiltFile(
         file,
         version: 2,
@@ -467,7 +483,8 @@ void main() {
       final upgraded = AppDatabase(NativeDatabase(file));
       addTearDown(upgraded.close);
 
-      expect(await _userVersion(upgraded), 3);
+      expect(await _userVersion(upgraded), 4);
+      expect(await _dayColumns(upgraded), contains('bloom_picked_at'));
       expect(await _entryColumns(upgraded), contains('title'));
       expect(await upgraded.select(upgraded.entries).get(), const <Entry>[
         Entry(
@@ -489,6 +506,58 @@ void main() {
       );
       await _expectEveryVersionOneRowKept(upgraded);
     });
+
+    test(
+      'a version 3 database upgrades to 4 keeping its days with no bloom time',
+      () async {
+        await _writeHandBuiltFile(
+          file,
+          version: 3,
+          statements: _versionThreeChanges,
+        );
+
+        final upgraded = AppDatabase(NativeDatabase(file));
+        addTearDown(upgraded.close);
+
+        expect(await _userVersion(upgraded), 4);
+        expect(
+          (await _dayColumns(upgraded))
+              .where((String name) => name == 'bloom_picked_at'),
+          hasLength(1),
+        );
+        expect(
+          await (upgraded.select(
+            upgraded.days,
+          )..orderBy([(t) => OrderingTerm.asc(t.date)])).get(),
+          const <Day>[
+            Day(
+              id: 'day-2026-07-11',
+              date: '2026-07-11',
+              moodId: 'calm',
+              createdAt: 1000,
+              updatedAt: 2000,
+              fieldClocks: '{"date":"c1"}',
+            ),
+            Day(
+              id: 'day-2026-07-12',
+              date: '2026-07-12',
+              createdAt: 3000,
+              updatedAt: 4000,
+              fieldClocks: '{"date":"c5"}',
+            ),
+          ],
+        );
+        expect(
+          (await upgraded.select(upgraded.days).get()).map(
+            (Day day) => day.bloomPickedAt,
+          ),
+          everyElement(isNull),
+        );
+        final Entry entry = await upgraded.select(upgraded.entries).getSingle();
+        expect(entry.peaks, '[0.1,0.9]');
+        expect(entry.title, 'Morning walk');
+      },
+    );
 
     test('an upgrade that fails part way leaves the file untouched', () async {
       await _writeHandBuiltFile(
@@ -545,14 +614,14 @@ void main() {
 
       final reopened = AppDatabase(NativeDatabase(file));
       addTearDown(reopened.close);
-      expect(await _userVersion(reopened), 3);
+      expect(await _userVersion(reopened), 4);
       expect(
         (await reopened.select(reopened.entries).getSingle()).peaks,
         '[0.1,0.9]',
       );
     });
 
-    test('a version 3 database reopens unchanged', () async {
+    test('a version 4 database reopens unchanged', () async {
       final created = AppDatabase(NativeDatabase(file));
       await _insertVoiceWithPeaks(created);
       await created.close();
@@ -560,9 +629,14 @@ void main() {
       final reopened = AppDatabase(NativeDatabase(file));
       addTearDown(reopened.close);
 
-      expect(await _userVersion(reopened), 3);
+      expect(await _userVersion(reopened), 4);
       expect(
         (await _entryColumns(reopened)).where((name) => name == 'title'),
+        hasLength(1),
+      );
+      expect(
+        (await _dayColumns(reopened))
+            .where((name) => name == 'bloom_picked_at'),
         hasLength(1),
       );
       final Entry entry = await reopened.select(reopened.entries).getSingle();
@@ -571,7 +645,7 @@ void main() {
     });
 
     test(
-      'an upgrade past version 3 keeps the data and raises the recovery error',
+      'an upgrade past version 4 keeps the data and raises the recovery error',
       () async {
         final created = AppDatabase(NativeDatabase(file));
         await _insertVoiceWithPeaks(created);
@@ -583,7 +657,7 @@ void main() {
           throwsA(
             predicate(
               (Object e) => e.toString().contains(
-                'cannot migrate its database from schema version 3 to 4',
+                'cannot migrate its database from schema version 4 to 5',
               ),
             ),
           ),
@@ -592,7 +666,7 @@ void main() {
 
         final reopened = AppDatabase(NativeDatabase(file));
         addTearDown(reopened.close);
-        expect(await _userVersion(reopened), 3);
+        expect(await _userVersion(reopened), 4);
         expect(
           (await reopened.select(reopened.days).getSingle()).id,
           'day-2026-07-11',

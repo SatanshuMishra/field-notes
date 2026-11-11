@@ -87,3 +87,42 @@ final class JournaledDatesProvider
 }
 
 String _$journaledDatesHash() => r'55294b552e96f27dcbb82e42170735067acabad6';
+
+@ProviderFor(streakDays)
+final streakDaysProvider = StreakDaysProvider._();
+
+final class StreakDaysProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<StreakDay>>,
+          List<StreakDay>,
+          Stream<List<StreakDay>>
+        >
+    with $FutureModifier<List<StreakDay>>, $StreamProvider<List<StreakDay>> {
+  StreakDaysProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'streakDaysProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$streakDaysHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<List<StreakDay>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<List<StreakDay>> create(Ref ref) {
+    return streakDays(ref);
+  }
+}
+
+String _$streakDaysHash() => r'fef899e37e1463b96e6d03afbb097c6071d80f5e';

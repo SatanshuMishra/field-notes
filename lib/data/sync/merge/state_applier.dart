@@ -25,10 +25,18 @@ const String _deletedField = 'deletedAt';
 const String _dayField = 'dayId';
 const String _peaksField = 'peaks';
 const String _titleField = 'title';
+const String _bloomPickedField = 'bloomPickedAt';
 const String _clocksColumn = 'fieldClocks';
 const String _relPathColumn = 'relPath';
 const String _emptyClocks = '{}';
-const Set<String> _fieldsOlderDevicesOmit = <String>{_peaksField, _titleField};
+const Map<String, Set<String>> _fieldsOlderDevicesOmit = <String, Set<String>>{
+  SyncedTables.entries: <String>{_peaksField, _titleField},
+  SyncedTables.days: <String>{_bloomPickedField},
+};
+const Map<String, String> _fieldPushedAgainWhenDropped = <String, String>{
+  SyncedTables.entries: _titleField,
+  SyncedTables.days: _bloomPickedField,
+};
 const List<String> _textFields = <String>[_textField, _versionField];
 const List<String> _mergedTextFields = <String>[
   _textField,
@@ -68,11 +76,11 @@ class StateApplier {
       final RecordState newest = _newestFields(local, remote, names);
       if (remote.table == SyncedTables.entries) {
         await _applyEntry(local, remote, newest);
-        if (_dropsTitleKeptHere(received, local)) {
-          await _queueForPush(remote.table, remote.rowId);
-        }
       } else {
         await _store(local, newest);
+      }
+      if (_dropsFieldKeptHere(received, local)) {
+        await _queueForPush(remote.table, remote.rowId);
       }
       return ApplyOutcome.applied;
     });
@@ -346,17 +354,19 @@ List<String> _checkedFields(RecordState remote) {
 }
 
 bool _mayBeMissing(String table, String name) {
-  return table == SyncedTables.entries &&
-      _fieldsOlderDevicesOmit.contains(name);
+  return _fieldsOlderDevicesOmit[table]?.contains(name) ?? false;
 }
 
 RecordState _withoutUnusableFields(RecordState remote) {
-  if (remote.table != SyncedTables.entries) {
-    return remote;
-  }
-  final Set<String> unusable = <String>{
-    if (!_hasUsablePeaks(remote)) _peaksField,
-    if (!_hasUsableTitle(remote)) _titleField,
+  final Set<String> unusable = switch (remote.table) {
+    SyncedTables.entries => <String>{
+      if (!_hasUsablePeaks(remote)) _peaksField,
+      if (!_hasUsableTitle(remote)) _titleField,
+    },
+    SyncedTables.days => <String>{
+      if (!_hasUsableBloomPick(remote)) _bloomPickedField,
+    },
+    _ => const <String>{},
   };
   if (unusable.isEmpty) {
     return remote;
@@ -383,14 +393,21 @@ bool _hasUsablePeaks(RecordState remote) {
   return peaks == null || decodeVoicePeaks(peaks) != null;
 }
 
-bool _dropsTitleKeptHere(RecordState received, RecordState? local) {
-  return !received.fields.containsKey(_titleField) &&
-      local?.clocks[_titleField] != null;
+bool _dropsFieldKeptHere(RecordState received, RecordState? local) {
+  final String? field = _fieldPushedAgainWhenDropped[received.table];
+  return field != null &&
+      !received.fields.containsKey(field) &&
+      local?.clocks[field] != null;
 }
 
 bool _hasUsableTitle(RecordState remote) {
   return remote.fields.containsKey(_titleField) &&
       remote.fields[_titleField] is String?;
+}
+
+bool _hasUsableBloomPick(RecordState remote) {
+  return remote.fields.containsKey(_bloomPickedField) &&
+      remote.fields[_bloomPickedField] is int?;
 }
 
 RecordState _newestFields(
@@ -399,10 +416,7 @@ RecordState _newestFields(
   List<String> names,
 ) {
   final Map<String, RecordState> sourceOf = <String, RecordState>{
-    for (final String name in names)
-      name: local == null || _isNewer(remote.clocks[name], local.clocks[name])
-          ? remote
-          : local,
+    for (final String name in names) name: _sourceOf(name, local, remote),
   };
   return RecordState(
     table: remote.table,
@@ -417,6 +431,23 @@ RecordState _newestFields(
           source.key: clock,
     },
   );
+}
+
+RecordState _sourceOf(String name, RecordState? local, RecordState remote) {
+  if (local == null) {
+    return remote;
+  }
+  if (remote.table == SyncedTables.days && name == _bloomPickedField) {
+    return _picksBloomEarlier(remote, local) ? remote : local;
+  }
+  return _isNewer(remote.clocks[name], local.clocks[name]) ? remote : local;
+}
+
+bool _picksBloomEarlier(RecordState candidate, RecordState current) {
+  final Object? candidateTime = candidate.fields[_bloomPickedField];
+  final Object? currentTime = current.fields[_bloomPickedField];
+  return candidateTime is int &&
+      (currentTime is! int || candidateTime < currentTime);
 }
 
 RecordState _textFrom(RecordState source, RecordState target) {

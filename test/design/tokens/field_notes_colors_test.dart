@@ -38,6 +38,7 @@ Map<String, Color> _roles(FieldNotesColors colors) => <String, Color>{
   'dashMuted': colors.dashMuted,
   'windowTitle': colors.windowTitle,
   'sage': colors.sage,
+  'lateNight': colors.lateNight,
   'accentInk': colors.accentInk,
   'coralLink': colors.coralLink,
   'accentInkStrong': colors.accentInkStrong,
@@ -127,6 +128,7 @@ void main() {
         'dashMuted': Color(0xFFC3B39A),
         'windowTitle': Color(0xFF705A46),
         'sage': Color(0xFF4C5B4C),
+        'lateNight': Color(0xFF4F6A4F),
         'accentInk': Color(0xFF903B4C),
         'coralLink': Color(0xFF8F3C4C),
         'accentInkStrong': Color(0xFF9B4255),
@@ -194,6 +196,7 @@ void main() {
         'dashMuted': Color(0xFF574F4F),
         'windowTitle': Color(0xFF8F8382),
         'sage': Color(0xFFA0B9A0),
+        'lateNight': Color(0xFFA9C2A9),
         'accentInk': Color(0xFFE692A0),
         'coralLink': Color(0xFFE38F9D),
         'accentInkStrong': Color(0xFFE692A0),
@@ -252,6 +255,7 @@ void main() {
         'mutedInkStrong': colors.mutedInkStrong,
         'dangerInk': colors.dangerInk,
         'sage': colors.sage,
+        'lateNight': colors.lateNight,
       };
       final Map<String, Color> surfaces = <String, Color>{
         'page': colors.page,

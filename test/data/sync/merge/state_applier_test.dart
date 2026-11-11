@@ -164,6 +164,10 @@ class _Device {
   Future<Map<String, String>> clocks() async {
     return decodeFieldClocks((await entry()).fieldClocks);
   }
+
+  Future<Map<String, String>> dayClocks() async {
+    return decodeFieldClocks((await day()).fieldClocks);
+  }
 }
 
 void main() {
@@ -996,4 +1000,110 @@ void main() {
       expect((await mac.entry()).textContent, 'hello');
     },
   );
+
+  test('the earlier first bloom time wins in either order', () async {
+    final _Device phone = device('Phone');
+    final _Device mac = device('Mac');
+    await phone.addDay();
+    await mac.applyAll(<RecordState>[
+      await phone.state(SyncedTables.days, dayIdForDate(_date)),
+    ]);
+    mac.now = _noon + _minute;
+    await mac.days.updateMood(
+      id: dayIdForDate(_date),
+      moodId: 'sunny',
+      updatedAt: mac.now,
+    );
+    phone.now = _noon + 2 * _minute;
+    await phone.days.updateMood(
+      id: dayIdForDate(_date),
+      moodId: 'rainy',
+      updatedAt: phone.now,
+    );
+    final RecordState earlier = await mac.state(
+      SyncedTables.days,
+      dayIdForDate(_date),
+    );
+    final RecordState later = await phone.state(
+      SyncedTables.days,
+      dayIdForDate(_date),
+    );
+
+    await phone.applyAll(<RecordState>[earlier]);
+    await mac.applyAll(<RecordState>[later]);
+
+    for (final _Device holder in <_Device>[phone, mac]) {
+      expect((await holder.day()).moodId, 'rainy');
+      expect((await holder.day()).bloomPickedAt, _noon + _minute);
+      expect(
+        (await holder.dayClocks())['bloomPickedAt'],
+        earlier.clocks['bloomPickedAt'],
+      );
+    }
+    await inEitherOrder(earlier, later, (_Device fresh) async {
+      expect((await fresh.day()).moodId, 'rainy');
+      expect((await fresh.day()).bloomPickedAt, _noon + _minute);
+    });
+  });
+
+  test(
+    'a day from a device without bloom times keeps the local time',
+    () async {
+      final _Device mac = device('Mac');
+      await mac.addDay(moodId: 'sunny');
+      final RecordState local = await mac.state(
+        SyncedTables.days,
+        dayIdForDate(_date),
+      );
+      final RecordState older = _changed(
+        local,
+        fields: <String, Object?>{
+          'moodId': 'rainy',
+          'updatedAt': _noon + _minute,
+        },
+        clocks: <String, String>{
+          'moodId': _phoneClock(1),
+          'updatedAt': _phoneClock(1),
+        },
+        without: <String>{'bloomPickedAt'},
+      );
+      await mac.db.delete(mac.db.syncOutbox).go();
+
+      await mac.applyAll(<RecordState>[older]);
+
+      expect(local.fields['bloomPickedAt'], _noon);
+      expect((await mac.day()).moodId, 'rainy');
+      expect((await mac.day()).bloomPickedAt, _noon);
+      expect(
+        (await mac.dayClocks())['bloomPickedAt'],
+        local.clocks['bloomPickedAt'],
+      );
+      expect(
+        <(String, String)>[
+          for (final SyncOutboxData row in await mac.outbox())
+            (row.recordTable, row.rowId),
+        ],
+        <(String, String)>[(SyncedTables.days, dayIdForDate(_date))],
+      );
+    },
+  );
+
+  test('a bloom time that is not a number is ignored', () async {
+    final _Device mac = device('Mac');
+    await mac.addDay(moodId: 'sunny');
+    final RecordState local = await mac.state(
+      SyncedTables.days,
+      dayIdForDate(_date),
+    );
+
+    await mac.applyAll(<RecordState>[
+      _changed(
+        local,
+        fields: <String, Object?>{'bloomPickedAt': 'early'},
+        clocks: <String, String>{'bloomPickedAt': _phoneClock(1)},
+      ),
+    ]);
+
+    expect((await mac.day()).bloomPickedAt, _noon);
+  });
 }

@@ -10,6 +10,7 @@ import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/services/streak_service.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/calendar/calendar.dart';
 import 'package:field_notes/features/calendar/widgets/calendar_chevron_button.dart';
@@ -102,6 +103,9 @@ Future<void> _pumpMonth(
         weekStartProvider.overrideWithValue(WeekStart.sunday),
         journaledDatesProvider.overrideWith(
           (Ref ref) => Stream<List<String>>.value(journaled),
+        ),
+        streakDaysProvider.overrideWith(
+          (Ref ref) => Stream<List<StreakDay>>.value(const <StreakDay>[]),
         ),
         monthDays ??
             daysInMonthProvider.overrideWith(
