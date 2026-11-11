@@ -101,7 +101,7 @@ final class ReminderSchedulerProvider
   }
 }
 
-String _$reminderSchedulerHash() => r'a6e729e7974386505e81d2b0c35b7d39e324905b';
+String _$reminderSchedulerHash() => r'd39d57615a3fb05c863a6cc9f712246b07962746';
 
 @ProviderFor(reminderCoordinator)
 final reminderCoordinatorProvider = ReminderCoordinatorProvider._();

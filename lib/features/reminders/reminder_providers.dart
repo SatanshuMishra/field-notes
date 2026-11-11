@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:field_notes/data/settings/drift_reminder_ledger_store.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/reminder_service.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:field_notes/state/database_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -24,7 +26,9 @@ DateTime Function() reminderClock(Ref ref) => DateTime.now;
 
 @Riverpod(keepAlive: true)
 ReminderScheduler reminderScheduler(Ref ref) =>
-    LocalNotificationsReminderScheduler();
+    LocalNotificationsReminderScheduler(
+      ledger: DriftReminderLedgerStore(ref.watch(databaseProvider)),
+    );
 
 @Riverpod(keepAlive: true)
 ReminderCoordinator reminderCoordinator(Ref ref) => ReminderCoordinator(

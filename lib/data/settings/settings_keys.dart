@@ -27,6 +27,7 @@ abstract final class SettingsKeys {
   static const String updateLastCheckedAt = 'update_last_checked_at';
   static const String updateLastAvailable = 'update_last_available';
   static const String updateLastSeenVersion = 'update_last_seen_version';
+  static const String reminderLedger = 'reminder_ledger';
 
   static const Set<String> deviceIdentifierKeys = <String>{
     audioInputId,
@@ -36,6 +37,9 @@ abstract final class SettingsKeys {
   static bool isUpdateRecordKey(String key) =>
       key.startsWith(updateRecordPrefix);
 
+  static bool isDeviceRecordKey(String key) =>
+      isUpdateRecordKey(key) || key == reminderLedger;
+
   static bool isExportedKey(String key) =>
-      !isUpdateRecordKey(key) && !deviceIdentifierKeys.contains(key);
+      !isDeviceRecordKey(key) && !deviceIdentifierKeys.contains(key);
 }

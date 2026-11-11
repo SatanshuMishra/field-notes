@@ -1,3 +1,4 @@
+import 'package:field_notes/domain/services/reminder_ledger.dart';
 import 'package:field_notes/domain/services/reminder_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +19,7 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
   LocalNotificationsReminderScheduler({
     FlutterLocalNotificationsPlugin? plugin,
     this._notificationStatus = const ChannelNotificationStatus(),
+    this._ledger,
   }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   static const String _channelId = 'daily_reminder';
@@ -39,7 +41,9 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
 
   final FlutterLocalNotificationsPlugin _plugin;
   final ChannelNotificationStatus _notificationStatus;
+  final ReminderLedgerStore? _ledger;
   Future<void>? _ready;
+  Future<void>? _seeded;
   Map<int, ReminderBooking> _booked = const <int, ReminderBooking>{};
   Set<int> _unsettled = Set<int>.unmodifiable(ReminderService.bookingIds);
 
@@ -154,9 +158,54 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
     null => ReminderPermission.unknown,
   };
 
+  Future<void> _ensureSeeded() => _seeded ??= _seed();
+
+  Future<void> _seed() async {
+    final ReminderLedgerStore? ledger = _ledger;
+    if (ledger == null) {
+      return;
+    }
+    try {
+      final ReminderLedger? stored = await ledger.read();
+      if (stored == null) {
+        return;
+      }
+      _booked = Map<int, ReminderBooking>.unmodifiable(<int, ReminderBooking>{
+        for (final ReminderBooking booking in stored.booked)
+          booking.id: booking,
+      });
+      _unsettled = Set<int>.unmodifiable(stored.unsettled);
+    } catch (error) {
+      debugPrint('Reminder ledger could not be read: $error');
+    }
+  }
+
+  Future<bool> _record(
+    Map<int, ReminderBooking> booked,
+    Set<int> unsettled,
+  ) async {
+    final ReminderLedgerStore? ledger = _ledger;
+    if (ledger == null) {
+      return true;
+    }
+    try {
+      await ledger.write(
+        ReminderLedger(
+          booked: List<ReminderBooking>.unmodifiable(booked.values),
+          unsettled: Set<int>.unmodifiable(unsettled),
+        ),
+      );
+      return true;
+    } catch (error) {
+      debugPrint('Reminder ledger could not be written: $error');
+      return false;
+    }
+  }
+
   @override
   Future<bool> schedule(List<ReminderBooking> bookings) async {
     await _ensureInitialized();
+    await _ensureSeeded();
     final Map<int, ReminderBooking> wanted = <int, ReminderBooking>{
       for (final ReminderBooking booking in bookings) booking.id: booking,
     };
@@ -165,18 +214,32 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
       for (final MapEntry<int, ReminderBooking> held in _booked.entries)
         if (wanted[held.key] != held.value) held.key,
     };
+    final Set<int> added = <int>{
+      for (final ReminderBooking booking in bookings)
+        if (!stale.contains(booking.id) && !_booked.containsKey(booking.id))
+          booking.id,
+    };
+    if (stale.isEmpty && added.isEmpty) {
+      return true;
+    }
+    final Map<int, ReminderBooking> kept = <int, ReminderBooking>{
+      for (final MapEntry<int, ReminderBooking> held in _booked.entries)
+        if (!stale.contains(held.key)) held.key: held.value,
+    };
+    if (!await _record(kept, <int>{...stale, ...added})) {
+      return false;
+    }
     final Set<int> cleared = await _cancelEach(stale);
     final List<ReminderBooking> fresh = <ReminderBooking>[
       for (final ReminderBooking booking in bookings)
         if (stale.contains(booking.id)
             ? cleared.contains(booking.id)
-            : !_booked.containsKey(booking.id))
+            : added.contains(booking.id))
           booking,
     ];
     final Set<int> scheduled = await _scheduleEach(fresh);
     _booked = Map<int, ReminderBooking>.unmodifiable(<int, ReminderBooking>{
-      for (final MapEntry<int, ReminderBooking> held in _booked.entries)
-        if (!stale.contains(held.key)) held.key: held.value,
+      ...kept,
       for (final ReminderBooking booking in fresh)
         if (scheduled.contains(booking.id)) booking.id: booking,
     });
@@ -185,6 +248,7 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
       for (final ReminderBooking booking in fresh)
         if (!scheduled.contains(booking.id)) booking.id,
     });
+    await _record(_booked, _unsettled);
     return _unsettled.isEmpty;
   }
 
@@ -232,10 +296,18 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
   @override
   Future<bool> cancel() async {
     await _ensureInitialized();
+    await _ensureSeeded();
     final Set<int> held = <int>{..._unsettled, ..._booked.keys};
+    if (held.isEmpty) {
+      return true;
+    }
+    if (!await _record(const <int, ReminderBooking>{}, held)) {
+      return false;
+    }
     final Set<int> cleared = await _cancelEach(held);
     _booked = const <int, ReminderBooking>{};
     _unsettled = Set<int>.unmodifiable(held.difference(cleared));
+    await _record(_booked, _unsettled);
     return _unsettled.isEmpty;
   }
 

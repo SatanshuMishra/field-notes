@@ -146,7 +146,7 @@ class DriftSettingsRepository implements SettingsRepository {
       _db.journalSettings,
     )..where((t) => t.key.isNotValue(SettingsKeys.meadowKey))).get();
     return device.any(
-          (Setting row) => !SettingsKeys.isUpdateRecordKey(row.key),
+          (Setting row) => !SettingsKeys.isDeviceRecordKey(row.key),
         ) ||
         journal.isNotEmpty;
   }
