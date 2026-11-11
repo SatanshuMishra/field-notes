@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-11T00:17:52.632Z
+Updated: 2026-11-11T00:17:54.416Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
