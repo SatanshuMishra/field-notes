@@ -110,7 +110,7 @@ class SettingsSection extends StatelessWidget {
           for (int index = 0; index < rows.length; index++) ...<Widget>[
             if (index > 0 || title != null)
               const Padding(padding: _gutterInsets, child: DashedDivider()),
-            _GutterRow(
+            SettingsGutterRow(
               padding: _phoneRowInsets,
               minHeight: 0,
               child: rows[index],
@@ -165,7 +165,7 @@ class SettingsSection extends StatelessWidget {
           const SizedBox(height: _sidebarLabelGap),
           for (int row = 0; row < groups[index].rows.length; row++) ...<Widget>[
             if (row > 0) hairline,
-            _GutterRow(
+            SettingsGutterRow(
               padding: _sidebarRowPadding,
               minHeight: _sidebarRowMinHeight,
               child: groups[index].rows[row],
@@ -173,35 +173,6 @@ class SettingsSection extends StatelessWidget {
           ],
         ],
       ],
-    );
-  }
-}
-
-class _GutterRow extends StatelessWidget {
-  const _GutterRow({
-    required this.padding,
-    required this.minHeight,
-    required this.child,
-  });
-
-  final EdgeInsets padding;
-  final double minHeight;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget child = this.child;
-    if (child is CarriesSettingsGutter) {
-      return SettingsGutter(
-        padding: padding,
-        minHeight: minHeight,
-        child: child,
-      );
-    }
-    return SettingsGutter(
-      padding: padding,
-      minHeight: minHeight,
-      child: SettingsRowFrame(child: child),
     );
   }
 }

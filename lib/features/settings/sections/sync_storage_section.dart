@@ -282,23 +282,21 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
                 ),
               ),
             ),
-            SettingsGutterCarrier(
-              child: Focus(
-                focusNode: _manageDevicesFocus,
-                canRequestFocus: false,
-                skipTraversal: true,
-                child: MinTarget(
-                  child: SettingsFieldRow(
-                    label: manageDevicesLabel,
-                    description: devices == null
-                        ? devicesFallbackCaption
-                        : deviceCountLabel(devices.length),
-                    control: ChevronGlyph(
-                      pointsBack: false,
-                      color: context.colors.muted,
-                    ),
-                    onPressed: _openDevices,
+            Focus(
+              focusNode: _manageDevicesFocus,
+              canRequestFocus: false,
+              skipTraversal: true,
+              child: MinTarget(
+                child: SettingsFieldRow(
+                  label: manageDevicesLabel,
+                  description: devices == null
+                      ? devicesFallbackCaption
+                      : deviceCountLabel(devices.length),
+                  control: ChevronGlyph(
+                    pointsBack: false,
+                    color: context.colors.muted,
                   ),
+                  onPressed: _openDevices,
                 ),
               ),
             ),
@@ -545,7 +543,7 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
   }
 }
 
-class SyncActionRow extends StatelessWidget implements CarriesSettingsGutter {
+class SyncActionRow extends StatelessWidget {
   const SyncActionRow({
     super.key,
     required this.label,

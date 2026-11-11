@@ -19,8 +19,7 @@ const double _markerHang = 16;
 const double _markerDrop = 7;
 const double _belowGap = 8;
 
-class SettingsFieldRow extends StatelessWidget
-    implements CarriesSettingsGutter {
+class SettingsFieldRow extends StatelessWidget {
   const SettingsFieldRow({
     super.key,
     required this.label,
@@ -34,7 +33,6 @@ class SettingsFieldRow extends StatelessWidget
     this.onPressed,
     this.semanticsValue,
     this.expanded,
-    this.minHeight = 0,
   });
 
   final String label;
@@ -48,7 +46,6 @@ class SettingsFieldRow extends StatelessWidget
   final VoidCallback? onPressed;
   final String? semanticsValue;
   final bool? expanded;
-  final double minHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -149,12 +146,7 @@ class SettingsFieldRow extends StatelessWidget
         },
       ),
     };
-    final Widget framed = SettingsRowFrame(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: minHeight),
-        child: row,
-      ),
-    );
+    final Widget framed = SettingsRowFrame(child: row);
     if (onPressed == null) {
       return Semantics(container: true, child: framed);
     }
