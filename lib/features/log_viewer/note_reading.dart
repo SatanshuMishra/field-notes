@@ -154,7 +154,9 @@ class LogStepFooter extends StatelessWidget {
         ? _phoneStepTarget
         : _desktopStepTarget;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: _footerHorizontalPadding),
+      padding: const EdgeInsets.symmetric(
+        horizontal: _footerHorizontalPadding - HoverStyle.fillInset,
+      ),
       child: Row(
         children: <Widget>[
           Expanded(
