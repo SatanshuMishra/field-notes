@@ -5,6 +5,7 @@ import 'package:field_notes/app/shell/bottom_bar_shell.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/motion/page_fade_through.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -116,7 +117,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final ScrollController _scrollController = ScrollController();
-  final GlobalKey _phoneSectionsKey = GlobalKey();
+  final GlobalKey _sectionsKey = GlobalKey();
   String? _notice;
   SettingsTab _tab = SettingsTab.journal;
   _PhonePage _page = const _ListPage();
@@ -158,7 +159,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return;
     }
     setState(() => _tab = tab);
-    _scrollToTop();
   }
 
   void _openRequested(SettingsTab? previous, SettingsTab? next) {
@@ -182,7 +182,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return;
     }
     setState(() => _page = page);
-    _scrollToTop();
   }
 
   _PhonePage _visiblePage({required bool syncOff}) => switch (_page) {
@@ -345,6 +344,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final _PhonePage page = _visiblePage(
       syncOff: ref.watch(syncEnabledProvider).value == false,
     );
+    return PopScope<Object?>(
+      canPop: page is _ListPage,
+      onPopInvokedWithResult: _onPhonePop,
+      child: PageFadeThrough<_PhonePage>(
+        page: page,
+        builder: (BuildContext context, _PhonePage shown) =>
+            _buildPhonePage(settings, shown),
+      ),
+    );
+  }
+
+  Widget _buildPhonePage(AppSettings settings, _PhonePage page) {
     final double gestureBar = MediaQuery.viewPaddingOf(context).bottom;
     final String? backLabel = switch (page) {
       _ListPage() => null,
@@ -357,39 +368,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _backPillLift +
               settingsBackPillHeight +
               _backPillClearance;
-    return PopScope<Object?>(
-      canPop: page is _ListPage,
-      onPopInvokedWithResult: _onPhonePop,
-      child: Semantics(
-        key: ValueKey<_PhonePage>(page),
-        scopesRoute: true,
-        namesRoute: true,
-        explicitChildNodes: true,
-        label: _phonePageTitle(page),
-        child: Stack(
-          children: <Widget>[
-            Positioned.fill(
-              child: _buildPhoneContent(
-                settings,
-                page,
-                EdgeInsets.fromLTRB(
-                  _phoneSideInset,
-                  MediaQuery.paddingOf(context).top + _phoneHeaderGap,
-                  _phoneSideInset,
-                  endRoom,
-                ),
+    return Semantics(
+      key: ValueKey<_PhonePage>(page),
+      scopesRoute: true,
+      namesRoute: true,
+      explicitChildNodes: true,
+      label: _phonePageTitle(page),
+      child: Stack(
+        children: <Widget>[
+          Positioned.fill(
+            child: _buildPhoneContent(
+              settings,
+              page,
+              EdgeInsets.fromLTRB(
+                _phoneSideInset,
+                MediaQuery.paddingOf(context).top + _phoneHeaderGap,
+                _phoneSideInset,
+                endRoom,
               ),
             ),
-            if (backLabel != null)
-              Positioned(
-                left: _backPillLeft,
-                bottom: gestureBar + _backPillLift,
-                child: FocusTraversalGroup(
-                  child: SettingsBackPill(label: backLabel, onPressed: _back),
-                ),
+          ),
+          if (backLabel != null)
+            Positioned(
+              left: _backPillLeft,
+              bottom: gestureBar + _backPillLift,
+              child: FocusTraversalGroup(
+                child: SettingsBackPill(label: backLabel, onPressed: _back),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -438,7 +445,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ],
                     },
                     KeyedSubtree(
-                      key: _phoneSectionsKey,
+                      key: _sectionsKey,
                       child: _buildTabColumn(
                         settings,
                         page is _SectionPage ? page.tab : null,
@@ -456,29 +463,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildTabContent(AppSettings settings) {
     return FocusTraversalGroup(
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        padding: _contentPadding,
-        child: Align(
-          alignment: Alignment.topLeft,
-          child: ConstrainedBox(
-            key: settingsContentColumnKey,
-            constraints: const BoxConstraints(
-              maxWidth: settingsContentMaxWidth,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Padding(
-                  padding: _contentTitlePadding,
-                  child: PageHeader(
-                    key: settingsContentTitleKey,
-                    title: _tab.label,
-                  ),
+      child: PageFadeThrough<SettingsTab>(
+        page: _tab,
+        builder: (BuildContext context, SettingsTab tab) =>
+            _buildTabPane(settings, tab),
+      ),
+    );
+  }
+
+  Widget _buildTabPane(AppSettings settings, SettingsTab tab) {
+    return SingleChildScrollView(
+      key: ValueKey<SettingsTab>(tab),
+      controller: _scrollController,
+      padding: _contentPadding,
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(
+          key: settingsContentColumnKey,
+          constraints: const BoxConstraints(maxWidth: settingsContentMaxWidth),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Padding(
+                padding: _contentTitlePadding,
+                child: PageHeader(
+                  key: settingsContentTitleKey,
+                  title: tab.label,
                 ),
-                _buildTabColumn(settings, _tab),
-              ],
-            ),
+              ),
+              KeyedSubtree(
+                key: _sectionsKey,
+                child: _buildTabColumn(settings, tab),
+              ),
+            ],
           ),
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:field_notes/design/motion/page_fade_through.dart';
 import 'package:field_notes/features/calendar/calendar.dart';
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/search/search.dart';
@@ -15,9 +16,12 @@ class ShellContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return KeyedSubtree(
-      key: ValueKey<ShellDestination>(destination),
-      child: _screenFor(destination),
+    return PageFadeThrough<ShellDestination>(
+      page: destination,
+      builder: (BuildContext context, ShellDestination shown) => KeyedSubtree(
+        key: ValueKey<ShellDestination>(shown),
+        child: _screenFor(shown),
+      ),
     );
   }
 

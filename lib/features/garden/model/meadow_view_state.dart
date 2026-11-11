@@ -54,7 +54,7 @@ class MeadowViewState extends _$MeadowViewState {
       ShellDestination next,
     ) {
       if (next != ShellDestination.garden) {
-        state = const MeadowView();
+        closeFullScreen();
       }
     });
     return const MeadowView();
@@ -68,6 +68,9 @@ class MeadowViewState extends _$MeadowViewState {
   }
 
   void backToThisYear() {
+    if (!ref.mounted) {
+      return;
+    }
     state = MeadowView(fullScreen: state.fullScreen);
   }
 

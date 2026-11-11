@@ -519,11 +519,13 @@ void main() {
 
     await tester.tap(calendarTab, warnIfMissed: false);
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.pump();
     expect(find.byType(PhoneFlowerMonth), findsOneWidget);
 
     await tester.tap(_dayCell(current.dateKey(now.day)));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.pump();
     expect(container.read(shellNavigationProvider), ShellDestination.today);
     expect(find.byType(TodayScreen), findsOneWidget);
@@ -532,6 +534,7 @@ void main() {
 
     await tester.tap(calendarTab, warnIfMissed: false);
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.pump();
     await tester.tap(find.byKey(phoneMonthPreviousKey));
     await tester.pump();

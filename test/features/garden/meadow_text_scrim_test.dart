@@ -211,6 +211,7 @@ Future<void> _pumpMeadowTab(WidgetTester tester, _Scene scene) async {
   await tester.pump();
   await tester.tap(find.byKey(const ValueKey<String>('tab-garden')));
   await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 bool _meadowReady(WidgetTester tester) {
