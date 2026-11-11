@@ -1,0 +1,29 @@
+# petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
+Status: active
+Updated: 2026-11-11T04:31:29.598Z
+Next ids: c1 D1 R1 S1
+
+## Goal
+
+Once today has a bloom, the drifting petals keep the whole app redrawing at the display rate on every page, costing the raster thread 67 to 71% CPU on the Note 10+ while idle; make the petals cheap on every device in a way the owner approves, keeping the journal look.
+
+## Done when
+
+## Where things stand
+
+Not started.
+
+## Next step
+
+Run the full-lane readiness gate (lighthouse readiness, do-not-flag closures), then interphase:bug with "Interview me first." for the petal redraw.
+
+## Decisions in force
+
+## Open risks
+
+## Settled, do not reopen
+
+## Where the details live
+
+- Code: lib/design/motion/petal_drift.dart (ticker, painter), hosted in lib/app/shell/app_shell.dart and lib/features/onboarding/onboarding_frame.dart
+- Baseline on the Note 10+, main f454ef02 profile build: no bloom 0 idle frames; with a bloom Today, Calendar and Settings each 60 fps, raster thread 67 to 71% CPU (scratchpad dp/load script)
