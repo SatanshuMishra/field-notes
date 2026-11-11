@@ -9,7 +9,6 @@ import 'package:field_notes/features/calendar/model/calendar_month.dart'
 import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/day_detail/show_day_detail.dart';
 import 'package:field_notes/features/streak/streak_providers.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -99,6 +98,7 @@ const TextStyle _tipText = TextStyle(
   color: Palette.toolbarInk,
 );
 const TextStyle _tipTitle = TextStyle(fontWeight: FontWeight.w700, height: 1.3);
+const BorderRadius _tipLinkRadius = BorderRadius.all(Radius.circular(4));
 const TextStyle _tipLink = TextStyle(
   fontWeight: FontWeight.w600,
   height: 2,
@@ -194,15 +194,6 @@ class _LateNightPill extends StatefulWidget {
 }
 
 class _LateNightPillState extends State<_LateNightPill> {
-  late final TapGestureRecognizer _openLink = TapGestureRecognizer()
-    ..onTap = _openDay;
-
-  @override
-  void dispose() {
-    _openLink.dispose();
-    super.dispose();
-  }
-
   bool get _onPhone =>
       widget.form == StreakPillForm.header ||
       widget.form == StreakPillForm.headerOverScene;
@@ -245,12 +236,21 @@ class _LateNightPillState extends State<_LateNightPill> {
             style: _tipTitle,
           ),
           const TextSpan(text: '$streakLateNightNudge\n'),
-          TextSpan(
-            text: streakLateNightAction(widget.day),
-            style: _tipLink.copyWith(
-              color: FieldNotesColors.light.accentInkStrong,
+          WidgetSpan(
+            alignment: PlaceholderAlignment.baseline,
+            baseline: TextBaseline.alphabetic,
+            child: Pressable(
+              label: streakLateNightAction(widget.day),
+              onPressed: _openDay,
+              borderRadius: _tipLinkRadius,
+              paintsHover: false,
+              child: Text(
+                streakLateNightAction(widget.day),
+                style: _tipText
+                    .merge(_tipLink)
+                    .copyWith(color: FieldNotesColors.light.accentInkStrong),
+              ),
             ),
-            recognizer: _openLink,
           ),
         ],
       ),

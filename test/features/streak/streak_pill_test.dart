@@ -1,14 +1,15 @@
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/icons/flame_icon.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -147,29 +148,21 @@ BoxDecoration _moonDecoration(WidgetTester tester) =>
             .decoration
         as BoxDecoration;
 
-InlineSpan _richTip(WidgetTester tester) => tester
-    .widget<Tooltip>(
-      find.descendant(
-        of: find.byType(StreakPill),
-        matching: find.byType(Tooltip),
-      ),
-    )
-    .richMessage!;
+const Duration _tipFadeIn = Duration(milliseconds: 200);
 
-TapGestureRecognizer _tipLink(WidgetTester tester, String text) {
-  final List<TapGestureRecognizer> links = <TapGestureRecognizer>[];
-  _richTip(tester).visitChildren((InlineSpan span) {
-    if (span
-        case TextSpan(
-          text: final String spanText,
-          recognizer: final TapGestureRecognizer link,
-        )
-        when spanText == text) {
-      links.add(link);
-    }
-    return true;
-  });
-  return links.single;
+final Finder _openMondayLink = find.widgetWithText(Pressable, 'Open Monday');
+
+Future<void> _showTip(WidgetTester tester) async {
+  tester
+      .state<TooltipState>(
+        find.descendant(
+          of: find.byType(StreakPill),
+          matching: find.byType(Tooltip),
+        ),
+      )
+      .ensureTooltipVisible();
+  await tester.pump();
+  await tester.pump(_tipFadeIn);
 }
 
 void main() {
@@ -303,13 +296,30 @@ void main() {
         find.bySemanticsLabel('2 days in a row, late night until 4 AM'),
         findsOneWidget,
       );
+
+      await _showTip(tester);
       expect(
-        _richTip(tester).toPlainText(),
-        'Monday still counts until 4 AM\n'
-        'Add a log and pick its bloom to keep your run going.\n'
-        'Open Monday',
+        find.textContaining(
+          'Monday still counts until 4 AM\n'
+          'Add a log and pick its bloom to keep your run going.\n',
+        ),
+        findsOneWidget,
       );
-      expect(_tipLink(tester, 'Open Monday'), isA<TapGestureRecognizer>());
+      expect(_openMondayLink, findsOneWidget);
+      final TextStyle link = tester
+          .widget<Text>(find.text('Open Monday'))
+          .style!;
+      expect(_argb(link.color!), _argb(FieldNotesColors.light.accentInkStrong));
+      expect(link.decoration, TextDecoration.underline);
+      expect(
+        tester.getSemantics(_openMondayLink),
+        isSemantics(
+          label: 'Open Monday',
+          isButton: true,
+          isFocusable: true,
+          hasTapAction: true,
+        ),
+      );
 
       handle.dispose();
     },
@@ -363,7 +373,19 @@ void main() {
     await _onMac(() async {
       await _pumpLive(tester, now: _oneAm);
 
-      _tipLink(tester, 'Open Monday').onTap!();
+      await _showTip(tester);
+      await tester.tap(_openMondayLink);
+      await tester.pumpAndSettle();
+      expect(find.text(_mondayHeading), findsOneWidget);
+
+      Navigator.of(tester.element(find.text(_mondayHeading))).pop();
+      await tester.pumpAndSettle();
+      expect(find.text(_mondayHeading), findsNothing);
+
+      await _showTip(tester);
+      Focus.of(tester.element(find.text('Open Monday'))).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
       expect(find.text(_mondayHeading), findsOneWidget);
 
