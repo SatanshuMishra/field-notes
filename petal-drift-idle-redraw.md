@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T04:34:32.285Z
+Updated: 2026-11-11T04:34:36.252Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -27,3 +27,6 @@ Measure the probe build (builds/field-notes-probe-no-ticker.apk, labmain id) on 
 
 - Code: lib/design/motion/petal_drift.dart (ticker, painter), hosted in lib/app/shell/app_shell.dart and lib/features/onboarding/onboarding_frame.dart
 - Baseline on the Note 10+, main f454ef02 profile build: no bloom 0 idle frames; with a bloom Today, Calendar and Settings each 60 fps, raster thread 67 to 71% CPU (scratchpad dp/load script)
+- Spec files: docs/specs/petal-drift-idle-redraw.decisions.md (intent and decisions), .record.json (interview record), .guard.json (tree guard)
+- Probe worktree: /var/folders/tz/b798spt96sjfyy924nf0cw4c0000gn/T/interphase-probe-rioxpwew (remove with interphase probe.py remove)
+- Night sky precedent on origin/feat/night-sky: lib/features/capture/core/night_sky.dart twinkles on an 83 ms timer and launches comets 60 to 180 s apart
