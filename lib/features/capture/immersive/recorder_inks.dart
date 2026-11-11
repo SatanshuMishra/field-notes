@@ -7,6 +7,8 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/sticker_button.dart';
 import 'package:field_notes/features/capture/video/camera_glyphs.dart';
 
+const double _mediaMutedAlpha = 0.68;
+
 class RecorderInkScope extends InheritedWidget {
   const RecorderInkScope({
     super.key,
@@ -89,6 +91,8 @@ final class RecorderInks {
     required this.panelMessage,
     required this.error,
     required this.glassGlyph,
+    required this.inputInk,
+    required this.inputMutedInk,
     required this.focus,
     required this.glass,
     required this.sticker,
@@ -138,6 +142,8 @@ final class RecorderInks {
     panelMessage: const Color(0xFFB7A58C),
     error: colors.accentBright,
     glassGlyph: cameraGlyphInk,
+    inputInk: Palette.mediaInk,
+    inputMutedInk: Palette.mediaInk.withValues(alpha: _mediaMutedAlpha),
     focus: FocusRingSurface.dark,
     glass: GlassTone.media,
     sticker: StickerGround.media,
@@ -178,6 +184,8 @@ final class RecorderInks {
     panelMessage: const Color(0xFF554737),
     error: colors.accentInk,
     glassGlyph: colors.ink,
+    inputInk: colors.ink,
+    inputMutedInk: colors.mutedInkStrong,
     focus: FocusRingSurface.light,
     glass: GlassTone.paper,
     sticker: StickerGround.page,
@@ -217,6 +225,8 @@ final class RecorderInks {
   final Color panelMessage;
   final Color error;
   final Color glassGlyph;
+  final Color inputInk;
+  final Color inputMutedInk;
   final FocusRingSurface focus;
   final GlassTone glass;
   final StickerGround sticker;

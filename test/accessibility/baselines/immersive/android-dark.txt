@@ -1,0 +1,1 @@
+text-contrast | i12-voice-input-panel | Add a title | <root> # measured: 7.43:1 by token arithmetic for the visible part; the open input panel covers the rest of the title placeholder, which the sweep samples through the glass

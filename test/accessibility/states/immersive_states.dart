@@ -1,7 +1,10 @@
 import 'dart:async';
 
 import 'package:camera/camera.dart' show CameraDescription, CameraLensDirection;
+import 'package:field_notes/data/media/audio_output.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/features/capture/audio/audio_inputs.dart';
+import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/journal_capture_service.dart'
     show entryWriteMessage;
@@ -17,16 +20,20 @@ import 'package:field_notes/features/capture/video/video_recorder_sheet.dart';
 import 'package:field_notes/features/capture/voice/voice_composer.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
+import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:record/record.dart';
 
 import '../../features/capture/video/video_test_support.dart'
     show FakeVideoRecorder, fakeVideoDevices;
 import '../../features/capture/voice/voice_test_support.dart'
     show FakeCaptureService, FakeVoiceRecorder;
+import '../../features/settings/support/fake_settings_repository.dart';
 import '../support/a11y_state.dart';
 
 const String _today = '2026-09-28';
@@ -50,6 +57,51 @@ final List<VideoCaptureDevice> _phoneCameras = cameraDeviceLabels(
     ),
   ],
 );
+
+const List<InputDevice> _microphones = <InputDevice>[
+  InputDevice(id: 'built-in', label: 'MacBook Pro Microphone'),
+  InputDevice(id: 'headset', label: 'CORSAIR HS80 MAX'),
+];
+
+const List<AudioOutputDevice> _speakers = <AudioOutputDevice>[
+  AudioOutputDevice(id: null, name: 'System output'),
+  AudioOutputDevice(id: 'speakers', name: 'MacBook Pro Speakers'),
+];
+
+class _QuietMicrophone extends Fake implements AudioRecorder {
+  @override
+  Future<bool> hasPermission({bool request = true}) async => true;
+
+  @override
+  Future<Stream<Uint8List>> startStream(RecordConfig config) async =>
+      const Stream<Uint8List>.empty();
+
+  @override
+  Future<String?> stop() async => null;
+
+  @override
+  Future<void> dispose() async {}
+}
+
+class _ListedSpeakers extends AudioOutput {
+  const _ListedSpeakers();
+
+  @override
+  Future<String?> defaultOutputName() async => _speakers.last.name;
+
+  @override
+  Future<List<AudioOutputDevice>> listOutputs() async => _speakers;
+
+  @override
+  Future<void> openSoundSettings() async {}
+}
+
+List<Override> _inputPanelOverrides() => <Override>[
+  settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
+  audioInputListerProvider.overrideWithValue(() async => _microphones),
+  inputLevelRecorderProvider.overrideWithValue(_QuietMicrophone.new),
+  audioOutputProvider.overrideWithValue(const _ListedSpeakers()),
+];
 
 Duration _fadeIn(A11yVariant variant) => immersiveFadeFor(variant.layout);
 
@@ -103,12 +155,14 @@ Future<void> _openVoice(
   bool prompts = false,
   FakeCaptureService? service,
   VoidCallback? onClosed,
+  List<Override> extra = const <Override>[],
 }) {
   return _openRecorder(
     tester,
     variant: variant,
     open: (BuildContext context) => showVoiceComposer(context, _today),
     overrides: <Override>[
+      ...extra,
       voiceRecorderProvider.overrideWith((Ref ref) => FakeVoiceRecorder()),
       captureServiceProvider.overrideWith((Ref ref) {
         if (onClosed != null) {
@@ -254,6 +308,15 @@ Future<void> _pumpVoiceSaveError(
   await _startVoiceTake(tester);
   await _tap(tester, voiceSavePillKey);
   await tester.pump(_panelOpen);
+}
+
+Future<void> _pumpVoiceInputPanel(
+  WidgetTester tester,
+  A11yVariant variant,
+) async {
+  await _openVoice(tester, variant, extra: _inputPanelOverrides());
+  _requireVoicePhase(tester, VoiceRecorderPhase.idle);
+  await _openPanel(tester, recorderInputKey);
 }
 
 Future<void> _pumpVideoIdle(WidgetTester tester, A11yVariant variant) async {
@@ -406,6 +469,15 @@ final List<A11yState> immersiveStates = <A11yState>[
       A11yProof(find.byKey(voiceErrorKey)),
       A11yProof(find.text(_heldSaveFailure.message)),
       A11yProof(find.byKey(voiceSavePillKey)),
+    ],
+  ),
+  ..._inBothLayouts(
+    id: 'i12-voice-input-panel',
+    pump: _pumpVoiceInputPanel,
+    proof: <A11yProof>[
+      A11yProof(find.byType(InputPanel)),
+      A11yProof(find.byKey(inputDeviceRowKey)),
+      A11yProof(find.byKey(voiceSettingsRowKey)),
     ],
   ),
 ];

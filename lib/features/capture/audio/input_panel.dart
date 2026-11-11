@@ -59,7 +59,6 @@ const EdgeInsets _rowPadding = EdgeInsets.symmetric(horizontal: 6);
 const double _rowRadius = 10;
 const double _glyphSize = 18;
 const double _glyphGap = 6;
-const double _mutedAlpha = 0.68;
 const double _heldDuringTakeOpacity = 0.4;
 const double _trackAlpha = 0.24;
 const double _overlayAlpha = 0.12;
@@ -67,8 +66,6 @@ const double _meterGap = 6;
 const EdgeInsets _meterPadding = EdgeInsets.fromLTRB(6, 4, 6, 10);
 const double _anchorGap = 8;
 const double _screenMargin = 16;
-
-final Color _mediaMutedInk = Palette.mediaInk.withValues(alpha: _mutedAlpha);
 
 final Set<LogicalKeyboardKey> _panelActivationKeys = <LogicalKeyboardKey>{
   LogicalKeyboardKey.space,
@@ -304,10 +301,13 @@ class InputPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bool desktop = isDesktopPlatform(Theme.of(context).platform);
+    final RecorderInks inks = RecorderInks.of(context);
+    final Color ink = inks.inputInk;
+    final Color mutedInk = inks.inputMutedInk;
     return SizedBox(
       width: inputPanelWidth,
       child: GlassSurface(
-        tone: GlassTone.media,
+        tone: inks.glass,
         borderRadius: BorderRadius.circular(_panelRadius),
         padding: _panelPadding,
         child: Material(
@@ -326,21 +326,21 @@ class InputPanel extends ConsumerWidget {
                       InputDeviceRow(
                         androidVideo: androidVideo,
                         heldDuringTake: takeLevels != null,
-                        ink: Palette.mediaInk,
-                        mutedInk: _mediaMutedInk,
-                        tone: GlassTone.media,
+                        ink: ink,
+                        mutedInk: mutedInk,
+                        tone: inks.glass,
                         tapRegionGroupId: tapRegionGroupId,
                       ),
                       InputProfileRow(
-                        ink: Palette.mediaInk,
-                        mutedInk: _mediaMutedInk,
-                        tone: GlassTone.media,
+                        ink: ink,
+                        mutedInk: mutedInk,
+                        tone: inks.glass,
                         tapRegionGroupId: tapRegionGroupId,
                       ),
                       InputVolumeRow(
-                        ink: Palette.mediaInk,
-                        mutedInk: _mediaMutedInk,
-                        surface: FocusRingSurface.dark,
+                        ink: ink,
+                        mutedInk: mutedInk,
+                        surface: inks.focus,
                       ),
                     ],
                   ),
@@ -348,24 +348,24 @@ class InputPanel extends ConsumerWidget {
                 Padding(
                   padding: _meterPadding,
                   child: InputLevelRow(
-                    ink: Palette.mediaInk,
-                    mutedInk: _mediaMutedInk,
+                    ink: ink,
+                    mutedInk: mutedInk,
                     takeLevels: takeLevels,
                   ),
                 ),
                 if (desktop)
                   OutputDeviceRow(
-                    ink: Palette.mediaInk,
-                    mutedInk: _mediaMutedInk,
-                    tone: GlassTone.media,
+                    ink: ink,
+                    mutedInk: mutedInk,
+                    tone: inks.glass,
                     tapRegionGroupId: tapRegionGroupId,
                   ),
                 _PanelRow(
                   key: voiceSettingsRowKey,
                   title: voiceSettingsLabel,
-                  ink: Palette.mediaInk,
-                  mutedInk: _mediaMutedInk,
-                  surface: FocusRingSurface.dark,
+                  ink: ink,
+                  mutedInk: mutedInk,
+                  surface: inks.focus,
                   trailing: const _Glyph(Icons.chevron_right),
                   onTap: onVoiceSettings,
                 ),
