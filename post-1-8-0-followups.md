@@ -1,7 +1,7 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-11T02:50:04.316Z
-Next ids: c4 D8 R2 S1
+Updated: 2026-11-11T02:50:14.422Z
+Next ids: c4 D8 R2 S2
 
 ## Goal
 
@@ -55,12 +55,13 @@ Needs: D1, D2, D3, D5, D6, D7.
 
 ## Open risks
 
-- R1 Windows reminders: every reschedule cancels and re-adds every toast over WinRT, the path that used to crash; #379 diffs bookings so only changed reminders are touched, but it was not tried on Windows (third_party/flutter_local_notifications_windows/LOCAL_MODIFICATIONS.md).
-
 ## Settled, do not reopen
+
+- S1 Windows reminder rescheduling under #379 is diff-based and safe: in the Windows lab, changing the schedule touched only the changed toasts and the app stayed up; Custom 11:30 PM left seven 11:30 PM toasts.
 
 ## Where the details live
 
 - Owner's request: 2026-11-10 message with ten screenshots, items a to h
 - Prototype canvas: https://claude.ai/artifact/6Jhnx5E1BxCPH9DgNu9R1m, page "1.8 follow-ups" (boards DayModal18, HoverPadding, SyncStatus, Transitions, NightSky, Reminders); local copy in the session scratchpad artifact-files folder
-- Fanout items and plan: session scratchpad fn/fanout18 (items.json each leaf's task, files and acceptance; review-bar.md the review criteria; rules.md the shared build rules; pr-notes.md each branch's assumptions, trade-offs and open problems; pr_fields.py and final/ the rendered PR bodies)
+- Fanout items and plan: session scratchpad fn/fanout18 (items.json each leaf's task, files and acceptance; review-bar.md the review criteria; rules.md the shared build rules; pr-notes.md each branch's assumptions, trade-offs and open problems; pr_fields.py and final/ the rendered PR bodies; final-devpass/ the bodies with device results)
+- Device pass evidence: ~/VMLab/evidence/fireplace/followups-1-8/ (6 proof shots, 1 issue shot)
