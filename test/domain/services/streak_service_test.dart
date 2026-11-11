@@ -47,6 +47,13 @@ void main() {
         DateTime(2026, 7, 16),
       );
     });
+
+    test('at midnight it is 4 AM the same morning', () {
+      expect(
+        nextStreakBoundary(DateTime(2026, 7, 16)),
+        DateTime(2026, 7, 16, 4),
+      );
+    });
   });
 
   group('StreakService.summarize', () {
@@ -242,6 +249,19 @@ void main() {
         now: DateTime(2026, 7, 16, 9),
       );
       expect(result, const StreakSummary(current: 3, longest: 3));
+    });
+
+    test('at midnight a finished yesterday holds the run without waiting', () {
+      final result = service.summarize(
+        days: _finishedDays(const <String>[
+          '2026-07-13',
+          '2026-07-14',
+          '2026-07-15',
+        ]),
+        now: DateTime(2026, 7, 16),
+      );
+      expect(result.current, 3);
+      expect(result.lateNightDay, isNull);
     });
 
     test(
