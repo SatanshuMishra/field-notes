@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T06:09:26.785Z
+Updated: 2026-11-11T06:10:38.161Z
 Next ids: c1 D2 R2 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Once today has a bloom, the drifting petals keep the whole app redrawing at the 
 
 ## Where things stand
 
-Full lane, unattended (owner: "Work autonomously. Complete the task."). The spec is handed off with the reviewer's four fixes: rests of five to six gusts, an immediate gust after a mid-gust flower change, one shared wide-or-phone rule with a fresh gust on a set change (criterion C4.4), and one shared per-petal draw. MSP petal-gusts is open as PR #381 (mitosis/petal-gusts into FEATURE branch fix/petal-drift-idle-redraw, base b7ccaea2), assigned to the owner; the drive is in awaiting-merge and watches its CI. Round 1 was green; advisories C1 (ADR rest wording) and C2 (flights carry their petal) are fixed and pushed as 1f7290f6, with all 18 petal tests passing, and the branch's ADR and glossary now match the checkout. The tree guard's only difference at hand-off was the README agent's worktree, recorded in D1. The owner's separate README request is open as PR #380 (README and 21 screenshots, no lab or personal setup, checks green); the 1.9.0 release notes should not need it. The owner asked to tag and release once the fix is merged into main: release 1.9.0, covering PRs #370 to #379 and this fix, notes drafted. Once the drive reaches awaiting-merge, the conducting session reports the MSP pull request, opens the 1.9.0 changelog pull request and measures the fixed build on the Note 10+ for criterion 5.6.
+Full lane, unattended (owner: "Work autonomously. Complete the task."). The spec is handed off with the reviewer's four fixes: rests of five to six gusts, an immediate gust after a mid-gust flower change, one shared wide-or-phone rule with a fresh gust on a set change (criterion C4.4), and one shared per-petal draw. MSP petal-gusts is open as PR #381 (mitosis/petal-gusts into FEATURE branch fix/petal-drift-idle-redraw, base b7ccaea2), assigned to the owner; the drive is in awaiting-merge and watches its CI. Round 1 was green; advisories C1 (ADR rest wording) and C2 (flights carry their petal) are fixed and pushed as 1f7290f6, with all 18 petal tests passing, and the branch's ADR and glossary now match the checkout. The tree guard's only difference at hand-off was the README agent's worktree, recorded in D1. The owner's separate README request is open as PR #380 (README and 21 screenshots, no lab or personal setup, checks green); the 1.9.0 release notes should not need it. The owner asked to tag and release once the fix is merged into main: release 1.9.0, covering PRs #370 to #379 and this fix, notes drafted. Criterion 5.6 is being measured: a profile build of the fixed branch (labmain id) is building in a scratch worktree, then five idle minutes each on Today, Calendar and Settings after picking today's mood (the phone is on Nov 11, so yesterday's Grateful bloom no longer counts). After that, the 1.9.0 changelog pull request opens.
 
 ## Next step
 
