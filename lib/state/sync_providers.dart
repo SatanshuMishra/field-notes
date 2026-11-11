@@ -99,6 +99,7 @@ SyncEngine syncEngine(Ref ref) {
     wipe: () async => (await ref.read(localJournalWipeProvider.future)).wipe(),
     backgroundSource: () => ref.read(backgroundTransferProvider.future),
     leaveRule: leaveRuleFor(defaultTargetPlatform),
+    syncingShownFor: minimumSyncingShown,
   );
   ref.onDispose(engine.dispose);
   engine.start();

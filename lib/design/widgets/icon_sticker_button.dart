@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/min_target.dart';
@@ -22,8 +24,8 @@ const double _pauseBarHeight = 16;
 const double _pauseBarGap = 3.5;
 const Radius _pauseBarRadius = Radius.circular(1.2);
 
-const double _buttonExtent = 30;
-const double _glyphExtent = 15;
+const double iconStickerButtonExtent = 30;
+const double iconStickerGlyphExtent = 15;
 
 const BorderRadius _buttonRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusIconButton),
@@ -83,6 +85,8 @@ class IconStickerButton extends StatelessWidget {
     required this.semanticLabel,
     required this.onPressed,
     this.selected,
+    this.extent = iconStickerButtonExtent,
+    this.glyphExtent = iconStickerGlyphExtent,
   });
 
   final IconStickerGlyph glyph;
@@ -91,6 +95,8 @@ class IconStickerButton extends StatelessWidget {
   final String semanticLabel;
   final VoidCallback onPressed;
   final bool? selected;
+  final double extent;
+  final double glyphExtent;
 
   FocusRingSurface get _faceSurface =>
       glyphColor.computeLuminance() > _lightGlyphLuminance
@@ -107,10 +113,13 @@ class IconStickerButton extends StatelessWidget {
       borderRadius: _buttonRadius,
       paintsHover: false,
       builder: (BuildContext context, bool hovered) => SizedBox.square(
-        dimension: minIconTargetOn(Theme.of(context).platform),
+        dimension: math.max(
+          minIconTargetOn(Theme.of(context).platform),
+          extent,
+        ),
         child: Center(
           child: SizedBox.square(
-            dimension: _buttonExtent,
+            dimension: extent,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: background,
@@ -123,7 +132,11 @@ class IconStickerButton extends StatelessWidget {
                 borderRadius: _buttonRadius,
                 position: DecorationPosition.background,
                 child: Center(
-                  child: IconStickerGlyphIcon(glyph: glyph, color: glyphColor),
+                  child: IconStickerGlyphIcon(
+                    glyph: glyph,
+                    color: glyphColor,
+                    size: glyphExtent,
+                  ),
                 ),
               ),
             ),
@@ -139,7 +152,7 @@ class IconStickerGlyphIcon extends StatelessWidget {
     super.key,
     required this.glyph,
     required this.color,
-    this.size = _glyphExtent,
+    this.size = iconStickerGlyphExtent,
   });
 
   final IconStickerGlyph glyph;

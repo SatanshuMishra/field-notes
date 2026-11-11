@@ -26,6 +26,7 @@ import '../../../support/sync_overrides.dart';
 import '../../../sync/support/relay_fixture.dart';
 
 const String _push = '/v1/records/push';
+const String _pull = '/v1/records';
 
 final class _IdleClosingProxy {
   _IdleClosingProxy(this._targetPort, this._clock, this._idleLimit);
@@ -151,6 +152,16 @@ Future<SyncRecordSeq?> _seqOf(SyncTestDevice device, String recordKey) =>
     )..where((t) => t.recordKey.equals(recordKey))).getSingleOrNull();
 
 String _label(SyncStatus? status) => status!.label(DateTime.now().toUtc());
+
+Future<void> _passTime(SyncTestDevice device, Duration span) async {
+  Duration left = span;
+  while (left > Duration.zero) {
+    final Duration step = left < livePingInterval ? left : livePingInterval;
+    await device.clock.advance(step);
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    left -= step;
+  }
+}
 
 local.RecordState _dayState(int index, String node) {
   final String date = '2026-01-${(index + 1).toString().padLeft(2, '0')}';
@@ -771,4 +782,106 @@ void main() {
       expect(await engine.status(), isA<SyncedStatus>());
     },
   );
+
+  test(
+    'a set-up engine syncs once at start and shows Syncing for two seconds',
+    () async {
+      final SyncTestDevice mac = await enrolDevice(relay, device('Mac'));
+      final Completer<void> release = Completer<void>();
+      int pulls = 0;
+      mac.http.intercept = (http.BaseRequest request) async {
+        if (request.method == 'GET' && request.url.path == _pull) {
+          pulls += 1;
+          await release.future;
+        }
+        return null;
+      };
+      final SyncEngine engine = mac.engine(
+        syncingShownFor: minimumSyncingShown,
+      );
+
+      await engine.start();
+      await eventually(() async => pulls == 1);
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(pulls, 1);
+      expect(await engine.status(), const SyncingStatus());
+
+      release.complete();
+      await eventually(() async => engine.isLive);
+      expect(await engine.status(), const SyncingStatus());
+
+      await mac.clock.advance(
+        minimumSyncingShown - const Duration(milliseconds: 1),
+      );
+      expect(await engine.status(), const SyncingStatus());
+
+      await mac.clock.advance(const Duration(milliseconds: 1));
+      await eventually(() async => await engine.status() is SyncedStatus);
+    },
+  );
+
+  test('before any sync has run the status says not synced yet', () async {
+    final SyncTestDevice mac = await enrolDevice(relay, device('Mac'));
+    mac.lifecycle.state = AppLifecycleState.hidden;
+    final SyncEngine engine = mac.engine();
+
+    await engine.start();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    expect(mac.http.countOf('GET', _pull), 0);
+    expect(await engine.status(), const NotSyncedYetStatus());
+    expect(_label(await engine.status()), 'Not synced yet');
+  });
+
+  test(
+    'the window coming back after more than a minute away syncs and shows it',
+    () async {
+      final SyncTestDevice mac = await enrolDevice(relay, device('Mac'));
+      final SyncEngine engine = mac.engine(
+        leaveRule: LeaveRule.quit,
+        syncingShownFor: minimumSyncingShown,
+      );
+      await engine.start();
+      await eventually(() async => engine.isLive);
+      await mac.clock.advance(minimumSyncingShown);
+      await eventually(() async => await engine.status() is SyncedStatus);
+      final int pulled = mac.http.countOf('GET', _pull);
+
+      mac.lifecycle.state = AppLifecycleState.inactive;
+      await _passTime(mac, const Duration(seconds: 50));
+      mac.lifecycle.state = AppLifecycleState.resumed;
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(await engine.status(), isA<SyncedStatus>());
+      expect(mac.http.countOf('GET', _pull), pulled);
+
+      mac.lifecycle.state = AppLifecycleState.inactive;
+      await _passTime(mac, awayBeforeResync + const Duration(seconds: 1));
+      mac.lifecycle.state = AppLifecycleState.resumed;
+
+      expect(await engine.status(), const SyncingStatus());
+      await eventually(
+        () async => mac.http.countOf('GET', _pull) == pulled + 1,
+      );
+    },
+  );
+
+  test('Sync now says whether the sync went through', () async {
+    final SyncTestDevice mac = await enrolDevice(relay, device('Mac'));
+    final SyncEngine engine = mac.engine();
+    await engine.start();
+
+    expect(await engine.syncNow(), isTrue);
+
+    mac.http.intercept = (http.BaseRequest request) async =>
+        request.method == 'GET' && request.url.path == _pull
+        ? throw http.ClientException('The relay is down')
+        : null;
+    expect(await engine.syncNow(), isFalse);
+
+    mac.http.intercept = null;
+    mac.network.kind = NetworkKind.offline;
+    expect(await engine.syncNow(), isFalse);
+  });
 }

@@ -50,6 +50,8 @@ const Duration firstBackoff = Duration(seconds: 2);
 const Duration maxBackoff = Duration(seconds: 64);
 const Duration maxBackoffJitter = Duration(seconds: 1);
 const int unreachableAfterFailures = 3;
+const Duration minimumSyncingShown = Duration(seconds: 2);
+const Duration awayBeforeResync = Duration(minutes: 1);
 
 abstract final class EngineStateKeys {
   static const String paused = 'paused';
@@ -207,6 +209,7 @@ class SyncEngine {
     this._backgroundSource,
     this.pullPageSize,
     this.leaveRule = LeaveRule.hidden,
+    this.syncingShownFor = Duration.zero,
     Random? random,
   }) : _db = database,
        _random = random ?? Random();
@@ -226,6 +229,7 @@ class SyncEngine {
   BackgroundTransfer? _background;
   final int? pullPageSize;
   final LeaveRule leaveRule;
+  final Duration syncingShownFor;
   final Random _random;
   Future<SyncMedia?>? _loadedMedia;
   Future<void>? _preparing;
@@ -258,6 +262,11 @@ class SyncEngine {
   int _liveFailures = 0;
   DateTime? _blockedUntil;
   DateTime? _lastSyncedAt;
+  bool _lastCycleSucceeded = false;
+  int _shownSyncs = 0;
+  DateTime? _syncShownSince;
+  Timer? _syncShownTimer;
+  DateTime? _awaySince;
   bool _keysRefreshed = false;
   FirstPullProgress? _currentProgress;
   RelayTag _tag = const RelayTag(address: null, generation: null, counter: 0);
@@ -398,12 +407,9 @@ class SyncEngine {
     }
   }
 
-  Future<void> syncNow() async {
+  Future<bool> syncNow() async {
     _unlockKeys();
-    if (!_mayTalk) {
-      return;
-    }
-    await _requestCycle();
+    return _shownSync();
   }
 
   Future<void> pause(bool paused) async {
@@ -438,7 +444,8 @@ class SyncEngine {
         uploadCount: await _pendingUploads(),
         paused: _paused,
         attention: _attention(held),
-        lastSyncedAt: _lastSyncedAt ?? _clock.now(),
+        syncing: _syncShownSince != null,
+        lastSyncedAt: _lastSyncedAt,
       ),
     );
   }
@@ -535,6 +542,8 @@ class SyncEngine {
     _cancelTimers();
     _inactiveTimer?.cancel();
     _inactiveTimer = null;
+    _syncShownTimer?.cancel();
+    _syncShownTimer = null;
     for (final StreamSubscription<Object?> subscription in _subscriptions) {
       await subscription.cancel();
     }
@@ -752,6 +761,7 @@ class SyncEngine {
   }
 
   void _lifecycleChanged(AppLifecycleState state) {
+    final bool cameBack = _cameBackAfterAway(state);
     _inactiveTimer?.cancel();
     _inactiveTimer = null;
     if (state == AppLifecycleState.inactive) {
@@ -763,17 +773,31 @@ class SyncEngine {
       }
       return;
     }
-    _setVisible(!leavesOn(leaveRule, state));
+    _setVisible(!leavesOn(leaveRule, state), cameBack: cameBack);
   }
 
-  void _setVisible(bool visible) {
+  bool _cameBackAfterAway(AppLifecycleState state) {
+    final DateTime now = _clock.now();
+    if (state != AppLifecycleState.resumed) {
+      _awaySince ??= now;
+      return false;
+    }
+    final DateTime? since = _awaySince;
+    _awaySince = null;
+    return since != null && now.difference(since) > awayBeforeResync;
+  }
+
+  void _setVisible(bool visible, {bool cameBack = false}) {
     if (visible == _visible) {
+      if (visible && cameBack) {
+        unawaited(_shownSync());
+      }
       return;
     }
     _visible = visible;
     if (visible) {
       _unlockKeys();
-      unawaited(_resume());
+      unawaited(cameBack ? _shownSync() : _resume());
     } else {
       unawaited(_quiet().then((_) => _handOverOnLeave()));
     }
@@ -893,7 +917,7 @@ class SyncEngine {
     _changed();
     await _background?.results.start();
     unawaited(_prepareMedia());
-    await _resume();
+    await _shownSync();
   }
 
   Future<void> _deactivate() async {
@@ -909,6 +933,49 @@ class SyncEngine {
       return;
     }
     await _requestCycle();
+  }
+
+  Future<bool> _shownSync() async {
+    if (!_mayTalk) {
+      return false;
+    }
+    _beginShownSync();
+    try {
+      await _requestCycle();
+    } finally {
+      _endShownSync();
+    }
+    return _lastCycleSucceeded;
+  }
+
+  void _beginShownSync() {
+    _shownSyncs += 1;
+    _syncShownTimer?.cancel();
+    _syncShownTimer = null;
+    if (_syncShownSince == null) {
+      _syncShownSince = _clock.now();
+      _changed();
+    }
+  }
+
+  void _endShownSync() {
+    _shownSyncs -= 1;
+    final DateTime? since = _syncShownSince;
+    if (_shownSyncs > 0 || since == null || _disposed) {
+      return;
+    }
+    final Duration left = syncingShownFor - _clock.now().difference(since);
+    if (left <= Duration.zero) {
+      _settleShownSync();
+      return;
+    }
+    _syncShownTimer = _clock.timer(left, _settleShownSync);
+  }
+
+  void _settleShownSync() {
+    _syncShownTimer = null;
+    _syncShownSince = null;
+    _changed();
   }
 
   Future<void> _quiet() async {
@@ -1043,6 +1110,7 @@ class SyncEngine {
       DeviceService(database: _db, keyStore: _keyStore, client: client);
 
   Future<void> _cycleOnce() async {
+    _lastCycleSucceeded = false;
     if (!_mayTalk || _rebasing) {
       return;
     }
@@ -1398,6 +1466,7 @@ class SyncEngine {
   }
 
   void _succeeded() {
+    _lastCycleSucceeded = true;
     _failures = 0;
     _troubled = false;
     _storageFull = false;

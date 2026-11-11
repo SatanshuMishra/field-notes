@@ -8,6 +8,7 @@ import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/sync/ui/add_device_sheet.dart';
@@ -91,16 +92,60 @@ const String changeAddressTitle = 'Change server address';
 const String newServerAddressLabel = 'New server address';
 const String mediaSettingFailedMessage = 'Could not save your media setting.';
 const String syncActionFailedMessage = "That didn't work. Try again.";
+const String connectedLabel = 'Connected';
+const String offlineLabel = 'Offline';
+const String unreachableLabel = "Can't reach your server";
+const String offlineLine =
+    "Changes on this device will sync when you're back online.";
+const String syncingNowLabel = 'Syncing…';
+const String syncedNowLabel = 'Synced';
+const String tryAgainLabel = 'Try again';
+const String syncFailedLabel = "Couldn't sync just now.";
+const Duration syncNowShownFor = Duration(milliseconds: 1600);
+const Duration syncedShownFor = Duration(seconds: 2);
+const double syncNowMinWidth = 132;
+const double _syncNowMarkSize = 13;
+const double _syncNowSpinnerStroke = 1.8;
 
-String lastChangeSentLabel(DateTime at, DateTime now) =>
-    'Last change sent ${relativeSyncTime(at, now)}';
+String lastSyncedLabel(DateTime at, DateTime now) =>
+    'Last synced ${relativeSyncTime(at, now)}';
+
+String syncFailedLine(DateTime? lastSynced, DateTime now) => lastSynced == null
+    ? syncFailedLabel
+    : '$syncFailedLabel ${lastSyncedLabel(lastSynced, now)}.';
+
+String syncConnectionLabel(SyncStatus status, DateTime now) => switch (status) {
+  SyncedStatus() ||
+  SyncingStatus() ||
+  WaitingStatus() ||
+  UploadingStatus() ||
+  NotSyncedYetStatus() => connectedLabel,
+  OfflineStatus() => offlineLabel,
+  AttentionStatus(
+    reason: AttentionReason.unreachable || AttentionReason.newServerUnreachable,
+  ) =>
+    unreachableLabel,
+  PausedStatus() || AttentionStatus() => status.label(now),
+};
+
+Color syncConnectionTone(SyncStatus status, FieldNotesColors colors) =>
+    switch (status) {
+      SyncedStatus() ||
+      SyncingStatus() ||
+      WaitingStatus() ||
+      UploadingStatus() ||
+      NotSyncedYetStatus() => colors.sage,
+      AttentionStatus() => colors.dangerInk,
+      OfflineStatus() || PausedStatus() => colors.muted,
+    };
 
 Color syncStatusTone(SyncStatus status, FieldNotesColors colors) =>
     switch (status) {
       SyncedStatus() => colors.sage,
+      SyncingStatus() => colors.inkSoft,
       WaitingStatus() || UploadingStatus() => colors.accentInk,
       AttentionStatus() => colors.dangerInk,
-      OfflineStatus() || PausedStatus() => colors.muted,
+      OfflineStatus() || PausedStatus() || NotSyncedYetStatus() => colors.muted,
     };
 
 class SyncClockRefresh extends StatefulWidget {
@@ -156,7 +201,8 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
   final FocusNode _manageDevicesFocus = FocusNode(
     debugLabel: manageDevicesLabel,
   );
-  DateTime? _lastSent;
+  DateTime? _lastSynced;
+  bool _syncFailed = false;
 
   @override
   void initState() {
@@ -190,7 +236,10 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
     ) {
       final SyncStatus? status = next.value;
       if (status is SyncedStatus) {
-        setState(() => _lastSent = status.at);
+        setState(() {
+          _syncFailed = _syncFailed && status.at == _lastSynced;
+          _lastSynced = status.at;
+        });
       }
     });
     final SyncStatus? status = ref.watch(syncStatusProvider).value;
@@ -239,7 +288,6 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
 
   Widget _desktopOn(SyncStatus? status, String? address) {
     final DateTime now = DateTime.now().toUtc();
-    final DateTime? sent = status is SyncedStatus ? status.at : _lastSent;
     final List<JournalDevice>? devices = ref
         .watch(journalDevicesProvider)
         .value;
@@ -250,14 +298,15 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
           rows: <Widget>[
             if (status != null)
               SettingsFieldRow(
-                label: status.label(now),
-                leading: _statusDot(status),
-                description: sent == null
-                    ? null
-                    : lastChangeSentLabel(sent, now),
+                label: syncConnectionLabel(_shownStatus(status), now),
+                leading: _statusDot(_shownStatus(status)),
+                description: _lastSyncedLine(status, now),
+                descriptionColor: _showsSyncFailure(status)
+                    ? context.colors.dangerInk
+                    : null,
                 control: status is PausedStatus
                     ? const SizedBox.shrink()
-                    : _syncNowButton(),
+                    : _syncNowButton(status),
               ),
             ..._fixRows(status),
             _pauseRow(status),
@@ -354,7 +403,7 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
                 ),
                 if (status is! PausedStatus) ...<Widget>[
                   const SizedBox(width: 12),
-                  _syncNowButton(),
+                  _syncNowButton(status),
                 ],
               ],
             ),
@@ -410,19 +459,60 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
 
   Widget _statusDot(SyncStatus status) => DecoratedBox(
     decoration: BoxDecoration(
-      color: syncStatusTone(status, context.colors),
+      color: syncConnectionTone(status, context.colors),
       shape: BoxShape.circle,
     ),
     child: const SizedBox.square(dimension: _statusDotSize),
   );
 
-  Widget _syncNowButton() => MinTarget(
-    child: SettingsActionButton(
-      label: syncNowLabel,
-      onPressed: () =>
-          _engineAction(() => ref.read(syncEngineProvider).syncNow()),
+  bool _showsSyncFailure(SyncStatus status) =>
+      _syncFailed && status is! OfflineStatus && status is! PausedStatus;
+
+  SyncStatus _shownStatus(SyncStatus status) => _showsSyncFailure(status)
+      ? const AttentionStatus(AttentionReason.unreachable)
+      : status;
+
+  String? _lastSyncedLine(SyncStatus status, DateTime now) {
+    final DateTime? at = status is SyncedStatus ? status.at : _lastSynced;
+    if (_showsSyncFailure(status)) {
+      return syncFailedLine(at, now);
+    }
+    if (status is OfflineStatus) {
+      return offlineLine;
+    }
+    if (at != null) {
+      return lastSyncedLabel(at, now);
+    }
+    return switch (status) {
+      NotSyncedYetStatus() ||
+      WaitingStatus() ||
+      UploadingStatus() => status.label(now),
+      _ => null,
+    };
+  }
+
+  Widget _syncNowButton(SyncStatus? status) => MinTarget(
+    child: SyncNowButton(
+      onSync: status is OfflineStatus ? null : _syncNow,
+      onSettled: _syncSettled,
     ),
   );
+
+  void _syncSettled(bool synced) {
+    if (mounted) {
+      setState(() => _syncFailed = !synced);
+    }
+  }
+
+  Future<bool> _syncNow() async {
+    try {
+      return await ref.read(syncEngineProvider).syncNow();
+    } on Exception catch (error) {
+      debugPrint('Sync now failed: $error');
+      widget.onFeedback(syncActionFailedMessage);
+      return false;
+    }
+  }
 
   Widget _changeButton() => MinTarget(
     child: SettingsActionButton(
@@ -676,5 +766,109 @@ class _ChangeServerAddressFlowState
         ],
       ),
     );
+  }
+}
+
+enum _SyncNowPhase { idle, syncing, synced }
+
+class SyncNowButton extends StatefulWidget {
+  const SyncNowButton({super.key, required this.onSync, this.onSettled});
+
+  final Future<bool> Function()? onSync;
+  final ValueChanged<bool>? onSettled;
+
+  @override
+  State<SyncNowButton> createState() => _SyncNowButtonState();
+}
+
+class _SyncNowButtonState extends State<SyncNowButton> {
+  _SyncNowPhase _phase = _SyncNowPhase.idle;
+  bool _failed = false;
+  Timer? _timer;
+  Completer<void>? _shown;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    final Completer<void>? shown = _shown;
+    if (shown != null && !shown.isCompleted) {
+      shown.complete();
+    }
+    super.dispose();
+  }
+
+  Future<void> _press(Future<bool> Function() onSync) async {
+    if (_phase != _SyncNowPhase.idle) {
+      return;
+    }
+    setState(() => _phase = _SyncNowPhase.syncing);
+    final Completer<void> shown = Completer<void>();
+    _shown = shown;
+    _timer = Timer(syncNowShownFor, shown.complete);
+    bool synced = false;
+    try {
+      synced = await onSync();
+    } finally {
+      await shown.future;
+      _finish(synced);
+    }
+  }
+
+  void _finish(bool synced) {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _failed = !synced;
+      _phase = synced ? _SyncNowPhase.synced : _SyncNowPhase.idle;
+    });
+    widget.onSettled?.call(synced);
+    if (synced) {
+      _timer = Timer(syncedShownFor, _settle);
+    }
+  }
+
+  void _settle() {
+    if (mounted) {
+      setState(() => _phase = _SyncNowPhase.idle);
+    }
+  }
+
+  void _hold() {}
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final Future<bool> Function()? onSync = widget.onSync;
+    return switch (_phase) {
+      _SyncNowPhase.idle => SettingsActionButton(
+        label: _failed && onSync != null ? tryAgainLabel : syncNowLabel,
+        onPressed: onSync == null ? null : () => _press(onSync),
+        minWidth: syncNowMinWidth,
+      ),
+      _SyncNowPhase.syncing => SettingsActionButton(
+        label: syncingNowLabel,
+        onPressed: _hold,
+        minWidth: syncNowMinWidth,
+        leading: SizedBox.square(
+          dimension: _syncNowMarkSize,
+          child: CircularProgressIndicator(
+            color: colors.accentInk,
+            backgroundColor: colors.ink16,
+            strokeWidth: _syncNowSpinnerStroke,
+          ),
+        ),
+      ),
+      _SyncNowPhase.synced => SettingsActionButton(
+        label: syncedNowLabel,
+        onPressed: _hold,
+        minWidth: syncNowMinWidth,
+        leading: IconStickerGlyphIcon(
+          glyph: IconStickerGlyph.check,
+          color: colors.sage,
+          size: _syncNowMarkSize,
+        ),
+      ),
+    };
   }
 }
