@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T06:09:19.085Z
+Updated: 2026-11-11T06:09:26.785Z
 Next ids: c1 D2 R2 S1
 
 ## Goal
@@ -23,7 +23,6 @@ The drive entered awaiting-merge: pull requests are ready to merge; it resumes o
 
 ## Open risks
 
-- R1 The checkout's ADR 0010 now says five to six gusts; if the branch copy keeps four to five, the post-merge sync refuses to fast-forward over it, so check the branch copy before the pull request opens.
 
 ## Settled, do not reopen
 
@@ -38,3 +37,4 @@ The drive entered awaiting-merge: pull requests are ready to merge; it resumes o
 - Night sky precedent: lib/features/capture/core/night_sky.dart twinkles on an 83 ms timer and launches comets 60 to 180 s apart
 - Run home: ~/.mitosis/fireplace/petal-drift-idle-redraw/ (run.zsh, CHARTER.md, worker rules); mitosis run dir ~/.mitosis/runs/fireplace/petal-drift-idle-redraw
 - Release process: a release/X-Y-Z-changelog PR adds the CHANGELOG.md section, then a vX.Y.Z tag on main triggers .github/workflows/release.yml, which builds and publishes the GitHub release
+- MSP worktree: ~/.mitosis/runs/fireplace/petal-drift-idle-redraw/trees/petal-gusts (branch mitosis/petal-gusts)
