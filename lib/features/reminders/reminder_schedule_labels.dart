@@ -31,5 +31,5 @@ String reminderScheduleDetail(
   ReminderSchedule.custom => 'Once, when you choose.',
 };
 
-String reminderLastCallTitle(BuildContext context) =>
-    'Last call at ${reminderClockLabel(context, ReminderService.lastCallTime)}';
+String reminderLastCallTitle(BuildContext context, ReminderTime time) =>
+    'Last call at ${reminderClockLabel(context, time)}';

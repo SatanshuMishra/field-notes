@@ -73,7 +73,75 @@ void _expectInside(_Circle marker, String reason) {
   );
 }
 
+Future<String> _lastCallTitleFor(
+  WidgetTester tester,
+  ReminderSchedule schedule,
+  ReminderTime customTime,
+) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+      home: Material(
+        child: SingleChildScrollView(
+          child: SizedBox(
+            width: _width,
+            child: ReminderSchedulePicker(
+              schedule: schedule,
+              customTime: customTime,
+              onSchedule: (_) {},
+              onCustomTime: () {},
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  final Iterable<Text> lines = tester.widgetList<Text>(
+    find.descendant(
+      of: find.byKey(reminderLastCallKey),
+      matching: find.byType(Text),
+    ),
+  );
+  return lines.first.data!;
+}
+
 void main() {
+  testWidgets('the last call line names the time the last call rings', (
+    WidgetTester tester,
+  ) async {
+    final List<(ReminderSchedule, ReminderTime, String)> cases =
+        <(ReminderSchedule, ReminderTime, String)>[
+          (
+            ReminderSchedule.evenings,
+            const ReminderTime(hour: 23, minute: 0),
+            'Last call at 10:30 PM',
+          ),
+          (
+            ReminderSchedule.custom,
+            const ReminderTime(hour: 19, minute: 0),
+            'Last call at 10:30 PM',
+          ),
+          (
+            ReminderSchedule.custom,
+            const ReminderTime(hour: 23, minute: 0),
+            'Last call at 11:00 PM',
+          ),
+          (
+            ReminderSchedule.custom,
+            const ReminderTime(hour: 1, minute: 15),
+            'Last call at 1:15 AM',
+          ),
+        ];
+    for (final (ReminderSchedule schedule, ReminderTime time, String title)
+        in cases) {
+      expect(
+        await _lastCallTitleFor(tester, schedule, time),
+        title,
+        reason: '$schedule at $time',
+      );
+    }
+  });
+
   testWidgets('an early-morning custom time sits inside the timeline at the '
       'morning end', (WidgetTester tester) async {
     for (final ReminderTime time in const <ReminderTime>[

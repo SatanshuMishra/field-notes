@@ -66,6 +66,10 @@ class ReminderSchedulePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final List<ReminderSlot> slots = const ReminderService().slotsFor(
+      schedule,
+      customTime,
+    );
     final List<Widget> cards = <Widget>[
       for (final ReminderSchedule option in ReminderSchedule.values)
         _ScheduleCard(
@@ -128,12 +132,15 @@ class ReminderSchedulePicker extends StatelessWidget {
           ),
         ),
         const SizedBox(height: _lastCallGap),
-        const _LastCallNote(),
-        const SizedBox(height: _timelineGap),
-        ReminderTimeline(
-          key: reminderTimelineKey,
-          slots: const ReminderService().slotsFor(schedule, customTime),
+        _LastCallNote(
+          time: slots
+              .firstWhere(
+                (ReminderSlot slot) => slot.nudge == ReminderNudge.lastCall,
+              )
+              .time,
         ),
+        const SizedBox(height: _timelineGap),
+        ReminderTimeline(key: reminderTimelineKey, slots: slots),
       ],
     );
   }
@@ -301,7 +308,9 @@ class _Radio extends StatelessWidget {
 }
 
 class _LastCallNote extends StatelessWidget {
-  const _LastCallNote();
+  const _LastCallNote({required this.time});
+
+  final ReminderTime time;
 
   @override
   Widget build(BuildContext context) {
@@ -340,7 +349,7 @@ class _LastCallNote extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Text(
-                      reminderLastCallTitle(context),
+                      reminderLastCallTitle(context, time),
                       style: styles.labelSans.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
