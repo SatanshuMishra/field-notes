@@ -78,6 +78,16 @@ _Avoid_: bright window
 The low fog the Meadow lays over the heaviest stretch's flowers, lying around their stems with the blooms rising out of it.
 _Avoid_: fog pocket, hollow fog
 
+## Petals
+
+**Petal gust**:
+One pass of today's flower petals across the window over a page, the petals entering close together and leaving the window still behind them.
+_Avoid_: petal wave, burst, cycle
+
+**Petal rest**:
+The still time between two petal gusts, when no petal is drawn.
+_Avoid_: pause, gap, cooldown
+
 ## Accessibility
 
 **Sweep**:
