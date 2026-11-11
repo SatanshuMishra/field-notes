@@ -10,6 +10,8 @@ import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/data/sync/pairing/pairing_code.dart';
 import 'package:field_notes/data/sync/pairing/pairing_service.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_text_field.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
@@ -22,6 +24,7 @@ import 'package:field_notes/features/sync/ui/pairing_word_fields.dart';
 import 'package:field_notes/features/sync/ui/qr_frame_decoder.dart';
 import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
 import 'package:field_notes/features/sync/ui/sync_flow_page.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,6 +38,8 @@ const double _gestureBar = 24;
 const double _keyboard = 300;
 const double _controlsLift = 22;
 const double _control = 48;
+const double _cancelInset = 20;
+const double _controlGap = 12;
 const double _bracketSide = 0.76 * 384;
 const double _titleBar = 42;
 const double _columnGap = 28;
@@ -510,6 +515,75 @@ void main() {
     expect(find.byType(JoinScanPage), findsOneWidget);
     expect(join.codes, isEmpty);
     semantics.dispose();
+  });
+
+  testWidgets('the phone camera Cancel words take a hover and a tap 6 px '
+      'beside them, fill 12 px past them and stay under the button', (
+    WidgetTester tester,
+  ) async {
+    _usePhoneCamera();
+    final _Opened opened = await _openJoin(
+      tester,
+      platform: TargetPlatform.android,
+      join: _FakeJoin(),
+    );
+    final Finder page = find.byType(JoinScanPage);
+    final Finder words = find.descendant(
+      of: page,
+      matching: find.text(syncCancelLabel),
+    );
+    final Finder caption = find.ancestor(
+      of: words,
+      matching: find.byType(Pressable),
+    );
+    expect(caption, findsOneWidget);
+    final Rect wordsRect = tester.getRect(words);
+    final Rect button = tester.getRect(
+      find.descendant(
+        of: find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is GlassCircleButton && widget.label == syncCancelLabel,
+        ),
+        matching: find.byType(GlassSurface),
+      ),
+    );
+    expect(button.left, _cancelInset);
+    expect(wordsRect.center.dx, closeTo(button.center.dx, 0.5));
+    final Rect pill = tester.getRect(
+      find.descendant(
+        of: find.byKey(typeWordsInsteadKey),
+        matching: find.byType(GlassSurface),
+      ),
+    );
+    expect(pill.left, button.right + _controlGap);
+
+    final Offset beside = Offset(wordsRect.left - 6, wordsRect.center.dy);
+    final TestGesture mouse = await tester.createGesture(
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(beside);
+    await tester.pump();
+    final Finder fill = find.descendant(
+      of: caption,
+      matching: find.byKey(pressableHoverFillKey),
+    );
+    final BoxDecoration painted =
+        tester.widget<DecoratedBox>(fill).decoration as BoxDecoration;
+    expect(
+      painted.color?.toARGB32(),
+      HoverStyle.onDark.withValues(alpha: HoverStyle.darkOpacity).toARGB32(),
+    );
+    final Rect fillRect = tester.getRect(fill);
+    expect(wordsRect.left - fillRect.left, greaterThanOrEqualTo(12));
+    expect(fillRect.right - wordsRect.right, greaterThanOrEqualTo(12));
+    expect(fillRect.right, lessThanOrEqualTo(pill.left));
+    await mouse.removePointer();
+
+    await tester.tapAt(beside);
+    await tester.pumpAndSettle();
+    expect(opened.closed, isTrue);
+    expect(find.byType(JoinScanPage), findsNothing);
   });
 
   testWidgets('the phone camera headline stays clear of the frame at 2x text', (

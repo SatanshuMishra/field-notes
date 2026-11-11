@@ -9,6 +9,7 @@ abstract final class HoverStyle {
   static const double pillOpacity = 0.08;
   static const double darkOpacity = 0.12;
   static const Color onDark = Color(0xFFFFFFFF);
+  static const double fillInset = Spacing.space12;
 
   static Color fill(
     FocusRingSurface surface,

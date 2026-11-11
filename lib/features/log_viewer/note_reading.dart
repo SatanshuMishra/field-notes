@@ -5,6 +5,7 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/focus/input_modality.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -38,7 +39,7 @@ const double _metaLetterSpacing = 0.44;
 const double _metaGap = 14;
 const double _footerVerticalPadding = 10;
 const double _footerHorizontalPadding = 14;
-const double _stepGlyphGap = 6;
+const double _stepGlyphGap = 2;
 const double _absentStepOpacity = 0.35;
 const double _phoneStepTarget = 48;
 const double _desktopStepTarget = 48;
@@ -153,7 +154,9 @@ class LogStepFooter extends StatelessWidget {
         ? _phoneStepTarget
         : _desktopStepTarget;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: _footerHorizontalPadding),
+      padding: const EdgeInsets.symmetric(
+        horizontal: _footerHorizontalPadding - HoverStyle.fillInset,
+      ),
       child: Row(
         children: <Widget>[
           Expanded(
@@ -237,11 +240,15 @@ class _StepControl extends StatelessWidget {
     return Pressable(
       label: label,
       onPressed: step,
+      placement: FocusRingPlacement.edge,
       borderRadius: _stepBorderRadius,
       child: ConstrainedBox(
         constraints: BoxConstraints(minWidth: target, minHeight: target),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: _footerVerticalPadding),
+          padding: const EdgeInsets.symmetric(
+            horizontal: HoverStyle.fillInset,
+            vertical: _footerVerticalPadding,
+          ),
           child: Opacity(
             opacity: enabled ? 1 : _absentStepOpacity,
             child: Row(

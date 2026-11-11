@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -413,9 +414,16 @@ void main() {
         );
         expect(
           tester.getRect(content).left,
+          moreOrLessEquals(tester.getRect(rule).right + 28 - settingsGutter),
+        );
+        expect(
+          tester.getSize(content).width,
+          moreOrLessEquals(680 + 2 * settingsGutter),
+        );
+        expect(
+          tester.getRect(find.byKey(settingsContentTitleKey)).left,
           moreOrLessEquals(tester.getRect(rule).right + 28),
         );
-        expect(tester.getSize(content).width, moreOrLessEquals(680));
 
         final ScrollableState scrollable = tester.state<ScrollableState>(
           find.ancestor(of: content, matching: find.byType(Scrollable)).first,
@@ -432,7 +440,10 @@ void main() {
         expect(tester.getTopLeft(content).dy, contentTop - offset);
         expect(tester.getTopLeft(rail).dy, railTop);
         expect(tester.getSize(rail).width, greaterThanOrEqualTo(190));
-        expect(tester.getSize(content).width, moreOrLessEquals(680));
+        expect(
+          tester.getSize(content).width,
+          moreOrLessEquals(680 + 2 * settingsGutter),
+        );
       });
     },
   );

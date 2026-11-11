@@ -1,10 +1,12 @@
 import 'package:field_notes/data/sync/engine/sync_status.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/icons/settings_icons.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
+import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
@@ -75,7 +77,13 @@ const EdgeInsets _bannerPadding = EdgeInsets.fromLTRB(14, 12, 12, 12);
 const double _pillChevronGap = 4;
 
 const EdgeInsets _headingPadding = EdgeInsets.symmetric(horizontal: 2);
-const EdgeInsets _listPadding = EdgeInsets.symmetric(horizontal: 16);
+const double _listSidePadding = 16;
+const double _listEndPadding = 4;
+const EdgeInsets _listPadding = EdgeInsets.symmetric(
+  horizontal: _listSidePadding - settingsGutter,
+  vertical: _listEndPadding,
+);
+const EdgeInsets _listGutter = EdgeInsets.symmetric(horizontal: settingsGutter);
 const EdgeInsets _pillPadding = EdgeInsets.only(left: 12, right: 18);
 
 const BorderRadius _pillRadius = BorderRadius.all(
@@ -120,22 +128,29 @@ class SettingsSectionList extends ConsumerWidget {
         StickerCard(
           padding: _listPadding,
           child: SyncClockRefresh(
-            builder: (BuildContext context) => Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                for (final SettingsTab tab in tabs) ...<Widget>[
-                  if (tab != tabs.first) const DashedDivider(),
-                  _SectionRow(
-                    tab: tab,
-                    summary: tab == SettingsTab.about && update != null
-                        ? aboutRowReadySummary(update.version.toString())
-                        : _summaryFor(tab, syncOn, status, version, profile),
-                    marked: tab == SettingsTab.about && update != null,
-                    onPressed: () => onOpen(tab),
-                  ),
+            builder: (BuildContext context) => SettingsGutter(
+              padding: _listGutter,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  for (final SettingsTab tab in tabs) ...<Widget>[
+                    if (tab != tabs.first)
+                      const Padding(
+                        padding: _listGutter,
+                        child: DashedDivider(),
+                      ),
+                    _SectionRow(
+                      tab: tab,
+                      summary: tab == SettingsTab.about && update != null
+                          ? aboutRowReadySummary(update.version.toString())
+                          : _summaryFor(tab, syncOn, status, version, profile),
+                      marked: tab == SettingsTab.about && update != null,
+                      onPressed: () => onOpen(tab),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -185,39 +200,42 @@ class _SectionRow extends StatelessWidget {
       label: tab.label,
       hint: summary,
       onPressed: onPressed,
+      placement: FocusRingPlacement.edge,
       borderRadius: Shapes.buttonBorderRadius,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minHeight: settingsSectionRowMinHeight,
-        ),
-        child: Row(
-          children: <Widget>[
-            _SectionTile(tab: tab),
-            const SizedBox(width: _tileGap),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    tab.label,
-                    style: context.textStyles.labelSans.copyWith(
-                      fontSize: _rowLabelSize,
-                      fontWeight: FontWeight.w600,
+      child: SettingsRowFrame(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: settingsSectionRowMinHeight,
+          ),
+          child: Row(
+            children: <Widget>[
+              _SectionTile(tab: tab),
+              const SizedBox(width: _tileGap),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      tab.label,
+                      style: context.textStyles.labelSans.copyWith(
+                        fontSize: _rowLabelSize,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: _summaryGap),
-                  Text(summary, style: context.textStyles.captionSans),
-                ],
+                    const SizedBox(height: _summaryGap),
+                    Text(summary, style: context.textStyles.captionSans),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: _chevronGap),
-            if (marked) ...<Widget>[
-              _Mark(markKey: settingsSectionMarkKey(tab)),
               const SizedBox(width: _chevronGap),
+              if (marked) ...<Widget>[
+                _Mark(markKey: settingsSectionMarkKey(tab)),
+                const SizedBox(width: _chevronGap),
+              ],
+              ChevronGlyph(pointsBack: false, color: colors.muted),
             ],
-            ChevronGlyph(pointsBack: false, color: colors.muted),
-          ],
+          ),
         ),
       ),
     );

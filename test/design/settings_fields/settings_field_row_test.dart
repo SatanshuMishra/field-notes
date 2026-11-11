@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -34,6 +36,8 @@ const String _slottedDescription = 'Last change sent today';
 const String _pressLabel = 'Manage devices';
 const String _pressDescription = '2 devices · add or remove';
 const String _controlLabel = 'chevron';
+const String _headingLabel = 'server & devices';
+const double _fillBleed = 12;
 
 void _usePhoneWidth(WidgetTester tester) {
   tester.view.physicalSize = const Size(411, 900);
@@ -127,6 +131,63 @@ Iterable<RenderObject> _renderPath(RenderObject from, RenderObject to) sync* {
     }
   }
 }
+
+Future<void> _pumpPressableSection(
+  WidgetTester tester,
+  VoidCallback onPressed,
+) async {
+  tester.view.physicalSize = const Size(1140, 726);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+      home: Scaffold(
+        body: Align(
+          alignment: Alignment.topLeft,
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: SizedBox(
+              width: 640,
+              child: SettingsSection.grouped(
+                groups: <SettingsGroup>[
+                  SettingsGroup(
+                    label: _headingLabel,
+                    rows: <Widget>[
+                      SettingsFieldRow(
+                        label: _plainLabel,
+                        control: const SizedBox(width: 16, height: 16),
+                        onPressed: () {},
+                      ),
+                      SettingsFieldRow(
+                        label: _pressLabel,
+                        description: _pressDescription,
+                        control: const SizedBox(
+                          key: _plainControlKey,
+                          width: 16,
+                          height: 16,
+                        ),
+                        onPressed: onPressed,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+Finder _hairlines() => find.byWidgetPredicate(
+  (Widget widget) =>
+      widget is ColoredBox &&
+      widget.color.toARGB32() ==
+          FieldNotesColors.light.ink.withValues(alpha: 0.13).toARGB32(),
+);
 
 void main() {
   group('SettingsFieldRow', () {
@@ -470,6 +531,88 @@ void main() {
 
       expect(tester.takeException(), isNull);
       handle.dispose();
+    },
+  );
+
+  testWidgets(
+    'a pressable row in a section takes a hover and a click 6 px left of its '
+    'words, keeps its words on the heading and draws its ring on the fill',
+    (WidgetTester tester) async {
+      int presses = 0;
+      await _pumpPressableSection(tester, () => presses++);
+      final Finder row = find.widgetWithText(SettingsFieldRow, _pressLabel);
+      final Finder fill = find.descendant(
+        of: row,
+        matching: find.byKey(pressableHoverFillKey),
+      );
+      final Rect heading = tester.getRect(find.text(_headingLabel));
+      final Rect label = tester.getRect(find.text(_pressLabel));
+      final Rect control = tester.getRect(find.byKey(_plainControlKey));
+      expect(label.left, heading.left);
+
+      final Offset beside = Offset(label.left - 6, label.center.dy);
+      final TestGesture mouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+      );
+      await mouse.addPointer(location: Offset.zero);
+      await mouse.moveTo(beside);
+      await tester.pump();
+      final BoxDecoration painted =
+          tester.widget<DecoratedBox>(fill).decoration as BoxDecoration;
+      expect(
+        painted.color?.toARGB32(),
+        FieldNotesColors.light.ink.withValues(alpha: 0.06).toARGB32(),
+      );
+      expect(painted.borderRadius, Shapes.buttonBorderRadius);
+      final Rect fillRect = tester.getRect(fill);
+      expect(label.left - fillRect.left, greaterThanOrEqualTo(_fillBleed));
+      expect(fillRect.right - control.right, greaterThanOrEqualTo(_fillBleed));
+
+      await tester.tapAt(beside);
+      await tester.pump();
+      expect(presses, 1);
+
+      await mouse.removePointer();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final Finder ring = find.descendant(
+        of: row,
+        matching: find.byKey(focusRingKey),
+      );
+      expect(ring, findsOneWidget);
+      expect(tester.getRect(ring), fillRect);
+      expect(
+        tester.renderObject(ring),
+        paints..drrect(
+          outer: RRect.fromRectAndRadius(
+            Offset.zero & fillRect.size,
+            Shapes.buttonBorderRadius.topLeft,
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'a pressable row in a section fills its whole band from hairline to edge',
+    (WidgetTester tester) async {
+      await _pumpPressableSection(tester, () {});
+      final Rect fill = tester.getRect(
+        find.descendant(
+          of: find.widgetWithText(SettingsFieldRow, _pressLabel),
+          matching: find.byKey(pressableHoverFillKey),
+        ),
+      );
+      final Rect label = tester.getRect(find.text(_pressLabel));
+      final Rect hairline = tester.getRect(_hairlines());
+      final Rect section = tester.getRect(find.byType(SettingsSection));
+      expect(fill.top, hairline.bottom);
+      expect(fill.bottom, section.bottom);
+      expect(fill.height, greaterThanOrEqualTo(56));
+      expect(label.top - fill.top, greaterThanOrEqualTo(_fillBleed));
     },
   );
 }

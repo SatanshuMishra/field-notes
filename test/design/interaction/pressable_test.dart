@@ -387,4 +387,94 @@ void main() {
     );
     semantics.dispose();
   });
+
+  testWidgets(
+    'a row that pads its words inside the pressable takes a hover and a tap '
+    '6 px left of them and draws its fill and focus ring 12 px past them',
+    (WidgetTester tester) async {
+      const Key headingKey = ValueKey<String>('heading');
+      const Key wordsKey = ValueKey<String>('words');
+      const EdgeInsets gutter = EdgeInsets.symmetric(
+        horizontal: HoverStyle.fillInset,
+      );
+      int presses = 0;
+      await _pump(
+        tester,
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Padding(
+              padding: gutter,
+              child: SizedBox(key: headingKey, width: 80, height: 20),
+            ),
+            Pressable(
+              key: _rowKey,
+              label: 'Manage devices',
+              onPressed: () => presses++,
+              placement: FocusRingPlacement.edge,
+              borderRadius: _rowRadius,
+              child: Padding(
+                padding: gutter,
+                child: SizedBox.fromSize(key: wordsKey, size: _controlSize),
+              ),
+            ),
+          ],
+        ),
+      );
+      final Finder fill = find.descendant(
+        of: find.byKey(_rowKey),
+        matching: find.byKey(pressableHoverFillKey),
+      );
+      final Rect words = tester.getRect(find.byKey(wordsKey));
+      final Rect heading = tester.getRect(find.byKey(headingKey));
+      final Rect fillRect = tester.getRect(fill);
+      expect(words.left, heading.left);
+      expect(
+        fillRect,
+        Rect.fromLTRB(
+          words.left - 12,
+          words.top,
+          words.right + 12,
+          words.bottom,
+        ),
+      );
+
+      final Offset beside = Offset(words.left - 6, words.center.dy);
+      final TestGesture mouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        pointer: _mousePointerId,
+      );
+      await mouse.addPointer(location: Offset.zero);
+      await mouse.moveTo(beside);
+      await tester.pump();
+      final BoxDecoration row = _fillOf(tester, _rowKey);
+      expect(
+        row.color?.toARGB32(),
+        FieldNotesColors.light.ink.withValues(alpha: 0.06).toARGB32(),
+      );
+      expect(row.borderRadius, _rowRadius);
+
+      await mouse.removePointer();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final Finder ring = find.byKey(focusRingKey);
+      expect(ring, findsOneWidget);
+      expect(tester.getRect(ring), fillRect);
+      expect(
+        tester.renderObject(ring),
+        paints..drrect(
+          outer: RRect.fromRectAndRadius(
+            Offset.zero & fillRect.size,
+            _rowRadius.topLeft,
+          ),
+        ),
+      );
+
+      await tester.tapAt(beside);
+      await tester.pump();
+      expect(presses, 1);
+    },
+  );
 }

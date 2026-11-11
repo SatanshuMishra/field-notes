@@ -254,11 +254,19 @@ class _ControlsLayout extends MultiChildLayoutDelegate {
       controlsTop,
       size.height - bottomInset - cancel.height,
     );
+    final double cancelBleed = math.min(
+      _sideInset,
+      (cancel.width - joinScanControlExtent) / 2,
+    );
+    final double cancelStart = _sideInset - cancelBleed;
     positionChild(
       _ControlSlot.cancel,
-      Offset(_startAligned(size, _sideInset, cancel.width), cancelTop),
+      Offset(_startAligned(size, cancelStart, cancel.width), cancelTop),
     );
-    final double pillLeft = _sideInset + cancel.width + _controlGap;
+    final double pillLeft = math.max(
+      cancelStart + (cancel.width + joinScanControlExtent) / 2 + _controlGap,
+      cancelStart + cancel.width,
+    );
     final double pillWidth = math.max(0, size.width - _sideInset - pillLeft);
     final Size pill = layoutChild(
       _ControlSlot.typeWords,
@@ -432,10 +440,15 @@ class _CancelControl extends StatelessWidget {
             onPressed: onCancel,
             surface: FocusRingSurface.dark,
             borderRadius: Shapes.buttonBorderRadius,
-            child: Text(
-              syncCancelLabel,
-              style: context.textStyles.captureLabelSans.copyWith(
-                color: Palette.mediaInk,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: HoverStyle.fillInset,
+              ),
+              child: Text(
+                syncCancelLabel,
+                style: context.textStyles.captureLabelSans.copyWith(
+                  color: Palette.mediaInk,
+                ),
               ),
             ),
           ),

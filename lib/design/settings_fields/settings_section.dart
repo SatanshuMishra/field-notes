@@ -3,10 +3,23 @@ import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
 import '../widgets/widgets.dart';
+import 'settings_gutter.dart';
 
 const double settingsSidebarSectionGap = 28;
 
 const double _phoneRowPadding = 12;
+const double _phoneCardPadding = 16;
+const EdgeInsets _phoneCardInsets = EdgeInsets.symmetric(
+  horizontal: _phoneCardPadding - settingsGutter,
+  vertical: _phoneCardPadding,
+);
+const EdgeInsets _phoneRowInsets = EdgeInsets.symmetric(
+  horizontal: settingsGutter,
+  vertical: _phoneRowPadding,
+);
+const EdgeInsets _gutterInsets = EdgeInsets.symmetric(
+  horizontal: settingsGutter,
+);
 const double _phoneSubtitleGap = 2;
 const double _phoneHeaderGap = 8;
 
@@ -17,7 +30,7 @@ const double _sidebarSubtitleGap = 2;
 const double _sidebarRowMinHeight = 56;
 const EdgeInsets _sidebarRowPadding = EdgeInsets.symmetric(
   vertical: 15,
-  horizontal: 2,
+  horizontal: settingsGutter,
 );
 const double _sidebarHairlineThickness = 1;
 const double _sidebarHairlineOpacity = 0.13;
@@ -75,22 +88,31 @@ class SettingsSection extends StatelessWidget {
       for (final SettingsGroup group in groups) ...group.rows,
     ];
     return StickerCard(
+      padding: _phoneCardInsets,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           if (title != null)
-            Text(title, style: context.textStyles.sectionHeaderAccent),
+            Padding(
+              padding: _gutterInsets,
+              child: Text(title, style: context.textStyles.sectionHeaderAccent),
+            ),
           if (subtitle != null) ...<Widget>[
             if (title != null) const SizedBox(height: _phoneSubtitleGap),
-            Text(subtitle, style: context.textStyles.captionSans),
+            Padding(
+              padding: _gutterInsets,
+              child: Text(subtitle, style: context.textStyles.captionSans),
+            ),
           ],
           if (title != null || subtitle != null)
             const SizedBox(height: _phoneHeaderGap),
           for (int index = 0; index < rows.length; index++) ...<Widget>[
-            if (index > 0 || title != null) const DashedDivider(),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: _phoneRowPadding),
+            if (index > 0 || title != null)
+              const Padding(padding: _gutterInsets, child: DashedDivider()),
+            SettingsGutterRow(
+              padding: _phoneRowInsets,
+              minHeight: 0,
               child: rows[index],
             ),
           ],
@@ -103,10 +125,13 @@ class SettingsSection extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     final String? subtitle = this.subtitle;
     final List<SettingsGroup> groups = this.groups;
-    final Widget hairline = SizedBox(
-      height: _sidebarHairlineThickness,
-      child: ColoredBox(
-        color: colors.ink.withValues(alpha: _sidebarHairlineOpacity),
+    final Widget hairline = Padding(
+      padding: _gutterInsets,
+      child: SizedBox(
+        height: _sidebarHairlineThickness,
+        child: ColoredBox(
+          color: colors.ink.withValues(alpha: _sidebarHairlineOpacity),
+        ),
       ),
     );
     return Column(
@@ -115,51 +140,39 @@ class SettingsSection extends StatelessWidget {
       children: <Widget>[
         for (int index = 0; index < groups.length; index++) ...<Widget>[
           if (index > 0) const SizedBox(height: _sidebarGroupGap),
-          Text(
-            groups[index].label,
-            style: context.textStyles.sectionHeaderAccent.copyWith(
-              fontSize: _sidebarLabelSize,
-              color: groups[index].danger ? colors.dangerInk : colors.sage,
+          Padding(
+            padding: _gutterInsets,
+            child: Text(
+              groups[index].label,
+              style: context.textStyles.sectionHeaderAccent.copyWith(
+                fontSize: _sidebarLabelSize,
+                color: groups[index].danger ? colors.dangerInk : colors.sage,
+              ),
             ),
           ),
           if (index == 0 && subtitle != null) ...<Widget>[
             const SizedBox(height: _sidebarSubtitleGap),
-            Text(
-              subtitle,
-              style: context.textStyles.captionSans.copyWith(
-                color: colors.muted,
+            Padding(
+              padding: _gutterInsets,
+              child: Text(
+                subtitle,
+                style: context.textStyles.captionSans.copyWith(
+                  color: colors.muted,
+                ),
               ),
             ),
           ],
           const SizedBox(height: _sidebarLabelGap),
           for (int row = 0; row < groups[index].rows.length; row++) ...<Widget>[
             if (row > 0) hairline,
-            _SidebarRow(child: groups[index].rows[row]),
+            SettingsGutterRow(
+              padding: _sidebarRowPadding,
+              minHeight: _sidebarRowMinHeight,
+              child: groups[index].rows[row],
+            ),
           ],
         ],
       ],
-    );
-  }
-}
-
-class _SidebarRow extends StatelessWidget {
-  const _SidebarRow({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: _sidebarRowMinHeight),
-      child: Padding(
-        padding: _sidebarRowPadding,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[child],
-        ),
-      ),
     );
   }
 }

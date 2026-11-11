@@ -7,6 +7,7 @@ import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
+import 'settings_gutter.dart';
 
 const double _sidebarControlGap = 20;
 const double _sidebarDescriptionGap = 1;
@@ -145,8 +146,9 @@ class SettingsFieldRow extends StatelessWidget {
         },
       ),
     };
+    final Widget framed = SettingsRowFrame(child: row);
     if (onPressed == null) {
-      return Semantics(container: true, child: row);
+      return Semantics(container: true, child: framed);
     }
     return Pressable(
       includeFocusSemantics: false,
@@ -159,7 +161,7 @@ class SettingsFieldRow extends StatelessWidget {
       excludeSemantics: false,
       child: Semantics(
         expanded: expanded,
-        child: ExcludeSemantics(child: row),
+        child: ExcludeSemantics(child: framed),
       ),
     );
   }
