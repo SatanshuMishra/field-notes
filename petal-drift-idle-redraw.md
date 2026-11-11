@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: parked
-Updated: 2026-11-11T06:57:45.300Z
+Updated: 2026-11-11T06:58:14.477Z
 Next ids: c1 D2 R2 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Once today has a bloom, the drifting petals keep the whole app redrawing at the 
 
 ## Where things stand
 
-Full lane, unattended (owner: "Work autonomously. Complete the task."). MSP petal-gusts is open as PR #381 (mitosis/petal-gusts into FEATURE branch fix/petal-drift-idle-redraw, base b7ccaea2) at 1f7290f6, assigned to the owner, bound in the app, CI green; round 1 review was green and both advisories are fixed. The drive is in awaiting-merge. Criterion 5.6 passed on the Note 10+ (Today 12.4% of 60 fps frames and 8.5% raster CPU, Calendar 18.8% and 13.8%, Settings 12.2% and 8.2%, posted on #381), and gusts recur on device. The owner rejected gusts as the app's only petal mode, because the non-stop drift is the app's identity, and asked for a graphics quality choice in Settings: High keeps the original non-stop petals, Medium is the gusts, Low is little or no petals, picked by the person or by measuring the device. Settings already has a Performance section (lib/features/settings/sections/performance_section.dart) and the app depends on device_info_plus. The interview for the choice is open: intent and round 1 are with the owner, recommending it lands on #381 so main never has gusts as the only mode. #381 must not merge before then. The 1.9.0 release notes, PR #382, are back to draft until the petal notes are rewritten. The owner's README request is open as PR #380.
+Full lane; the gusts build ran unattended, and the quality choice gets an attended interview. MSP petal-gusts is open as PR #381 (mitosis/petal-gusts into FEATURE branch fix/petal-drift-idle-redraw, base b7ccaea2) at 1f7290f6, assigned to the owner, bound in the app, CI green; round 1 review was green and both advisories are fixed. The drive is in awaiting-merge. Criterion 5.6 passed on the Note 10+ (Today 12.4% of 60 fps frames and 8.5% raster CPU, Calendar 18.8% and 13.8%, Settings 12.2% and 8.2%, posted on #381), and gusts recur on device. The owner rejected gusts as the app's only petal mode, because the non-stop drift is the app's identity, and asked for a graphics quality choice in Settings: High keeps the original non-stop petals, Medium is the gusts, Low is little or no petals, picked by the person or by measuring the device. Settings already has a Performance section (lib/features/settings/sections/performance_section.dart) and the app depends on device_info_plus. The interview for the choice is open: intent and round 1 are with the owner, recommending it lands on #381 so main never has gusts as the only mode. #381 must not merge before then. The 1.9.0 release notes, PR #382, are back to draft until the petal notes are rewritten. The owner's README request is open as PR #380.
 
 ## Next step
 
