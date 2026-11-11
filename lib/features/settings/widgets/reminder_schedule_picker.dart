@@ -395,6 +395,7 @@ class _MoonPainter extends CustomPainter {
 }
 
 const int _timelineStartHour = 6;
+const int _timelineEndHour = 4;
 const int _timelineMinutes = 22 * 60;
 const double _timelineFont = 11;
 const double _timelineLineHeight = 1.3;
@@ -409,7 +410,10 @@ const double _nightFill = 0.14;
 const double _nightEdge = 0.5;
 
 double _timelineFraction(ReminderTime time) {
-  final int hour = time.hour < _timelineStartHour ? time.hour + 24 : time.hour;
+  if (time.hour >= _timelineEndHour && time.hour < _timelineStartHour) {
+    return 0;
+  }
+  final int hour = time.hour < _timelineEndHour ? time.hour + 24 : time.hour;
   return ((hour - _timelineStartHour) * 60 + time.minute) / _timelineMinutes;
 }
 
@@ -459,10 +463,7 @@ class ReminderTimeline extends StatelessWidget {
                 _timelineFraction(const ReminderTime(hour: 0, minute: 0)),
                 twentyFour ? '00:00' : 'midnight',
               ),
-              (
-                _timelineFraction(const ReminderTime(hour: 4, minute: 0)),
-                twentyFour ? '04:00' : '4 AM',
-              ),
+              (1, twentyFour ? '04:00' : '4 AM'),
             ],
             markStyle: base.copyWith(
               fontWeight: FontWeight.w600,
@@ -554,6 +555,11 @@ class _TimelinePainter extends CustomPainter {
     return List<double>.unmodifiable(lefts);
   }
 
+  double _markerX(_TimelineMark mark, double span) {
+    const double inset = _markerRadius + _markerRing;
+    return (span * mark.at).clamp(inset, math.max(inset, span - inset));
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     final double span = size.width;
@@ -598,7 +604,7 @@ class _TimelinePainter extends CustomPainter {
         Paint()..color = midnight,
       );
     for (final _TimelineMark mark in marks) {
-      final Offset centre = Offset(span * mark.at, axis);
+      final Offset centre = Offset(_markerX(mark, span), axis);
       canvas
         ..drawCircle(centre, _markerRadius + _markerRing, Paint()..color = ring)
         ..drawCircle(
@@ -608,7 +614,7 @@ class _TimelinePainter extends CustomPainter {
         );
     }
     final List<double> markLefts = _spread(
-      <double>[for (final _TimelineMark mark in marks) span * mark.at],
+      <double>[for (final _TimelineMark mark in marks) _markerX(mark, span)],
       <double>[for (final TextPainter label in markLabels) label.width],
       span,
     );
