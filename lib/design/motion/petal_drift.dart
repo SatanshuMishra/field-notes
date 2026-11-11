@@ -413,28 +413,39 @@ const int _restLeastGusts = 5;
 @immutable
 class _Flight {
   const _Flight({
+    required this.petal,
     required this.entry,
     required this.top,
+    required this.alternate,
     this.entered = false,
     this.art,
   });
 
+  final _Petal petal;
   final double entry;
   final double top;
+  final bool alternate;
   final bool entered;
   final PetalArt? art;
 
-  double progressAt(_Petal petal, double seconds) =>
-      (seconds - entry) / petal.loopSeconds;
+  double get leaves => entry + petal.loopSeconds;
 
-  bool leftAt(_Petal petal, double seconds) => progressAt(petal, seconds) >= 1;
+  double progressAt(double seconds) => (seconds - entry) / petal.loopSeconds;
 
-  bool airborneAt(_Petal petal, double seconds) =>
-      entered && art != null && !leftAt(petal, seconds);
+  bool leftAt(double seconds) => progressAt(seconds) >= 1;
+
+  bool airborneAt(double seconds) => entered && art != null && !leftAt(seconds);
 
   _Flight at(double seconds, PetalArt? current) => entered || seconds < entry
       ? this
-      : _Flight(entry: entry, top: top, entered: true, art: current);
+      : _Flight(
+          petal: petal,
+          entry: entry,
+          top: top,
+          alternate: alternate,
+          entered: true,
+          art: current,
+        );
 }
 
 @immutable
@@ -455,8 +466,10 @@ class _Gust {
       flights: List<_Flight>.unmodifiable(<_Flight>[
         for (int index = 0; index < set.petals.length; index++)
           _Flight(
+            petal: set.petals[index],
             entry: random.nextDouble() * spread,
             top: random.nextDouble(),
+            alternate: index.isOdd,
           ),
       ]),
     );
@@ -467,20 +480,13 @@ class _Gust {
   final List<_Flight> flights;
   final double seconds;
 
-  double get length => <double>[
-    for (int index = 0; index < flights.length; index++)
-      flights[index].entry + set.petals[index].loopSeconds,
-  ].reduce(math.max);
+  double get length =>
+      flights.map((_Flight flight) => flight.leaves).reduce(math.max);
 
-  bool get spent => <bool>[
-    for (int index = 0; index < flights.length; index++)
-      flights[index].leftAt(set.petals[index], seconds),
-  ].every((bool left) => left);
+  bool get spent => flights.every((_Flight flight) => flight.leftAt(seconds));
 
-  bool get empty => <bool>[
-    for (int index = 0; index < flights.length; index++)
-      flights[index].airborneAt(set.petals[index], seconds),
-  ].every((bool airborne) => !airborne);
+  bool get empty =>
+      flights.every((_Flight flight) => !flight.airborneAt(seconds));
 
   _Gust at(double now, PetalArt? current) => _Gust(
     set: set,
@@ -652,11 +658,9 @@ class _GustPainter extends CustomPainter {
       return;
     }
     canvas.clipRect(Offset.zero & size);
-    for (int index = 0; index < set.petals.length; index++) {
-      final _Petal petal = set.petals[index];
-      final _Flight flight = now.flights[index];
+    for (final _Flight flight in now.flights) {
       final PetalArt? art = flight.art;
-      if (art == null || !flight.airborneAt(petal, now.seconds)) {
+      if (art == null || !flight.airborneAt(now.seconds)) {
         continue;
       }
       _paintPetal(
@@ -664,11 +668,11 @@ class _GustPainter extends CustomPainter {
         size: size,
         screen: set.pace.screen,
         art: art,
-        progress: flight.progressAt(petal, now.seconds),
+        progress: flight.progressAt(now.seconds),
         top: flight.top,
-        fall: petal.fall,
+        fall: flight.petal.fall,
         opacityFactor: 1,
-        alternate: index.isOdd,
+        alternate: flight.alternate,
       );
     }
   }
