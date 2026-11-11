@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T05:38:58.449Z
+Updated: 2026-11-11T05:44:02.010Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Once today has a bloom, the drifting petals keep the whole app redrawing at the 
 
 ## Where things stand
 
-Full lane, unattended (owner: "Work autonomously. Complete the task."). The spec is handed off with the reviewer's four fixes: rests of five to six gusts, an immediate gust after a mid-gust flower change, one shared wide-or-phone rule with a fresh gust on a set change (criterion C4.4), and one shared per-petal draw. The pipeline drive built MSP petal-gusts on FEATURE branch fix/petal-drift-idle-redraw (base b7ccaea2), its gate passing all 8 acceptance lines, and is in review round 1 (suite, reviewers, validator); a watcher on the drive status reports each state change. The tree guard's only difference at hand-off was the README agent's worktree, recorded in D1. A background agent is separately writing the owner's README-with-screenshots pull request; the owner wants no lab or personal setup in it, which was passed on. The owner asked to tag and release once the fix is merged into main: release 1.9.0, covering PRs #370 to #379 and this fix, notes drafted. Once the drive reaches awaiting-merge, the conducting session reports the MSP pull request, opens the 1.9.0 changelog pull request and measures the fixed build on the Note 10+ for criterion 5.6.
+Full lane, unattended (owner: "Work autonomously. Complete the task."). The spec is handed off with the reviewer's four fixes: rests of five to six gusts, an immediate gust after a mid-gust flower change, one shared wide-or-phone rule with a fresh gust on a set change (criterion C4.4), and one shared per-petal draw. The pipeline drive built MSP petal-gusts on FEATURE branch fix/petal-drift-idle-redraw (base b7ccaea2), its gate passing all 8 acceptance lines, and is in review round 1 (suite, reviewers, validator); a watcher on the drive status reports each state change. The tree guard's only difference at hand-off was the README agent's worktree, recorded in D1. The owner's separate README request is open as PR #380 (README and 21 screenshots, no lab or personal setup, checks green); the 1.9.0 release notes should not need it. The owner asked to tag and release once the fix is merged into main: release 1.9.0, covering PRs #370 to #379 and this fix, notes drafted. Once the drive reaches awaiting-merge, the conducting session reports the MSP pull request, opens the 1.9.0 changelog pull request and measures the fixed build on the Note 10+ for criterion 5.6.
 
 ## Next step
 
