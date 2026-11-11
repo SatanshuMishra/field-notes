@@ -21,4 +21,3 @@ small-target | d5-reader-menu@2x | Copy | <root> # Flutter's own control
 text-contrast | d14-delete-entry-dialog | Fri | <root> # measured: 5.12:1 by token arithmetic
 text-contrast | d14-delete-entry-dialog | Sep 18 · 9:30 AM | <root> # measured: 6.38:1 by token arithmetic
 text-contrast | d14-delete-entry-dialog@2x | Fri | <root> # measured: 5.12:1 by token arithmetic
-text-contrast | d14-delete-entry-dialog@2x | Sep 18 · 9:30 AM | <root> # measured: 6.38:1 by token arithmetic

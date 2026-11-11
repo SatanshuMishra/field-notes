@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
+import 'recorder_inks.dart';
 import 'voice_level_smoother.dart';
 
 enum VoiceLevelStage { breathing, recording, paused }
@@ -73,12 +74,6 @@ const double _starFlashAlpha = 0.8;
 const double _starFade = 2.2;
 const double _starStroke = 1;
 const double _loudOnset = 0.45;
-
-const Color _glowRose = Color(0xFFB8566A);
-const Color _hotTrailInk = Color(0xFFE58D9C);
-const Color _coolTrailInk = Color(0xFFF3E6D1);
-const Color _headInk = Color(0xFFF3E6D1);
-const Color _starInk = Color(0xFFF3E6D1);
 
 @immutable
 class CometPoint {
@@ -173,6 +168,7 @@ List<CometTrailSegment> cometTrailSegments({
   required double brightness,
   required double level,
   required double ease,
+  CometInks? inks,
 }) {
   final double span = cometTrailSpan(brightness);
   final bool hot = brightness > _hotBrightness;
@@ -188,6 +184,7 @@ List<CometTrailSegment> cometTrailSegments({
           hot: hot,
           widest: widest,
           ease: ease,
+          inks: inks ?? CometInks.dark,
         ),
   ];
 }
@@ -199,6 +196,7 @@ CometTrailSegment _trailSegment({
   required bool hot,
   required double widest,
   required double ease,
+  required CometInks inks,
 }) {
   final double alpha =
       math.pow(1 - age, _trailFadePower).toDouble() *
@@ -208,8 +206,8 @@ CometTrailSegment _trailSegment({
     start: older.offset,
     end: newer.point.offset,
     color: hot
-        ? _hotTrailInk.withValues(alpha: alpha)
-        : _coolTrailInk.withValues(alpha: _coolTrailShare * alpha),
+        ? inks.hotTrail.withValues(alpha: alpha)
+        : inks.coolTrail.withValues(alpha: _coolTrailShare * alpha),
     width: widest * (1 - _trailThinning * age),
   );
 }
@@ -282,6 +280,7 @@ class Comet {
           brightness: _brightness,
           level: _model.level,
           ease: ease,
+          inks: _model.inks,
         )
       : const <CometTrailSegment>[];
 
@@ -296,7 +295,7 @@ class Comet {
     return CometHead(
       centre: point.offset,
       radius: _headFloor + _headBrightness * _brightness,
-      color: _headInk,
+      color: _model.inks.head,
     );
   }
 
@@ -378,7 +377,9 @@ class CometsModel {
     required this._stage,
     VoiceLevelSmoother? smoother,
     this._still = false,
-  }) : _smoother = smoother ?? VoiceLevelSmoother() {
+    CometInks? inks,
+  }) : inks = inks ?? CometInks.dark,
+       _smoother = smoother ?? VoiceLevelSmoother() {
     _comets = List<Comet>.unmodifiable(<Comet>[
       for (int index = 0; index < _cometCount; index++) Comet._(this, index),
     ]);
@@ -389,6 +390,7 @@ class CometsModel {
 
   final math.Random _random;
   final VoiceLevelSmoother _smoother;
+  CometInks inks;
   late final List<Comet> _comets;
   late final List<CometStar> _stars;
   Size _size;
@@ -467,7 +469,7 @@ class CometsModel {
     return CometsGlow(
       inner: _orbRadius,
       outer: innerRadius + reach * (_glowReachFloor + _glowReachLevel * level),
-      color: _glowRose.withValues(
+      color: inks.glow.withValues(
         alpha:
             (_glowAlphaFloor +
                     _glowAlphaLevel * level +
@@ -613,7 +615,7 @@ class CometsPainter extends CustomPainter {
     for (final CometStar star in model.stars) {
       final Offset centre = star.centre;
       final double arm = star.arm;
-      stroke.color = _starInk.withValues(alpha: star.alpha);
+      stroke.color = model.inks.star.withValues(alpha: star.alpha);
       canvas
         ..drawLine(centre - Offset(arm, 0), centre + Offset(arm, 0), stroke)
         ..drawLine(centre - Offset(0, arm), centre + Offset(0, arm), stroke);
@@ -674,6 +676,7 @@ class VoiceLevelFieldState extends State<VoiceLevelField>
   final ValueNotifier<int> _frames = ValueNotifier<int>(0);
   late StreamSubscription<double> _subscription;
   CometsModel? _model;
+  CometInks _inks = CometInks.dark;
   Duration _lastElapsed = Duration.zero;
   bool _still = false;
 
@@ -706,7 +709,9 @@ class VoiceLevelFieldState extends State<VoiceLevelField>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _still = MediaQuery.disableAnimationsOf(context);
+    _inks = RecorderInks.of(context).comets;
     _model?.still = _still;
+    _model?.inks = _inks;
     if (!_ticker.isActive) {
       _lastElapsed = Duration.zero;
       _ticker.start();
@@ -743,6 +748,7 @@ class VoiceLevelFieldState extends State<VoiceLevelField>
       random: _random,
       stage: widget.stage,
       still: _still,
+      inks: _inks,
     );
   }
 

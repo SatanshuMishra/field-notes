@@ -74,19 +74,11 @@ const double voiceSavingCoreOpacity = 0.7;
 const double voicePausedCoreOpacity = 0.86;
 const double voiceActionsHeight = 118;
 
-const Color _orbRing = Color(0xEBF3E6D1);
 const double _orbRingGap = 4;
+const double _orbOutlineWidth = 1;
 const Color _orbShadow = Color(0xBFB8566A);
 const Color _orbGlyphInk = Palette.onAccent;
-const Color _orbCountdownRing = Color(0x5CF3E6D1);
-const Color _orbResumeRing = Color(0x8FF3E6D1);
-const Color _orbSavingRing = Color(0x47F3E6D1);
 const Color _orbSweep = Color(0xFFC86075);
-const Color _keepFill = Color(0xFFF3E6D1);
-const Color _keepInk = Color(0xFF1C1713);
-const Color _keepShadow = Color(0x73F3E6D1);
-const Color _letGoInk = Color(0xFFB7A58C);
-const Color _keyHintInk = Color(0xFF9A8872);
 
 const double _minTapTarget = 48;
 const double _sidebarLevelReach = 60;
@@ -124,7 +116,10 @@ const EdgeInsets _sidebarKeepPadding = EdgeInsets.symmetric(
   horizontal: 24,
   vertical: 13,
 );
-const EdgeInsets _bottomBarKeepPadding = EdgeInsets.symmetric(horizontal: 16);
+const EdgeInsets _bottomBarKeepPadding = EdgeInsets.symmetric(
+  horizontal: 16,
+  vertical: 6,
+);
 const BorderRadius _actionRadius = BorderRadius.all(Radius.circular(24));
 const Offset _keepShadowOffset = Offset(0, 12);
 const double _keepShadowBlur = 30;
@@ -139,7 +134,9 @@ Decoration _hoverVeil(
   required HoverShape shape,
   required BorderRadius borderRadius,
 }) => HoverStyle.decoration(
-  color: hovered ? HoverStyle.of(context, FocusRingSurface.dark, shape) : null,
+  color: hovered
+      ? HoverStyle.of(context, RecorderInks.of(context).focus, shape)
+      : null,
   shape: shape,
   borderRadius: borderRadius,
 );
@@ -304,6 +301,7 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet>
         child: holdsChromeWhileFocused(
           child: RecorderSurface(
             leaveKey: voiceCloseKey,
+            holdComets: _phase == VoiceRecorderPhase.breathing || _saving,
             dayLine: widget.dayLine,
             onLeave: _saving || widget.asking ? null : widget.onCancel,
             trailing: _trailing(context, sidebar),
@@ -406,12 +404,14 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet>
             child: Semantics(
               container: true,
               liveRegion: true,
-              child: Text(
-                errorMessage,
-                key: voiceErrorKey,
-                textAlign: TextAlign.center,
-                style: context.textStyles.captionSans.copyWith(
-                  color: context.colors.accentBright,
+              child: Builder(
+                builder: (BuildContext context) => Text(
+                  errorMessage,
+                  key: voiceErrorKey,
+                  textAlign: TextAlign.center,
+                  style: context.textStyles.captionSans.copyWith(
+                    color: RecorderInks.of(context).error,
+                  ),
                 ),
               ),
             ),
@@ -466,12 +466,12 @@ class _KeyHint extends StatelessWidget {
         text,
         key: voiceKeyHintKey,
         textAlign: TextAlign.right,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: TypographyTokens.sans,
           fontSize: _keyHintSize,
           fontWeight: FontWeight.w500,
           letterSpacing: _keyHintTracking,
-          color: _keyHintInk,
+          color: RecorderInks.of(context).keyHint,
         ),
       ),
     );
@@ -604,10 +604,11 @@ class _Orb extends StatelessWidget {
   }
 
   Widget _core(BuildContext context, CaptureButtonForm form) {
+    final RecorderInks inks = RecorderInks.of(context);
     return switch (form) {
       CaptureButtonForm.ready => _mic(),
       CaptureButtonForm.countdown => _ringed(
-        _orbCountdownRing,
+        inks.countdownRing,
         sweep: CaptureCountdownSweep(progress: breath, color: _orbSweep),
       ),
       CaptureButtonForm.pause || CaptureButtonForm.stop => IconStickerGlyphIcon(
@@ -615,9 +616,9 @@ class _Orb extends StatelessWidget {
         color: _orbGlyphInk,
         size: _glyphSize,
       ),
-      CaptureButtonForm.resume => _ringed(_orbResumeRing, centre: _mic()),
+      CaptureButtonForm.resume => _ringed(inks.resumeRing, centre: _mic()),
       CaptureButtonForm.saving => _ringed(
-        _orbSavingRing,
+        inks.savingRing,
         sweep: const CaptureSavingSweep(color: _orbSweep),
       ),
     };
@@ -638,7 +639,7 @@ class _Orb extends StatelessWidget {
       label: _label,
       hint: sidebar && enabled ? voiceOrbShortcutHint : null,
       onPressed: onTap,
-      surface: FocusRingSurface.dark,
+      surface: RecorderInks.of(context).focus,
       shape: HoverShape.circle,
       borderRadius: radius,
       paintsHover: false,
@@ -701,6 +702,8 @@ class _OrbDisc extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool still = MediaQuery.disableAnimationsOf(context);
+    final RecorderInks inks = RecorderInks.of(context);
+    final Color? outline = inks.orbOutline;
     return AnimatedScale(
       scale: _scale,
       duration: still ? Duration.zero : Motion.stage,
@@ -724,16 +727,32 @@ class _OrbDisc extends StatelessWidget {
             ],
           ),
           child: DecoratedBox(
+            position: DecorationPosition.foreground,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: _orbRing, width: captureRingWidth),
+              border: outline == null
+                  ? null
+                  : Border.all(
+                      color: outline,
+                      width: _orbOutlineWidth,
+                      strokeAlign: BorderSide.strokeAlignOutside,
+                    ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(_orbRingGap),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: context.colors.accentRecord,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: inks.orbRing,
+                  width: captureRingWidth,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(_orbRingGap),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: context.colors.accentRecord,
+                  ),
                 ),
               ),
             ),
@@ -760,11 +779,12 @@ class _TakeActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double? height = sidebar ? null : _minTapTarget;
+    final RecorderInks inks = RecorderInks.of(context);
     final Widget letGo = _ActionButton(
       key: voiceDiscardPillKey,
       label: letGoConfirmLabel,
       onPressed: onLetGo,
-      ink: _letGoInk,
+      ink: inks.letGo,
       fontSize: sidebar ? _sidebarActionSize : _bottomBarLetGoSize,
       fontWeight: FontWeight.w500,
       padding: sidebar ? _sidebarLetGoPadding : _bottomBarLetGoPadding,
@@ -775,8 +795,8 @@ class _TakeActions extends StatelessWidget {
       label: voiceKeepLabel,
       onPressed: onKeep,
       hint: sidebar ? voiceKeepShortcutHint(Theme.of(context).platform) : null,
-      ink: _keepInk,
-      fill: _keepFill,
+      ink: inks.keepInk,
+      fill: inks.keepFill,
       glyph: IconStickerGlyph.check,
       glyphGap: sidebar ? _sidebarKeepGap : _bottomBarKeepGap,
       fontSize: _keepSize,
@@ -845,6 +865,7 @@ class _ActionButton extends StatelessWidget {
     final bool enabled = onPressed != null;
     final Color? fill = this.fill;
     final IconStickerGlyph? glyph = this.glyph;
+    final RecorderInks inks = RecorderInks.of(context);
     final Widget text = Text(
       label,
       textAlign: TextAlign.center,
@@ -881,9 +902,9 @@ class _ActionButton extends StatelessWidget {
             borderRadius: _actionRadius,
             boxShadow: fill == null
                 ? null
-                : const <BoxShadow>[
+                : <BoxShadow>[
                     BoxShadow(
-                      color: _keepShadow,
+                      color: inks.keepShadow,
                       offset: _keepShadowOffset,
                       blurRadius: _keepShadowBlur,
                       spreadRadius: _keepShadowSpread,
@@ -908,7 +929,7 @@ class _ActionButton extends StatelessWidget {
       label: label,
       hint: enabled ? hint : null,
       onPressed: onPressed,
-      surface: FocusRingSurface.dark,
+      surface: inks.focus,
       shape: HoverShape.pill,
       borderRadius: _actionRadius,
       paintsHover: false,

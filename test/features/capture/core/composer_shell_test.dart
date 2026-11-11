@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/outlined_surface.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
+import 'package:field_notes/features/capture/core/night_sky.dart';
 
 const Key _content = ValueKey<String>('composer-content');
 
@@ -49,6 +51,44 @@ void _usePhoneInsets(WidgetTester tester, {double keyboard = 0}) {
     bottom: _gestureBar,
   );
   tester.view.viewInsets = FakeViewPadding(bottom: keyboard);
+}
+
+Future<void> _pumpGround(
+  WidgetTester tester, {
+  required Brightness brightness,
+  bool still = false,
+}) async {
+  tester.view.physicalSize = const Size(1280, 800);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: brightness,
+        extensions: <ThemeExtension<dynamic>>[
+          brightness == Brightness.dark
+              ? FieldNotesColors.dark
+              : FieldNotesColors.light,
+        ],
+      ),
+      home: Builder(
+        builder: (BuildContext context) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: still),
+          child: const ComposerStageGround(seed: 7),
+        ),
+      ),
+    ),
+  );
+}
+
+bool _noShader(Symbol method, List<dynamic> arguments) {
+  for (final Paint paint in arguments.whereType<Paint>()) {
+    if (paint.shader != null) {
+      throw 'The ground painted a shader with $method.';
+    }
+  }
+  return true;
 }
 
 Color _roomColor(WidgetTester tester) =>
@@ -195,10 +235,50 @@ void main() {
 
     final Rect panel = tester.getRect(find.byKey(composerPanelKey));
     expect(panel.top, greaterThan(_statusBar));
-    final BoxDecoration card =
-        tester.widget<Container>(find.byKey(composerPanelKey)).decoration!
-            as BoxDecoration;
-    expect(card.border, isNotNull);
+    final OutlinedSurface card = tester.widget<OutlinedSurface>(
+      find.byKey(composerPanelKey),
+    );
+    expect(card.borderWidth, composerPanelBorderWidth);
     expect(card.borderRadius, isNotNull);
+    expect(
+      tester.getRect(find.byKey(_content)).left,
+      panel.left + composerPanelBorderWidth,
+    );
+  });
+
+  for (final Brightness brightness in Brightness.values) {
+    testWidgets('the ${brightness.name} note room ground is one flat colour', (
+      WidgetTester tester,
+    ) async {
+      await _pumpGround(tester, brightness: brightness);
+      final FieldNotesColors colors = brightness == Brightness.dark
+          ? FieldNotesColors.dark
+          : FieldNotesColors.light;
+
+      expect(
+        find.byType(ComposerStageGround),
+        paints..rect(color: colors.viewerStage),
+      );
+      expect(find.byType(ComposerStageGround), paints..everything(_noShader));
+    });
+  }
+
+  testWidgets('with reduce motion the note room sky settles and stays still', (
+    WidgetTester tester,
+  ) async {
+    final bool before = debugNightSkyStill;
+    debugNightSkyStill = false;
+    addTearDown(() => debugNightSkyStill = before);
+    await _pumpGround(tester, brightness: Brightness.dark, still: true);
+    await tester.pumpAndSettle();
+
+    await tester.binding.delayed(const Duration(minutes: 3));
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    expect(
+      find.byKey(nightSkyStillKey),
+      paintsExactlyCountTimes(#drawCircle, nightSkyStarCount),
+    );
+    expect(find.byKey(nightSkyTwinkleKey), findsNothing);
+    expect(find.byKey(nightSkyCometKey), findsNothing);
   });
 }

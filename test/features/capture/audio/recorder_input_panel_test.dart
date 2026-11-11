@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/data/media/audio_output.dart';
+import 'package:field_notes/design/glass/glass_surface.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
 import 'package:field_notes/features/capture/audio/input_level.dart';
@@ -20,6 +21,7 @@ import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_section_request.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -104,7 +106,7 @@ void _phoneView(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
-int _litSegments(WidgetTester tester) => <int>[
+int _litSegments(WidgetTester tester, Color ink) => <int>[
   for (int index = 0; index < inputLevelSegments; index++)
     if ((tester
                     .widget<DecoratedBox>(
@@ -113,7 +115,7 @@ int _litSegments(WidgetTester tester) => <int>[
                     .decoration
                 as BoxDecoration)
             .color ==
-        Palette.mediaInk)
+        ink)
       index,
 ].length;
 
@@ -223,7 +225,78 @@ VideoRecorderSheet _videoSheet(
   onCameraChanged: (bool on) {},
 );
 
+Color? _panelInkOf(WidgetTester tester, String text) => tester
+    .renderObject<RenderParagraph>(
+      find.descendant(of: find.byType(InputPanel), matching: find.text(text)),
+    )
+    .text
+    .style
+    ?.color;
+
+GlassTone _panelTone(WidgetTester tester) => tester
+    .widget<GlassSurface>(
+      find
+          .descendant(
+            of: find.byType(InputPanel),
+            matching: find.byType(GlassSurface),
+          )
+          .first,
+    )
+    .tone;
+
 void main() {
+  testWidgets(
+    'the input panel takes paper inks in the light voice room and media inks in the video recorder',
+    (WidgetTester tester) async {
+      _desktopView(tester);
+      const FieldNotesColors paper = FieldNotesColors.light;
+      final List<(String, Widget, GlassTone, Color, Color)> rooms =
+          <(String, Widget, GlassTone, Color, Color)>[
+            (
+              'voice',
+              _voiceSheet(VoiceRecorderPhase.idle),
+              GlassTone.paper,
+              paper.ink,
+              paper.mutedInkStrong,
+            ),
+            (
+              'video',
+              _videoSheet(VideoRecorderPhase.idle),
+              GlassTone.media,
+              Palette.mediaInk,
+              Palette.mediaInk.withValues(alpha: 0.68),
+            ),
+          ];
+      for (final (
+            String room,
+            Widget sheet,
+            GlassTone tone,
+            Color ink,
+            Color mutedInk,
+          )
+          in rooms) {
+        await _pumpSheet(tester, TargetPlatform.macOS, sheet);
+        await tester.tap(find.byKey(recorderInputKey));
+        await tester.pump();
+        await tester.pump();
+
+        expect(_panelTone(tester), tone, reason: room);
+        for (final String title in const <String>[
+          inputDeviceTitle,
+          inputProfileTitle,
+          inputVolumeTitle,
+          outputDeviceTitle,
+          voiceSettingsLabel,
+        ]) {
+          expect(_panelInkOf(tester, title), ink, reason: '$room $title');
+        }
+        expect(_panelInkOf(tester, inputLevelLabel), mutedInk, reason: room);
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
+
   testWidgets(
     'the voice recorder opens the input panel from its trailing controls',
     (WidgetTester tester) async {
@@ -365,19 +438,27 @@ void main() {
     final StreamController<double> take = StreamController<double>.broadcast();
     addTearDown(take.close);
     int microphonesOpened = 0;
-    final List<(String, Widget)> sheets = <(String, Widget)>[
+    final List<(String, Widget, Color)> sheets = <(String, Widget, Color)>[
       for (final VoiceRecorderPhase phase in <VoiceRecorderPhase>[
         VoiceRecorderPhase.recording,
         VoiceRecorderPhase.paused,
       ])
-        ('voice ${phase.name}', _voiceSheet(phase, levels: take.stream)),
+        (
+          'voice ${phase.name}',
+          _voiceSheet(phase, levels: take.stream),
+          FieldNotesColors.light.ink,
+        ),
       for (final VideoRecorderPhase phase in <VideoRecorderPhase>[
         VideoRecorderPhase.recording,
         VideoRecorderPhase.paused,
       ])
-        ('video ${phase.name}', _videoSheet(phase, levels: take.stream)),
+        (
+          'video ${phase.name}',
+          _videoSheet(phase, levels: take.stream),
+          Palette.mediaInk,
+        ),
     ];
-    for (final (String name, Widget sheet) in sheets) {
+    for (final (String name, Widget sheet, Color ink) in sheets) {
       await _pumpSheet(
         tester,
         TargetPlatform.macOS,
@@ -398,7 +479,7 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(_litSegments(tester), 12, reason: name);
+      expect(_litSegments(tester, ink), 12, reason: name);
     }
     expect(microphonesOpened, 0);
     await tester.pumpWidget(const SizedBox.shrink());

@@ -30,8 +30,6 @@ text-contrast | d14-delete-entry-dialog-sidebar | Close | <root> # measured: 7.6
 text-contrast | d14-delete-entry-dialog-sidebar | Edit | <root> # measured: 7.64:1 by token arithmetic
 text-contrast | d14-delete-entry-dialog-sidebar | Friday | <root> # measured: 5.12:1 by token arithmetic
 text-contrast | d14-delete-entry-dialog-sidebar | September 18 · 9:30 AM | <root> # measured: 6.38:1 by token arithmetic
-text-contrast | d14-delete-entry-dialog-sidebar@2x | Close | <root> # measured: 7.64:1 by token arithmetic
-text-contrast | d14-delete-entry-dialog-sidebar@2x | Edit | <root> # measured: 7.64:1 by token arithmetic
 text-contrast | d14-delete-entry-dialog-sidebar@2x | Friday | <root> # measured: 5.12:1 by token arithmetic
 text-contrast | d14-delete-entry-dialog-sidebar@2x | September 18 · 9:30 AM | <root> # measured: 6.38:1 by token arithmetic
 truncated-text | d5-reader-menu-sidebar@2x | Select All | <root> # Flutter's own control

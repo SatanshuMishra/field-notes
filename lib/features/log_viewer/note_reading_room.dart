@@ -108,7 +108,6 @@ class NoteReadingRoom extends StatefulWidget {
 
 class _NoteReadingRoomState extends State<NoteReadingRoom> {
   final ScrollController _scroll = ScrollController();
-  final ValueNotifier<int> _still = ValueNotifier<int>(0);
   final GlobalKey _moreAnchor = GlobalKey(debugLabel: 'note-reading-more');
   bool _renaming = false;
   ({String? title})? _pendingTitle;
@@ -128,7 +127,6 @@ class _NoteReadingRoomState extends State<NoteReadingRoom> {
   @override
   void dispose() {
     _scroll.dispose();
-    _still.dispose();
     super.dispose();
   }
 
@@ -216,7 +214,7 @@ class _NoteReadingRoomState extends State<NoteReadingRoom> {
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            ComposerStageGround(typing: _still),
+            const ComposerStageGround(),
             LayoutBuilder(builder: _layout),
           ],
         ),

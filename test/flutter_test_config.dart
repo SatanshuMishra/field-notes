@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+import 'package:field_notes/features/capture/core/night_sky.dart';
+
 import 'support/ax_update_checker.dart';
 
 const Map<String, List<String>> _fontFamilies = <String, List<String>>{
@@ -27,5 +29,6 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     }
     await loader.load();
   }
+  debugNightSkyStill = true;
   return testMain();
 }

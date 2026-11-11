@@ -1,12 +1,17 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/features/capture/core/capture_day_line.dart';
 import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/features/capture/core/night_sky.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
+import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
+import 'package:field_notes/state/settings_providers.dart';
 
 const Key _openKey = ValueKey<String>('open-recorder');
 const Key _centreKey = ValueKey<String>('stage-centre');
@@ -14,6 +19,9 @@ const Key _statusKey = ValueKey<String>('stage-status');
 const Key _actionsKey = ValueKey<String>('stage-actions');
 const Key _questionKey = ValueKey<String>('stage-question');
 const Key _trailingKey = ValueKey<String>('stage-trailing');
+const Duration _skyStep = Duration(milliseconds: 500);
+const Color _lightGround = Color(0xFFE6D8BF);
+const Color _darkGround = Color(0xFF1C1713);
 
 void _useWindow(WidgetTester tester, TargetPlatform platform, Size window) {
   debugDefaultTargetPlatformOverride = platform;
@@ -22,12 +30,55 @@ void _useWindow(WidgetTester tester, TargetPlatform platform, Size window) {
   addTearDown(tester.view.reset);
 }
 
-Widget _app(TargetPlatform platform, Widget home) {
+Widget _app(
+  TargetPlatform platform,
+  Widget home, {
+  Brightness brightness = Brightness.light,
+}) {
   return MaterialApp(
     debugShowCheckedModeBanner: false,
-    theme: fieldNotesTheme(platform: platform),
+    theme: fieldNotesTheme(platform: platform, brightness: brightness),
     home: home,
   );
+}
+
+bool _noShader(Symbol method, List<dynamic> arguments) {
+  for (final Paint paint in arguments.whereType<Paint>()) {
+    if (paint.shader != null) {
+      throw 'The stage painted a shader with $method.';
+    }
+  }
+  return true;
+}
+
+bool _paintsShader(Symbol method, List<dynamic> arguments) =>
+    arguments.whereType<Paint>().any((Paint paint) => paint.shader != null);
+
+Widget _voiceRoom(VoiceRecorderPhase phase) {
+  return ProviderScope(
+    overrides: <Override>[
+      reflectionPromptsEnabledProvider.overrideWithValue(false),
+    ],
+    child: _app(
+      TargetPlatform.macOS,
+      VoiceRecorderSheet(
+        phase: phase,
+        onStart: () {},
+        onStop: () {},
+        onCancel: () {},
+      ),
+    ),
+  );
+}
+
+Future<bool> _cometWithin(WidgetTester tester, Duration span) async {
+  for (Duration now = Duration.zero; now < span; now += _skyStep) {
+    await tester.pump(_skyStep);
+    if (find.byKey(nightSkyCometKey).evaluate().isNotEmpty) {
+      return true;
+    }
+  }
+  return false;
 }
 
 const CaptureDayLine _dayLine = (lead: 'today', date: 'Monday, November 9');
@@ -190,7 +241,7 @@ void main() {
   });
 
   testWidgets(
-    'the bottom-bar surface switches the status bar to light icons and restores it on close',
+    'the dark bottom-bar surface switches the status bar to light icons and restores it on close',
     (WidgetTester tester) async {
       _useWindow(tester, TargetPlatform.android, const Size(360, 740));
       tester.view.padding = const FakeViewPadding(top: 24);
@@ -219,6 +270,7 @@ void main() {
               ),
             ),
           ),
+          brightness: Brightness.dark,
         ),
       );
       await tester.pumpAndSettle();
@@ -388,6 +440,89 @@ void main() {
     expect(_glowScales(tester)[0], closeTo(0.82, 0.001));
     expect(_glowOpacities(tester)[0], closeTo(0.35, 0.001));
     expect(tester.hasRunningAnimations, isFalse);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  for (final TargetPlatform platform in <TargetPlatform>[
+    TargetPlatform.macOS,
+    TargetPlatform.android,
+  ]) {
+    testWidgets(
+      'the light voice room on ${platform.name} lies on the paper ground',
+      (WidgetTester tester) async {
+        _useWindow(tester, platform, const Size(1280, 800));
+        await tester.pumpWidget(_app(platform, _surface()));
+
+        expect(find.byType(RecorderSurface), paints..rect(color: _lightGround));
+        expect(find.byType(RecorderSurface), paints..everything(_noShader));
+        expect(find.byType(NightSky), findsOneWidget);
+        if (platform == TargetPlatform.android) {
+          expect(
+            _overlayRegions(tester).map(
+              (AnnotatedRegion<SystemUiOverlayStyle> region) => region.value,
+            ),
+            contains(SystemUiOverlayStyle.dark),
+          );
+        }
+        debugDefaultTargetPlatformOverride = null;
+      },
+    );
+  }
+
+  testWidgets('the dark voice room lies on the night ground with no glow', (
+    WidgetTester tester,
+  ) async {
+    _useWindow(tester, TargetPlatform.macOS, const Size(1280, 800));
+    await tester.pumpWidget(
+      _app(TargetPlatform.macOS, _surface(), brightness: Brightness.dark),
+    );
+
+    expect(find.byType(RecorderSurface), paints..rect(color: _darkGround));
+    expect(find.byType(RecorderSurface), paints..everything(_noShader));
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('the video stage stays dark with its glow in the light theme', (
+    WidgetTester tester,
+  ) async {
+    _useWindow(tester, TargetPlatform.macOS, const Size(1280, 800));
+    await tester.pumpWidget(
+      _app(
+        TargetPlatform.macOS,
+        _surface(arrangement: RecorderArrangement.video),
+      ),
+    );
+
+    expect(find.byType(RecorderSurface), paints..rect(color: _darkGround));
+    expect(find.byType(RecorderSurface), paints..something(_paintsShader));
+    expect(find.byType(NightSky), findsNothing);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('no comet starts while the voice room counts down or saves', (
+    WidgetTester tester,
+  ) async {
+    final bool before = debugNightSkyStill;
+    debugNightSkyStill = false;
+    addTearDown(() => debugNightSkyStill = before);
+    _useWindow(tester, TargetPlatform.macOS, const Size(1280, 800));
+
+    for (final VoiceRecorderPhase phase in <VoiceRecorderPhase>[
+      VoiceRecorderPhase.breathing,
+      VoiceRecorderPhase.saving,
+    ]) {
+      await tester.pumpWidget(_voiceRoom(phase));
+      expect(
+        await _cometWithin(tester, const Duration(minutes: 10)),
+        isFalse,
+        reason: phase.name,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+
+    await tester.pumpWidget(_voiceRoom(VoiceRecorderPhase.idle));
+    expect(await _cometWithin(tester, const Duration(minutes: 3)), isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
     debugDefaultTargetPlatformOverride = null;
   });
 }

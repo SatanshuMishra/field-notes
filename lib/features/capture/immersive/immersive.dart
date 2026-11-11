@@ -3,6 +3,7 @@ export 'immersive_route.dart';
 export 'let_go_panel.dart';
 export 'recorder_chrome.dart';
 export 'recorder_glass_button.dart';
+export 'recorder_inks.dart';
 export 'recorder_shortcuts.dart';
 export 'recorder_status_line.dart';
 export 'recorder_surface.dart';

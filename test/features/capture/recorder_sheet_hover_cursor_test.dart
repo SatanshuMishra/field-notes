@@ -87,7 +87,11 @@ void _desktopView(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
-Future<void> _pump(WidgetTester tester, Widget body) async {
+Future<void> _pump(
+  WidgetTester tester,
+  Widget body, {
+  Brightness brightness = Brightness.light,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       key: UniqueKey(),
@@ -104,7 +108,10 @@ Future<void> _pump(WidgetTester tester, Widget body) async {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+        theme: fieldNotesTheme(
+          platform: TargetPlatform.macOS,
+          brightness: brightness,
+        ),
         home: Scaffold(backgroundColor: Palette.mediaGround, body: body),
       ),
     ),
@@ -205,6 +212,7 @@ void main() {
         onResume: () {},
         onDiscard: () {},
       ),
+      brightness: Brightness.dark,
     );
     await _expectRows(tester, mouse, _voiceRows);
 

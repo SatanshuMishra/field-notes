@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/voice/record_voice_recorder.dart';
@@ -115,7 +116,7 @@ void _sizeWindow(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
-Future<double> _warmthAroundOrb(WidgetTester tester) async {
+Future<double> _inkAroundOrb(WidgetTester tester) async {
   final Rect zone = tester.getRect(find.byKey(voiceOrbZoneKey));
   final double reach = _desktop ? 60 : 44;
   final double orbRadius = (_desktop ? voiceSidebarOrb : voiceBottomBarOrb) / 2;
@@ -135,7 +136,13 @@ Future<double> _warmthAroundOrb(WidgetTester tester) async {
   final Offset centre = zone.center;
   final double outer = zone.width / 2 + reach;
   final double inner = orbRadius + 6;
-  double warmth = 0;
+  final Color ground = FieldNotesColors.light.viewerStage;
+  final List<int> groundChannels = <int>[
+    (ground.r * 255).round(),
+    (ground.g * 255).round(),
+    (ground.b * 255).round(),
+  ];
+  double ink = 0;
   for (
     int y = (centre.dy - outer).floor();
     y <= (centre.dy + outer).ceil();
@@ -153,10 +160,13 @@ Future<double> _warmthAroundOrb(WidgetTester tester) async {
       if (distance < inner || distance > outer) {
         continue;
       }
-      warmth += rgba[(y * width + x) * 4];
+      final int pixel = (y * width + x) * 4;
+      for (int channel = 0; channel < groundChannels.length; channel++) {
+        ink += (rgba[pixel + channel] - groundChannels[channel]).abs();
+      }
     }
   }
-  return warmth;
+  return ink;
 }
 
 Future<double> _recordAndMeasure(WidgetTester tester, double dbfs) async {
@@ -173,11 +183,11 @@ Future<double> _recordAndMeasure(WidgetTester tester, double dbfs) async {
     tester.widget<VoiceRecorderSheet>(find.byType(VoiceRecorderSheet)).phase,
     VoiceRecorderPhase.recording,
   );
-  final double warmth = await _warmthAroundOrb(tester);
+  final double ink = await _inkAroundOrb(tester);
   mic.fallQuiet();
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump();
-  return warmth;
+  return ink;
 }
 
 void main() {

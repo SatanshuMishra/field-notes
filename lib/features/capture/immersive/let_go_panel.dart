@@ -3,17 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/confirm_dialog.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/design/widgets/sticker_button.dart';
+
+import 'recorder_inks.dart';
 
 const String letGoTitle = 'Let this one go?';
 const String letGoMessage = "Nothing will be saved. That's okay too.";
 const String letGoKeepGoingLabel = 'Keep going';
 const String letGoConfirmLabel = 'Let it go';
-
-const Color _panelFill = Color(0xB81C1713);
-const Color _panelEdge = Color(0x24F3E6D1);
-const Color _titleInk = Color(0xFFF3E6D1);
-const Color _messageInk = Color(0xFFB7A58C);
 
 const double _panelRadius = 18;
 const double _panelEdgeWidth = 1;
@@ -61,18 +57,19 @@ class _LetGoPanelState extends State<LetGoPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final RecorderInks inks = RecorderInks.of(context);
     final List<Widget> choices = confirmChoicesInOrder(
       Theme.of(context).platform,
       safe: ConfirmChoiceButton.safe(
         buttonKey: widget.keepGoingKey,
         label: letGoKeepGoingLabel,
-        ground: StickerGround.media,
+        ground: inks.sticker,
         onPressed: () => _answer(widget.onKeepGoing),
       ),
       action: ConfirmChoiceButton.action(
         buttonKey: widget.letGoKey,
         label: letGoConfirmLabel,
-        ground: StickerGround.media,
+        ground: inks.sticker,
         onPressed: () => _answer(widget.onLetGo),
       ),
     );
@@ -88,18 +85,20 @@ class _LetGoPanelState extends State<LetGoPanel> {
         onTapOutside: (PointerDownEvent _) => _answer(widget.onKeepGoing),
         child: _TabCanLeaveFocusScope(
           child: DecoratedBox(
-            decoration: const BoxDecoration(
-              color: _panelFill,
+            decoration: BoxDecoration(
+              color: inks.panelFill,
               border: Border.fromBorderSide(
-                BorderSide(color: _panelEdge, width: _panelEdgeWidth),
+                BorderSide(color: inks.panelEdge, width: _panelEdgeWidth),
               ),
-              borderRadius: BorderRadius.all(Radius.circular(_panelRadius)),
+              borderRadius: const BorderRadius.all(
+                Radius.circular(_panelRadius),
+              ),
             ),
             child: Padding(
               padding: compact ? _compactPadding : _widePadding,
               child: compact
-                  ? _belowTheWords(context, choices)
-                  : _besideTheWords(choices),
+                  ? _belowTheWords(context, choices, inks)
+                  : _besideTheWords(choices, inks),
             ),
           ),
         ),
@@ -107,11 +106,11 @@ class _LetGoPanelState extends State<LetGoPanel> {
     );
   }
 
-  Widget _besideTheWords(List<Widget> choices) {
+  Widget _besideTheWords(List<Widget> choices, RecorderInks inks) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Flexible(child: _words()),
+        Flexible(child: _words(inks)),
         const SizedBox(width: _wideActionsGap),
         choices.first,
         const SizedBox(width: _buttonGap),
@@ -120,14 +119,18 @@ class _LetGoPanelState extends State<LetGoPanel> {
     );
   }
 
-  Widget _belowTheWords(BuildContext context, List<Widget> choices) {
+  Widget _belowTheWords(
+    BuildContext context,
+    List<Widget> choices,
+    RecorderInks inks,
+  ) {
     final bool stacked =
         resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _words(),
+        _words(inks),
         const SizedBox(height: _compactActionsGap),
         if (stacked) ...<Widget>[
           choices.first,
@@ -145,7 +148,7 @@ class _LetGoPanelState extends State<LetGoPanel> {
     );
   }
 
-  Widget _words() {
+  Widget _words(RecorderInks inks) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,7 +160,7 @@ class _LetGoPanelState extends State<LetGoPanel> {
               fontFamily: TypographyTokens.serif,
               fontSize: compact ? _compactTitleSize : _wideTitleSize,
               fontWeight: FontWeight.w500,
-              color: _titleInk,
+              color: inks.panelTitle,
             ),
           ),
         ),
@@ -168,7 +171,7 @@ class _LetGoPanelState extends State<LetGoPanel> {
             fontFamily: TypographyTokens.sans,
             fontSize: compact ? _compactMessageSize : _wideMessageSize,
             fontWeight: FontWeight.w400,
-            color: _messageInk,
+            color: inks.panelMessage,
           ),
         ),
       ],

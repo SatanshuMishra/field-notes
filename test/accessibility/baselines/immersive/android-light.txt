@@ -1,0 +1,1 @@
+text-contrast | i2-voice-breathing | 2 | Recording starts in 3 # measured: 7.6:1 by token arithmetic once the countdown numeral has faded in; the sweep catches it mid-fade
