@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-11T00:58:35.271Z
+Updated: 2026-11-11T01:00:07.167Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
@@ -18,7 +18,7 @@ Prototype the owner's eight 1.8.0 follow-ups (a to h) on the design canvas, get 
 Fanout split a to h into ten branches (one PR each) from origin/main f454ef02, each built in its own worktree under .claude/worktrees.
 
 - Reviewed, fixed and ready: fix/outlined-surface 80df9212 (agent-a227d6afe19505c51); feat/update-launch-check 7aeff6dc (agent-aa28e60456c8b13a7; its new About wording retired one android-dark 2x contrast line); feat/day-modal-tidy 59756fe7 on 80df9212 (agent-a388bf42e55a1271b); feat/modal-video-transport bd9aba45 (agent-a1abc2d27eedfac3c); feat/night-sky 8979173b on 80df9212 (agent-aea935a14e5e1a0bc); feat/page-transitions 5fc52c4d (agent-a28aae361b473ae8f); feat/sync-status-box d49acdea (agent-aa8c967d5794cf1ff); feat/streak-late-night a5db8464 (agent-a8e2daa0103a1e7ab).
-- fix/hover-padding from a03a0fc7 (agent-a6532085534a30cd2): second review green; its builder is adding a sweep over every Settings row, a 360 dp check that log step captions stay on one line, and padding inside the join-scan Cancel caption's fill.
+- fix/hover-padding 226ec6f8 (agent-a6532085534a30cd2): second review green; its follow-ups (a sweep over every Settings row, one-line phone step captions, the join-scan Cancel fill) are under a focused review, chiefly the custom render-object gutter claim in settings_gutter.dart against a simpler design. LogStepFooter is shared with feat/day-modal-tidy, so the day modal's footer tests belong in the integration run.
 - feat/reminder-schedules 30933a9b on a5db8464 (agent-a00deb7378308fb28): built and under code review, including whether its new settings cards pass hover-padding's gutter rule once merged.
 - The eight ready branches merge cleanly in integ-180, and the other two merge cleanly on top. The full suite on the eight-branch merge has failures to route: streak_pill.dart:197 builds its tooltip link with a TapGestureRecognizer, which no_hand_built_tap_targets_test forbids (with the streak builder, which also checks a FakeJournalRepository setMoodForDate mismatch the onboarding tests log); natural_voice_chain_test and push_limits_test failed only under load and pass when rerun alone on the merge (7,579 passed, 9 failed in the full run). Five golden tests already fail on main with byte-identical images: note_float, three sticker_button and meadow_page (the last confirmed by running it on f454ef02's lib).
 
