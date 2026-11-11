@@ -13,6 +13,11 @@ const String reminderLastCallBloomBody =
 const String reminderLastCallLogBody =
     'Before today closes, add a few words about it.';
 
+const ReminderTime _lateNightEnd = ReminderTime(
+  hour: lateNightEndHour,
+  minute: 0,
+);
+
 enum ReminderNudge { midday, evening, lastCall }
 
 class ReminderSlot {
@@ -21,8 +26,15 @@ class ReminderSlot {
   final ReminderNudge nudge;
   final ReminderTime time;
 
-  DateTime on(DateTime day) =>
-      DateTime(day.year, day.month, day.day, time.hour, time.minute);
+  bool get isLateNight => time.isBefore(_lateNightEnd);
+
+  DateTime on(DateTime day) => DateTime(
+    day.year,
+    day.month,
+    isLateNight ? day.day + 1 : day.day,
+    time.hour,
+    time.minute,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -126,13 +138,15 @@ class ReminderService {
       ReminderSlot(nudge: ReminderNudge.evening, time: eveningTime),
       ReminderSlot(nudge: ReminderNudge.lastCall, time: lastCallTime),
     ],
-    ReminderSchedule.custom when customTime.isBefore(lastCallFrom) =>
+    ReminderSchedule.custom
+        when customTime.isBefore(_lateNightEnd) ||
+            !customTime.isBefore(lastCallFrom) =>
       <ReminderSlot>[
-        ReminderSlot(nudge: ReminderNudge.evening, time: customTime),
-        const ReminderSlot(nudge: ReminderNudge.lastCall, time: lastCallTime),
+        ReminderSlot(nudge: ReminderNudge.lastCall, time: customTime),
       ],
     ReminderSchedule.custom => <ReminderSlot>[
-      ReminderSlot(nudge: ReminderNudge.lastCall, time: customTime),
+      ReminderSlot(nudge: ReminderNudge.evening, time: customTime),
+      const ReminderSlot(nudge: ReminderNudge.lastCall, time: lastCallTime),
     ],
   });
 
@@ -146,12 +160,15 @@ class ReminderService {
     },
   };
 
-  List<DateTime> windowDays(DateTime now) => List<DateTime>.unmodifiable(
-    List<DateTime>.generate(
-      windowLength,
-      (int offset) => DateTime(now.year, now.month, now.day + offset),
-    ),
-  );
+  List<DateTime> windowDays(DateTime now) {
+    final int firstDay = now.hour < lateNightEndHour ? now.day - 1 : now.day;
+    return List<DateTime>.unmodifiable(
+      List<DateTime>.generate(
+        windowLength,
+        (int offset) => DateTime(now.year, now.month, firstDay + offset),
+      ),
+    );
+  }
 
   List<ReminderBooking>? upcomingReminders({
     required bool enabled,

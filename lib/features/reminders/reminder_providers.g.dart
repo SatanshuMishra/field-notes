@@ -190,7 +190,7 @@ final class ReminderSyncProvider
   }
 }
 
-String _$reminderSyncHash() => r'eb54fb23e46190ccf3df1ec2fe0916f6668208e9';
+String _$reminderSyncHash() => r'e39816202603f55cf0fe50ebdd60cbb926700527';
 
 @ProviderFor(notificationSettingsOpener)
 final notificationSettingsOpenerProvider =

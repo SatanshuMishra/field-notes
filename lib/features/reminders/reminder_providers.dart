@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:field_notes/data/settings/drift_reminder_ledger_store.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/reminder_service.dart';
+import 'package:field_notes/domain/services/streak_service.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/state/database_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
@@ -72,11 +73,11 @@ Future<ReminderSyncResult?> reminderSync(Ref ref) async {
       now: now,
     );
   }
-  final Timer midnight = Timer(
-    DateTime(now.year, now.month, now.day + 1).difference(now),
+  final Timer dayEnds = Timer(
+    nextStreakBoundary(now).difference(now),
     ref.invalidateSelf,
   );
-  ref.onDispose(midnight.cancel);
+  ref.onDispose(dayEnds.cancel);
   final List<DateTime> days = const ReminderService().windowDays(now);
   final List<AsyncValue<List<Entry>>> entries = <AsyncValue<List<Entry>>>[
     for (final DateTime day in days)

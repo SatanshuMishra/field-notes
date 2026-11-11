@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 const double _width = 600;
 const double _markerOuterRadius = 10;
 const double _noonFraction = 6 / 22;
-const double _midnightFraction = 18 / 22;
+const double _lastCallFraction = 16.5 / 22;
 
 typedef _Circle = ({Offset centre, double radius});
 
@@ -95,16 +95,15 @@ void main() {
     }
   });
 
-  testWidgets('a custom time after midnight stays in the night', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('a 1:15 AM custom time is the last call at the night end, '
+      'after 10:30 PM', (WidgetTester tester) async {
     final List<_Circle> markers = await _markersFor(
       tester,
-      const ReminderTime(hour: 1, minute: 0),
+      const ReminderTime(hour: 1, minute: 15),
     );
 
-    expect(markers, hasLength(2));
-    _expectInside(markers.first, '1:00');
-    expect(markers.first.centre.dx, greaterThan(_width * _midnightFraction));
+    expect(markers, hasLength(1));
+    _expectInside(markers.single, '1:15');
+    expect(markers.single.centre.dx, greaterThan(_width * _lastCallFraction));
   });
 }

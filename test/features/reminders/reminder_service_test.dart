@@ -265,4 +265,201 @@ void main() {
       );
     });
   });
+
+  group('a custom time from midnight to 3:59 AM is the late night of the day '
+      'before', () {
+    const ReminderTime quarterPastOne = ReminderTime(hour: 1, minute: 15);
+
+    List<ReminderBooking> lateNight({
+      required DateTime now,
+      Map<DateTime, ReminderDay> days = const <DateTime, ReminderDay>{},
+    }) => _upcoming(
+      schedule: ReminderSchedule.custom,
+      customTime: quarterPastOne,
+      now: now,
+      days: days,
+    );
+
+    test('1:15 AM books only the last call, the next morning, for the day '
+        'before', () {
+      final List<ReminderBooking> bookings = lateNight(
+        now: DateTime(2026, 7, 19, 8),
+      );
+
+      expect(bookings.map((ReminderBooking b) => b.at).toList(), <DateTime>[
+        for (int day = 19; day <= 25; day++) DateTime(2026, 7, day + 1, 1, 15),
+      ]);
+      expect(bookings.map((ReminderBooking b) => b.id).toList(), <int>[
+        for (int day = 19; day <= 25; day++)
+          ReminderService.bookingIdFor(
+            DateTime(2026, 7, day),
+            ReminderNudge.lastCall,
+          ),
+      ]);
+      expect(bookings.map((ReminderBooking b) => b.body).toSet(), <String>{
+        reminderLastCallBody,
+      });
+      expect(bookings.where((ReminderBooking b) => b.at.hour == 22), isEmpty);
+    });
+
+    test("the late-night last call names what that day is missing", () {
+      final List<ReminderBooking> bookings = lateNight(
+        now: DateTime(2026, 7, 19, 8),
+        days: <DateTime, ReminderDay>{
+          DateTime(2026, 7, 19): const ReminderDay(hasBloom: true),
+          DateTime(2026, 7, 20): const ReminderDay(logCount: 1),
+        },
+      );
+
+      expect(bookings[0].at, DateTime(2026, 7, 20, 1, 15));
+      expect(bookings[0].body, reminderLastCallLogBody);
+      expect(bookings[1].at, DateTime(2026, 7, 21, 1, 15));
+      expect(bookings[1].body, reminderLastCallBloomBody);
+    });
+
+    test('it is skipped once that day is complete, judged on that day', () {
+      final List<ReminderBooking> dayBeforeDone = lateNight(
+        now: DateTime(2026, 7, 19, 8),
+        days: <DateTime, ReminderDay>{
+          DateTime(2026, 7, 19): const ReminderDay(hasBloom: true, logCount: 1),
+        },
+      );
+      final List<ReminderBooking> newDateDone = lateNight(
+        now: DateTime(2026, 7, 19, 8),
+        days: <DateTime, ReminderDay>{
+          DateTime(2026, 7, 20): const ReminderDay(hasBloom: true, logCount: 1),
+        },
+      );
+
+      expect(dayBeforeDone.first.at, DateTime(2026, 7, 21, 1, 15));
+      expect(dayBeforeDone, hasLength(6));
+      expect(newDateDone.first.at, DateTime(2026, 7, 20, 1, 15));
+      expect(
+        newDateDone.map((ReminderBooking b) => b.at),
+        isNot(contains(DateTime(2026, 7, 21, 1, 15))),
+      );
+    });
+
+    test('after midnight the day before still has its last call until it is '
+        'complete', () {
+      final DateTime halfPastMidnight = DateTime(2026, 7, 20, 0, 30);
+
+      final List<ReminderBooking> open = lateNight(now: halfPastMidnight);
+      final List<ReminderBooking> done = lateNight(
+        now: halfPastMidnight,
+        days: <DateTime, ReminderDay>{
+          DateTime(2026, 7, 19): const ReminderDay(hasBloom: true, logCount: 1),
+        },
+      );
+
+      expect(open.first.at, DateTime(2026, 7, 20, 1, 15));
+      expect(
+        open.first.id,
+        ReminderService.bookingIdFor(
+          DateTime(2026, 7, 19),
+          ReminderNudge.lastCall,
+        ),
+      );
+      expect(open, hasLength(7));
+      expect(done.first.at, DateTime(2026, 7, 21, 1, 15));
+      expect(
+        lateNight(now: DateTime(2026, 7, 20, 1, 15)).first.at,
+        DateTime(2026, 7, 21, 1, 15),
+      );
+    });
+
+    test('3:59 AM is a last call and 4:00 AM a morning nudge with the 10:30 '
+        'PM last call', () {
+      expect(
+        _service.slotsFor(
+          ReminderSchedule.custom,
+          const ReminderTime(hour: 3, minute: 59),
+        ),
+        const <ReminderSlot>[
+          ReminderSlot(
+            nudge: ReminderNudge.lastCall,
+            time: ReminderTime(hour: 3, minute: 59),
+          ),
+        ],
+      );
+      expect(
+        _service.slotsFor(
+          ReminderSchedule.custom,
+          const ReminderTime(hour: 4, minute: 0),
+        ),
+        const <ReminderSlot>[
+          ReminderSlot(
+            nudge: ReminderNudge.evening,
+            time: ReminderTime(hour: 4, minute: 0),
+          ),
+          ReminderSlot(
+            nudge: ReminderNudge.lastCall,
+            time: ReminderService.lastCallTime,
+          ),
+        ],
+      );
+      expect(
+        _upcoming(
+          schedule: ReminderSchedule.custom,
+          customTime: const ReminderTime(hour: 3, minute: 59),
+          now: DateTime(2026, 7, 19, 8),
+        ).first.at,
+        DateTime(2026, 7, 20, 3, 59),
+      );
+      expect(
+        _upcoming(
+          schedule: ReminderSchedule.custom,
+          customTime: const ReminderTime(hour: 4, minute: 0),
+          now: DateTime(2026, 7, 19, 3),
+        ).take(2).map((ReminderBooking b) => b.at).toList(),
+        <DateTime>[DateTime(2026, 7, 19, 4), DateTime(2026, 7, 19, 22, 30)],
+      );
+    });
+
+    test('late-night ids stay in the reserved range and never collide across '
+        'the date change', () {
+      for (final DateTime now in <DateTime>[
+        DateTime(2026, 7, 19, 8),
+        DateTime(2026, 7, 20, 0, 30),
+        DateTime(2026, 7, 31, 2),
+      ]) {
+        final List<ReminderBooking> bookings = lateNight(now: now);
+        final Set<int> ids = <int>{
+          for (final ReminderBooking booking in bookings) booking.id,
+        };
+
+        expect(ids, hasLength(bookings.length), reason: '$now');
+        expect(
+          ReminderService.bookingIds.toSet().containsAll(ids),
+          isTrue,
+          reason: '$now',
+        );
+      }
+      final List<ReminderBooking> beforeFour = lateNight(
+        now: DateTime(2026, 7, 20, 0, 30),
+      );
+      final List<ReminderBooking> afterFour = lateNight(
+        now: DateTime(2026, 7, 20, 8),
+      );
+      expect(
+        afterFour.where((ReminderBooking b) => b.at.day != 27).toList(),
+        beforeFour.where((ReminderBooking b) => b.at.day != 20).toList(),
+      );
+    });
+  });
+
+  group('the reminder window follows the 4 AM day', () {
+    test('before 4 AM the window starts on the day before', () {
+      expect(_service.windowDays(DateTime(2026, 7, 20, 3, 59)), <DateTime>[
+        for (int day = 19; day <= 25; day++) DateTime(2026, 7, day),
+      ]);
+      expect(_service.windowDays(DateTime(2026, 7, 20, 4)), <DateTime>[
+        for (int day = 20; day <= 26; day++) DateTime(2026, 7, day),
+      ]);
+      expect(
+        _service.windowDays(DateTime(2026, 8, 1, 1)).first,
+        DateTime(2026, 7, 31),
+      );
+    });
+  });
 }

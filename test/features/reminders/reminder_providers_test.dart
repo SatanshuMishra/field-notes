@@ -1,3 +1,4 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/reminder_service.dart';
 import 'package:field_notes/domain/settings/settings.dart';
@@ -47,6 +48,7 @@ ProviderContainer _container({
   required DateTime now,
   bool todayBloomed = false,
   List<String>? queriedDates,
+  DateTime Function()? clock,
 }) {
   final container = ProviderContainer(
     overrides: <Override>[
@@ -64,7 +66,7 @@ ProviderContainer _container({
           todayBloomed && date == reminderDateKey(now) ? _bloomed(date) : null,
         ),
       ),
-      reminderClockProvider.overrideWithValue(() => now),
+      reminderClockProvider.overrideWithValue(clock ?? () => now),
       reminderSchedulerProvider.overrideWithValue(scheduler),
     ],
   );
@@ -177,6 +179,69 @@ void main() {
       expect(result, ReminderSyncResult.cancelled);
       expect(scheduler.cancelCount, 1);
       expect(scheduler.scheduled, isEmpty);
+    });
+
+    test('between midnight and 4 AM it looks up the day before and keeps its '
+        'late-night last call', () async {
+      final List<String> queriedDates = <String>[];
+      final FakeReminderScheduler scheduler = FakeReminderScheduler();
+      final ProviderContainer container = _container(
+        settings: AppSettings.defaults.copyWith(
+          reminderSchedule: ReminderSchedule.custom,
+          reminderTime: const ReminderTime(hour: 1, minute: 15),
+        ),
+        todayEntries: const <Entry>[],
+        scheduler: scheduler,
+        now: DateTime(2026, 7, 20, 0, 30),
+        queriedDates: queriedDates,
+      );
+
+      await _settledSync(container);
+
+      expect(queriedDates, contains('2026-07-19'));
+      expect(scheduler.scheduled.first.at, DateTime(2026, 7, 20, 1, 15));
+      expect(
+        scheduler.scheduled.first.id,
+        ReminderService.bookingIdFor(
+          DateTime(2026, 7, 19),
+          ReminderNudge.lastCall,
+        ),
+      );
+      expect(scheduler.scheduled.first.body, reminderLastCallBody);
+    });
+
+    test('books again when the late night ends at 4 AM', () {
+      fakeAsync((FakeAsync async) {
+        DateTime current = DateTime(2026, 7, 20, 0, 30);
+        final FakeReminderScheduler scheduler = FakeReminderScheduler();
+        final ProviderContainer container = _container(
+          settings: AppSettings.defaults,
+          todayEntries: const <Entry>[],
+          scheduler: scheduler,
+          now: current,
+          clock: () => current,
+        );
+        container.listen(
+          reminderSyncProvider,
+          (_, _) {},
+          fireImmediately: true,
+        );
+        async.elapse(const Duration(seconds: 1));
+        final List<ReminderBooking> beforeFour = List<ReminderBooking>.of(
+          scheduler.scheduled,
+        );
+
+        current = DateTime(2026, 7, 20, 4, 0, 1);
+        async.elapse(const Duration(hours: 3, minutes: 30));
+
+        expect(beforeFour.first.at, DateTime(2026, 7, 20, 20, 30));
+        expect(beforeFour, hasLength(12));
+        expect(
+          scheduler.calls.where((String call) => call == 'schedule'),
+          hasLength(2),
+        );
+        expect(scheduler.scheduled.last.at, DateTime(2026, 7, 26, 22, 30));
+      });
     });
 
     test("looks up today's entries by today's date key", () async {
