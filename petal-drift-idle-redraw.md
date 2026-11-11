@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: parked
-Updated: 2026-11-11T06:58:14.477Z
+Updated: 2026-11-11T06:58:17.288Z
 Next ids: c1 D2 R2 S1
 
 ## Goal
@@ -15,7 +15,7 @@ Full lane; the gusts build ran unattended, and the quality choice gets an attend
 
 ## Next step
 
-When the owner says PR #381 merged, run pipeline drive event --repo /Users/satanshumishra/Documents/DevLabs/fireplace --slug petal-drift-idle-redraw --name merged, so Integration tests the FEATURE branch and opens its pull request to main.
+Take the owner's answers to the intent and round 1 (Q1 to Q11: where it lands, Automatic, what it measures, Low, scope, setup, battery saver, a cheaper High, test seams, pre-mortem, do-not-flag), write them to docs/specs/petal-drift-idle-redraw.decisions.md as new intent lines replacing I1, I3 and I4, then ask the next round.
 
 ## Decisions in force
 
