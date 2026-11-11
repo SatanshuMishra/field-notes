@@ -33,21 +33,15 @@ final class CometInks {
     required this.star,
   });
 
-  static const CometInks dark = CometInks(
-    glow: Color(0xFFB8566A),
-    hotTrail: Color(0xFFE58D9C),
-    coolTrail: Color(0xFFF3E6D1),
-    head: Color(0xFFF3E6D1),
-    star: Color(0xFFF3E6D1),
+  factory CometInks.from(FieldNotesColors colors) => CometInks(
+    glow: Palette.coral,
+    hotTrail: colors.cometTrail,
+    coolTrail: colors.cometTail,
+    head: colors.cometHead,
+    star: colors.cometTail,
   );
 
-  static const CometInks light = CometInks(
-    glow: Color(0xFFB8566A),
-    hotTrail: Color(0xFFA54B5D),
-    coolTrail: Color(0xFF6F605B),
-    head: Color(0xFF5C4E4A),
-    star: Color(0xFF6F605B),
-  );
+  static final CometInks dark = CometInks.from(FieldNotesColors.dark);
 
   final Color glow;
   final Color hotTrail;
@@ -112,7 +106,7 @@ final class RecorderInks {
   factory RecorderInks._dark(FieldNotesColors colors) => RecorderInks._(
     brightness: Brightness.dark,
     ground: Palette.mediaGround,
-    chrome: const Color(0xFFB7A58C),
+    chrome: FieldNotesColors.dark.stageChrome,
     leaveGlyph: const Color(0xCCFFFFFF),
     leaveGlyphBottomBar: const Color(0xBFFFFFFF),
     dayLead: const Color(0xFFE692A0),
@@ -121,17 +115,17 @@ final class RecorderInks {
     question: const Color(0xFFF3E6D1),
     kicker: colors.accentSoft,
     status: const Color(0xFFDCCAB0),
-    timer: const Color(0xFFB7A58C),
+    timer: FieldNotesColors.dark.stageChrome,
     numeral: const Color(0xFFF3E6D1),
-    pausedDot: const Color(0xFFD9B36B),
+    pausedDot: FieldNotesColors.dark.recorderPausedDot,
     takeTime: const Color(0xFFF3E6D1),
     takeTimeShadow: const Color(0x73000000),
     keyHint: const Color(0xFF9A8872),
-    letGo: const Color(0xFFB7A58C),
+    letGo: FieldNotesColors.dark.stageChrome,
     keepFill: const Color(0xFFF3E6D1),
     keepInk: const Color(0xFF1C1713),
     keepShadow: const Color(0x73F3E6D1),
-    orbRing: const Color(0xEBF3E6D1),
+    orbRing: FieldNotesColors.dark.recorderOrbRing,
     orbOutline: null,
     countdownRing: const Color(0x5CF3E6D1),
     resumeRing: const Color(0x8FF3E6D1),
@@ -139,7 +133,7 @@ final class RecorderInks {
     panelFill: const Color(0xB81C1713),
     panelEdge: const Color(0x24F3E6D1),
     panelTitle: const Color(0xFFF3E6D1),
-    panelMessage: const Color(0xFFB7A58C),
+    panelMessage: FieldNotesColors.dark.stageChrome,
     error: colors.accentBright,
     glassGlyph: cameraGlyphInk,
     inputInk: Palette.mediaInk,
@@ -154,7 +148,7 @@ final class RecorderInks {
   factory RecorderInks._light(FieldNotesColors colors) => RecorderInks._(
     brightness: Brightness.light,
     ground: colors.viewerStage,
-    chrome: const Color(0xFF554737),
+    chrome: colors.stageChrome,
     leaveGlyph: colors.ink.withValues(alpha: 0.8),
     leaveGlyphBottomBar: colors.ink.withValues(alpha: 0.75),
     dayLead: colors.accentInk,
@@ -163,25 +157,25 @@ final class RecorderInks {
     question: colors.ink,
     kicker: colors.accentInk,
     status: colors.ink,
-    timer: const Color(0xFF554737),
+    timer: colors.stageChrome,
     numeral: colors.ink,
-    pausedDot: const Color(0xFF8E6A1F),
+    pausedDot: colors.recorderPausedDot,
     takeTime: colors.ink,
     takeTimeShadow: const Color(0x00000000),
     keyHint: colors.mutedInkStrong,
-    letGo: const Color(0xFF554737),
+    letGo: colors.stageChrome,
     keepFill: colors.mediaCta,
     keepInk: colors.mediaCtaInk,
     keepShadow: colors.ink.withValues(alpha: 0.25),
-    orbRing: const Color(0xFFF6ECDC),
-    orbOutline: const Color(0xFFB9A88A),
+    orbRing: colors.recorderOrbRing,
+    orbOutline: colors.recorderOrbOutline,
     countdownRing: colors.ink.withValues(alpha: 0.36),
     resumeRing: colors.ink.withValues(alpha: 0.56),
     savingRing: colors.ink.withValues(alpha: 0.28),
     panelFill: colors.composerPaper.withValues(alpha: 0.92),
     panelEdge: colors.ink.withValues(alpha: 0.2),
     panelTitle: colors.ink,
-    panelMessage: const Color(0xFF554737),
+    panelMessage: colors.stageChrome,
     error: colors.accentInk,
     glassGlyph: colors.ink,
     inputInk: colors.ink,
@@ -190,7 +184,7 @@ final class RecorderInks {
     glass: GlassTone.paper,
     sticker: StickerGround.page,
     overlay: SystemUiOverlayStyle.dark,
-    comets: CometInks.light,
+    comets: CometInks.from(colors),
   );
 
   final Brightness brightness;

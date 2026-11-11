@@ -51,9 +51,7 @@ double composerPanelWidthFor(double window) => clampDouble(
 
 const Color _clearBarrier = Color(0x00000000);
 
-const Color _paperChrome = Color(0xFF554737);
 const Color _paperCaret = Color(0xFFB8566A);
-const Color _roomChrome = Color(0xFFB7A58C);
 const Color _roomStatus = Color(0xFFDCCAB0);
 const Color _roomCaret = Color(0xFFE3889A);
 const double _paperLineAlpha = 0.32;
@@ -78,7 +76,7 @@ final class ComposerStageInks {
     return ComposerStageInks._(
       ground: colors.viewerStage,
       ink: ink,
-      chrome: dark ? _roomChrome : _paperChrome,
+      chrome: colors.stageChrome,
       status: dark ? _roomStatus : ink,
       line: ink.withValues(alpha: dark ? _roomLineAlpha : _paperLineAlpha),
       caret: dark ? _roomCaret : _paperCaret,

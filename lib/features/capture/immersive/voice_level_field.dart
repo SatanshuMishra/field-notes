@@ -168,7 +168,7 @@ List<CometTrailSegment> cometTrailSegments({
   required double brightness,
   required double level,
   required double ease,
-  CometInks inks = CometInks.dark,
+  CometInks? inks,
 }) {
   final double span = cometTrailSpan(brightness);
   final bool hot = brightness > _hotBrightness;
@@ -184,7 +184,7 @@ List<CometTrailSegment> cometTrailSegments({
           hot: hot,
           widest: widest,
           ease: ease,
-          inks: inks,
+          inks: inks ?? CometInks.dark,
         ),
   ];
 }
@@ -377,8 +377,9 @@ class CometsModel {
     required this._stage,
     VoiceLevelSmoother? smoother,
     this._still = false,
-    this.inks = CometInks.dark,
-  }) : _smoother = smoother ?? VoiceLevelSmoother() {
+    CometInks? inks,
+  }) : inks = inks ?? CometInks.dark,
+       _smoother = smoother ?? VoiceLevelSmoother() {
     _comets = List<Comet>.unmodifiable(<Comet>[
       for (int index = 0; index < _cometCount; index++) Comet._(this, index),
     ]);

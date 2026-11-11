@@ -62,6 +62,13 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     required this.viewerFadeEnd,
     required this.skyStar,
     required this.skyComet,
+    required this.stageChrome,
+    required this.recorderOrbRing,
+    required this.recorderOrbOutline,
+    required this.recorderPausedDot,
+    required this.cometHead,
+    required this.cometTrail,
+    required this.cometTail,
   });
 
   static const FieldNotesColors light = FieldNotesColors(
@@ -123,6 +130,13 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     viewerFadeEnd: Color(0xF5FBF3E4),
     skyStar: Color(0x5C6F605B),
     skyComet: Color(0xCC5C4E4A),
+    stageChrome: Color(0xFF554737),
+    recorderOrbRing: Color(0xFFF6ECDC),
+    recorderOrbOutline: Color(0xFFB9A88A),
+    recorderPausedDot: Color(0xFF8E6A1F),
+    cometHead: Color(0xFF5C4E4A),
+    cometTrail: Color(0xFFA54B5D),
+    cometTail: Color(0xFF6F605B),
   );
 
   static const FieldNotesColors dark = FieldNotesColors(
@@ -184,6 +198,13 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     viewerFadeEnd: Color(0xF01C1919),
     skyStar: Color(0x8AF3E6D1),
     skyComet: Color(0xB3FBF3E4),
+    stageChrome: Color(0xFFB7A58C),
+    recorderOrbRing: Color(0xEBF3E6D1),
+    recorderOrbOutline: Color(0x00F3E6D1),
+    recorderPausedDot: Color(0xFFD9B36B),
+    cometHead: Color(0xFFF3E6D1),
+    cometTrail: Color(0xFFE58D9C),
+    cometTail: Color(0xFFF3E6D1),
   );
 
   static FieldNotesColors of(BuildContext context) =>
@@ -247,6 +268,13 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
   final Color viewerFadeEnd;
   final Color skyStar;
   final Color skyComet;
+  final Color stageChrome;
+  final Color recorderOrbRing;
+  final Color recorderOrbOutline;
+  final Color recorderPausedDot;
+  final Color cometHead;
+  final Color cometTrail;
+  final Color cometTail;
 
   Color get ink08 => ink.withAlpha(0x14);
   Color get ink12 => ink.withAlpha(0x1F);
@@ -325,6 +353,13 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     Color? viewerFadeEnd,
     Color? skyStar,
     Color? skyComet,
+    Color? stageChrome,
+    Color? recorderOrbRing,
+    Color? recorderOrbOutline,
+    Color? recorderPausedDot,
+    Color? cometHead,
+    Color? cometTrail,
+    Color? cometTail,
   }) {
     return FieldNotesColors(
       page: page ?? this.page,
@@ -385,6 +420,13 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
       viewerFadeEnd: viewerFadeEnd ?? this.viewerFadeEnd,
       skyStar: skyStar ?? this.skyStar,
       skyComet: skyComet ?? this.skyComet,
+      stageChrome: stageChrome ?? this.stageChrome,
+      recorderOrbRing: recorderOrbRing ?? this.recorderOrbRing,
+      recorderOrbOutline: recorderOrbOutline ?? this.recorderOrbOutline,
+      recorderPausedDot: recorderPausedDot ?? this.recorderPausedDot,
+      cometHead: cometHead ?? this.cometHead,
+      cometTrail: cometTrail ?? this.cometTrail,
+      cometTail: cometTail ?? this.cometTail,
     );
   }
 
@@ -463,6 +505,21 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
       viewerFadeEnd: Color.lerp(viewerFadeEnd, other.viewerFadeEnd, t)!,
       skyStar: Color.lerp(skyStar, other.skyStar, t)!,
       skyComet: Color.lerp(skyComet, other.skyComet, t)!,
+      stageChrome: Color.lerp(stageChrome, other.stageChrome, t)!,
+      recorderOrbRing: Color.lerp(recorderOrbRing, other.recorderOrbRing, t)!,
+      recorderOrbOutline: Color.lerp(
+        recorderOrbOutline,
+        other.recorderOrbOutline,
+        t,
+      )!,
+      recorderPausedDot: Color.lerp(
+        recorderPausedDot,
+        other.recorderPausedDot,
+        t,
+      )!,
+      cometHead: Color.lerp(cometHead, other.cometHead, t)!,
+      cometTrail: Color.lerp(cometTrail, other.cometTrail, t)!,
+      cometTail: Color.lerp(cometTail, other.cometTail, t)!,
     );
   }
 
@@ -525,6 +582,13 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     viewerFadeEnd,
     skyStar,
     skyComet,
+    stageChrome,
+    recorderOrbRing,
+    recorderOrbOutline,
+    recorderPausedDot,
+    cometHead,
+    cometTrail,
+    cometTail,
   ];
 
   @override
