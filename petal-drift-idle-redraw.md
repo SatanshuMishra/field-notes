@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T04:31:29.598Z
+Updated: 2026-11-11T04:34:32.285Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -11,11 +11,11 @@ Once today has a bloom, the drifting petals keep the whole app redrawing at the 
 
 ## Where things stand
 
-Not started.
+Full lane, interphase bug pathway, slug petal-drift-idle-redraw. Readiness is clear. The intent round (goal, why, success, do-not-flag closure) is with the owner, each with a recommended answer. Cause: PetalDrift's ticker runs every vsync while a flower is set, and each petal frame re-renders the whole page on Impeller, including the phone bottom bar's backdrop blur. A probe build with the ticker never started is built, to confirm the petals are the only driver.
 
 ## Next step
 
-Run the full-lane readiness gate (lighthouse readiness, do-not-flag closures), then interphase:bug with "Interview me first." for the petal redraw.
+Measure the probe build (builds/field-notes-probe-no-ticker.apk, labmain id) on the Note 10+ with today's bloom, record the result in the spec, then take the owner's intent answers into the decisions file and ask the first frontier round (drift pattern, step-down, onboarding scope, seams, pre-mortem).
 
 ## Decisions in force
 
