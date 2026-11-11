@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T05:55:15.621Z
+Updated: 2026-11-11T06:07:16.434Z
 Next ids: c1 D2 R2 S1
 
 ## Goal
@@ -15,7 +15,7 @@ Full lane, unattended (owner: "Work autonomously. Complete the task."). The spec
 
 ## Next step
 
-The drive entered ship and runs it next.
+The drive entered awaiting-merge: pull requests are ready to merge; it resumes on pipeline drive event --name merged.
 
 ## Decisions in force
 
