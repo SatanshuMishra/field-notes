@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-11T02:50:14.422Z
+Updated: 2026-11-11T02:51:37.851Z
 Next ids: c4 D8 R2 S2
 
 ## Goal
@@ -32,7 +32,7 @@ Ten PRs are open from origin/main f454ef02, assigned to the owner, with Auto-fix
 
 Each branch's builder worktree under .claude/worktrees still holds it, for fixes.
 
-The device pass of the ten-branch merge is done, on the owner's test Note 10+ and in the VM lab on Windows and macOS, and every PR body's device-pass row now carries its result. Onboarding offers Evenings, Midday and evening, Custom time and Not now on all three, which the owner made a pre-merge check. The pass found one defect, the collapsed rail's update box at 40 by 40 with an 8 px gap; #374 now draws it 44 by 44, 10 px above the streak box (00f8387c, pushed). The lab build is off the phone, the scratch branch lab/devpass-180 is deleted from origin and the devpass worktrees are removed.
+Every PR body carries its device result from the owner's test Note 10+ and the Windows and macOS labs, including onboarding's Evenings, Midday and evening, Custom time and Not now on all three, the owner's pre-merge check.
 
 Follow-ups left for later, named in their PR bodies: the Microphone and Speaker rows (input_panel.dart _PanelRow) sit 6 px off their heading, fixable once #377 and #378 merge; the onboarding FakeJournalRepository in test/app/support/app_shell_harness.dart lacks setMoodForDate, as on main; in #372 full screen once opened at 0:00 after a finished clip was scrubbed while paused, cause not confirmed.
 
