@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T05:01:21.160Z
+Updated: 2026-11-11T05:01:24.549Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -30,3 +30,5 @@ Fix what the spec reviewer reports, re-render and re-check, set the record to ha
 - Spec files: docs/specs/petal-drift-idle-redraw.md (spec), .decisions.md (intent and decisions), .record.json (interview record), .items.json (Steps), .repro.dart (draft failing test, red on main at 100% of five minutes), .guard.json (tree guard)
 - Note 10+ still holds the probe build (labmain id, petals off) with the Grateful bloom set; reinstall main for any before measurement and the fixed build for the after measurement
 - Night sky precedent: lib/features/capture/core/night_sky.dart twinkles on an 83 ms timer and launches comets 60 to 180 s apart
+- Run home: ~/.mitosis/fireplace/petal-drift-idle-redraw/ (run.zsh, CHARTER.md, worker rules); mitosis run dir ~/.mitosis/runs/fireplace/petal-drift-idle-redraw
+- Release process: a release/X-Y-Z-changelog PR adds the CHANGELOG.md section, then a vX.Y.Z tag on main triggers .github/workflows/release.yml, which builds and publishes the GitHub release
