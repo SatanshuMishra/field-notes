@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../settings_controller.dart';
 import '../settings_feedback.dart';
 import '../settings_providers.dart';
+import '../widgets/reminder_schedule_picker.dart';
 import '../widgets/reminder_time_sheet.dart';
 
 typedef TimeOfDayPicker = Future<TimeOfDay?> Function(
@@ -52,23 +53,25 @@ class RemindersSoundSection extends ConsumerWidget {
           rows: <Widget>[
             SettingsFieldRow(
               label: 'Daily reminder',
-              description: 'One nudge a day, skipped once you have written.',
+              description:
+                  'A gentle nudge to reflect, skipped once the day has its '
+                  'bloom and a log.',
               control: SettingsToggle(
                 semanticLabel: 'Daily reminder',
                 value: settings.reminderEnabled,
                 onChanged: (bool value) => _setReminderEnabled(ref, value),
               ),
             ),
-            SettingsFieldRow(
-              label: 'Reminder time',
-              description: 'When the nudge arrives.',
-              control: SettingsTimeField(
-                value: TimeOfDay(
-                  hour: settings.reminderTime.hour,
-                  minute: settings.reminderTime.minute,
-                ),
-                onTap: () => _chooseTime(context, ref),
+            ReminderSchedulePicker(
+              schedule: settings.reminderSchedule,
+              customTime: settings.reminderTime,
+              onSchedule: (ReminderSchedule value) => _apply(
+                ref,
+                () => ref
+                    .read(settingsControllerProvider)
+                    .setReminderSchedule(value),
               ),
+              onCustomTime: () => _chooseTime(context, ref),
             ),
             if (notificationsOff)
               NotificationsOffNotice(onFeedback: onFeedback),
@@ -127,6 +130,13 @@ class RemindersSoundSection extends ConsumerWidget {
       ),
     );
     if (picked == null) {
+      return;
+    }
+    final bool kept = await _apply(
+      ref,
+      () => controller.setReminderSchedule(ReminderSchedule.custom),
+    );
+    if (!kept) {
       return;
     }
     await _apply(

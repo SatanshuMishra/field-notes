@@ -44,7 +44,7 @@ Future<void> _pumpSection(
 }
 
 void main() {
-  testWidgets('Reflection question sits after Reminder time and starts off', (
+  testWidgets('Reflection question sits after the schedule and starts off', (
     WidgetTester tester,
   ) async {
     await _pumpSection(tester, repository: FakeSettingsRepository());
@@ -69,12 +69,12 @@ void main() {
     final double reflectionTop = tester
         .getTopLeft(find.text('Reflection question'))
         .dy;
-    final double reminderTimeTop = tester
-        .getTopLeft(find.text('Reminder time'))
+    final double lastCallTop = tester
+        .getTopLeft(find.text('Last call at 10:30 PM'))
         .dy;
 
-    expect(reminderTimeTop, greaterThan(dailyReminderTop));
-    expect(reflectionTop, greaterThan(reminderTimeTop));
+    expect(lastCallTop, greaterThan(dailyReminderTop));
+    expect(reflectionTop, greaterThan(lastCallTop));
   });
 
   testWidgets('turning Reflection question on writes the setting', (

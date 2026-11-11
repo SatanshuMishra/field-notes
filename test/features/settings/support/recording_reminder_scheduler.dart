@@ -24,16 +24,18 @@ class RecordingReminderScheduler implements ReminderScheduler {
   }
 
   @override
-  Future<void> schedule(List<ReminderBooking> bookings) async {
+  Future<bool> schedule(List<ReminderBooking> bookings) async {
     this.bookings.add(List<ReminderBooking>.unmodifiable(bookings));
     booked = Map<int, DateTime>.unmodifiable(<int, DateTime>{
       for (final ReminderBooking booking in bookings) booking.id: booking.at,
     });
+    return true;
   }
 
   @override
-  Future<void> cancel() async {
+  Future<bool> cancel() async {
     cancelCount++;
     booked = const <int, DateTime>{};
+    return true;
   }
 }

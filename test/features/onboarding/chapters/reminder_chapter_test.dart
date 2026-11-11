@@ -2,8 +2,8 @@ import 'package:field_notes/app/app.dart';
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
-import 'package:field_notes/domain/settings/reminder_time.dart';
-import 'package:field_notes/domain/settings/week_start.dart';
+import 'package:field_notes/domain/services/reminder_service.dart';
+import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/onboarding/chapters/reminder_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/tour_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/week_chapter.dart';
@@ -14,6 +14,8 @@ import 'package:field_notes/features/onboarding/reminder_choice.dart';
 import 'package:field_notes/features/reminders/local_notifications_reminder_scheduler.dart';
 import 'package:field_notes/features/reminders/notification_settings_opener.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
+import 'package:field_notes/features/settings/sections/reminders_sound_section.dart'
+    show TimeOfDayPicker;
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +29,7 @@ import '../../settings/support/fake_settings_repository.dart';
 import '../../settings/support/recording_reminder_scheduler.dart';
 
 const String _liveTitle = 'Field Notes';
-const String _liveBody = "You haven't written today's field note yet.";
+const String _liveBody = 'How was today? A few words and a bloom are plenty.';
 const String _quietBody = 'No nudges. Your meadow waits quietly.';
 
 const String _notificationsOff = 'Notifications are off for Field Notes.';
@@ -49,7 +51,7 @@ const ReminderTime _evening = ReminderTime(hour: 20, minute: 30);
 
 typedef _Option = ({
   ReminderChoice choice,
-  String time,
+  String title,
   String caption,
   String label,
 });
@@ -61,81 +63,92 @@ typedef _Spies = ({
 
 typedef _Clock = ({
   bool use24Hour,
-  List<String> choices,
+  List<String> sidebar,
+  List<String> bottomBar,
   String big,
   String preview,
 });
 
 const List<_Option> _sidebarOptions = <_Option>[
   (
-    choice: ReminderChoice.morning,
-    time: '08:00',
-    caption: 'morning',
-    label: '08:00, morning',
+    choice: ReminderChoice.evenings,
+    title: 'Evenings',
+    caption: '20:30',
+    label: 'Evenings, 20:30',
   ),
   (
-    choice: ReminderChoice.midday,
-    time: '12:30',
-    caption: 'midday',
-    label: '12:30, midday',
+    choice: ReminderChoice.middayAndEvening,
+    title: 'Midday and evening',
+    caption: '12:30 · 20:30',
+    label: 'Midday and evening, 12:30 · 20:30',
   ),
   (
-    choice: ReminderChoice.evening,
-    time: '20:30',
-    caption: 'evening',
-    label: '20:30, evening',
+    choice: ReminderChoice.custom,
+    title: 'Custom time',
+    caption: '20:30',
+    label: 'Custom time, 20:30',
   ),
   (
     choice: ReminderChoice.off,
-    time: 'Off',
+    title: 'Not now',
     caption: 'no nudge',
-    label: 'Off, no nudge',
+    label: 'Not now, no nudge',
   ),
 ];
 
 const List<_Option> _bottomBarOptions = <_Option>[
   (
-    choice: ReminderChoice.morning,
-    time: '08:00',
-    caption: 'Morning · start the day',
-    label: '08:00, Morning, start the day',
+    choice: ReminderChoice.evenings,
+    title: 'Evenings',
+    caption: 'Once, around 20:30.',
+    label: 'Evenings, Once, around 20:30.',
   ),
   (
-    choice: ReminderChoice.midday,
-    time: '12:30',
-    caption: 'Midday · a pause',
-    label: '12:30, Midday, a pause',
+    choice: ReminderChoice.middayAndEvening,
+    title: 'Midday and evening',
+    caption: 'Around 12:30 and 20:30.',
+    label: 'Midday and evening, Around 12:30 and 20:30.',
   ),
   (
-    choice: ReminderChoice.evening,
-    time: '20:30',
-    caption: 'Evening · look back',
-    label: '20:30, Evening, look back',
+    choice: ReminderChoice.custom,
+    title: 'Custom time',
+    caption: 'Once, when you choose.',
+    label: 'Custom time, Once, when you choose.',
   ),
   (
     choice: ReminderChoice.off,
-    time: 'No reminder',
+    title: 'Not now',
     caption: "You'll open it when you want",
-    label: "No reminder, You'll open it when you want",
+    label: "Not now, You'll open it when you want",
   ),
 ];
 
 const List<ReminderChoice> _timedChoices = <ReminderChoice>[
-  ReminderChoice.morning,
-  ReminderChoice.midday,
-  ReminderChoice.evening,
+  ReminderChoice.evenings,
+  ReminderChoice.middayAndEvening,
+  ReminderChoice.custom,
 ];
 
 const List<_Clock> _clocks = <_Clock>[
   (
     use24Hour: false,
-    choices: <String>['8:00 AM', '12:30 PM', '8:30 PM'],
+    sidebar: <String>['8:30 PM', '12:30 PM · 8:30 PM', '8:30 PM'],
+    bottomBar: <String>[
+      'Once, around 8:30 PM.',
+      'Around 12:30 PM and 8:30 PM.',
+      'Once, when you choose.',
+    ],
     big: '8:30 PM',
     preview: '8:30 PM',
   ),
   (
     use24Hour: true,
-    choices: <String>['08:00', '12:30', '20:30'],
+    sidebar: <String>['20:30', '12:30 · 20:30', '20:30'],
+    bottomBar: <String>[
+      'Once, around 20:30.',
+      'Around 12:30 and 20:30.',
+      'Once, when you choose.',
+    ],
     big: '20:30',
     preview: '20:30',
   ),
@@ -172,6 +185,7 @@ Future<_Spies> _pumpReminder(
   ShellLayout layout, {
   bool reduceMotion = false,
   bool use24Hour = true,
+  TimeOfDayPicker? pickTime,
 }) async {
   tester.view.physicalSize = switch (layout) {
     ShellLayout.sidebar => _sidebarArea,
@@ -212,7 +226,14 @@ Future<_Spies> _pumpReminder(
           ),
           child: child!,
         ),
-        home: Material(child: ReminderChapter(layout: layout)),
+        home: Material(
+          child: ReminderChapter(
+            layout: layout,
+            pickTime:
+                pickTime ??
+                (BuildContext context, TimeOfDay initial) async => null,
+          ),
+        ),
       ),
     ),
   );
@@ -390,7 +411,7 @@ void _expectChoices(
     final Finder control = find.byKey(reminderChoiceKey(option.choice));
     final bool on = option.choice == selected;
     expect(
-      find.descendant(of: control, matching: find.text(option.time)),
+      find.descendant(of: control, matching: find.text(option.title)),
       findsOneWidget,
     );
     expect(
@@ -421,6 +442,7 @@ void _expectChoices(
 void _expectNothingSaved(_Spies spies) {
   expect(spies.settings.reminderEnabledWrites, isEmpty);
   expect(spies.settings.reminderTimeWrites, isEmpty);
+  expect(spies.settings.reminderScheduleWrites, isEmpty);
   expect(spies.settings.weekStartWrites, isEmpty);
   expect(spies.settings.notificationPermissionAskedWrites, isEmpty);
   expect(spies.settings.onboardingStatusWrites, isEmpty);
@@ -437,7 +459,7 @@ void main() {
   testWidgets('reminder previews the live notification text and holds the '
       'choice', (WidgetTester tester) async {
     expect(reminderNotificationTitle, _liveTitle);
-    expect(reminderNotificationBody, _liveBody);
+    expect(reminderEveningBody, _liveBody);
     for (final ShellLayout layout in ShellLayout.values) {
       await _onLayout(layout, () async {
         final _Spies spies = await _pumpReminder(tester, layout);
@@ -445,16 +467,17 @@ void main() {
 
         expect(find.text('and you'), findsOneWidget);
         expect(find.text('When should we check in?'), findsOneWidget);
-        expect(_held(tester), ReminderChoice.evening);
-        _expectChoices(tester, layout, ReminderChoice.evening);
+        expect(_held(tester), ReminderChoice.evenings);
+        _expectChoices(tester, layout, ReminderChoice.evenings);
         _expectPreview(
           tester,
           big: '20:30',
           clock: '20:30',
-          body: reminderNotificationBody,
+          body: reminderEveningBody,
           quiet: false,
         );
         expect(find.text(_quietBody), findsNothing);
+        expect(find.byKey(reminderChapterCustomTimeKey), findsNothing);
 
         await _choose(tester, ReminderChoice.off);
         expect(_held(tester), ReminderChoice.off);
@@ -466,21 +489,103 @@ void main() {
           body: _quietBody,
           quiet: true,
         );
-        expect(find.text(reminderNotificationBody), findsNothing);
-        expect(find.text('20:30'), findsOneWidget);
+        expect(find.text(reminderEveningBody), findsNothing);
 
-        await _choose(tester, ReminderChoice.morning);
-        expect(_held(tester), ReminderChoice.morning);
-        _expectChoices(tester, layout, ReminderChoice.morning);
+        await _choose(tester, ReminderChoice.middayAndEvening);
+        expect(_held(tester), ReminderChoice.middayAndEvening);
+        _expectChoices(tester, layout, ReminderChoice.middayAndEvening);
         _expectPreview(
           tester,
-          big: '08:00',
-          clock: '08:00',
-          body: reminderNotificationBody,
+          big: '12:30 · 20:30',
+          clock: '12:30',
+          body: reminderMiddayBody,
           quiet: false,
         );
         expect(find.text(_quietBody), findsNothing);
 
+        await _choose(tester, ReminderChoice.custom);
+        expect(_held(tester), ReminderChoice.custom);
+        _expectChoices(tester, layout, ReminderChoice.custom);
+        _expectPreview(
+          tester,
+          big: '20:30',
+          clock: '20:30',
+          body: reminderEveningBody,
+          quiet: false,
+        );
+        expect(find.byKey(reminderChapterCustomTimeKey), findsOneWidget);
+
+        _expectNothingSaved(spies);
+        await _unmount(tester);
+      });
+    }
+  });
+
+  testWidgets('the reminder chapter offers the three schedules plus Not now, '
+      'Evenings first', (WidgetTester tester) async {
+    for (final ShellLayout layout in ShellLayout.values) {
+      await _onLayout(layout, () async {
+        await _pumpReminder(tester, layout);
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(ReminderChoice.values, <ReminderChoice>[
+          ReminderChoice.evenings,
+          ReminderChoice.middayAndEvening,
+          ReminderChoice.custom,
+          ReminderChoice.off,
+        ]);
+        final List<double> order = <double>[
+          for (final ReminderChoice choice in ReminderChoice.values)
+            switch (layout) {
+              ShellLayout.sidebar =>
+                tester.getTopLeft(find.byKey(reminderChoiceKey(choice))).dx,
+              ShellLayout.bottomBar =>
+                tester.getTopLeft(find.byKey(reminderChoiceKey(choice))).dy,
+            },
+        ];
+        expect(order, List<double>.of(order)..sort(), reason: layout.name);
+        for (final String title in <String>[
+          'Evenings',
+          'Midday and evening',
+          'Custom time',
+          'Not now',
+        ]) {
+          expect(find.text(title), findsOneWidget, reason: title);
+        }
+        await _unmount(tester);
+      });
+    }
+  });
+
+  testWidgets('the custom time field picks the time Custom time uses', (
+    WidgetTester tester,
+  ) async {
+    for (final ShellLayout layout in ShellLayout.values) {
+      await _onLayout(layout, () async {
+        final List<TimeOfDay> asked = <TimeOfDay>[];
+        final _Spies spies = await _pumpReminder(
+          tester,
+          layout,
+          pickTime: (BuildContext context, TimeOfDay initial) async {
+            asked.add(initial);
+            return const TimeOfDay(hour: 7, minute: 15);
+          },
+        );
+        await tester.pump(const Duration(seconds: 1));
+        await _choose(tester, ReminderChoice.custom);
+
+        await tester.tap(find.byKey(reminderChapterCustomTimeKey));
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(asked, <TimeOfDay>[const TimeOfDay(hour: 20, minute: 30)]);
+        expect(_held(tester), ReminderChoice.custom);
+        _expectPreview(
+          tester,
+          big: '07:15',
+          clock: '07:15',
+          body: reminderEveningBody,
+          quiet: false,
+        );
         _expectNothingSaved(spies);
         await _unmount(tester);
       });
@@ -505,31 +610,33 @@ void main() {
           everyElement(1),
         );
         expect(
-          _opacitiesAbove(tester, _inPreview(reminderNotificationBody)),
+          _opacitiesAbove(tester, _inPreview(reminderEveningBody)),
           everyElement(1),
         );
         expect(
           _opacitiesAbove(
             tester,
-            find.byKey(reminderChoiceKey(ReminderChoice.midday)),
+            find.byKey(reminderChoiceKey(ReminderChoice.middayAndEvening)),
           ),
           everyElement(1),
         );
 
-        await tester.tap(find.byKey(reminderChoiceKey(ReminderChoice.midday)));
+        await tester.tap(
+          find.byKey(reminderChoiceKey(ReminderChoice.middayAndEvening)),
+        );
         await tester.pump();
 
         expect(tester.hasRunningAnimations, isFalse);
-        expect(_held(tester), ReminderChoice.midday);
+        expect(_held(tester), ReminderChoice.middayAndEvening);
         _expectPreview(
           tester,
-          big: '12:30',
+          big: '12:30 · 20:30',
           clock: '12:30',
-          body: reminderNotificationBody,
+          body: reminderMiddayBody,
           quiet: false,
         );
         expect(
-          _opacitiesAbove(tester, _inPreview(reminderNotificationBody)),
+          _opacitiesAbove(tester, _inPreview(reminderMiddayBody)),
           everyElement(1),
         );
         _expectNothingSaved(spies);
@@ -569,7 +676,10 @@ void main() {
             expect(
               find.descendant(
                 of: find.byKey(reminderChoiceKey(choice)),
-                matching: find.text(clock.choices[index]),
+                matching: find.text(switch (layout) {
+                  ShellLayout.sidebar => clock.sidebar[index],
+                  ShellLayout.bottomBar => clock.bottomBar[index],
+                }),
               ),
               findsOneWidget,
               reason: '$reason ${choice.name}',
@@ -584,7 +694,7 @@ void main() {
           expect(
             find.descendant(
               of: find.byKey(reminderChoiceKey(ReminderChoice.off)),
-              matching: find.text(_optionsFor(layout).last.time),
+              matching: find.text(_optionsFor(layout).last.title),
             ),
             findsOneWidget,
             reason: reason,
@@ -622,7 +732,7 @@ void main() {
             settings: settings,
             scheduler: asking,
           );
-          expect(_held(tester), ReminderChoice.evening, reason: name);
+          expect(_held(tester), ReminderChoice.evenings, reason: name);
           expect(asking.permissionRequests, 0, reason: name);
 
           await _moveOn(tester, layout);
@@ -692,7 +802,7 @@ void main() {
           settings: settings,
           scheduler: granted,
         );
-        expect(_held(tester), ReminderChoice.evening, reason: name);
+        expect(_held(tester), ReminderChoice.evenings, reason: name);
         _expectHelp(tester, shown: false, reason: '$name before Next');
 
         await _moveOn(tester, layout);
@@ -761,6 +871,9 @@ void main() {
 
           await _finish(tester, layout);
           expect(settings.reminderEnabledWrites, <bool>[false], reason: name);
+          expect(settings.reminderScheduleWrites, <ReminderSchedule>[
+            ReminderSchedule.evenings,
+          ], reason: name);
           expect(settings.reminderTimeWrites, <ReminderTime>[
             _evening,
           ], reason: name);
@@ -805,6 +918,9 @@ void main() {
         expect(find.byType(WeekChapter), findsOneWidget, reason: name);
         await _finish(tester, layout);
         expect(settings.reminderEnabledWrites, <bool>[true], reason: name);
+        expect(settings.reminderScheduleWrites, <ReminderSchedule>[
+          ReminderSchedule.evenings,
+        ], reason: name);
         expect(settings.reminderTimeWrites, <ReminderTime>[
           _evening,
         ], reason: name);

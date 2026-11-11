@@ -44,7 +44,6 @@ const Duration _pause = Duration(milliseconds: 600);
 const Duration _afterwards = Duration(seconds: 2);
 
 const ReminderTime _morning = ReminderTime(hour: 8, minute: 0);
-const ReminderTime _midday = ReminderTime(hour: 12, minute: 30);
 const ReminderTime _evening = ReminderTime(hour: 20, minute: 30);
 
 final DateTime _now = DateTime(2026, 10, 1, 9, 30);
@@ -59,35 +58,43 @@ typedef _Layout = ({
 typedef _Passing = ({
   String name,
   ReminderChoice reminder,
+  ReminderTime? customTime,
   bool grantOnRequest,
   int requests,
   bool remind,
+  ReminderSchedule schedule,
   ReminderTime time,
 });
 
 const List<_Passing> _passings = <_Passing>[
   (
     name: 'granted',
-    reminder: ReminderChoice.morning,
+    reminder: ReminderChoice.custom,
+    customTime: _morning,
     grantOnRequest: true,
     requests: 1,
     remind: true,
+    schedule: ReminderSchedule.custom,
     time: _morning,
   ),
   (
     name: 'refused',
-    reminder: ReminderChoice.evening,
+    reminder: ReminderChoice.evenings,
+    customTime: null,
     grantOnRequest: false,
     requests: 1,
     remind: false,
+    schedule: ReminderSchedule.evenings,
     time: _evening,
   ),
   (
     name: 'no reminder',
     reminder: ReminderChoice.off,
+    customTime: null,
     grantOnRequest: false,
     requests: 0,
     remind: false,
+    schedule: ReminderSchedule.evenings,
     time: ReminderTime.defaultTime,
   ),
 ];
@@ -125,6 +132,14 @@ class _StoredSettings extends FakeSettingsRepository {
     await super.setReminderEnabled(value);
     await _store(
       (AppSettings stored) => stored.copyWith(reminderEnabled: value),
+    );
+  }
+
+  @override
+  Future<void> setReminderSchedule(ReminderSchedule value) async {
+    await super.setReminderSchedule(value);
+    await _store(
+      (AppSettings stored) => stored.copyWith(reminderSchedule: value),
     );
   }
 
@@ -290,12 +305,16 @@ Future<void> _walkToTour(
   ProviderContainer container, {
   required ReminderChoice reminder,
   required WeekStart week,
+  ReminderTime? customTime,
 }) async {
   final OnboardingController controller = _controller(container);
   controller
     ..skipToSetup()
     ..next()
     ..chooseReminder(reminder);
+  if (customTime != null) {
+    controller.chooseCustomTime(customTime);
+  }
   await _settle(tester);
   expect(_chapterOf(container), OnboardingChapter.reminder);
   controller.next();
@@ -454,6 +473,7 @@ void main() {
             tester,
             container,
             reminder: passing.reminder,
+            customTime: passing.customTime,
             week: WeekStart.monday,
           );
           expect(
@@ -488,6 +508,9 @@ void main() {
           );
           expect(settings.reminderEnabledWrites, <bool>[
             passing.remind,
+          ], reason: reason);
+          expect(settings.reminderScheduleWrites, <ReminderSchedule>[
+            passing.schedule,
           ], reason: reason);
           expect(settings.reminderTimeWrites, <ReminderTime>[
             passing.time,
@@ -545,7 +568,7 @@ void main() {
           await _walkToTour(
             tester,
             container,
-            reminder: ReminderChoice.evening,
+            reminder: ReminderChoice.evenings,
             week: WeekStart.saturday,
           );
 
@@ -566,6 +589,9 @@ void main() {
 
           expect(scheduler.permissionRequests, 1, reason: reason);
           expect(settings.reminderEnabledWrites, <bool>[false], reason: reason);
+          expect(settings.reminderScheduleWrites, <ReminderSchedule>[
+            ReminderSchedule.evenings,
+          ], reason: reason);
           expect(settings.reminderTimeWrites, <ReminderTime>[
             _evening,
           ], reason: reason);
@@ -591,7 +617,7 @@ void main() {
           await _walkToTour(
             tester,
             stuck,
-            reminder: ReminderChoice.midday,
+            reminder: ReminderChoice.middayAndEvening,
             week: WeekStart.monday,
           );
           unrecorded.failOnboardingStatus = true;
@@ -606,7 +632,10 @@ void main() {
             reason: '$reason onboarding status write',
           );
           expect(unrecorded.reminderEnabledWrites, <bool>[true]);
-          expect(unrecorded.reminderTimeWrites, <ReminderTime>[_midday]);
+          expect(unrecorded.reminderScheduleWrites, <ReminderSchedule>[
+            ReminderSchedule.middayAndEvening,
+          ]);
+          expect(unrecorded.reminderTimeWrites, <ReminderTime>[_evening]);
 
           unrecorded.failOnboardingStatus = false;
           await _pressStart(tester, layout);

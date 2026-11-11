@@ -51,7 +51,8 @@ class OnboardingDraft {
     this.yearDay = 0,
     this.yearScrubbed = false,
     this.showingOtherWays = false,
-    this.reminder = ReminderChoice.evening,
+    this.reminder = ReminderChoice.evenings,
+    this.customTime = ReminderTime.defaultTime,
     this.notificationsOff = false,
     this.petalFlower,
     this.finishError,
@@ -72,6 +73,7 @@ class OnboardingDraft {
   final bool yearScrubbed;
   final bool showingOtherWays;
   final ReminderChoice reminder;
+  final ReminderTime customTime;
   final bool notificationsOff;
   final FlowerKind? petalFlower;
   final WeekStart regionWeek;
@@ -94,6 +96,7 @@ class OnboardingDraft {
     bool? yearScrubbed,
     bool? showingOtherWays,
     ReminderChoice? reminder,
+    ReminderTime? customTime,
     bool? notificationsOff,
     ValueGetter<FlowerKind?>? petalFlower,
     WeekStart? regionWeek,
@@ -115,6 +118,7 @@ class OnboardingDraft {
     yearScrubbed: yearScrubbed ?? this.yearScrubbed,
     showingOtherWays: showingOtherWays ?? this.showingOtherWays,
     reminder: reminder ?? this.reminder,
+    customTime: customTime ?? this.customTime,
     notificationsOff: notificationsOff ?? this.notificationsOff,
     petalFlower: petalFlower == null ? this.petalFlower : petalFlower(),
     regionWeek: regionWeek ?? this.regionWeek,
@@ -141,6 +145,7 @@ class OnboardingDraft {
           other.yearScrubbed == yearScrubbed &&
           other.showingOtherWays == showingOtherWays &&
           other.reminder == reminder &&
+          other.customTime == customTime &&
           other.notificationsOff == notificationsOff &&
           other.petalFlower == petalFlower &&
           other.regionWeek == regionWeek &&
@@ -164,6 +169,7 @@ class OnboardingDraft {
     yearScrubbed,
     showingOtherWays,
     reminder,
+    customTime,
     notificationsOff,
     petalFlower,
     regionWeek,
@@ -179,7 +185,7 @@ class OnboardingDraft {
       'noteError: $noteError, monthFill: $monthFill, '
       'monthReached: $monthReached, yearDay: $yearDay, '
       'yearScrubbed: $yearScrubbed, showingOtherWays: $showingOtherWays, '
-      'reminder: $reminder, '
+      'reminder: $reminder, customTime: $customTime, '
       'notificationsOff: $notificationsOff, petalFlower: $petalFlower, '
       'regionWeek: $regionWeek, week: $week, finishError: $finishError)';
 }
@@ -336,6 +342,11 @@ class OnboardingController extends _$OnboardingController {
 
   void chooseReminder(ReminderChoice choice) =>
       _edit((OnboardingDraft draft) => draft.copyWith(reminder: choice));
+
+  void chooseCustomTime(ReminderTime time) => _edit(
+    (OnboardingDraft draft) =>
+        draft.copyWith(reminder: ReminderChoice.custom, customTime: time),
+  );
 
   void chooseWeek(WeekStart week) =>
       _edit((OnboardingDraft draft) => draft.copyWith(week: week));
@@ -552,9 +563,10 @@ class OnboardingController extends _$OnboardingController {
     final List<Future<SettingsWriteResult> Function()> writes =
         <Future<SettingsWriteResult> Function()>[
           () => settings.setReminderEnabled(remind),
-          () => settings.setReminderTime(
-            draft.reminder.time ?? ReminderTime.defaultTime,
+          () => settings.setReminderSchedule(
+            draft.reminder.schedule ?? AppSettings.defaults.reminderSchedule,
           ),
+          () => settings.setReminderTime(draft.customTime),
           () => settings.setWeekStart(draft.week),
         ];
     for (final Future<SettingsWriteResult> Function() write in writes) {

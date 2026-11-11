@@ -101,7 +101,7 @@ final class ReminderSchedulerProvider
   }
 }
 
-String _$reminderSchedulerHash() => r'a6e729e7974386505e81d2b0c35b7d39e324905b';
+String _$reminderSchedulerHash() => r'd39d57615a3fb05c863a6cc9f712246b07962746';
 
 @ProviderFor(reminderCoordinator)
 final reminderCoordinatorProvider = ReminderCoordinatorProvider._();
@@ -190,7 +190,7 @@ final class ReminderSyncProvider
   }
 }
 
-String _$reminderSyncHash() => r'41f0a31480613186587e6c1925d3217e5b37c9bc';
+String _$reminderSyncHash() => r'e39816202603f55cf0fe50ebdd60cbb926700527';
 
 @ProviderFor(notificationSettingsOpener)
 final notificationSettingsOpenerProvider =

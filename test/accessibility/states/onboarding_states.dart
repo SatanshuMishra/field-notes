@@ -536,7 +536,7 @@ final List<_Screen> _screens = <_Screen>[
     chapter: OnboardingChapter.reminder,
     shows: (ShellLayout layout) => <Finder>[
       find.byKey(reminderPreviewKey),
-      find.byKey(reminderChoiceKey(ReminderChoice.evening)),
+      find.byKey(reminderChoiceKey(ReminderChoice.evenings)),
       if (layout == ShellLayout.bottomBar) _cueReading(onboardingSwipeOnLabel),
     ],
   ),

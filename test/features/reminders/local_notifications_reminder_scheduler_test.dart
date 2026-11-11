@@ -1,4 +1,6 @@
+import 'package:field_notes/domain/services/reminder_ledger.dart';
 import 'package:field_notes/domain/services/reminder_service.dart';
+import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/reminders/local_notifications_reminder_scheduler.dart';
 import 'package:field_notes/features/reminders/reminder_scheduler.dart';
 import 'package:flutter/foundation.dart';
@@ -284,8 +286,28 @@ List<ReminderBooking> _fourBookings() {
       ReminderBooking(
         id: ReminderService.bookingIds[offset],
         at: DateTime(start.year, start.month, start.day + offset, 20),
+        body: 'nudge $offset',
       ),
   ];
+}
+
+List<String> _callNames(_CallRecordingPlugin plugin) => <String>[
+  for (final _Call call in plugin.calls) '${call.kind.name} ${call.id}',
+];
+
+Future<(LocalNotificationsReminderScheduler, _CallRecordingPlugin)>
+_bookedOnMacOS(List<ReminderBooking> bookings) async {
+  debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+  addTearDown(() => debugDefaultTargetPlatformOverride = null);
+  _answerTimezone('Europe/London');
+  final _CallRecordingPlugin plugin = _CallRecordingPlugin(
+    macOS: _RecordingMacOSPlugin(),
+  );
+  final LocalNotificationsReminderScheduler scheduler =
+      LocalNotificationsReminderScheduler(plugin: plugin);
+  await scheduler.schedule(bookings);
+  plugin.calls.clear();
+  return (scheduler, plugin);
 }
 
 List<String> _captureLog() {
@@ -336,11 +358,52 @@ Future<AndroidScheduleMode> _androidModeWhen(
     ReminderBooking(
       id: ReminderService.bookingIds.first,
       at: DateTime(2026, 10, 9, 20),
+      body: reminderEveningBody,
     ),
   ]);
 
   expect(plugin.scheduled, hasLength(1));
   return plugin.scheduled.single.mode;
+}
+
+class _MemoryLedger implements ReminderLedgerStore {
+  _MemoryLedger({this.readError, this.writeError});
+
+  final Object? readError;
+  final Object? writeError;
+  ReminderLedger? stored;
+
+  @override
+  Future<ReminderLedger?> read() async {
+    final Object? error = readError;
+    if (error != null) {
+      throw error;
+    }
+    return stored;
+  }
+
+  @override
+  Future<void> write(ReminderLedger ledger) async {
+    final Object? error = writeError;
+    if (error != null) {
+      throw error;
+    }
+    stored = ledger;
+  }
+}
+
+List<ReminderBooking> _eveningsWeek() =>
+    const ReminderService().upcomingReminders(
+      enabled: true,
+      schedule: ReminderSchedule.evenings,
+      customTime: ReminderTime.defaultTime,
+      now: DateTime(2026, 11, 10, 9),
+    )!;
+
+void _onWindows() {
+  debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+  addTearDown(() => debugDefaultTargetPlatformOverride = null);
+  _answerTimezone('Europe/London');
 }
 
 void _answerTimezone(String identifier) {
@@ -420,6 +483,7 @@ void main() {
     final ReminderBooking booking = ReminderBooking(
       id: ReminderService.bookingIds.first,
       at: DateTime(2026, 10, 9, 20),
+      body: reminderEveningBody,
     );
 
     await scheduler.schedule(<ReminderBooking>[booking]);
@@ -500,10 +564,12 @@ void main() {
       ReminderBooking(
         id: ReminderService.bookingIds[0],
         at: DateTime(2026, 10, 9, 20),
+        body: reminderEveningBody,
       ),
       ReminderBooking(
         id: ReminderService.bookingIds[1],
         at: DateTime(2026, 10, 10, 20),
+        body: reminderLastCallBody,
       ),
     ];
 
@@ -565,8 +631,9 @@ void main() {
       final LocalNotificationsReminderScheduler scheduler =
           LocalNotificationsReminderScheduler(plugin: plugin);
 
-      await scheduler.schedule(_fourBookings());
+      final bool settled = await scheduler.schedule(_fourBookings());
 
+      expect(settled, isFalse);
       expect(plugin.cancelled, ids.sublist(1));
       expect(plugin.scheduled, <int>[ids[1], ids[3]]);
     },
@@ -584,9 +651,13 @@ void main() {
     final LocalNotificationsReminderScheduler scheduler =
         LocalNotificationsReminderScheduler(plugin: plugin);
 
-    await scheduler.cancel();
+    final bool settled = await scheduler.cancel();
 
+    expect(settled, isFalse);
     expect(plugin.cancelled, <int>[...ids.sublist(0, 3), ...ids.sublist(4)]);
+    plugin.failingCancels.clear();
+    expect(await scheduler.cancel(), isTrue);
+    expect(plugin.cancelled.last, ids[3]);
   });
 
   test('when every call fails the app keeps going with no reminders', () async {
@@ -606,7 +677,246 @@ void main() {
 
     expect(plugin.cancelled, isEmpty);
     expect(plugin.scheduled, isEmpty);
-    expect(log, hasLength(7));
+    expect(log, hasLength(ids.length));
+  });
+
+  group('after the first booking only changed reminders are touched', () {
+    test('the same bookings again touch nothing', () async {
+      final List<ReminderBooking> bookings = _fourBookings();
+      final (scheduler, plugin) = await _bookedOnMacOS(bookings);
+
+      final bool settled = await scheduler.schedule(
+        List<ReminderBooking>.of(bookings),
+      );
+
+      expect(settled, isTrue);
+      expect(plugin.calls, isEmpty);
+    });
+
+    test('a changed reminder is cancelled and booked again alone', () async {
+      final List<ReminderBooking> bookings = _fourBookings();
+      final (scheduler, plugin) = await _bookedOnMacOS(bookings);
+      final ReminderBooking changed = ReminderBooking(
+        id: bookings[1].id,
+        at: bookings[1].at,
+        body: reminderLastCallBloomBody,
+      );
+
+      await scheduler.schedule(<ReminderBooking>[
+        bookings[0],
+        changed,
+        bookings[2],
+        bookings[3],
+      ]);
+
+      expect(_callNames(plugin), <String>[
+        'cancel ${changed.id}',
+        'schedule ${changed.id}',
+      ]);
+      expect(plugin.calls.last.body, reminderLastCallBloomBody);
+    });
+
+    test(
+      'a dropped reminder is only cancelled and a new one only booked',
+      () async {
+        final List<ReminderBooking> bookings = _fourBookings();
+        final (scheduler, plugin) = await _bookedOnMacOS(bookings);
+        final ReminderBooking added = ReminderBooking(
+          id: ReminderService.bookingIds[4],
+          at: bookings[3].at.add(const Duration(days: 1)),
+          body: reminderEveningBody,
+        );
+
+        await scheduler.schedule(<ReminderBooking>[
+          ...bookings.sublist(1),
+          added,
+        ]);
+
+        expect(_callNames(plugin), <String>[
+          'cancel ${bookings[0].id}',
+          'schedule ${added.id}',
+        ]);
+      },
+    );
+
+    test('turning reminders off cancels only what was booked', () async {
+      final List<ReminderBooking> bookings = _fourBookings();
+      final (scheduler, plugin) = await _bookedOnMacOS(bookings);
+
+      await scheduler.cancel();
+      await scheduler.cancel();
+
+      expect(_callNames(plugin), <String>[
+        for (final ReminderBooking booking in bookings) 'cancel ${booking.id}',
+      ]);
+    });
+
+    test(
+      'an id whose cancel failed is cancelled again before it is rebooked',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        _answerTimezone('Europe/London');
+        final List<int> ids = ReminderService.bookingIds;
+        final _FailingWindowsPlugin plugin = _FailingWindowsPlugin(
+          failingCancels: <int>{ids[0]},
+          failingSchedules: <int>{},
+        );
+        final LocalNotificationsReminderScheduler scheduler =
+            LocalNotificationsReminderScheduler(plugin: plugin);
+        final List<ReminderBooking> bookings = _fourBookings();
+        expect(await scheduler.schedule(bookings), isFalse);
+        plugin.cancelled.clear();
+        plugin.scheduled.clear();
+        plugin.failingCancels.clear();
+
+        expect(await scheduler.schedule(bookings), isTrue);
+
+        expect(plugin.cancelled, <int>[ids[0]]);
+        expect(plugin.scheduled, <int>[ids[0]]);
+      },
+    );
+  });
+
+  group('across launches the ledger keeps what is booked', () {
+    test(
+      'a cold start over the booked week makes no calls when nothing changed',
+      () async {
+        _onWindows();
+        final _MemoryLedger ledger = _MemoryLedger();
+        final List<ReminderBooking> week = _eveningsWeek();
+        final _CallRecordingPlugin launch = _CallRecordingPlugin();
+        await LocalNotificationsReminderScheduler(
+          plugin: launch,
+          ledger: ledger,
+        ).schedule(week);
+        final _CallRecordingPlugin coldStart = _CallRecordingPlugin();
+
+        final bool settled = await LocalNotificationsReminderScheduler(
+          plugin: coldStart,
+          ledger: ledger,
+        ).schedule(List<ReminderBooking>.of(week));
+
+        expect(_callNames(launch), <String>[
+          for (final int id in ReminderService.bookingIds) 'cancel $id',
+          for (final ReminderBooking booking in week) 'schedule ${booking.id}',
+        ]);
+        expect(week, hasLength(14));
+        expect(_callNames(coldStart), isEmpty);
+        expect(settled, isTrue);
+      },
+    );
+
+    test('a cold start touches only the reminder that changed', () async {
+      _onWindows();
+      final _MemoryLedger ledger = _MemoryLedger();
+      final List<ReminderBooking> week = _eveningsWeek();
+      await LocalNotificationsReminderScheduler(
+        plugin: _CallRecordingPlugin(),
+        ledger: ledger,
+      ).schedule(week);
+      final ReminderBooking changed = ReminderBooking(
+        id: week[1].id,
+        at: week[1].at,
+        body: reminderLastCallBloomBody,
+      );
+      final _CallRecordingPlugin coldStart = _CallRecordingPlugin();
+
+      await LocalNotificationsReminderScheduler(
+        plugin: coldStart,
+        ledger: ledger,
+      ).schedule(<ReminderBooking>[week[0], changed, ...week.sublist(2)]);
+
+      expect(_callNames(coldStart), <String>[
+        'cancel ${changed.id}',
+        'schedule ${changed.id}',
+      ]);
+    });
+
+    test('turning reminders off after a cold start cancels only the booked '
+        'week', () async {
+      _onWindows();
+      final _MemoryLedger ledger = _MemoryLedger();
+      final List<ReminderBooking> week = _eveningsWeek();
+      await LocalNotificationsReminderScheduler(
+        plugin: _CallRecordingPlugin(),
+        ledger: ledger,
+      ).schedule(week);
+      final _CallRecordingPlugin coldStart = _CallRecordingPlugin();
+
+      final bool settled = await LocalNotificationsReminderScheduler(
+        plugin: coldStart,
+        ledger: ledger,
+      ).cancel();
+
+      expect(_callNames(coldStart), <String>[
+        for (final int id in ReminderService.bookingIds)
+          if (week.any((ReminderBooking booking) => booking.id == id))
+            'cancel $id',
+      ]);
+      expect(settled, isTrue);
+    });
+
+    test('a reminder that did not settle is cancelled and booked again after a '
+        'cold start', () async {
+      _onWindows();
+      final List<int> ids = ReminderService.bookingIds;
+      final _MemoryLedger ledger = _MemoryLedger();
+      final List<ReminderBooking> bookings = _fourBookings();
+      await LocalNotificationsReminderScheduler(
+        plugin: _FailingWindowsPlugin(
+          failingCancels: <int>{},
+          failingSchedules: <int>{ids[2]},
+        ),
+        ledger: ledger,
+      ).schedule(bookings);
+      final _FailingWindowsPlugin coldStart = _FailingWindowsPlugin(
+        failingCancels: <int>{},
+        failingSchedules: <int>{},
+      );
+
+      final bool settled = await LocalNotificationsReminderScheduler(
+        plugin: coldStart,
+        ledger: ledger,
+      ).schedule(bookings);
+
+      expect(coldStart.cancelled, <int>[ids[2]]);
+      expect(coldStart.scheduled, <int>[ids[2]]);
+      expect(settled, isTrue);
+    });
+
+    test('without a ledger to write to nothing is booked and the run reports '
+        'unsettled', () async {
+      _onWindows();
+      final _CallRecordingPlugin plugin = _CallRecordingPlugin();
+      final LocalNotificationsReminderScheduler scheduler =
+          LocalNotificationsReminderScheduler(
+            plugin: plugin,
+            ledger: _MemoryLedger(writeError: StateError('disk full')),
+          );
+
+      final bool settled = await scheduler.schedule(_fourBookings());
+
+      expect(plugin.calls, isEmpty);
+      expect(settled, isFalse);
+    });
+
+    test('a ledger that cannot be read clears every reminder id', () async {
+      _onWindows();
+      final _CallRecordingPlugin plugin = _CallRecordingPlugin();
+      final List<ReminderBooking> bookings = _fourBookings();
+
+      await LocalNotificationsReminderScheduler(
+        plugin: plugin,
+        ledger: _MemoryLedger(readError: StateError('locked')),
+      ).schedule(bookings);
+
+      expect(_callNames(plugin), <String>[
+        for (final int id in ReminderService.bookingIds) 'cancel $id',
+        for (final ReminderBooking booking in bookings)
+          'schedule ${booking.id}',
+      ]);
+    });
   });
 
   group(
@@ -644,7 +954,7 @@ void main() {
           final _Call call = scheduled[index];
           expect(call.id, ids[index]);
           expect(call.title, 'Field Notes');
-          expect(call.body, "You haven't written today's field note yet.");
+          expect(call.body, bookings[index].body);
           expect(
             call.scheduledDate!.isAtSameMomentAs(bookings[index].at),
             isTrue,

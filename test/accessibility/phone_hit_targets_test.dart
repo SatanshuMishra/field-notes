@@ -62,6 +62,9 @@ const String _today = '2026-09-25';
 const String _pastDay = '2026-09-21';
 
 final DateTime _now = DateTime(2026, 9, 25, 9, 30);
+final AppSettings _customSchedule = AppSettings.defaults.copyWith(
+  reminderSchedule: ReminderSchedule.custom,
+);
 
 final List<Entry> _todayEntries = <Entry>[
   for (int index = 0; index < 3; index++)
@@ -77,7 +80,9 @@ final List<Entry> _todayEntries = <Entry>[
 
 List<Override> _overrides(Mood? mood, {List<Override>? sync}) => <Override>[
   journalRepositoryProvider.overrideWithValue(FakeJournalRepository()),
-  settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
+  settingsRepositoryProvider.overrideWithValue(
+    FakeSettingsRepository(initial: _customSchedule),
+  ),
   journaledDatesProvider.overrideWith(
     (Ref ref) => Stream<List<String>>.value(const <String>[_pastDay]),
   ),

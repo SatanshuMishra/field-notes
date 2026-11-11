@@ -9,6 +9,7 @@ import 'package:field_notes/features/reminders/notification_settings_opener.dart
 import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/reminders/reminder_scheduler.dart';
 import 'package:field_notes/features/settings/sections/reminders_sound_section.dart';
+import 'package:field_notes/features/settings/widgets/reminder_schedule_picker.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -23,6 +24,31 @@ import '../support/recording_reminder_scheduler.dart';
 import '../support/settings_harness.dart';
 
 const double _minTapTarget = 48;
+const String _lastCall = 'Last call at 10:30 PM';
+final AppSettings _custom = AppSettings.defaults.copyWith(
+  reminderSchedule: ReminderSchedule.custom,
+  reminderTime: const ReminderTime(hour: 7, minute: 15),
+);
+
+typedef _Card = ({ReminderSchedule schedule, String label, String detail});
+
+const List<_Card> _cards = <_Card>[
+  (
+    schedule: ReminderSchedule.evenings,
+    label: 'Evenings, default',
+    detail: 'Once, around 8:30 PM.',
+  ),
+  (
+    schedule: ReminderSchedule.middayAndEvening,
+    label: 'Midday and evening',
+    detail: 'Around 12:30 PM and 8:30 PM.',
+  ),
+  (
+    schedule: ReminderSchedule.custom,
+    label: 'Custom time',
+    detail: 'Once, when you choose.',
+  ),
+];
 
 class _RecordingOpener implements NotificationSettingsOpener {
   int opens = 0;
@@ -103,7 +129,8 @@ void main() {
       final List<String> order = <String>[
         'daily nudge',
         'Daily reminder',
-        'Reminder time',
+        'Evenings',
+        _lastCall,
         'while recording',
         'Reflection question',
         'sound',
@@ -140,7 +167,7 @@ void main() {
 
     expect(
       _top(tester, 'Notifications are off for Field Notes.'),
-      greaterThan(_top(tester, 'Reminder time')),
+      greaterThan(_top(tester, _lastCall)),
     );
     expect(
       _top(tester, 'Notifications are off for Field Notes.'),
@@ -185,7 +212,8 @@ void main() {
     }
     for (final String row in <String>[
       'Daily reminder',
-      'Reminder time',
+      'Evenings',
+      _lastCall,
       'Reflection question',
       'Sound effects',
     ]) {
@@ -201,9 +229,128 @@ void main() {
     expect(find.text('Reminders & sound'), findsNothing);
     expect(find.text('daily nudge'), findsNothing);
     expect(find.text('Daily reminder'), findsOneWidget);
-    expect(find.text('Reminder time'), findsOneWidget);
-    expect(find.text('8:30 PM'), findsOneWidget);
+    expect(
+      find.text(
+        'A gentle nudge to reflect, skipped once the day has its bloom and '
+        'a log.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Reminder time'), findsNothing);
+    expect(find.text(_lastCall), findsOneWidget);
+    expect(
+      find.text(
+        'If the day still needs a bloom or a log, one last nudge before it '
+        'closes. Comes with any schedule.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(reminderLastCallKey), findsOneWidget);
+    expect(find.byKey(reminderTimelineKey), findsOneWidget);
     expect(find.text('Sound effects'), findsOneWidget);
+  });
+
+  testWidgets(
+    'the schedule is three radio cards with Evenings the checked default',
+    (WidgetTester tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await _pumpSection(tester, repository: FakeSettingsRepository());
+
+      for (final _Card card in _cards) {
+        final Finder control = find.byKey(reminderScheduleKey(card.schedule));
+        expect(control, findsOneWidget, reason: card.label);
+        expect(
+          find.descendant(of: control, matching: find.text(card.detail)),
+          findsOneWidget,
+          reason: card.label,
+        );
+        expect(
+          tester.getSemantics(control),
+          isSemantics(
+            label: card.label,
+            value: card.detail,
+            hasCheckedState: true,
+            isChecked: card.schedule == ReminderSchedule.evenings,
+            isInMutuallyExclusiveGroup: true,
+            hasTapAction: true,
+          ),
+          reason: card.label,
+        );
+        expect(
+          tester.getSize(control).height,
+          greaterThanOrEqualTo(_minTapTarget),
+          reason: card.label,
+        );
+      }
+      expect(
+        find.descendant(
+          of: find.byKey(reminderScheduleKey(ReminderSchedule.evenings)),
+          matching: find.text('default'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(reminderCustomTimeKey), findsNothing);
+      handle.dispose();
+    },
+  );
+
+  testWidgets('choosing another schedule writes it, the held one nothing', (
+    WidgetTester tester,
+  ) async {
+    final FakeSettingsRepository repository = FakeSettingsRepository();
+    await _pumpSection(tester, repository: repository);
+
+    await tester.tap(
+      find.byKey(reminderScheduleKey(ReminderSchedule.evenings)),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.reminderScheduleWrites, isEmpty);
+
+    await tester.tap(
+      find.byKey(reminderScheduleKey(ReminderSchedule.middayAndEvening)),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.reminderScheduleWrites, <ReminderSchedule>[
+      ReminderSchedule.middayAndEvening,
+    ]);
+    expect(repository.reminderTimeWrites, isEmpty);
+  });
+
+  testWidgets('the time field shows under Custom time only once it is chosen', (
+    WidgetTester tester,
+  ) async {
+    await _pumpSection(
+      tester,
+      repository: FakeSettingsRepository(),
+      settings: _custom,
+    );
+
+    final Finder field = find.byKey(reminderCustomTimeKey);
+    expect(field, findsOneWidget);
+    expect(
+      find.descendant(of: field, matching: find.text('7:15 AM')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getTopLeft(field).dy,
+      greaterThan(
+        tester
+            .getBottomLeft(
+              find.byKey(reminderScheduleKey(ReminderSchedule.custom)),
+            )
+            .dy,
+      ),
+    );
+    expect(
+      tester.getTopLeft(field).dx,
+      greaterThanOrEqualTo(
+        tester
+            .getTopLeft(
+              find.byKey(reminderScheduleKey(ReminderSchedule.custom)),
+            )
+            .dx,
+      ),
+    );
   });
 
   testWidgets('toggling the daily reminder writes the setting', (
@@ -230,22 +377,30 @@ void main() {
     expect(repository.soundEnabledWrites, <bool>[false]);
   });
 
-  testWidgets('picking a reminder time writes the chosen time', (
+  testWidgets('picking a custom time writes Custom time and the time', (
     WidgetTester tester,
   ) async {
     final FakeSettingsRepository repository = FakeSettingsRepository();
+    final List<TimeOfDay> asked = <TimeOfDay>[];
     await _pumpSection(
       tester,
       repository: repository,
-      pickTime: (BuildContext context, TimeOfDay initial) async =>
-          const TimeOfDay(hour: 7, minute: 5),
+      settings: _custom,
+      pickTime: (BuildContext context, TimeOfDay initial) async {
+        asked.add(initial);
+        return const TimeOfDay(hour: 20, minute: 30);
+      },
     );
 
-    await tester.tap(find.byType(SettingsTimeField));
+    await tester.tap(find.byKey(reminderCustomTimeKey));
     await tester.pumpAndSettle();
 
+    expect(asked, <TimeOfDay>[const TimeOfDay(hour: 7, minute: 15)]);
+    expect(repository.reminderScheduleWrites, <ReminderSchedule>[
+      ReminderSchedule.custom,
+    ]);
     expect(repository.reminderTimeWrites, <ReminderTime>[
-      const ReminderTime(hour: 7, minute: 5),
+      const ReminderTime(hour: 20, minute: 30),
     ]);
   });
 
@@ -253,11 +408,12 @@ void main() {
     WidgetTester tester,
   ) async {
     final FakeSettingsRepository repository = FakeSettingsRepository();
-    await _pumpSection(tester, repository: repository);
+    await _pumpSection(tester, repository: repository, settings: _custom);
 
-    await tester.tap(find.byType(SettingsTimeField));
+    await tester.tap(find.byKey(reminderCustomTimeKey));
     await tester.pumpAndSettle();
 
+    expect(repository.reminderScheduleWrites, isEmpty);
     expect(repository.reminderTimeWrites, isEmpty);
   });
 

@@ -569,7 +569,7 @@ void main() {
         );
         final Rect reminderCard = _card(
           tester,
-          reminderChoiceKey(ReminderChoice.morning),
+          reminderChoiceKey(ReminderChoice.evenings),
         );
         expect(
           reminderCard.contains(
@@ -596,7 +596,7 @@ void main() {
           find.byKey(reminderPreviewKey),
         );
         expect(time.height, moreOrLessEquals(72));
-        expect(notification.height, moreOrLessEquals(64));
+        expect(notification.height, moreOrLessEquals(70));
         expect(notification.top - time.bottom, moreOrLessEquals(18));
         _expectCentredBetween(
           time.expandToInclude(notification),

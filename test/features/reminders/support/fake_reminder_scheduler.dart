@@ -9,12 +9,16 @@ class FakeReminderScheduler implements ReminderScheduler {
     this.grantOnRequest = false,
     this.scheduleError,
     this.scheduleGate,
+    this.unsettledSchedules = 0,
+    this.unsettledCancels = 0,
   });
 
   bool permissionGranted;
   final bool grantOnRequest;
   final Object? scheduleError;
   final Completer<void>? scheduleGate;
+  int unsettledSchedules;
+  int unsettledCancels;
   final List<ReminderBooking> scheduled = <ReminderBooking>[];
   final List<String> calls = <String>[];
   int permissionRequests = 0;
@@ -41,7 +45,7 @@ class FakeReminderScheduler implements ReminderScheduler {
   }
 
   @override
-  Future<void> schedule(List<ReminderBooking> bookings) async {
+  Future<bool> schedule(List<ReminderBooking> bookings) async {
     calls.add('schedule');
     final Completer<void>? gate = scheduleGate;
     if (gate != null) {
@@ -52,11 +56,21 @@ class FakeReminderScheduler implements ReminderScheduler {
       throw error;
     }
     scheduled.addAll(bookings);
+    if (unsettledSchedules > 0) {
+      unsettledSchedules--;
+      return false;
+    }
+    return true;
   }
 
   @override
-  Future<void> cancel() async {
+  Future<bool> cancel() async {
     cancelCount++;
     calls.add('cancel');
+    if (unsettledCancels > 0) {
+      unsettledCancels--;
+      return false;
+    }
+    return true;
   }
 }

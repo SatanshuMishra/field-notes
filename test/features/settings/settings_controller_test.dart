@@ -24,16 +24,23 @@ void main() {
       expect(repository.reminderEnabledWrites, <bool>[false]);
     });
 
-    test('writes the reminder time, sound, and week start', () async {
+    test('writes the reminder schedule, time, sound, and week start', () async {
       final FakeSettingsRepository repository = FakeSettingsRepository();
       final SettingsController controller = SettingsController(
         repository: repository,
       );
 
+      expect(
+        await controller.setReminderSchedule(ReminderSchedule.custom),
+        isA<SettingsWriteSucceeded>(),
+      );
       await controller.setReminderTime(const ReminderTime(hour: 7, minute: 5));
       await controller.setSoundEnabled(false);
       await controller.setWeekStart(WeekStart.monday);
 
+      expect(repository.reminderScheduleWrites, <ReminderSchedule>[
+        ReminderSchedule.custom,
+      ]);
       expect(repository.reminderTimeWrites, <ReminderTime>[
         const ReminderTime(hour: 7, minute: 5),
       ]);
@@ -108,29 +115,26 @@ void main() {
       expect(repository.reflectionPromptsEnabledWrites, <bool>[true]);
     });
 
-    test(
-      'setReflectionPromptsEnabled reports the reflection question failure message',
-      () async {
-        final FakeSettingsRepository repository = FakeSettingsRepository(
-          writeError: StateError('disk full'),
-        );
-        final SettingsController controller = SettingsController(
-          repository: repository,
-        );
+    test('setReflectionPromptsEnabled reports the reflection question failure message', () async {
+      final FakeSettingsRepository repository = FakeSettingsRepository(
+        writeError: StateError('disk full'),
+      );
+      final SettingsController controller = SettingsController(
+        repository: repository,
+      );
 
-        final SettingsWriteResult result = await controller
-            .setReflectionPromptsEnabled(true);
+      final SettingsWriteResult result = await controller
+          .setReflectionPromptsEnabled(true);
 
-        expect(
-          result,
-          isA<SettingsWriteFailed>().having(
-            (SettingsWriteFailed f) => f.message,
-            'message',
-            'Could not save your reflection question setting.',
-          ),
-        );
-      },
-    );
+      expect(
+        result,
+        isA<SettingsWriteFailed>().having(
+          (SettingsWriteFailed f) => f.message,
+          'message',
+          'Could not save your reflection question setting.',
+        ),
+      );
+    });
 
     test('setAppearance writes through the repository', () async {
       final FakeSettingsRepository repository = FakeSettingsRepository();
