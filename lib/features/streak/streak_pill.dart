@@ -332,6 +332,11 @@ class _PillFace extends StatelessWidget {
 
   BorderRadius get _radius => _sticker ? _stickerRadius : _headerRadius;
 
+  FieldNotesColors _lateNightColors(BuildContext context) =>
+      form == StreakPillForm.headerOverScene
+      ? FieldNotesColors.dark
+      : context.colors;
+
   _PillLook _look(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final List<BoxShadow> base = _sticker
@@ -357,12 +362,13 @@ class _PillFace extends StatelessWidget {
       StreakPillForm.rail => colors.cardLight,
     };
     if (lateNight) {
+      final Color sage = _lateNightColors(context).lateNight;
       return (
         fill: fill,
         border: null,
-        dashes: colors.lateNight,
-        ink: colors.lateNight,
-        flame: colors.lateNight,
+        dashes: sage,
+        ink: sage,
+        flame: sage,
         shadows: base,
       );
     }
@@ -416,10 +422,10 @@ class _PillFace extends StatelessWidget {
       clipBehavior: Clip.none,
       children: <Widget>[
         shaped,
-        const Positioned(
+        Positioned(
           top: -_moonBadgeOverlap,
           right: -_moonBadgeOverlap,
-          child: _MoonBadge(),
+          child: _MoonBadge(colors: _lateNightColors(context)),
         ),
       ],
     );
@@ -531,11 +537,12 @@ class _PillFace extends StatelessWidget {
 }
 
 class _MoonBadge extends StatelessWidget {
-  const _MoonBadge();
+  const _MoonBadge({required this.colors});
+
+  final FieldNotesColors colors;
 
   @override
   Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
     return SizedBox.square(
       key: streakMoonBadgeKey,
       dimension: _moonBadgeSize,

@@ -124,6 +124,29 @@ BoxDecoration _faceDecoration(WidgetTester tester) =>
     tester.widget<DecoratedBox>(find.byKey(streakPillFaceKey)).decoration
         as BoxDecoration;
 
+Color _dashColour(WidgetTester tester) => tester
+    .widgetList<CustomPaint>(
+      find.descendant(
+        of: find.byType(StreakPill),
+        matching: find.byType(CustomPaint),
+      ),
+    )
+    .map((CustomPaint paint) => paint.foregroundPainter)
+    .whereType<DashedBorderPainter>()
+    .single
+    .color;
+
+BoxDecoration _moonDecoration(WidgetTester tester) =>
+    tester
+            .widget<DecoratedBox>(
+              find.descendant(
+                of: find.byKey(streakMoonBadgeKey),
+                matching: find.byType(DecoratedBox),
+              ),
+            )
+            .decoration
+        as BoxDecoration;
+
 InlineSpan _richTip(WidgetTester tester) => tester
     .widget<Tooltip>(
       find.descendant(
@@ -264,33 +287,14 @@ void main() {
         lessThanOrEqualTo(lateLine.size.width),
       );
       expect(_faceDecoration(tester).border, isNull);
-      final DashedBorderPainter dashes = tester
-          .widgetList<CustomPaint>(
-            find.descendant(
-              of: find.byType(StreakPill),
-              matching: find.byType(CustomPaint),
-            ),
-          )
-          .map((CustomPaint paint) => paint.foregroundPainter)
-          .whereType<DashedBorderPainter>()
-          .single;
-      expect(_argb(dashes.color), _argb(colors.lateNight));
+      expect(_argb(_dashColour(tester)), _argb(colors.lateNight));
 
       final Rect face = tester.getRect(find.byKey(streakPillFaceKey));
       final Rect badge = tester.getRect(find.byKey(streakMoonBadgeKey));
       expect(badge.size, const Size(18, 18));
       expect(badge.right, face.right + 6);
       expect(badge.top, face.top - 6);
-      final BoxDecoration ring =
-          tester
-                  .widget<DecoratedBox>(
-                    find.descendant(
-                      of: find.byKey(streakMoonBadgeKey),
-                      matching: find.byType(DecoratedBox),
-                    ),
-                  )
-                  .decoration
-              as BoxDecoration;
+      final BoxDecoration ring = _moonDecoration(tester);
       expect(_argb(ring.color!), _argb(colors.page));
       expect(_argb(ring.border!.top.color), _argb(colors.lateNight));
       expect(ring.border!.top.width, 1.5);
@@ -308,6 +312,32 @@ void main() {
       expect(_tipLink(tester, 'Open Monday'), isA<TapGestureRecognizer>());
 
       handle.dispose();
+    },
+  );
+
+  testWidgets(
+    'over the Garden scene in light mode the late-night pill stays pale sage',
+    (WidgetTester tester) async {
+      const Color paleSage = Color(0xFFA9C2A9);
+
+      await _pumpLive(
+        tester,
+        now: _oneAm,
+        form: StreakPillForm.headerOverScene,
+        width: null,
+      );
+
+      expect(
+        Theme.of(tester.element(find.byType(StreakPill))).brightness,
+        Brightness.light,
+      );
+      expect(find.text('2 days'), findsOneWidget);
+      expect(_argb(_dashColour(tester)), _argb(paleSage));
+      expect(_argb(_flameColour(tester)), _argb(paleSage));
+      expect(_argb(_textColour(tester, '2 days')), _argb(paleSage));
+      final BoxDecoration moon = _moonDecoration(tester);
+      expect(_argb(moon.color!), _argb(FieldNotesColors.dark.page));
+      expect(_argb(moon.border!.top.color), _argb(paleSage));
     },
   );
 

@@ -73,6 +73,26 @@ const List<_Surface> _darkPhoneShell = <_Surface>[
   ('cardBright', Color(0xFF1F1B1B)),
 ];
 
+const Color _scenePillFill = Color.fromRGBO(255, 250, 240, 0.14);
+const Color _sceneGlassTint = Color.fromRGBO(28, 22, 16, 0.34);
+
+const List<_Surface> _nightSkyTops = <_Surface>[
+  ('night sky', Color(0xFF0C1022)),
+  ('nautical twilight sky', Color(0xFF141A38)),
+  ('civil twilight sky', Color(0xFF2E3A6A)),
+];
+
+final List<_Surface> _lateNightScene = <_Surface>[
+  for (final (String sky, Color ground) in _nightSkyTops)
+    (
+      'scene pill over the $sky',
+      Color.alphaBlend(
+        _scenePillFill,
+        Color.alphaBlend(_sceneGlassTint, ground),
+      ),
+    ),
+];
+
 const List<_Surface> _lightTitleBar = <_Surface>[
   ('titleBar', Color(0xFFE4D6BF)),
 ];
@@ -132,6 +152,7 @@ final List<_Pairing> _textInks = <_Pairing>[
   ('dark noticeBodyInk', _d.noticeBodyInk, _darkSurfaces),
   ('dark sage', _d.sage, _darkSurfaces),
   ('dark lateNight', _d.lateNight, _darkSurfaces),
+  ('scene lateNight', _d.lateNight, _lateNightScene),
   ('dark accentInk', _d.accentInk, _darkSurfaces),
   ('dark coralLink', _d.coralLink, _darkSurfaces),
   ('dark accentInkStrong', _d.accentInkStrong, _darkPhoneShell),
