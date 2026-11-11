@@ -2,31 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show FutureProviderFamily;
 
-import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart';
 import 'package:field_notes/features/entry_cards/cards/video_controls_overlay.dart';
-import 'package:field_notes/features/entry_cards/cards/video_scrubber.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
 import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
 import 'package:field_notes/features/entry_cards/playback/video_slots.dart';
 import 'package:field_notes/features/entry_cards/transport/transport.dart';
-import 'package:field_notes/features/entry_cards/util/duration_format.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart'
     show LogViewerPlace;
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
 import 'package:field_notes/state/media_provider.dart';
-
-const double _timeGap = 12;
-
-const double _embeddedPrimary = 44;
-const double _embeddedCapsuleMaxWidth = 780;
-const double _embeddedCapsuleBottom = 16;
-const double _embeddedCapsuleSide = 16;
 
 final FutureProviderFamily<double?, String> videoAspectProvider = FutureProvider
     .autoDispose
@@ -151,6 +141,8 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
     if (widget.embedded) {
       return ViewerKeys(
         onSpace: _toggle,
+        onPageUp: scene.onEarlier,
+        onPageDown: scene.onLater,
         child: _body(platform, _embeddedControls),
       );
     }
@@ -186,57 +178,15 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
   }
 
   Widget _embeddedControls(BuildContext context, VideoControlsState state) {
-    return Stack(
-      children: <Widget>[
-        const Positioned.fill(child: ViewerOverlayShade(top: false)),
-        Positioned(
-          left: _embeddedCapsuleSide,
-          right: _embeddedCapsuleSide,
-          bottom: _embeddedCapsuleBottom,
-          child: Center(
-            child: ViewerCapsule(
-              maxWidth: _embeddedCapsuleMaxWidth,
-              children: <Widget>[
-                ViewerPrimaryButton(
-                  playing: state.isPlaying,
-                  diameter: _embeddedPrimary,
-                  onPressed: state.onToggle,
-                  download: state.download,
-                ),
-                const SizedBox(width: _timeGap),
-                _time(context, state.position),
-                const SizedBox(width: _timeGap),
-                Expanded(child: _scrubber(state)),
-                const SizedBox(width: _timeGap),
-                _time(context, state.total),
-                const SizedBox(width: _timeGap),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _time(BuildContext context, Duration? time) {
-    return Text(
-      formatMediaDuration(time?.inMilliseconds),
-      maxLines: 1,
-      softWrap: false,
-      style: context.textStyles.captionSans.copyWith(
-        color: Palette.mediaInk,
-        fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
-      ),
-    );
-  }
-
-  Widget _scrubber(VideoControlsState state) {
-    return VideoScrubber(
-      position: state.position,
-      total: state.total,
-      onSeek: state.onSeek,
-      onScrubUpdate: state.onScrubUpdate,
-      onScrubEnd: state.onScrubEnd,
+    return Transport(
+      kind: TransportKind.video,
+      mode: TransportMode.viewer,
+      compact: false,
+      fitWidth: true,
+      value: state.transport,
+      mediaPath: state.mediaPath,
+      tuning: state.tuning,
+      onFullScreen: widget.scene.onFullScreen,
     );
   }
 
