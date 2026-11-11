@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-11T01:57:20.819Z
+Updated: 2026-11-11T02:50:03.063Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
@@ -32,9 +32,11 @@ Ten PRs are open from origin/main f454ef02, assigned to the owner, with Auto-fix
 
 Each branch's builder worktree under .claude/worktrees still holds it, for fixes.
 
-Device pass in progress, owner-approved: Android on the owner's test Note 10+ (serial RF8MA2NA3ZM, which the owner said can be used freely), macOS and Windows in the VM lab. It tests the ten-branch merge: local profile builds "Field Notes Lab" from ~/.mitosis/fireplace/devpass-180 (lab app ids, never pushed); the Windows installer comes from release.yml dispatched on the scratch branch lab/devpass-180 (signed merge 816d332a, same tree), because winpc is offline. Delete lab/devpass-180 from origin when the pass ends. The owner made onboarding's reminder choices a pre-merge check: the code and reminder_chapter_test already show Evenings, Midday and evening, Custom time and Not now, and the finish step saves the schedule; still to be seen on each device.
+The device pass of the ten-branch merge is done, on the owner's test Note 10+ and in the VM lab on Windows and macOS, and every PR body's device-pass row now carries its result. Onboarding offers Evenings, Midday and evening, Custom time and Not now on all three, which the owner made a pre-merge check. The pass found one defect, the collapsed rail's update box at 40 by 40 with an 8 px gap; #374 now draws it 44 by 44, 10 px above the streak box (00f8387c, pushed). The lab build is off the phone, the scratch branch lab/devpass-180 is deleted from origin and the devpass worktrees are removed.
 
-Follow-ups left for later, named in their PR bodies: the Microphone and Speaker rows (input_panel.dart _PanelRow) sit 6 px off their heading, fixable once #377 and #378 merge; the onboarding FakeJournalRepository in test/app/support/app_shell_harness.dart lacks setMoodForDate, as on main.
+Follow-ups left for later, named in their PR bodies: the Microphone and Speaker rows (input_panel.dart _PanelRow) sit 6 px off their heading, fixable once #377 and #378 merge; the onboarding FakeJournalRepository in test/app/support/app_shell_harness.dart lacks setMoodForDate, as on main; in #372 full screen once opened at 0:00 after a finished clip was scrubbed while paused, cause not confirmed.
+
+Found on main by the device pass, not caused by these PRs: once today has a bloom, the drifting petals keep every page redrawing at 60 fps (raster about 70 to 75% on the Note 10+, also seen on Windows); the phone's reminder time sheet is 24-hour on a 12-hour phone; the bloom picker says today's bloom on past days; the Windows lab VM cannot render video.
 
 ## Next step
 
