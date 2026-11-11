@@ -2,15 +2,19 @@ import 'package:drift/drift.dart';
 
 import '../database/app_database.dart';
 import '../sync/change_recorder.dart';
+import '../sync/merge/record_reader.dart';
 import '../sync/synced_tables.dart';
 import 'day_ids.dart';
 
 const String _moodField = 'moodId';
 const String _bloomPickedField = 'bloomPickedAt';
-const List<String> _reviveFields = <String>[
-  _moodField,
+const List<String> _reviveFieldsWithoutMood = <String>[
   'updatedAt',
   'deletedAt',
+];
+const List<String> _reviveFields = <String>[
+  _moodField,
+  ..._reviveFieldsWithoutMood,
 ];
 const List<String> _moodFields = <String>[_moodField, 'updatedAt'];
 const List<String> _deleteFields = <String>['deletedAt', 'updatedAt'];
@@ -18,6 +22,11 @@ const List<String> _deleteFields = <String>['deletedAt', 'updatedAt'];
 List<String> _withBloomPick(List<String> fields, int? newBloomPick) {
   return <String>[...fields, if (newBloomPick != null) _bloomPickedField];
 }
+
+bool _neverHadBloom(Day day) =>
+    day.bloomPickedAt == null &&
+    day.moodId == null &&
+    !decodeFieldClocks(day.fieldClocks).containsKey(_moodField);
 
 class DaysDao {
   DaysDao(this._db, this._recorder);
@@ -86,10 +95,7 @@ class DaysDao {
       if (existing == null) {
         return 0;
       }
-      final int? firstPick =
-          moodId != null &&
-              existing.moodId == null &&
-              existing.bloomPickedAt == null
+      final int? firstPick = moodId != null && _neverHadBloom(existing)
           ? updatedAt
           : null;
       final String clocks = await _recorder.stamp(
@@ -165,13 +171,17 @@ class DaysDao {
     required String? moodId,
     required int updatedAt,
   }) async {
-    final int? firstPick = moodId != null && existing.bloomPickedAt == null
-        ? updatedAt
-        : null;
+    final bool neverHadBloom = _neverHadBloom(existing);
+    final int? firstPick = moodId != null && neverHadBloom ? updatedAt : null;
     final String clocks = await _recorder.stamp(
       table: SyncedTables.days,
       rowId: existing.id,
-      fields: _withBloomPick(_reviveFields, firstPick),
+      fields: _withBloomPick(
+        moodId == null && neverHadBloom
+            ? _reviveFieldsWithoutMood
+            : _reviveFields,
+        firstPick,
+      ),
       currentClocks: existing.fieldClocks,
     );
     final List<Day> revived =
