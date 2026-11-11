@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T05:01:24.549Z
+Updated: 2026-11-11T05:04:57.027Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Once today has a bloom, the drifting petals keep the whole app redrawing at the 
 
 ## Where things stand
 
-Full lane, interphase bug pathway, unattended after the intent round (owner: "Work autonomously. Complete the task."). The spec, record and items file pass check_spec and check_items; the single spec-reviewer pass is running. The glossary terms (petal gust, petal rest) and ADR 0010 are written, and the tree guard verified clean. The FEATURE branch fix/petal-drift-idle-redraw is pushed at b7ccaea2, and the run home holds feature.json, CHARTER.md, run.zsh, worker scripts, worker-rules.base.txt, do-not-flag.md and graph.json. Design: over the app, petals fall in gusts (PetalRhythm.gusts) with rests of four to five gust lengths; onboarding stays steady. The owner asked to tag and release once the fix is merged into main; the release would be 1.9.0, covering PRs #370 to #379 and this fix.
+Full lane, interphase bug pathway, unattended after the intent round (owner: "Work autonomously. Complete the task."). The spec reviewer found four issues, all being fixed: rests become five to six gusts (four to five lets a wide window reach 27%), a flower changed mid-gust gets a new gust at once, the wide-or-narrow rule and the per-petal draw become shared functions, and a set change mid-gust starts a fresh gust. A background agent is separately writing the owner's README-with-screenshots pull request; it shares no files with this fix. The glossary terms (petal gust, petal rest) and ADR 0010 are written, and the tree guard verified clean. The FEATURE branch fix/petal-drift-idle-redraw is pushed at b7ccaea2, and the run home holds feature.json, CHARTER.md, run.zsh, worker scripts, worker-rules.base.txt, do-not-flag.md and graph.json. Design: over the app, petals fall in gusts (PetalRhythm.gusts) with rests of four to five gust lengths; onboarding stays steady. The owner asked to tag and release once the fix is merged into main; the release would be 1.9.0, covering PRs #370 to #379 and this fix.
 
 ## Next step
 
