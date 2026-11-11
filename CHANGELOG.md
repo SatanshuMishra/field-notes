@@ -6,6 +6,31 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-11-11
+
+This release lets you choose when Field Notes reminds you, keeps your notes syncing on their own, and adds a quiet night sky behind your notes.
+
+### New
+
+- Choose when Field Notes reminds you: in the evening, at midday and in the evening, or at a time you pick on a day timeline. Choose in Settings or while you set up the app.
+- If today still needs a bloom or a log, a last reminder at 10:30 PM says what is missing. A reminder time you pick at 9:30 PM or later takes its place.
+- Your streak counts a day once it has a bloom and at least one log. Until 4 AM you can still finish the day before, and the streak shows a moon while you can.
+- Opening a note or a voice note shows a faint night sky, a little different each time, with the odd shooting star. The voice recorder now follows your light or dark theme.
+- Field Notes syncs when it opens and when you come back to it after a minute or more, and a box in the sidebar shows whether your notes are synced. Click it to open Sync and storage.
+
+### Improved
+
+- Pages fade into each other instead of switching abruptly. With reduced motion on, they fade quickly without moving.
+- Videos in an earlier day's window have the same player controls as the log viewer, and they fit at every window size.
+- An earlier day's window reads as one surface: its two sides line up, one line runs along the bottom of both, and its corners stay round. A past day's bloom names only its flower.
+- Sync and storage shows while it syncs, when it last synced and when it can't reach your server, and Sync now waits while you are offline.
+- Outside Google Play, Field Notes checks for updates every time it opens and once a day after that, so a new version shows up sooner. Nothing installs until you choose.
+
+### Fixed
+
+- Rounded outlines on cards such as On this day and the update notes no longer lose their corners.
+- Hover highlights in Settings, the steps of a day's logs and Cancel now leave room around their words.
+
 ## [1.8.0] - 2026-11-10
 
 This release gives notes one calm place to be written, read and edited, and makes earlier days quicker to reach.
