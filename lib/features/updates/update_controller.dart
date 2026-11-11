@@ -16,6 +16,7 @@ part 'update_controller.g.dart';
 const Duration automaticCheckDelay = Duration(seconds: 10);
 const Duration automaticCheckInterval = Duration(hours: 24);
 const Duration automaticCheckEvaluation = Duration(hours: 1);
+const Duration _dailyThreshold = Duration(minutes: 23 * 60 + 30);
 
 @Riverpod(keepAlive: true)
 class UpdateGreeting extends _$UpdateGreeting {
@@ -36,6 +37,9 @@ class UpdateController extends _$UpdateController {
   DateTime? _lastChecked;
   DateTime? _lastAttempt;
   DateTime? _retryAfter;
+  bool _retryPending = false;
+  bool _checkedSinceStart = false;
+  bool _checkEveryLaunch = true;
   bool _ready = false;
   bool _automatic = false;
   bool _installing = false;
@@ -93,6 +97,10 @@ class UpdateController extends _$UpdateController {
     if (seen != null && installed.isNewerThan(seen)) {
       ref.read(updateGreetingProvider.notifier).greet(app.version);
     }
+    _checkEveryLaunch = await _routeChecksEveryLaunch();
+    if (!ref.mounted) {
+      return;
+    }
     _ready = true;
     final bool automatic =
         ref.read(appSettingsProvider).value?.checkForUpdatesAutomatically ??
@@ -101,6 +109,16 @@ class UpdateController extends _$UpdateController {
       _turnOnAutomatic(atLaunch: true);
     }
     await _record(() => _store.recordSeenVersion(app.version));
+  }
+
+  Future<bool> _routeChecksEveryLaunch() async {
+    try {
+      final InstallRoute route = await ref.read(updateRouteProvider.future);
+      return route != InstallRoute.googlePlay;
+    } catch (error) {
+      debugPrint('The update route is unavailable: $error');
+      return true;
+    }
   }
 
   Future<T> _firstOutcome<T>(ProviderListenable<AsyncValue<T>> provider) {
@@ -153,9 +171,11 @@ class UpdateController extends _$UpdateController {
     );
     if (!atLaunch) {
       _evaluate();
-    } else if (_isDue(_now())) {
-      _launchTimer?.cancel();
-      _launchTimer = Timer(automaticCheckDelay, _evaluate);
+    } else {
+      if (_checkEveryLaunch || _isDue(_now(), automaticCheckInterval)) {
+        _launchTimer?.cancel();
+        _launchTimer = Timer(automaticCheckDelay, _checkAtLaunch);
+      }
     }
   }
 
@@ -171,15 +191,22 @@ class UpdateController extends _$UpdateController {
     _evaluationTimer = null;
   }
 
-  bool _isDue(DateTime now) {
+  void _checkAtLaunch() {
+    if (ref.mounted && _ready && _automatic && !_checkedSinceStart) {
+      unawaited(check());
+    }
+  }
+
+  bool _isDue(DateTime now, [Duration interval = _dailyThreshold]) {
     final DateTime? retryAfter = _retryAfter;
     if (retryAfter != null && now.isBefore(retryAfter)) {
       return false;
     }
     final DateTime? lastAttempt = _lastAttempt;
     return lastAttempt == null ||
+        _retryPending ||
         lastAttempt.isAfter(now) ||
-        now.difference(lastAttempt) >= automaticCheckInterval;
+        now.difference(lastAttempt) >= interval;
   }
 
   void _evaluate() {
@@ -206,6 +233,9 @@ class UpdateController extends _$UpdateController {
       state = _knownOr(UpdateCheckFailed(_lastChecked, null, retryAfter));
       return;
     }
+    final bool isRetry = _retryPending;
+    _retryPending = false;
+    _checkedSinceStart = true;
     state = UpdateChecking(_lastChecked);
     ReleaseLookup lookup;
     try {
@@ -230,10 +260,12 @@ class UpdateController extends _$UpdateController {
         await _record(() => _store.recordCheck(now, null));
       case LookupRateLimited(:final DateTime retryAfter):
         _retryAfter = retryAfter;
+        _retryPending = !isRetry;
         state = _knownOr(UpdateCheckFailed(_lastChecked, null, retryAfter));
       case LookupFailed(:final LookupFailure reason):
         _retryAfter = null;
         _lastAttempt = now;
+        _retryPending = !isRetry;
         state = _knownOr(UpdateCheckFailed(_lastChecked, reason, null));
         await _record(() => _store.recordAttempt(now));
     }
@@ -244,6 +276,7 @@ class UpdateController extends _$UpdateController {
     _lastChecked = now;
     _lastAttempt = now;
     _retryAfter = null;
+    _retryPending = false;
   }
 
   UpdateStatus _knownOr(UpdateCheckFailed failed) {

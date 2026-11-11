@@ -217,11 +217,11 @@ void main() {
         store.record.lastCheckedAt,
         _at(const Duration(seconds: 10)).toUtc(),
       );
-      async.elapse(const Duration(hours: 24) - const Duration(seconds: 10));
+      async.elapse(const Duration(hours: 23));
       expect(source.calls, 1);
       async.elapse(const Duration(hours: 1));
       expect(source.calls, 2);
-      expect(launch.state, UpdateCurrent(_at(const Duration(hours: 25))));
+      expect(launch.state, UpdateCurrent(_at(const Duration(hours: 24))));
       launch.dispose();
     });
 
@@ -233,14 +233,38 @@ void main() {
         source: source,
       )..start();
       expect(fresh.state, UpdateCurrent(_fresh));
-      expect(async.nonPeriodicTimerCount, 0);
+      expect(async.nonPeriodicTimerCount, 1);
       expect(async.periodicTimerCount, 1);
-      async.elapse(const Duration(hours: 21));
+      async.elapse(const Duration(seconds: 9));
       expect(source.calls, 0);
-      async.elapse(const Duration(hours: 1));
+      async.elapse(const Duration(seconds: 1));
       expect(source.calls, 1);
-      expect(fresh.state, UpdateCurrent(_at(const Duration(hours: 22))));
+      expect(fresh.state, UpdateCurrent(_at(const Duration(seconds: 10))));
+      async.elapse(const Duration(hours: 23));
+      expect(source.calls, 1);
+      async.elapse(const Duration(hours: 1));
+      expect(source.calls, 2);
       fresh.dispose();
+    });
+
+    fakeAsync((FakeAsync async) {
+      final _Source source = _Source(const LookupFailed(LookupFailure.offline));
+      final _Harness failing = _Harness(
+        async,
+        store: MemoryUpdateRecordStore(UpdateRecord(lastCheckedAt: _fresh)),
+        source: source,
+      )..start();
+      async.elapse(const Duration(seconds: 10));
+      expect(source.calls, 1);
+      source.answer = const NoRelease();
+      async.elapse(const Duration(minutes: 59));
+      expect(source.calls, 1);
+      async.elapse(const Duration(minutes: 1));
+      expect(source.calls, 2);
+      expect(failing.state, UpdateCurrent(_at(const Duration(hours: 1))));
+      async.elapse(const Duration(hours: 22));
+      expect(source.calls, 2);
+      failing.dispose();
     });
 
     fakeAsync((FakeAsync async) {
@@ -390,6 +414,7 @@ void main() {
             UpdateRecord(lastCheckedAt: checked, lastAvailable: known),
           ),
           source: source,
+          automatic: false,
         )..start();
         expect(restarted.state, expected, reason: '${known.version}');
         async.elapse(const Duration(minutes: 1));
@@ -520,12 +545,94 @@ void main() {
       final DateTime failedAt = _at(const Duration(minutes: 5)).toUtc();
       expect(second.state, UpdateAvailable(_r13, failedAt));
       async.elapse(const Duration(minutes: 1));
-      expect(source.calls, 2);
-      second.check();
       expect(source.calls, 3);
+      second.check();
+      expect(source.calls, 4);
       expect(second.state, UpdateAvailable(_r13, failedAt));
       expect(store.record.lastAvailable, _r13);
       second.dispose();
+    });
+  });
+
+  test(
+    'a rate-limited launch check is retried at the first tick after the reset',
+    () {
+      fakeAsync((FakeAsync async) {
+        final _Source source = _Source(
+          LookupRateLimited(_at(const Duration(minutes: 40))),
+        );
+        final _Harness limited = _Harness(
+          async,
+          store: MemoryUpdateRecordStore(UpdateRecord(lastCheckedAt: _fresh)),
+          source: source,
+        )..start();
+        async.elapse(const Duration(seconds: 10));
+        expect(source.calls, 1);
+        source.answer = const NoRelease();
+        async.elapse(const Duration(minutes: 59));
+        expect(source.calls, 1);
+        async.elapse(const Duration(minutes: 1));
+        expect(source.calls, 2);
+        expect(limited.state, UpdateCurrent(_at(const Duration(hours: 1))));
+        limited.dispose();
+      });
+    },
+  );
+
+  test('a check started by hand before the launch check is not repeated', () {
+    fakeAsync((FakeAsync async) {
+      final _Source source = _Source(const NoRelease());
+      final _Harness early = _Harness(
+        async,
+        store: MemoryUpdateRecordStore(UpdateRecord(lastCheckedAt: _fresh)),
+        source: source,
+      )..start();
+      async.elapse(const Duration(seconds: 4));
+      early.check();
+      expect(source.calls, 1);
+      async.elapse(const Duration(seconds: 6));
+      expect(source.calls, 1);
+      early.dispose();
+    });
+  });
+
+  test('the Play route keeps the once a day gate and skips launch checks', () {
+    fakeAsync((FakeAsync async) {
+      final _Source source = _Source(const NoRelease());
+      final _Harness play = _Harness(
+        async,
+        store: MemoryUpdateRecordStore(
+          UpdateRecord(
+            lastCheckedAt: _start.subtract(const Duration(hours: 1)),
+          ),
+        ),
+        source: source,
+        installer: Future<UpdateInstaller>.value(
+          _Installer(InstallRoute.googlePlay),
+        ),
+      )..start();
+      async.elapse(const Duration(seconds: 30));
+      expect(source.calls, 0);
+      async.elapse(const Duration(hours: 22));
+      expect(source.calls, 0);
+      async.elapse(const Duration(hours: 2));
+      expect(source.calls, 1);
+      play.dispose();
+    });
+
+    fakeAsync((FakeAsync async) {
+      final _Source source = _Source(const NoRelease());
+      final _Harness play = _Harness(
+        async,
+        store: MemoryUpdateRecordStore(UpdateRecord(lastCheckedAt: _stale)),
+        source: source,
+        installer: Future<UpdateInstaller>.value(
+          _Installer(InstallRoute.googlePlay),
+        ),
+      )..start();
+      async.elapse(const Duration(seconds: 10));
+      expect(source.calls, 1);
+      play.dispose();
     });
   });
 
@@ -919,7 +1026,7 @@ void main() {
     );
   });
 
-  test('the quiet overrides settle on up to date without a check', () {
+  test('the quiet overrides stay on up to date through the launch check', () {
     fakeAsync((FakeAsync async) {
       final ProviderContainer container = ProviderContainer(
         overrides: [
@@ -943,6 +1050,12 @@ void main() {
       );
       expect(container.read(updateNoticeProvider), isNull);
       expect(container.read(updateGreetingProvider), isNull);
+      expect(async.nonPeriodicTimerCount, 1);
+      async.elapse(const Duration(seconds: 10));
+      expect(
+        container.read(updateControllerProvider),
+        UpdateCurrent(updateQuietNow),
+      );
       expect(async.nonPeriodicTimerCount, 0);
       container.dispose();
       expect(async.pendingTimers, isEmpty);

@@ -217,7 +217,7 @@ void main() {
     expect(checkAutomaticallyLabel, 'Check automatically');
     expect(
       checkAutomaticallyDescription,
-      'Once a day. Nothing installs until you choose.',
+      'Checks when Field Notes opens and once a day after that. Nothing installs until you choose.',
     );
     expect(releaseNotesLabel, 'Release notes');
     expect(releaseNotesDescription('1.2.0'), 'What changed in version 1.2.0');

@@ -168,7 +168,7 @@ String phoneUpdateLabel(String version) => 'Update to $version…';
 
 const String checkAutomaticallyLabel = 'Check automatically';
 const String checkAutomaticallyDescription =
-    'Once a day. Nothing installs until you choose.';
+    'Checks when Field Notes opens and once a day after that. Nothing installs until you choose.';
 const String releaseNotesLabel = 'Release notes';
 
 String releaseNotesDescription(String version) =>
