@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T06:35:46.244Z
+Updated: 2026-11-11T06:35:50.678Z
 Next ids: c1 D2 R2 S1
 
 ## Goal
@@ -31,9 +31,9 @@ The drive entered awaiting-merge: pull requests are ready to merge; it resumes o
 - Code: lib/design/motion/petal_drift.dart (ticker, painter), hosted in lib/app/shell/app_shell.dart and lib/features/onboarding/onboarding_frame.dart
 - Baseline on the Note 10+, main f454ef02 profile build: no bloom 0 idle frames; with a bloom Today, Calendar and Settings each 60 fps, raster thread 67 to 71% CPU (scratchpad dp/load script)
 - Spec files: docs/specs/petal-drift-idle-redraw.md (spec), .decisions.md (intent and decisions), .record.json (interview record, handed-off), .items.json (Steps), .repro.dart (draft failing test, red on main at 100% of five minutes)
-- Glossary terms petal gust and petal rest in GLOSSARY.md; ADR docs/adr/0010-drift-petals-over-the-app-in-gusts.md (uncommitted in the checkout until commit-records puts them on the MSP)
-- Draft 1.9.0 release notes: scratchpad petal/changelog-1.9.0.md
-- Note 10+ holds the probe build (labmain id, petals off) until the fixed build replaces it; scratchpad dp/build_fixed.sh builds the fixed APK from origin/mitosis/petal-gusts in dp/petal-fixed, and dp/measure_idle.py measures one page for five minutes (frames from SurfaceFlinger, raster thread CPU from /proc ticks)
+- Glossary terms petal gust and petal rest in GLOSSARY.md and ADR docs/adr/0010-drift-petals-over-the-app-in-gusts.md, committed on mitosis/petal-gusts and uncommitted copies in the checkout
+- 1.9.0 release notes: PR #382, branch release/1-9-0-changelog, worktree scratchpad rel/changelog-1-9-0
+- Note 10+ holds the fixed profile build (labmain id); scratchpad dp/build_fixed.sh builds it in the scratch worktree dp/petal-fixed, dp/measure_idle.py measures one page for five minutes (frames from SurfaceFlinger, raster thread CPU from /proc ticks), dp/catch_gust.py waits out a rest and screenshots the next gust
 - Night sky precedent: lib/features/capture/core/night_sky.dart twinkles on an 83 ms timer and launches comets 60 to 180 s apart
 - Run home: ~/.mitosis/fireplace/petal-drift-idle-redraw/ (run.zsh, CHARTER.md, worker rules); mitosis run dir ~/.mitosis/runs/fireplace/petal-drift-idle-redraw
 - Release process: a release/X-Y-Z-changelog PR adds the CHANGELOG.md section, then a vX.Y.Z tag on main triggers .github/workflows/release.yml, which builds and publishes the GitHub release
