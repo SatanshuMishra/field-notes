@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T05:07:27.177Z
+Updated: 2026-11-11T05:07:43.525Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -15,7 +15,9 @@ Full lane, interphase bug pathway, unattended after the intent round (owner: "Wo
 
 ## Next step
 
-Fix what the spec reviewer reports, re-render and re-check, set the record to handed-off and delete the guard; then pipeline guarantees, the hand-off decision, copy items.json, pipeline prevent into worker-rules.txt, plan-only and the drive.
+Run the run home's run.zsh with --plan-only, then start the pipeline drive (pipeline drive start --repo /Users/satanshumishra/Documents/DevLabs/fireplace --slug petal-drift-idle-redraw) to build, review, fix and ship the petal-gusts MSP.
+
+Needs: D1.
 
 ## Decisions in force
 
