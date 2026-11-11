@@ -547,17 +547,20 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
                         padding: EdgeInsetsDirectional.only(
                           start: listWidth + _paneRuleThickness,
                         ),
-                        child: Visibility(
-                          visible: selected != null,
-                          maintainState: true,
-                          maintainAnimation: true,
-                          maintainSize: true,
-                          child: DayStepFooter(
+                        child: switch (selected) {
+                          final Entry chosen => DayStepFooter(
                             entries: listed,
-                            entry: selected ?? listed.first,
+                            entry: chosen,
                             onStep: _stepTo,
                           ),
-                        ),
+                          null => _HeldSpace(
+                            child: DayStepFooter(
+                              entries: listed,
+                              entry: listed.first,
+                              onStep: _stepTo,
+                            ),
+                          ),
+                        },
                       ),
                     ],
                   ],
@@ -829,6 +832,21 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
           const _DayDetailMessage(text: dayDetailMediaErrorMessage),
         ],
       ],
+    );
+  }
+}
+
+class _HeldSpace extends StatelessWidget {
+  const _HeldSpace({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: ExcludeFocus(
+        child: IgnorePointer(child: Opacity(opacity: 0, child: child)),
+      ),
     );
   }
 }
