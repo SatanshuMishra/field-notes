@@ -123,12 +123,9 @@ class _DayMediaPaneState extends ConsumerState<DayMediaPane> {
     return KeyedSubtree(
       key: dayMediaPaneKey,
       child: DayPaneFrame(
-        entries: widget.entries,
-        entry: entry,
         title: logOwnTitle(entry),
         onOpenFull: _openFullScreen,
         onDelete: () => widget.onDelete(entry),
-        onStep: widget.onStep,
         body: Padding(
           padding: _stagePadding,
           child: ClipRRect(

@@ -210,6 +210,9 @@ Finder _mediaPane() => find.byKey(dayMediaPaneKey);
 Finder _inPane(Finder matching) =>
     find.descendant(of: _mediaPane(), matching: matching);
 
+Finder _inWindow(Finder matching) =>
+    find.descendant(of: find.byKey(dayDetailPanelKey), matching: matching);
+
 Finder _card(String id) => find.byWidgetPredicate(
   (Widget widget) => widget is CompactLogCard && widget.entry.id == id,
 );
@@ -419,14 +422,14 @@ void main() {
     expect(_inPane(find.text('Morning voice log')), findsNothing);
     expect(_inPane(find.byTooltip(logActionsOpenTooltip)), findsOneWidget);
     expect(_inPane(find.byKey(logActionsDeleteKey)), findsOneWidget);
-    expect(_inPane(find.byType(LogStepFooter)), findsOneWidget);
-    expect(_inPane(find.byKey(logViewerEarlierKey)), findsOneWidget);
-    expect(_inPane(find.byKey(logViewerLaterKey)), findsOneWidget);
-    expect(_inPane(find.text('2 of 3')), findsOneWidget);
+    expect(_inWindow(find.byType(LogStepFooter)), findsOneWidget);
+    expect(_inWindow(find.byKey(logViewerEarlierKey)), findsOneWidget);
+    expect(_inWindow(find.byKey(logViewerLaterKey)), findsOneWidget);
+    expect(_inWindow(find.text('2 of 3')), findsOneWidget);
     expect(find.byKey(logViewerBackKey), findsNothing);
     expect(find.text(logViewerBackLabel), findsNothing);
 
-    await tester.tap(_inPane(find.byKey(logViewerLaterKey)));
+    await tester.tap(_inWindow(find.byKey(logViewerLaterKey)));
     await tester.pumpAndSettle();
 
     expect(_inPane(find.byType(VideoViewerView)), findsOneWidget);

@@ -1,9 +1,18 @@
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart' show Scaffold, MaterialApp;
+import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/widgets.dart' show DashedDivider;
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
@@ -11,7 +20,11 @@ import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/day_detail/day_detail_header.dart';
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
+import 'package:field_notes/features/day_detail/day_note_pane.dart'
+    show DayPaneFrame, dayNotePaneKey;
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/log_viewer/note_reading.dart'
+    show LogStepFooter, NoteReadingBody;
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
@@ -42,25 +55,125 @@ Future<void> _drainToast(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+List<Override> _overrides(
+  FakeJournalRepository repository, {
+  Override? mediaResolver,
+}) {
+  return <Override>[
+    journalRepositoryProvider.overrideWithValue(repository),
+    draftStoreProvider.overrideWith((Ref ref) => FakeDraftStore()),
+    mediaResolver ??
+        dayDetailMediaResolverProvider.overrideWith(
+          (Ref ref) => FakeMediaResolver(),
+        ),
+    todayClockProvider.overrideWithValue(() => DateTime(2026, 7, 23, 9)),
+  ];
+}
+
 Widget _panelApp(
   FakeJournalRepository repository, {
   Override? mediaResolver,
   String? focusEntryId,
 }) {
   return ProviderScope(
-    overrides: <Override>[
-      journalRepositoryProvider.overrideWithValue(repository),
-      draftStoreProvider.overrideWith((Ref ref) => FakeDraftStore()),
-      mediaResolver ??
-          dayDetailMediaResolverProvider.overrideWith(
-            (Ref ref) => FakeMediaResolver(),
-          ),
-      todayClockProvider.overrideWithValue(() => DateTime(2026, 7, 23, 9)),
-    ],
+    overrides: _overrides(repository, mediaResolver: mediaResolver),
     child: dayDetailHarness(
       DayDetailPanel(date: '2026-07-19', focusEntryId: focusEntryId),
     ),
   );
+}
+
+const Key _windowCaptureKey = ValueKey<String>('day-window-capture');
+
+final TargetPlatformVariant _mac = TargetPlatformVariant.only(
+  TargetPlatform.macOS,
+);
+
+Widget _windowApp(
+  FakeJournalRepository repository, {
+  Brightness brightness = Brightness.light,
+}) {
+  return ProviderScope(
+    overrides: _overrides(repository),
+    child: MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: fieldNotesTheme(
+        platform: TargetPlatform.macOS,
+        brightness: brightness,
+      ),
+      home: const Scaffold(
+        body: RepaintBoundary(
+          key: _windowCaptureKey,
+          child: DayDetailPanel(date: '2026-07-19'),
+        ),
+      ),
+    ),
+  );
+}
+
+void _useDesktopWindow(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1440, 900);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+}
+
+Future<void> _selectFirstCard(WidgetTester tester) async {
+  await tester.tapAt(
+    tester.getTopLeft(find.byType(CompactLogCard).first) + const Offset(24, 18),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<List<Color>> _windowPixels(
+  WidgetTester tester,
+  List<Offset> points,
+) async {
+  final RenderRepaintBoundary boundary = tester.renderObject(
+    find.byKey(_windowCaptureKey),
+  ) as RenderRepaintBoundary;
+  final Offset origin = tester.getTopLeft(find.byKey(_windowCaptureKey));
+  final List<Color>? pixels = await tester.runAsync<List<Color>>(() async {
+    final ui.Image image = await boundary.toImage();
+    final ByteData data = (await image.toByteData())!;
+    final List<Color> sampled = <Color>[
+      for (final Offset point in points)
+        _pixelAt(data, image.width, point - origin),
+    ];
+    image.dispose();
+    return sampled;
+  });
+  return pixels!;
+}
+
+Color _pixelAt(ByteData data, int width, Offset point) {
+  final int offset = (point.dy.floor() * width + point.dx.floor()) * 4;
+  return Color.fromARGB(
+    data.getUint8(offset + 3),
+    data.getUint8(offset),
+    data.getUint8(offset + 1),
+    data.getUint8(offset + 2),
+  );
+}
+
+bool _near(Color actual, Color expected, int tolerance) {
+  int channel(double value) => (value * 255).round();
+  return (channel(actual.r) - channel(expected.r)).abs() <= tolerance &&
+      (channel(actual.g) - channel(expected.g)).abs() <= tolerance &&
+      (channel(actual.b) - channel(expected.b)).abs() <= tolerance;
+}
+
+List<Rect> _horizontalRulesIn(WidgetTester tester, Finder scope) {
+  final Finder rules = find.descendant(
+    of: scope,
+    matching: find.byWidgetPredicate(
+      (Widget widget) =>
+          widget is DashedDivider && widget.axis == Axis.horizontal,
+    ),
+  );
+  return <Rect>[
+    for (int index = 0; index < rules.evaluate().length; index++)
+      tester.getRect(rules.at(index)),
+  ];
 }
 
 String _longNote(int index) {
@@ -80,6 +193,186 @@ FakeJournalRepository _twoNotes() => FakeJournalRepository(
 );
 
 void main() {
+  testWidgets('both header rules meet in one straight line', (
+    WidgetTester tester,
+  ) async {
+    _useDesktopWindow(tester);
+    await tester.pumpWidget(_windowApp(_twoNotes()));
+    await tester.pumpAndSettle();
+    await _selectFirstCard(tester);
+
+    final Rect panel = tester.getRect(_panelCard());
+    final Rect left = tester.getRect(
+      find.descendant(
+        of: find.byType(DayDetailHeader),
+        matching: find.byType(DashedDivider),
+      ),
+    );
+    final Rect right = tester.getRect(
+      find
+          .descendant(
+            of: find.byType(DayPaneFrame),
+            matching: find.byType(DashedDivider),
+          )
+          .first,
+    );
+    expect(right.bottom, left.bottom);
+    expect(right.left, greaterThan(left.right));
+    expect(
+      left.bottom,
+      panel.top + 2 + dayDetailHeaderHeight + dayDetailHeaderRuleThickness,
+    );
+  }, variant: _mac);
+
+  testWidgets('choosing a card at the foot of the list keeps it in view', (
+    WidgetTester tester,
+  ) async {
+    _useDesktopWindow(tester);
+    await tester.pumpWidget(
+      _windowApp(
+        FakeJournalRepository(
+          entries: <Entry>[
+            for (int i = 0; i < 10; i++)
+              entryOf(
+                id: 'entry-$i',
+                type: EntryType.text,
+                textContent: 'journal note number $i for the day',
+              ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    const double shownSlice = 36;
+    final Finder list = find
+        .descendant(
+          of: find.byKey(dayDetailListPaneKey),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    final Finder card = find.descendant(
+      of: find.byKey(const ValueKey<String>('entry-6'), skipOffstage: false),
+      matching: find.byType(CompactLogCard, skipOffstage: false),
+    );
+    final ScrollPosition position = tester
+        .state<ScrollableState>(list)
+        .position;
+    position.jumpTo(
+      position.pixels +
+          tester.getRect(card).top -
+          (tester.getRect(list).bottom - shownSlice),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(list).bottom - tester.getRect(card).top,
+      closeTo(shownSlice, 0.5),
+    );
+
+    await tester.tapAt(tester.getTopLeft(card) + const Offset(24, 18));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<NoteReadingBody>(
+            find.descendant(
+              of: find.byKey(dayNotePaneKey),
+              matching: find.byType(NoteReadingBody),
+            ),
+          )
+          .entry
+          .id,
+      'entry-6',
+    );
+    expect(
+      tester.getRect(list).bottom - tester.getRect(card).top,
+      greaterThanOrEqualTo(shownSlice - 0.5),
+    );
+  }, variant: _mac);
+
+  testWidgets('one footer rule runs under both panes', (
+    WidgetTester tester,
+  ) async {
+    _useDesktopWindow(tester);
+    await tester.pumpWidget(_windowApp(_twoNotes()));
+    await tester.pumpAndSettle();
+    await _selectFirstCard(tester);
+
+    final Rect panel = tester.getRect(_panelCard());
+    final Rect list = tester.getRect(find.byKey(dayDetailListPaneKey));
+    final Rect pane = tester.getRect(find.byKey(dayNotePaneKey));
+    final Rect stepper = tester.getRect(find.byType(LogStepFooter));
+    final double headerBottom =
+        panel.top + 2 + dayDetailHeaderHeight + dayDetailHeaderRuleThickness;
+    final List<Rect> footerRules = <Rect>[
+      for (final Rect rule in _horizontalRulesIn(tester, _panelCard()))
+        if (rule.top > headerBottom && rule.width > list.width) rule,
+    ];
+
+    expect(footerRules, hasLength(1));
+    final Rect rule = footerRules.single;
+    expect(rule.left, closeTo(panel.left + 2, 0.5));
+    expect(rule.right, closeTo(panel.right - 2, 0.5));
+    expect(list.bottom, lessThanOrEqualTo(rule.top + 0.5));
+    expect(pane.bottom, lessThanOrEqualTo(rule.top + 0.5));
+    expect(stepper.top, greaterThanOrEqualTo(rule.bottom - 0.5));
+    expect(stepper.left, greaterThan(list.right));
+  }, variant: _mac);
+
+  for (final Brightness brightness in Brightness.values) {
+    testWidgets('the day window is the ${brightness.name} page colour in both '
+        'halves', (WidgetTester tester) async {
+      _useDesktopWindow(tester);
+      await tester.pumpWidget(
+        _windowApp(FakeJournalRepository(), brightness: brightness),
+      );
+      await tester.pumpAndSettle();
+
+      final FieldNotesColors colors = switch (brightness) {
+        Brightness.light => FieldNotesColors.light,
+        Brightness.dark => FieldNotesColors.dark,
+      };
+      final Rect list = tester.getRect(find.byKey(dayDetailListPaneKey));
+      final Rect pane = tester.getRect(find.byKey(dayNotePaneKey));
+      final List<Color> pixels = await _windowPixels(tester, <Offset>[
+        list.bottomLeft + const Offset(24, -24),
+        pane.topRight + const Offset(-24, 24),
+        pane.bottomRight + const Offset(-24, -24),
+      ]);
+
+      for (final Color pixel in pixels) {
+        expect(_near(pixel, colors.panelTop, 1), isTrue, reason: '$pixel');
+      }
+    }, variant: _mac);
+  }
+
+  testWidgets('the window outline keeps its top-right corner arc', (
+    WidgetTester tester,
+  ) async {
+    _useDesktopWindow(tester);
+    await tester.pumpWidget(
+      _windowApp(_twoNotes(), brightness: Brightness.dark),
+    );
+    await tester.pumpAndSettle();
+    await _selectFirstCard(tester);
+
+    final Rect panel = tester.getRect(_panelCard());
+    const double radius = Shapes.radiusXl;
+    const double centreline = radius - 2 / 2;
+    const double angle = math.pi / 4;
+    final Offset arc = Offset(
+      panel.right - radius + centreline * math.cos(angle),
+      panel.top + radius - centreline * math.sin(angle),
+    );
+    final List<Color> pixels = await _windowPixels(tester, <Offset>[arc]);
+
+    expect(
+      _near(pixels.single, FieldNotesColors.dark.line, 24),
+      isTrue,
+      reason: '${pixels.single}',
+    );
+  }, variant: _mac);
+
   testWidgets('the day card actions lie inside every reading-order frame', (
     WidgetTester tester,
   ) async {

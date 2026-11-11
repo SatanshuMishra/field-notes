@@ -20,6 +20,9 @@ import 'package:field_notes/features/entry_cards/transport/transport_bar.dart'
     show TransportGlyph, TransportGlyphIcon;
 import 'package:field_notes/features/log_viewer/note_reading.dart';
 
+import 'day_detail_header.dart'
+    show dayDetailHeaderHeight, dayDetailHeaderRuleThickness;
+
 const String dayNotePanePrompt = 'Choose a log to read it here.';
 const String dayNotePaneHint = 'Logs open on this side.';
 const String dayNotePaneEmptyTitle = 'Nothing logged this day yet.';
@@ -33,9 +36,7 @@ const double _flowerGap = 16;
 const double _placeholderLineGap = 6;
 const EdgeInsets _placeholderPadding = EdgeInsets.all(32);
 const double _readingEms = 34;
-const double _ruleThickness = 1.5;
 const double _actionButtonExtent = 30;
-const double _headerVerticalPadding = 16;
 const double _headerHorizontalPadding = 28;
 const double _headerGap = 14;
 const double _headerActionGap = 10;
@@ -57,7 +58,6 @@ class DayNotePane extends StatelessWidget {
     required this.resolver,
     required this.onEdit,
     required this.onDelete,
-    required this.onStep,
     this.onOpenFull,
     this.onToggleTask,
   });
@@ -69,7 +69,6 @@ class DayNotePane extends StatelessWidget {
   final MediaResolver? resolver;
   final ValueChanged<Entry> onEdit;
   final ValueChanged<Entry> onDelete;
-  final ValueChanged<Entry> onStep;
   final ValueChanged<Entry>? onOpenFull;
   final ValueChanged<int>? onToggleTask;
 
@@ -128,13 +127,10 @@ class DayNotePane extends StatelessWidget {
   Widget _reading(BuildContext context, Entry note, MediaResolver media) {
     final ValueChanged<Entry>? openFull = onOpenFull;
     return DayPaneFrame(
-      entries: entries,
-      entry: note,
       title: logOwnTitle(note),
       onOpenFull: openFull == null ? null : () => openFull(note),
       onEdit: () => onEdit(note),
       onDelete: () => onDelete(note),
-      onStep: onStep,
       body: SingleChildScrollView(
         key: ValueKey<String>('day-note-pane-${note.id}'),
         padding: _bodyPadding,
@@ -160,52 +156,30 @@ class DayNotePane extends StatelessWidget {
 class DayPaneFrame extends StatelessWidget {
   const DayPaneFrame({
     super.key,
-    required this.entries,
-    required this.entry,
     this.title,
     required this.onDelete,
-    required this.onStep,
     required this.body,
     this.onEdit,
     this.onOpenFull,
   });
 
-  final List<Entry> entries;
-  final Entry entry;
   final String? title;
   final VoidCallback onDelete;
-  final ValueChanged<Entry> onStep;
   final Widget body;
   final VoidCallback? onEdit;
   final VoidCallback? onOpenFull;
 
   @override
   Widget build(BuildContext context) {
-    final Color rule = context.colors.ink25;
-    final int index = entries.indexWhere(
-      (Entry candidate) => candidate.id == entry.id,
-    );
-    final Entry? earlier = index > 0 ? entries[index - 1] : null;
-    final Entry? later = index >= 0 && index + 1 < entries.length
-        ? entries[index + 1]
-        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         _header(context),
-        DashedDivider(thickness: _ruleThickness, color: rule),
+        DashedDivider(
+          thickness: dayDetailHeaderRuleThickness,
+          color: context.colors.ink25,
+        ),
         Expanded(child: body),
-        if (index >= 0 && entries.length > 1) ...<Widget>[
-          DashedDivider(thickness: _ruleThickness, color: rule),
-          LogStepFooter(
-            index: index,
-            count: entries.length,
-            earlier: earlier,
-            later: later,
-            onEarlier: earlier == null ? null : () => onStep(earlier),
-            onLater: later == null ? null : () => onStep(later),
-          ),
-        ],
       ],
     );
   }
@@ -215,57 +189,82 @@ class DayPaneFrame extends StatelessWidget {
       buttonExtent: _actionButtonExtent,
       withEdit: onEdit != null,
     );
-    final double actionsTop = math.max<double>(
-      0,
-      _headerVerticalPadding - reach.top,
-    );
     final String? shownTitle = title;
     final VoidCallback? openFull = onOpenFull;
-    return Padding(
-      padding: EdgeInsetsDirectional.only(
-        start: _headerHorizontalPadding,
-        end: math.max<double>(0, _headerHorizontalPadding - reach.right),
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: shownTitle == null
-                ? const SizedBox.shrink()
-                : Padding(
-                    padding: EdgeInsetsDirectional.fromSTEB(
-                      0,
-                      _headerVerticalPadding,
-                      math.max<double>(0, _headerGap - reach.left),
-                      _headerVerticalPadding,
-                    ),
-                    child: Text(
-                      shownTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.textStyles.headlineSerif.copyWith(
-                        fontSize: _titleSize,
-                        height: _titleLineHeight,
+    return SizedBox(
+      height: dayDetailHeaderHeight,
+      child: Padding(
+        padding: EdgeInsetsDirectional.only(
+          start: _headerHorizontalPadding,
+          end: math.max<double>(0, _headerHorizontalPadding - reach.right),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: shownTitle == null
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: EdgeInsetsDirectional.only(
+                        end: math.max<double>(0, _headerGap - reach.left),
+                      ),
+                      child: Text(
+                        shownTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.headlineSerif.copyWith(
+                          fontSize: _titleSize,
+                          height: _titleLineHeight,
+                        ),
                       ),
                     ),
-                  ),
-          ),
-          if (openFull != null)
-            Padding(
-              padding: EdgeInsetsDirectional.only(
-                end: math.max<double>(0, _headerActionGap - reach.left),
-              ),
-              child: _OpenFullViewButton(onPressed: openFull),
             ),
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: actionsTop),
-            child: LogActionsPill(
+            if (openFull != null)
+              Padding(
+                padding: EdgeInsetsDirectional.only(
+                  end: math.max<double>(0, _headerActionGap - reach.left),
+                ),
+                child: _OpenFullViewButton(onPressed: openFull),
+              ),
+            LogActionsPill(
               buttonExtent: _actionButtonExtent,
               onEdit: onEdit,
               onDelete: onDelete,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class DayStepFooter extends StatelessWidget {
+  const DayStepFooter({
+    super.key,
+    required this.entries,
+    required this.entry,
+    required this.onStep,
+  });
+
+  final List<Entry> entries;
+  final Entry entry;
+  final ValueChanged<Entry> onStep;
+
+  @override
+  Widget build(BuildContext context) {
+    final int index = entries.indexWhere(
+      (Entry candidate) => candidate.id == entry.id,
+    );
+    final Entry? earlier = index > 0 ? entries[index - 1] : null;
+    final Entry? later = index >= 0 && index + 1 < entries.length
+        ? entries[index + 1]
+        : null;
+    return LogStepFooter(
+      index: index,
+      count: entries.length,
+      earlier: earlier,
+      later: later,
+      onEarlier: earlier == null ? null : () => onStep(earlier),
+      onLater: later == null ? null : () => onStep(later),
     );
   }
 }

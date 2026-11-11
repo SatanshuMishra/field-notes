@@ -27,7 +27,7 @@ const Color _darkCard = Color(0xFF272222);
 const Color _darkLine = Color(0xFF968888);
 const Color _darkCardShadow = Color(0x29000000);
 const Color _darkInk = Color(0xFFEDE1E1);
-const Color _darkPaper = Color(0xFF292424);
+const Color _darkPage = Color(0xFF1C1919);
 
 final DateTime _today = DateTime(2026, 7, 23, 9);
 
@@ -118,9 +118,8 @@ void main() {
     }
   });
 
-  testWidgets('day detail draws dark paper and the note room its dark stage', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('day detail draws the dark page and the note room its dark '
+      'stage', (WidgetTester tester) async {
     await pumpThemed(
       tester,
       ProviderScope(
@@ -133,10 +132,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final Container dayPanel = tester.widget<Container>(
-      find.byKey(dayDetailPanelKey),
+    final OutlinedSurface dayPanel = tester.widget<OutlinedSurface>(
+      find.descendant(
+        of: find.byKey(dayDetailPanelKey),
+        matching: find.byType(OutlinedSurface),
+      ),
     );
-    expect((dayPanel.decoration! as BoxDecoration).color, _darkPaper);
+    expect(dayPanel.color, _darkPage);
     expect(
       _textColour(tester, dayDetailHeadingFor(_date, today: _today).title),
       _darkInk,

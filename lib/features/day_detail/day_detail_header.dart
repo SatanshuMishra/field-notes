@@ -16,15 +16,15 @@ const String dayDetailCloseLabel = 'Close';
 const String dayDetailEarlierDayLabel = 'Earlier day';
 const String dayDetailLaterDayLabel = 'Later day';
 
-const double _headerVerticalPadding = 16;
+const double dayDetailHeaderHeight = 72;
+const double dayDetailHeaderRuleThickness = 1.5;
+
 const double _headerHorizontalPadding = 18;
 const double _headerGap = 12;
-const double _ruleThickness = 1.5;
 const double _backExtent = 34;
 const BorderRadius _backBorderRadius = BorderRadius.all(Radius.circular(10));
 const double _minTapTarget = 48;
 const double _backReach = (_minTapTarget - _backExtent) / 2;
-const double _backVerticalReach = 4;
 const double _chevronExtent = 16;
 const double _chevronArm = 4.5;
 const double _chevronStrokeWidth = 2;
@@ -90,7 +90,10 @@ class DayDetailSheetHeader extends StatelessWidget {
             ],
           ),
         ),
-        DashedDivider(thickness: _ruleThickness, color: colors.ink22),
+        DashedDivider(
+          thickness: dayDetailHeaderRuleThickness,
+          color: colors.ink22,
+        ),
       ],
     );
   }
@@ -123,57 +126,79 @@ class DayDetailHeader extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            _headerHorizontalPadding - _backReach,
-            _headerVerticalPadding - _backVerticalReach,
-            _headerHorizontalPadding - _backReach,
-            _headerVerticalPadding - _backVerticalReach,
-          ),
-          child: Row(
-            children: <Widget>[
-              _ChevronButton(
-                faceKey: dayDetailBackKey,
-                label: closeLabel,
-                direction: AxisDirection.left,
-                onPressed: onClose,
-              ),
-              const SizedBox(width: _headerGap - _backReach),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      dayDetailKickerFor(date, today: today),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: textStyles.stampAccent.copyWith(
-                        color: colors.accentInk,
-                      ),
-                    ),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Text(
-                        heading.title,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: textStyles.headlineSerif.copyWith(
-                          height: _titleLineHeight,
-                        ),
-                      ),
-                    ),
-                  ],
+        SizedBox(
+          height: dayDetailHeaderHeight,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: _headerHorizontalPadding - _backReach,
+            ),
+            child: Row(
+              children: <Widget>[
+                _ChevronButton(
+                  faceKey: dayDetailBackKey,
+                  label: closeLabel,
+                  direction: AxisDirection.left,
+                  onPressed: onClose,
                 ),
-              ),
-              const SizedBox(width: _headerGap - _backReach),
-              _DayStepButtons(onEarlier: onEarlier, onLater: onLater),
-            ],
+                const SizedBox(width: _headerGap - _backReach),
+                Expanded(
+                  child: _FitHeaderHeight(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          dayDetailKickerFor(date, today: today),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textStyles.stampAccent.copyWith(
+                            color: colors.accentInk,
+                          ),
+                        ),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(
+                            heading.title,
+                            maxLines: 1,
+                            softWrap: false,
+                            style: textStyles.headlineSerif.copyWith(
+                              height: _titleLineHeight,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: _headerGap - _backReach),
+                _DayStepButtons(onEarlier: onEarlier, onLater: onLater),
+              ],
+            ),
           ),
         ),
-        DashedDivider(thickness: _ruleThickness, color: colors.ink25),
+        DashedDivider(
+          thickness: dayDetailHeaderRuleThickness,
+          color: colors.ink25,
+        ),
       ],
+    );
+  }
+}
+
+class _FitHeaderHeight extends StatelessWidget {
+  const _FitHeaderHeight({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) => FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: AlignmentDirectional.centerStart,
+        child: SizedBox(width: constraints.maxWidth, child: child),
+      ),
     );
   }
 }
