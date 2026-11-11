@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-11T02:51:37.851Z
+Updated: 2026-11-11T02:51:39.094Z
 Next ids: c4 D8 R2 S2
 
 ## Goal
@@ -36,7 +36,7 @@ Every PR body carries its device result from the owner's test Note 10+ and the W
 
 Follow-ups left for later, named in their PR bodies: the Microphone and Speaker rows (input_panel.dart _PanelRow) sit 6 px off their heading, fixable once #377 and #378 merge; the onboarding FakeJournalRepository in test/app/support/app_shell_harness.dart lacks setMoodForDate, as on main; in #372 full screen once opened at 0:00 after a finished clip was scrubbed while paused, cause not confirmed.
 
-Found on main by the device pass, not caused by these PRs: once today has a bloom, the drifting petals keep every page redrawing at 60 fps (raster about 70 to 75% on the Note 10+, also seen on Windows); the phone's reminder time sheet is 24-hour on a 12-hour phone; the bloom picker says today's bloom on past days; the Windows lab VM cannot render video.
+Found on main by the device pass, not caused by these PRs: once today has a bloom, the drifting petals keep every page redrawing at 60 fps (raster about 70 to 75% on the Note 10+, also seen on Windows); the phone's reminder time sheet is 24-hour on a 12-hour phone; the bloom picker says today's bloom on past days; the Windows lab VM cannot render video. The owner has been asked whether to start the petal fix in its own session.
 
 ## Next step
 
