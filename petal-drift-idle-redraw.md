@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
-Status: active
-Updated: 2026-11-11T06:35:50.678Z
+Status: parked
+Updated: 2026-11-11T06:35:59.114Z
 Next ids: c1 D2 R2 S1
 
 ## Goal
@@ -15,7 +15,7 @@ Full lane, unattended (owner: "Work autonomously. Complete the task."). MSP peta
 
 ## Next step
 
-The drive entered awaiting-merge: pull requests are ready to merge; it resumes on pipeline drive event --name merged.
+When the owner says PR #381 merged, run pipeline drive event --repo /Users/satanshumishra/Documents/DevLabs/fireplace --slug petal-drift-idle-redraw --name merged, so Integration tests the FEATURE branch and opens its pull request to main.
 
 ## Decisions in force
 
