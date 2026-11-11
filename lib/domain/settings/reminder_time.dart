@@ -1,7 +1,7 @@
 class ReminderTime {
   const ReminderTime({required this.hour, required this.minute})
-      : assert(hour >= 0 && hour < 24, 'hour must be in 0..23'),
-        assert(minute >= 0 && minute < 60, 'minute must be in 0..59');
+    : assert(hour >= 0 && hour < 24, 'hour must be in 0..23'),
+      assert(minute >= 0 && minute < 60, 'minute must be in 0..59');
 
   static const ReminderTime defaultTime = ReminderTime(hour: 20, minute: 30);
 
@@ -9,6 +9,9 @@ class ReminderTime {
   final int minute;
 
   int get minutesSinceMidnight => hour * 60 + minute;
+
+  bool isBefore(ReminderTime other) =>
+      minutesSinceMidnight < other.minutesSinceMidnight;
 
   static ReminderTime? fromMinutes(int minutes) {
     if (minutes < 0 || minutes > 1439) {

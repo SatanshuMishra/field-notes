@@ -1,6 +1,7 @@
 import 'appearance.dart';
 import 'input_profile.dart';
 import 'onboarding_status.dart';
+import 'reminder_schedule.dart';
 import 'reminder_time.dart';
 import 'text_size.dart';
 import 'week_start.dart';
@@ -17,6 +18,7 @@ class AppSettings {
     required this.reflectionPromptsEnabled,
     required this.onboardingStatus,
     required this.appearance,
+    this.reminderSchedule = ReminderSchedule.evenings,
     this.sidebarCollapsed = false,
     this.meadowPausesWhenInactive = true,
     this.keepAllMediaOnDevice = false,
@@ -32,6 +34,7 @@ class AppSettings {
   static const AppSettings defaults = AppSettings(
     reminderEnabled: true,
     reminderTime: ReminderTime.defaultTime,
+    reminderSchedule: ReminderSchedule.evenings,
     soundEnabled: true,
     textSize: TextSize.medium,
     weekStart: WeekStart.sunday,
@@ -54,6 +57,7 @@ class AppSettings {
 
   final bool reminderEnabled;
   final ReminderTime reminderTime;
+  final ReminderSchedule reminderSchedule;
   final bool soundEnabled;
   final TextSize textSize;
   final WeekStart weekStart;
@@ -76,6 +80,7 @@ class AppSettings {
   AppSettings copyWith({
     bool? reminderEnabled,
     ReminderTime? reminderTime,
+    ReminderSchedule? reminderSchedule,
     bool? soundEnabled,
     TextSize? textSize,
     WeekStart? weekStart,
@@ -100,6 +105,7 @@ class AppSettings {
     return AppSettings(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       reminderTime: reminderTime ?? this.reminderTime,
+      reminderSchedule: reminderSchedule ?? this.reminderSchedule,
       soundEnabled: soundEnabled ?? this.soundEnabled,
       textSize: textSize ?? this.textSize,
       weekStart: weekStart ?? this.weekStart,
@@ -137,6 +143,7 @@ class AppSettings {
           runtimeType == other.runtimeType &&
           reminderEnabled == other.reminderEnabled &&
           reminderTime == other.reminderTime &&
+          reminderSchedule == other.reminderSchedule &&
           soundEnabled == other.soundEnabled &&
           textSize == other.textSize &&
           weekStart == other.weekStart &&
@@ -157,9 +164,10 @@ class AppSettings {
           outputVolume == other.outputVolume;
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll(<Object?>[
     reminderEnabled,
     reminderTime,
+    reminderSchedule,
     soundEnabled,
     textSize,
     weekStart,
@@ -178,12 +186,13 @@ class AppSettings {
     inputVolume,
     audioOutputId,
     outputVolume,
-  );
+  ]);
 
   @override
   String toString() =>
       'AppSettings(reminderEnabled: $reminderEnabled, '
-      'reminderTime: $reminderTime, soundEnabled: $soundEnabled, '
+      'reminderTime: $reminderTime, reminderSchedule: $reminderSchedule, '
+      'soundEnabled: $soundEnabled, '
       'textSize: $textSize, weekStart: $weekStart, '
       'spellCheckEnabled: $spellCheckEnabled, '
       'notificationPermissionAsked: $notificationPermissionAsked, '

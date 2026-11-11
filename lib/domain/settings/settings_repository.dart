@@ -2,6 +2,7 @@ import 'app_settings.dart';
 import 'appearance.dart';
 import 'input_profile.dart';
 import 'onboarding_status.dart';
+import 'reminder_schedule.dart';
 import 'reminder_time.dart';
 import 'storage_mode.dart';
 import 'text_size.dart';
@@ -15,6 +16,8 @@ abstract interface class SettingsRepository {
   Future<void> setReminderEnabled(bool value);
 
   Future<void> setReminderTime(ReminderTime value);
+
+  Future<void> setReminderSchedule(ReminderSchedule value);
 
   Future<void> setSoundEnabled(bool value);
 

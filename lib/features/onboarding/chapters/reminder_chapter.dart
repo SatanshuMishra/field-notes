@@ -10,6 +10,7 @@ import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/mood/mood.dart';
+import 'package:field_notes/domain/services/reminder_service.dart';
 import 'package:field_notes/domain/settings/reminder_time.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
@@ -156,7 +157,7 @@ String _previewClock(BuildContext context, ReminderChoice choice) =>
     choice.time == null ? _offClock : _clock(context, choice);
 
 String _previewBody(ReminderChoice choice) =>
-    choice.time == null ? _offBody : reminderNotificationBody;
+    choice.time == null ? _offBody : reminderEveningBody;
 
 String _sidebarCaption(ReminderChoice choice) => switch (choice) {
   ReminderChoice.morning => 'morning',

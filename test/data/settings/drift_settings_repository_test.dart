@@ -50,6 +50,56 @@ void main() {
       );
     });
 
+    test('setReminderSchedule round-trips through storage', () async {
+      await repository.setReminderSchedule(ReminderSchedule.middayAndEvening);
+      expect(
+        (await repository.load()).reminderSchedule,
+        ReminderSchedule.middayAndEvening,
+      );
+    });
+
+    test(
+      'a stored single reminder time becomes Custom time at that time',
+      () async {
+        await db
+            .into(db.settings)
+            .insert(
+              SettingsCompanion.insert(key: 'reminder_time', value: '435'),
+            );
+
+        final AppSettings settings = await repository.load();
+
+        expect(settings.reminderSchedule, ReminderSchedule.custom);
+        expect(settings.reminderTime, const ReminderTime(hour: 7, minute: 15));
+      },
+    );
+
+    test(
+      'a stored single time at the old 8:30 PM default becomes Evenings',
+      () async {
+        await db
+            .into(db.settings)
+            .insert(
+              SettingsCompanion.insert(key: 'reminder_time', value: '1230'),
+            );
+
+        final AppSettings settings = await repository.load();
+
+        expect(settings.reminderSchedule, ReminderSchedule.evenings);
+        expect(settings.reminderTime, ReminderTime.defaultTime);
+      },
+    );
+
+    test('a chosen schedule wins over a stored single time', () async {
+      await repository.setReminderTime(const ReminderTime(hour: 7, minute: 15));
+      await repository.setReminderSchedule(ReminderSchedule.evenings);
+
+      final AppSettings settings = await repository.load();
+
+      expect(settings.reminderSchedule, ReminderSchedule.evenings);
+      expect(settings.reminderTime, const ReminderTime(hour: 7, minute: 15));
+    });
+
     test('setSoundEnabled persists and load reflects it', () async {
       await repository.setSoundEnabled(false);
       expect((await repository.load()).soundEnabled, isFalse);
@@ -103,6 +153,7 @@ void main() {
 
       final settings = await repository.load();
       expect(settings.reminderTime, ReminderTime.defaultTime);
+      expect(settings.reminderSchedule, ReminderSchedule.evenings);
       expect(settings.textSize, TextSize.medium);
       expect(settings.weekStart, WeekStart.sunday);
       expect(settings.soundEnabled, isTrue);

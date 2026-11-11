@@ -50,6 +50,10 @@ class DriftSettingsRepository implements SettingsRepository {
       _put(SettingsKeys.reminderTime, value.minutesSinceMidnight.toString());
 
   @override
+  Future<void> setReminderSchedule(ReminderSchedule value) =>
+      _put(SettingsKeys.reminderSchedule, value.id);
+
+  @override
   Future<void> setSoundEnabled(bool value) =>
       _put(SettingsKeys.soundEnabled, value ? _trueValue : _falseValue);
 
@@ -210,6 +214,10 @@ class DriftSettingsRepository implements SettingsRepository {
         defaults.reminderEnabled,
       ),
       reminderTime: _decodeReminderTime(values[SettingsKeys.reminderTime]),
+      reminderSchedule: _decodeReminderSchedule(
+        values[SettingsKeys.reminderSchedule],
+        values[SettingsKeys.reminderTime],
+      ),
       soundEnabled: _decodeBool(
         values[SettingsKeys.soundEnabled],
         defaults.soundEnabled,
@@ -315,12 +323,28 @@ class DriftSettingsRepository implements SettingsRepository {
     return fallback;
   }
 
-  ReminderTime _decodeReminderTime(String? raw) {
+  ReminderTime _decodeReminderTime(String? raw) =>
+      _storedReminderTime(raw) ?? AppSettings.defaults.reminderTime;
+
+  ReminderTime? _storedReminderTime(String? raw) {
     final minutes = int.tryParse(raw ?? '');
     if (minutes == null) {
-      return AppSettings.defaults.reminderTime;
+      return null;
     }
-    return ReminderTime.fromMinutes(minutes) ??
-        AppSettings.defaults.reminderTime;
+    return ReminderTime.fromMinutes(minutes);
+  }
+
+  ReminderSchedule _decodeReminderSchedule(
+    String? rawSchedule,
+    String? rawTime,
+  ) {
+    final ReminderSchedule? chosen = ReminderSchedule.fromId(rawSchedule);
+    if (chosen != null) {
+      return chosen;
+    }
+    final ReminderTime? singleTime = _storedReminderTime(rawTime);
+    return singleTime == null || singleTime == ReminderTime.defaultTime
+        ? ReminderSchedule.evenings
+        : ReminderSchedule.custom;
   }
 }

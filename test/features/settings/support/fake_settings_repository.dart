@@ -25,6 +25,7 @@ class FakeSettingsRepository implements SettingsRepository {
       StreamController<AppSettings>.broadcast();
   final List<bool> reminderEnabledWrites = <bool>[];
   final List<ReminderTime> reminderTimeWrites = <ReminderTime>[];
+  final List<ReminderSchedule> reminderScheduleWrites = <ReminderSchedule>[];
   final List<bool> soundEnabledWrites = <bool>[];
   final List<TextSize> textSizeWrites = <TextSize>[];
   final List<WeekStart> weekStartWrites = <WeekStart>[];
@@ -69,6 +70,12 @@ class FakeSettingsRepository implements SettingsRepository {
   Future<void> setReminderTime(ReminderTime value) async {
     _failIfConfigured();
     reminderTimeWrites.add(value);
+  }
+
+  @override
+  Future<void> setReminderSchedule(ReminderSchedule value) async {
+    _failIfConfigured();
+    reminderScheduleWrites.add(value);
   }
 
   @override

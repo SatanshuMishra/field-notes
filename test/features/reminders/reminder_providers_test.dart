@@ -13,19 +13,39 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/fake_reminder_scheduler.dart';
 
 Entry _entry() => const Entry(
-      id: 'entry-1',
-      dayId: 'day-1',
-      type: EntryType.text,
-      textContent: 'a note',
-      createdAt: 0,
-      updatedAt: 0,
-    );
+  id: 'entry-1',
+  dayId: 'day-1',
+  type: EntryType.text,
+  textContent: 'a note',
+  createdAt: 0,
+  updatedAt: 0,
+);
+
+Day _bloomed(String date) => Day(
+  id: 'day-$date',
+  date: date,
+  createdAt: 0,
+  updatedAt: 0,
+  mood: Mood.happy,
+);
+
+List<ReminderBooking> _evenings(
+  DateTime now, {
+  ReminderDay today = const ReminderDay(),
+}) => const ReminderService().upcomingReminders(
+  enabled: true,
+  schedule: ReminderSchedule.evenings,
+  customTime: ReminderTime.defaultTime,
+  now: now,
+  days: <DateTime, ReminderDay>{DateTime(now.year, now.month, now.day): today},
+)!;
 
 ProviderContainer _container({
   required AppSettings settings,
   required List<Entry> todayEntries,
   required FakeReminderScheduler scheduler,
   required DateTime now,
+  bool todayBloomed = false,
   List<String>? queriedDates,
 }) {
   final container = ProviderContainer(
@@ -39,6 +59,11 @@ ProviderContainer _container({
           date == reminderDateKey(now) ? todayEntries : const <Entry>[],
         );
       }),
+      dayForDateProvider.overrideWith(
+        (ref, date) => Stream<Day?>.value(
+          todayBloomed && date == reminderDateKey(now) ? _bloomed(date) : null,
+        ),
+      ),
       reminderClockProvider.overrideWithValue(() => now),
       reminderSchedulerProvider.overrideWithValue(scheduler),
     ],
@@ -60,7 +85,7 @@ Future<ReminderSyncResult?> _settledSync(ProviderContainer container) async {
 
 void main() {
   group('reminderSyncProvider', () {
-    test('schedules tonight when today has no entry', () async {
+    test('schedules tonight when today has nothing yet', () async {
       final FakeReminderScheduler scheduler = FakeReminderScheduler();
       final ProviderContainer container = _container(
         settings: AppSettings.defaults,
@@ -72,26 +97,41 @@ void main() {
       final ReminderSyncResult? result = await _settledSync(container);
 
       expect(result, ReminderSyncResult.scheduled);
-      expect(scheduler.scheduled, <ReminderBooking>[
-        for (final (int id, int day) in const <(int, int)>[
-          (1001, 19),
-          (1002, 20),
-          (1003, 21),
-          (1004, 22),
-          (1005, 23),
-          (1006, 24),
-          (1007, 25),
-        ])
-          ReminderBooking(id: id, at: DateTime(2026, 7, day, 20, 30)),
-      ]);
+      expect(scheduler.scheduled, _evenings(DateTime(2026, 7, 19, 9)));
+      expect(scheduler.scheduled.first.at, DateTime(2026, 7, 19, 20, 30));
     });
 
-    test('suppresses today and schedules tomorrow once an entry exists',
-        () async {
+    test(
+      'keeps tonight, asking for a bloom, when today has only a log',
+      () async {
+        final FakeReminderScheduler scheduler = FakeReminderScheduler();
+        final ProviderContainer container = _container(
+          settings: AppSettings.defaults,
+          todayEntries: <Entry>[_entry()],
+          scheduler: scheduler,
+          now: DateTime(2026, 7, 19, 9),
+        );
+
+        await _settledSync(container);
+
+        expect(
+          scheduler.scheduled,
+          _evenings(
+            DateTime(2026, 7, 19, 9),
+            today: const ReminderDay(logCount: 1),
+          ),
+        );
+        expect(scheduler.scheduled[1].at, DateTime(2026, 7, 19, 22, 30));
+        expect(scheduler.scheduled[1].body, reminderLastCallBloomBody);
+      },
+    );
+
+    test('skips today once it has its bloom and a log', () async {
       final FakeReminderScheduler scheduler = FakeReminderScheduler();
       final ProviderContainer container = _container(
         settings: AppSettings.defaults,
         todayEntries: <Entry>[_entry()],
+        todayBloomed: true,
         scheduler: scheduler,
         now: DateTime(2026, 7, 19, 9),
       );
@@ -99,17 +139,28 @@ void main() {
       final ReminderSyncResult? result = await _settledSync(container);
 
       expect(result, ReminderSyncResult.scheduled);
-      expect(scheduler.scheduled, <ReminderBooking>[
-        for (final (int id, int day) in const <(int, int)>[
-          (1002, 20),
-          (1003, 21),
-          (1004, 22),
-          (1005, 23),
-          (1006, 24),
-          (1007, 25),
-        ])
-          ReminderBooking(id: id, at: DateTime(2026, 7, day, 20, 30)),
-      ]);
+      expect(scheduler.scheduled.first.at, DateTime(2026, 7, 20, 20, 30));
+      expect(scheduler.scheduled, hasLength(12));
+    });
+
+    test('follows the chosen schedule and custom time', () async {
+      final FakeReminderScheduler scheduler = FakeReminderScheduler();
+      final ProviderContainer container = _container(
+        settings: AppSettings.defaults.copyWith(
+          reminderSchedule: ReminderSchedule.custom,
+          reminderTime: const ReminderTime(hour: 7, minute: 15),
+        ),
+        todayEntries: const <Entry>[],
+        scheduler: scheduler,
+        now: DateTime(2026, 7, 19, 6),
+      );
+
+      await _settledSync(container);
+
+      expect(
+        scheduler.scheduled.take(2).map((ReminderBooking b) => b.at).toList(),
+        <DateTime>[DateTime(2026, 7, 19, 7, 15), DateTime(2026, 7, 19, 22, 30)],
+      );
     });
 
     test('cancels when the reminder toggle is off', () async {
@@ -148,10 +199,13 @@ void main() {
       final container = ProviderContainer(
         overrides: <Override>[
           appSettingsProvider.overrideWith(
-            (ref) => const Stream<AppSettings>.empty(),
+            (ref) => Stream<AppSettings>.value(AppSettings.defaults),
           ),
           entriesForDateProvider.overrideWith(
-            (ref, date) => const Stream<List<Entry>>.empty(),
+            (ref, date) => Stream<List<Entry>>.value(const <Entry>[]),
+          ),
+          dayForDateProvider.overrideWith(
+            (ref, date) => const Stream<Day?>.empty(),
           ),
           reminderClockProvider.overrideWithValue(
             () => DateTime(2026, 7, 19, 9),

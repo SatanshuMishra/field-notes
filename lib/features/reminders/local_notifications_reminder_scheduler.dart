@@ -10,8 +10,6 @@ import 'notification_settings_opener.dart';
 import 'reminder_scheduler.dart';
 
 const String reminderNotificationTitle = 'Field Notes';
-const String reminderNotificationBody =
-    "You haven't written today's field note yet.";
 const String reminderNotificationIcon = '@drawable/ic_stat_peony';
 const String windowsAppUserModelId = 'dev.satanshumishra.FieldNotes';
 const String windowsNotificationGuid = 'D6A0FDC5-EAD0-45F8-9024-F50F093EE5B2';
@@ -42,6 +40,8 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
   final FlutterLocalNotificationsPlugin _plugin;
   final ChannelNotificationStatus _notificationStatus;
   Future<void>? _ready;
+  Map<int, ReminderBooking> _booked = const <int, ReminderBooking>{};
+  Set<int> _unsettled = Set<int>.unmodifiable(ReminderService.bookingIds);
 
   Future<void> _ensureInitialized() async {
     final Future<void> ready = _ready ??= _initialize();
@@ -157,25 +157,58 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
   @override
   Future<void> schedule(List<ReminderBooking> bookings) async {
     await _ensureInitialized();
-    final Set<int> cancelled = await _cancelAll();
+    final Map<int, ReminderBooking> wanted = <int, ReminderBooking>{
+      for (final ReminderBooking booking in bookings) booking.id: booking,
+    };
+    final Set<int> stale = <int>{
+      ..._unsettled,
+      for (final MapEntry<int, ReminderBooking> held in _booked.entries)
+        if (wanted[held.key] != held.value) held.key,
+    };
+    final Set<int> cleared = await _cancelEach(stale);
+    final List<ReminderBooking> fresh = <ReminderBooking>[
+      for (final ReminderBooking booking in bookings)
+        if (stale.contains(booking.id)
+            ? cleared.contains(booking.id)
+            : !_booked.containsKey(booking.id))
+          booking,
+    ];
+    final Set<int> scheduled = await _scheduleEach(fresh);
+    _booked = Map<int, ReminderBooking>.unmodifiable(<int, ReminderBooking>{
+      for (final MapEntry<int, ReminderBooking> held in _booked.entries)
+        if (!stale.contains(held.key)) held.key: held.value,
+      for (final ReminderBooking booking in fresh)
+        if (scheduled.contains(booking.id)) booking.id: booking,
+    });
+    _unsettled = Set<int>.unmodifiable(<int>{
+      ...stale.difference(cleared),
+      for (final ReminderBooking booking in fresh)
+        if (!scheduled.contains(booking.id)) booking.id,
+    });
+  }
+
+  Future<Set<int>> _scheduleEach(List<ReminderBooking> bookings) async {
+    if (bookings.isEmpty) {
+      return const <int>{};
+    }
     final AndroidScheduleMode mode = await _androidScheduleMode();
+    final Set<int> scheduled = <int>{};
     for (final ReminderBooking booking in bookings) {
-      if (!cancelled.contains(booking.id)) {
-        continue;
-      }
       try {
         await _plugin.zonedSchedule(
           id: booking.id,
           title: reminderNotificationTitle,
-          body: reminderNotificationBody,
+          body: booking.body,
           scheduledDate: tz.TZDateTime.from(booking.at, tz.local),
           notificationDetails: _details,
           androidScheduleMode: mode,
         );
+        scheduled.add(booking.id);
       } catch (error) {
         debugPrint('Reminder zonedSchedule failed for ${booking.id}: $error');
       }
     }
+    return scheduled;
   }
 
   Future<AndroidScheduleMode> _androidScheduleMode() async {
@@ -198,12 +231,18 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
   @override
   Future<void> cancel() async {
     await _ensureInitialized();
-    await _cancelAll();
+    final Set<int> held = <int>{..._unsettled, ..._booked.keys};
+    final Set<int> cleared = await _cancelEach(held);
+    _booked = const <int, ReminderBooking>{};
+    _unsettled = Set<int>.unmodifiable(held.difference(cleared));
   }
 
-  Future<Set<int>> _cancelAll() async {
+  Future<Set<int>> _cancelEach(Set<int> ids) async {
     final Set<int> cancelled = <int>{};
     for (final int id in ReminderService.bookingIds) {
+      if (!ids.contains(id)) {
+        continue;
+      }
       try {
         await _plugin.cancel(id: id);
         cancelled.add(id);

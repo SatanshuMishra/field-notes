@@ -284,8 +284,28 @@ List<ReminderBooking> _fourBookings() {
       ReminderBooking(
         id: ReminderService.bookingIds[offset],
         at: DateTime(start.year, start.month, start.day + offset, 20),
+        body: 'nudge $offset',
       ),
   ];
+}
+
+List<String> _callNames(_CallRecordingPlugin plugin) => <String>[
+  for (final _Call call in plugin.calls) '${call.kind.name} ${call.id}',
+];
+
+Future<(LocalNotificationsReminderScheduler, _CallRecordingPlugin)>
+_bookedOnMacOS(List<ReminderBooking> bookings) async {
+  debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+  addTearDown(() => debugDefaultTargetPlatformOverride = null);
+  _answerTimezone('Europe/London');
+  final _CallRecordingPlugin plugin = _CallRecordingPlugin(
+    macOS: _RecordingMacOSPlugin(),
+  );
+  final LocalNotificationsReminderScheduler scheduler =
+      LocalNotificationsReminderScheduler(plugin: plugin);
+  await scheduler.schedule(bookings);
+  plugin.calls.clear();
+  return (scheduler, plugin);
 }
 
 List<String> _captureLog() {
@@ -336,6 +356,7 @@ Future<AndroidScheduleMode> _androidModeWhen(
     ReminderBooking(
       id: ReminderService.bookingIds.first,
       at: DateTime(2026, 10, 9, 20),
+      body: reminderEveningBody,
     ),
   ]);
 
@@ -420,6 +441,7 @@ void main() {
     final ReminderBooking booking = ReminderBooking(
       id: ReminderService.bookingIds.first,
       at: DateTime(2026, 10, 9, 20),
+      body: reminderEveningBody,
     );
 
     await scheduler.schedule(<ReminderBooking>[booking]);
@@ -500,10 +522,12 @@ void main() {
       ReminderBooking(
         id: ReminderService.bookingIds[0],
         at: DateTime(2026, 10, 9, 20),
+        body: reminderEveningBody,
       ),
       ReminderBooking(
         id: ReminderService.bookingIds[1],
         at: DateTime(2026, 10, 10, 20),
+        body: reminderLastCallBody,
       ),
     ];
 
@@ -606,7 +630,102 @@ void main() {
 
     expect(plugin.cancelled, isEmpty);
     expect(plugin.scheduled, isEmpty);
-    expect(log, hasLength(7));
+    expect(log, hasLength(ids.length));
+  });
+
+  group('after the first booking only changed reminders are touched', () {
+    test('the same bookings again touch nothing', () async {
+      final List<ReminderBooking> bookings = _fourBookings();
+      final (scheduler, plugin) = await _bookedOnMacOS(bookings);
+
+      await scheduler.schedule(List<ReminderBooking>.of(bookings));
+
+      expect(plugin.calls, isEmpty);
+    });
+
+    test('a changed reminder is cancelled and booked again alone', () async {
+      final List<ReminderBooking> bookings = _fourBookings();
+      final (scheduler, plugin) = await _bookedOnMacOS(bookings);
+      final ReminderBooking changed = ReminderBooking(
+        id: bookings[1].id,
+        at: bookings[1].at,
+        body: reminderLastCallBloomBody,
+      );
+
+      await scheduler.schedule(<ReminderBooking>[
+        bookings[0],
+        changed,
+        bookings[2],
+        bookings[3],
+      ]);
+
+      expect(_callNames(plugin), <String>[
+        'cancel ${changed.id}',
+        'schedule ${changed.id}',
+      ]);
+      expect(plugin.calls.last.body, reminderLastCallBloomBody);
+    });
+
+    test(
+      'a dropped reminder is only cancelled and a new one only booked',
+      () async {
+        final List<ReminderBooking> bookings = _fourBookings();
+        final (scheduler, plugin) = await _bookedOnMacOS(bookings);
+        final ReminderBooking added = ReminderBooking(
+          id: ReminderService.bookingIds[4],
+          at: bookings[3].at.add(const Duration(days: 1)),
+          body: reminderEveningBody,
+        );
+
+        await scheduler.schedule(<ReminderBooking>[
+          ...bookings.sublist(1),
+          added,
+        ]);
+
+        expect(_callNames(plugin), <String>[
+          'cancel ${bookings[0].id}',
+          'schedule ${added.id}',
+        ]);
+      },
+    );
+
+    test('turning reminders off cancels only what was booked', () async {
+      final List<ReminderBooking> bookings = _fourBookings();
+      final (scheduler, plugin) = await _bookedOnMacOS(bookings);
+
+      await scheduler.cancel();
+      await scheduler.cancel();
+
+      expect(_callNames(plugin), <String>[
+        for (final ReminderBooking booking in bookings) 'cancel ${booking.id}',
+      ]);
+    });
+
+    test(
+      'an id whose cancel failed is cancelled again before it is rebooked',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        _answerTimezone('Europe/London');
+        final List<int> ids = ReminderService.bookingIds;
+        final _FailingWindowsPlugin plugin = _FailingWindowsPlugin(
+          failingCancels: <int>{ids[0]},
+          failingSchedules: <int>{},
+        );
+        final LocalNotificationsReminderScheduler scheduler =
+            LocalNotificationsReminderScheduler(plugin: plugin);
+        final List<ReminderBooking> bookings = _fourBookings();
+        await scheduler.schedule(bookings);
+        plugin.cancelled.clear();
+        plugin.scheduled.clear();
+        plugin.failingCancels.clear();
+
+        await scheduler.schedule(bookings);
+
+        expect(plugin.cancelled, <int>[ids[0]]);
+        expect(plugin.scheduled, <int>[ids[0]]);
+      },
+    );
   });
 
   group(
@@ -644,7 +763,7 @@ void main() {
           final _Call call = scheduled[index];
           expect(call.id, ids[index]);
           expect(call.title, 'Field Notes');
-          expect(call.body, "You haven't written today's field note yet.");
+          expect(call.body, bookings[index].body);
           expect(
             call.scheduledDate!.isAtSameMomentAs(bookings[index].at),
             isTrue,

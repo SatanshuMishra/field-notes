@@ -2,6 +2,7 @@ import 'package:field_notes/app/app.dart';
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/domain/services/reminder_service.dart';
 import 'package:field_notes/domain/settings/reminder_time.dart';
 import 'package:field_notes/domain/settings/week_start.dart';
 import 'package:field_notes/features/onboarding/chapters/reminder_chapter.dart';
@@ -27,7 +28,7 @@ import '../../settings/support/fake_settings_repository.dart';
 import '../../settings/support/recording_reminder_scheduler.dart';
 
 const String _liveTitle = 'Field Notes';
-const String _liveBody = "You haven't written today's field note yet.";
+const String _liveBody = 'How was today? A few words and a bloom are plenty.';
 const String _quietBody = 'No nudges. Your meadow waits quietly.';
 
 const String _notificationsOff = 'Notifications are off for Field Notes.';
@@ -437,7 +438,7 @@ void main() {
   testWidgets('reminder previews the live notification text and holds the '
       'choice', (WidgetTester tester) async {
     expect(reminderNotificationTitle, _liveTitle);
-    expect(reminderNotificationBody, _liveBody);
+    expect(reminderEveningBody, _liveBody);
     for (final ShellLayout layout in ShellLayout.values) {
       await _onLayout(layout, () async {
         final _Spies spies = await _pumpReminder(tester, layout);
@@ -451,7 +452,7 @@ void main() {
           tester,
           big: '20:30',
           clock: '20:30',
-          body: reminderNotificationBody,
+          body: reminderEveningBody,
           quiet: false,
         );
         expect(find.text(_quietBody), findsNothing);
@@ -466,7 +467,7 @@ void main() {
           body: _quietBody,
           quiet: true,
         );
-        expect(find.text(reminderNotificationBody), findsNothing);
+        expect(find.text(reminderEveningBody), findsNothing);
         expect(find.text('20:30'), findsOneWidget);
 
         await _choose(tester, ReminderChoice.morning);
@@ -476,7 +477,7 @@ void main() {
           tester,
           big: '08:00',
           clock: '08:00',
-          body: reminderNotificationBody,
+          body: reminderEveningBody,
           quiet: false,
         );
         expect(find.text(_quietBody), findsNothing);
@@ -505,7 +506,7 @@ void main() {
           everyElement(1),
         );
         expect(
-          _opacitiesAbove(tester, _inPreview(reminderNotificationBody)),
+          _opacitiesAbove(tester, _inPreview(reminderEveningBody)),
           everyElement(1),
         );
         expect(
@@ -525,11 +526,11 @@ void main() {
           tester,
           big: '12:30',
           clock: '12:30',
-          body: reminderNotificationBody,
+          body: reminderEveningBody,
           quiet: false,
         );
         expect(
-          _opacitiesAbove(tester, _inPreview(reminderNotificationBody)),
+          _opacitiesAbove(tester, _inPreview(reminderEveningBody)),
           everyElement(1),
         );
         _expectNothingSaved(spies);

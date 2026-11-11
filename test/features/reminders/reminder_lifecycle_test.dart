@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/services/reminder_service.dart';
 import 'package:field_notes/domain/services/streak_service.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/onboarding/onboarding_gate.dart';
@@ -24,21 +25,47 @@ import '../settings/support/fake_settings_repository.dart';
 import '../settings/support/recording_reminder_scheduler.dart';
 
 Entry _entry(String id) => Entry(
-      id: id,
-      dayId: 'day-$id',
-      type: EntryType.text,
-      textContent: 'a note',
-      createdAt: 0,
-      updatedAt: 0,
-    );
+  id: id,
+  dayId: 'day-$id',
+  type: EntryType.text,
+  textContent: 'a note',
+  createdAt: 0,
+  updatedAt: 0,
+);
 
 Stream<List<Entry>> _noEntries(String date) =>
     Stream<List<Entry>>.value(const <Entry>[]);
 
-Map<int, DateTime> _eveningsOn(Map<int, int> julyDayById) => <int, DateTime>{
-      for (final MapEntry<int, int> booking in julyDayById.entries)
-        booking.key: DateTime(2026, 7, booking.value, 20, 30),
-    };
+Stream<Day?> _noDay(String date) => Stream<Day?>.value(null);
+
+Day _bloomed(String date) => Day(
+  id: 'day-$date',
+  date: date,
+  createdAt: 0,
+  updatedAt: 0,
+  mood: Mood.happy,
+);
+
+Map<int, DateTime> _eveningsOn(Iterable<int> julyDays) => <int, DateTime>{
+  for (final int day in julyDays) ...<int, DateTime>{
+    ReminderService.bookingIdFor(DateTime(2026, 7, day), ReminderNudge.evening):
+        DateTime(2026, 7, day, 20, 30),
+    ReminderService.bookingIdFor(
+      DateTime(2026, 7, day),
+      ReminderNudge.lastCall,
+    ): DateTime(
+      2026,
+      7,
+      day,
+      22,
+      30,
+    ),
+  },
+};
+
+Iterable<int> _julyDays(int first, int last) => <int>[
+  for (int day = first; day <= last; day++) day,
+];
 
 void _holdStill(WidgetTester tester) {
   tester.platformDispatcher.accessibilityFeaturesTestValue =
@@ -50,6 +77,7 @@ Future<RecordingReminderScheduler> _launch(
   WidgetTester tester, {
   required DateTime Function() clock,
   Stream<List<Entry>> Function(String date) entriesFor = _noEntries,
+  Stream<Day?> Function(String date) dayFor = _noDay,
   FakeSettingsRepository? settings,
   RecordingReminderScheduler? recorder,
 }) async {
@@ -83,6 +111,7 @@ Future<RecordingReminderScheduler> _launch(
         entriesForDateProvider.overrideWith(
           (Ref ref, String date) => entriesFor(date),
         ),
+        dayForDateProvider.overrideWith((Ref ref, String date) => dayFor(date)),
         reminderClockProvider.overrideWithValue(clock),
         reminderSchedulerProvider.overrideWithValue(scheduler),
       ],
@@ -98,91 +127,84 @@ Future<RecordingReminderScheduler> _launch(
 }
 
 void main() {
-  testWidgets('the reminder is booked at launch without opening Settings',
-      (WidgetTester tester) async {
+  testWidgets('the reminder is booked at launch without opening Settings', (
+    WidgetTester tester,
+  ) async {
     final RecordingReminderScheduler scheduler = await _launch(
       tester,
       clock: () => DateTime(2026, 7, 20, 9),
     );
 
     expect(find.byType(SettingsScreen), findsNothing);
-    expect(
-      scheduler.booked,
-      _eveningsOn(<int, int>{
-        1001: 20,
-        1002: 21,
-        1003: 22,
-        1004: 23,
-        1005: 24,
-        1006: 25,
-        1007: 26,
-      }),
-    );
-  });
-
-  testWidgets('the next seven days are booked and days with an entry are skipped',
-      (WidgetTester tester) async {
-    final RecordingReminderScheduler scheduler = await _launch(
-      tester,
-      clock: () => DateTime(2026, 7, 20, 9),
-      entriesFor: (String date) => Stream<List<Entry>>.value(
-        switch (date) {
-          '2026-07-20' => <Entry>[_entry('monday')],
-          '2026-07-22' => <Entry>[_entry('wednesday')],
-          _ => const <Entry>[],
-        },
-      ),
-    );
-
-    expect(
-      scheduler.booked,
-      _eveningsOn(<int, int>{
-        1002: 21,
-        1004: 23,
-        1005: 24,
-        1006: 25,
-        1007: 26,
-      }),
-    );
+    expect(scheduler.booked, _eveningsOn(_julyDays(20, 26)));
   });
 
   testWidgets(
-      "saving today's entry cancels today's reminder and keeps the next six days",
-      (WidgetTester tester) async {
-    final StreamController<List<Entry>> today =
-        StreamController<List<Entry>>();
-    addTearDown(() {
-      today.close();
-    });
-    today.add(const <Entry>[]);
-    final RecordingReminderScheduler scheduler = await _launch(
-      tester,
-      clock: () => DateTime(2026, 7, 20, 9),
-      entriesFor: (String date) =>
-          date == '2026-07-20' ? today.stream : _noEntries(date),
-    );
+    'the next seven days are booked and only days with a bloom and a log are skipped',
+    (WidgetTester tester) async {
+      final RecordingReminderScheduler scheduler = await _launch(
+        tester,
+        clock: () => DateTime(2026, 7, 20, 9),
+        entriesFor: (String date) => Stream<List<Entry>>.value(switch (date) {
+          '2026-07-20' => <Entry>[_entry('monday')],
+          '2026-07-22' => <Entry>[_entry('wednesday')],
+          _ => const <Entry>[],
+        }),
+        dayFor: (String date) =>
+            Stream<Day?>.value(date == '2026-07-22' ? _bloomed(date) : null),
+      );
 
-    expect(scheduler.booked[1001], DateTime(2026, 7, 20, 20, 30));
+      expect(scheduler.booked, _eveningsOn(<int>[20, 21, 23, 24, 25, 26]));
+    },
+  );
 
-    today.add(<Entry>[_entry('tonight')]);
-    await tester.pumpAndSettle();
+  testWidgets(
+    "finishing today cancels today's nudges and keeps the next six days",
+    (WidgetTester tester) async {
+      final StreamController<List<Entry>> today =
+          StreamController<List<Entry>>();
+      final StreamController<Day?> todayDay = StreamController<Day?>();
+      addTearDown(() {
+        today.close();
+        todayDay.close();
+      });
+      today.add(const <Entry>[]);
+      todayDay.add(null);
+      final RecordingReminderScheduler scheduler = await _launch(
+        tester,
+        clock: () => DateTime(2026, 7, 20, 9),
+        entriesFor: (String date) =>
+            date == '2026-07-20' ? today.stream : _noEntries(date),
+        dayFor: (String date) =>
+            date == '2026-07-20' ? todayDay.stream : _noDay(date),
+      );
 
-    expect(scheduler.booked.containsKey(1001), isFalse);
-    expect(
-      scheduler.booked,
-      _eveningsOn(<int, int>{
-        1002: 21,
-        1003: 22,
-        1004: 23,
-        1005: 24,
-        1006: 25,
-        1007: 26,
-      }),
-    );
-  });
+      expect(scheduler.booked, _eveningsOn(_julyDays(20, 26)));
 
-  testWidgets('resuming the app re-books the next seven days',
-      (WidgetTester tester) async {
+      today.add(<Entry>[_entry('tonight')]);
+      await tester.pumpAndSettle();
+
+      expect(scheduler.booked, _eveningsOn(_julyDays(20, 26)));
+      expect(
+        scheduler.bookings.last
+            .firstWhere(
+              (ReminderBooking booking) =>
+                  booking.at == DateTime(2026, 7, 20, 22, 30),
+            )
+            .body,
+        reminderLastCallBloomBody,
+      );
+
+      todayDay.add(_bloomed('2026-07-20'));
+      await tester.pumpAndSettle();
+
+      expect(scheduler.booked, _eveningsOn(_julyDays(21, 26)));
+    },
+  );
+
+  testWidgets('resuming the app re-books the next seven days', (
+    WidgetTester tester,
+  ) async {
     DateTime now = DateTime(2026, 7, 20, 9);
     final RecordingReminderScheduler scheduler = await _launch(
       tester,
@@ -203,22 +225,12 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
 
-    expect(
-      scheduler.booked,
-      _eveningsOn(<int, int>{
-        1001: 21,
-        1002: 22,
-        1003: 23,
-        1004: 24,
-        1005: 25,
-        1006: 26,
-        1007: 27,
-      }),
-    );
+    expect(scheduler.booked, _eveningsOn(_julyDays(21, 27)));
   });
 
-  testWidgets('permission is asked once at first launch',
-      (WidgetTester tester) async {
+  testWidgets('permission is asked once at first launch', (
+    WidgetTester tester,
+  ) async {
     final FakeSettingsRepository firstSettings = FakeSettingsRepository();
     final RecordingReminderScheduler firstLaunch = await _launch(
       tester,
@@ -248,26 +260,28 @@ void main() {
     expect(relaunch.statusChecks, greaterThan(0));
   });
 
-  testWidgets('the first-launch notification request waits until onboarding is done',
-      (WidgetTester tester) async {
-    final RecordingReminderScheduler scheduler = await _launch(
-      tester,
-      clock: () => DateTime(2026, 7, 20, 9),
-      settings: FakeSettingsRepository(storedValues: false),
-    );
-    final ProviderContainer container = ProviderScope.containerOf(
-      tester.element(find.byType(AppShell)),
-    );
+  testWidgets(
+    'the first-launch notification request waits until onboarding is done',
+    (WidgetTester tester) async {
+      final RecordingReminderScheduler scheduler = await _launch(
+        tester,
+        clock: () => DateTime(2026, 7, 20, 9),
+        settings: FakeSettingsRepository(storedValues: false),
+      );
+      final ProviderContainer container = ProviderScope.containerOf(
+        tester.element(find.byType(AppShell)),
+      );
 
-    expect(
-      await container.read(onboardingGateProvider.future),
-      OnboardingVisibility.shown,
-    );
-    expect(scheduler.permissionRequests, 0);
+      expect(
+        await container.read(onboardingGateProvider.future),
+        OnboardingVisibility.shown,
+      );
+      expect(scheduler.permissionRequests, 0);
 
-    await container.read(onboardingGateProvider.notifier).complete();
-    await tester.pumpAndSettle();
+      await container.read(onboardingGateProvider.notifier).complete();
+      await tester.pumpAndSettle();
 
-    expect(scheduler.permissionRequests, 1);
-  });
+      expect(scheduler.permissionRequests, 1);
+    },
+  );
 }

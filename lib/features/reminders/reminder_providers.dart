@@ -28,35 +28,44 @@ ReminderScheduler reminderScheduler(Ref ref) =>
 
 @Riverpod(keepAlive: true)
 ReminderCoordinator reminderCoordinator(Ref ref) => ReminderCoordinator(
-      scheduler: ref.watch(reminderSchedulerProvider),
-      onError: (Object error, StackTrace _) =>
-          debugPrint('Reminder scheduling failed: $error'),
-    );
+  scheduler: ref.watch(reminderSchedulerProvider),
+  onError: (Object error, StackTrace _) =>
+      debugPrint('Reminder scheduling failed: $error'),
+);
+
+typedef ReminderPlan = ({
+  bool enabled,
+  ReminderSchedule schedule,
+  ReminderTime customTime,
+});
 
 @Riverpod(keepAlive: true)
 Future<ReminderSyncResult?> reminderSync(Ref ref) async {
-  final ({bool enabled, ReminderTime time})? reminder = ref.watch(
+  final ReminderPlan? plan = ref.watch(
     appSettingsProvider.select(
       (AsyncValue<AppSettings> settings) => switch (settings.value) {
         final AppSettings value => (
-            enabled: value.reminderEnabled,
-            time: value.reminderTime,
-          ),
+          enabled: value.reminderEnabled,
+          schedule: value.reminderSchedule,
+          customTime: value.reminderTime,
+        ),
         null => null,
       },
     ),
   );
-  if (reminder == null) {
+  if (plan == null) {
     return null;
   }
   final DateTime now = ref.watch(reminderClockProvider)();
-  final ReminderCoordinator coordinator = ref.watch(reminderCoordinatorProvider);
-  if (!reminder.enabled) {
+  final ReminderCoordinator coordinator = ref.watch(
+    reminderCoordinatorProvider,
+  );
+  if (!plan.enabled) {
     return coordinator.sync(
       enabled: false,
-      time: reminder.time,
+      schedule: plan.schedule,
+      customTime: plan.customTime,
       now: now,
-      todayHasEntry: false,
     );
   }
   final Timer midnight = Timer(
@@ -65,21 +74,31 @@ Future<ReminderSyncResult?> reminderSync(Ref ref) async {
   );
   ref.onDispose(midnight.cancel);
   final List<DateTime> days = const ReminderService().windowDays(now);
-  final List<List<Entry>?> entries = <List<Entry>?>[
+  final List<AsyncValue<List<Entry>>> entries = <AsyncValue<List<Entry>>>[
     for (final DateTime day in days)
-      ref.watch(entriesForDateProvider(reminderDateKey(day))).value,
+      ref.watch(entriesForDateProvider(reminderDateKey(day))),
   ];
-  if (entries.contains(null)) {
+  final List<AsyncValue<Day?>> blooms = <AsyncValue<Day?>>[
+    for (final DateTime day in days)
+      ref.watch(dayForDateProvider(reminderDateKey(day))),
+  ];
+  if (<AsyncValue<Object?>>[
+    ...entries,
+    ...blooms,
+  ].any((AsyncValue<Object?> value) => !value.hasValue)) {
     return null;
   }
   return coordinator.sync(
     enabled: true,
-    time: reminder.time,
+    schedule: plan.schedule,
+    customTime: plan.customTime,
     now: now,
-    todayHasEntry: entries.first!.isNotEmpty,
-    daysWithEntries: <DateTime>{
+    days: <DateTime, ReminderDay>{
       for (int offset = 0; offset < days.length; offset++)
-        if (entries[offset]!.isNotEmpty) days[offset],
+        days[offset]: ReminderDay(
+          hasBloom: blooms[offset].requireValue?.mood != null,
+          logCount: entries[offset].requireValue.length,
+        ),
     },
   );
 }
@@ -107,8 +126,9 @@ class ReminderPermissionStatus extends _$ReminderPermissionStatus {
   }
 
   Future<void> requestUnlessGranted() async {
-    final ReminderPermission current =
-        await _checkPermission(ref.read(reminderSchedulerProvider));
+    final ReminderPermission current = await _checkPermission(
+      ref.read(reminderSchedulerProvider),
+    );
     if (current == ReminderPermission.granted) {
       state = const AsyncData<ReminderPermission>(ReminderPermission.granted);
       return;
