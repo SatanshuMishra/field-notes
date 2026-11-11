@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
-Status: parked
-Updated: 2026-11-11T07:10:18.026Z
+Status: abandoned: The owner dropped the petal change as unnecessary: PR 381 closed, its branches, worktrees, spec files, glossary terms and decision record removed, run home archived under ~/.mitosis/fireplace/archive/petal-drift-idle-redraw; the petals stay as in 1.8.0.
+Updated: 2026-11-11T07:10:18.162Z
 Next ids: c1 D2 R2 S1
 
 ## Goal
