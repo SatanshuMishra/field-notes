@@ -3,7 +3,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show clampDouble;
 import 'package:flutter/material.dart' show Theme;
-import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter/widgets.dart';
 
@@ -12,6 +11,8 @@ import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/app/shell/windows_caption_buttons.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/outlined_surface.dart';
+import 'package:field_notes/features/capture/core/night_sky.dart';
 import 'package:field_notes/features/capture/immersive/immersive_route.dart'
     show immersiveFadeFor;
 import 'package:field_notes/features/capture/immersive/stage_phase.dart'
@@ -51,32 +52,21 @@ double composerPanelWidthFor(double window) => clampDouble(
 const Color _clearBarrier = Color(0x00000000);
 
 const Color _paperChrome = Color(0xFF554737);
-const Color _paperMote = Color(0xFFB8566A);
 const Color _paperCaret = Color(0xFFB8566A);
 const Color _roomChrome = Color(0xFFB7A58C);
 const Color _roomStatus = Color(0xFFDCCAB0);
-const Color _roomMote = Color(0xFFF3D8BE);
 const Color _roomCaret = Color(0xFFE3889A);
-const double _paperGlowAlpha = 0.16;
-const double _roomGlowAlpha = 0.17;
 const double _paperLineAlpha = 0.32;
 const double _roomLineAlpha = 0.28;
-const double _groundFocusY = 0.38;
-const double _groundWidthReach = 1.2;
-const double _groundHeightReach = 0.9;
-const Size _glowSize = Size(760, 520);
 
 @immutable
 final class ComposerStageInks {
   const ComposerStageInks._({
     required this.ground,
-    required this.groundEdge,
     required this.ink,
     required this.chrome,
     required this.status,
     required this.line,
-    required this.glow,
-    required this.mote,
     required this.caret,
     required this.focus,
   });
@@ -87,28 +77,20 @@ final class ComposerStageInks {
     final Color ink = colors.mediaCta;
     return ComposerStageInks._(
       ground: colors.viewerStage,
-      groundEdge: colors.viewerStageEdge,
       ink: ink,
       chrome: dark ? _roomChrome : _paperChrome,
       status: dark ? _roomStatus : ink,
       line: ink.withValues(alpha: dark ? _roomLineAlpha : _paperLineAlpha),
-      glow: Palette.coral.withValues(
-        alpha: dark ? _roomGlowAlpha : _paperGlowAlpha,
-      ),
-      mote: dark ? _roomMote : _paperMote,
       caret: dark ? _roomCaret : _paperCaret,
       focus: dark ? Palette.focusRingOnDark : ink,
     );
   }
 
   final Color ground;
-  final Color groundEdge;
   final Color ink;
   final Color chrome;
   final Color status;
   final Color line;
-  final Color glow;
-  final Color mote;
   final Color caret;
   final Color focus;
 }
@@ -261,241 +243,31 @@ class ComposerShell extends StatelessWidget {
 
   Widget _panel(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return Container(
+    return OutlinedSurface(
       key: composerPanelKey,
-      clipBehavior: Clip.hardEdge,
-      decoration: BoxDecoration(
-        color: colors.composerPaper,
-        border: Border.all(color: colors.line, width: composerPanelBorderWidth),
-        borderRadius: BorderRadius.circular(Shapes.radiusXl),
-        boxShadow: Shadows.panelLift,
-      ),
+      color: colors.composerPaper,
+      borderColor: colors.line,
+      borderWidth: composerPanelBorderWidth,
+      borderRadius: BorderRadius.circular(Shapes.radiusXl),
+      boxShadow: Shadows.panelLift,
+      padding: const EdgeInsets.all(composerPanelBorderWidth),
       child: child,
     );
   }
 }
 
 class ComposerStageGround extends StatelessWidget {
-  const ComposerStageGround({super.key, required this.typing});
+  const ComposerStageGround({super.key, this.seed});
 
-  final Listenable typing;
-
-  @override
-  Widget build(BuildContext context) {
-    final ComposerStageInks inks = ComposerStageInks.of(context);
-    return IgnorePointer(
-      child: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          RepaintBoundary(
-            child: CustomPaint(painter: _GroundPainter(inks: inks)),
-          ),
-          RepaintBoundary(
-            child: _Motes(typing: typing, color: inks.mote),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GroundPainter extends CustomPainter {
-  const _GroundPainter({required this.inks});
-
-  final ComposerStageInks inks;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) {
-      return;
-    }
-    final Rect bounds = Offset.zero & size;
-    final Offset focus = Offset(size.width / 2, size.height * _groundFocusY);
-    canvas.drawRect(
-      bounds,
-      Paint()
-        ..shader = _ellipse(
-          focus,
-          size.width * _groundWidthReach,
-          size.height * _groundHeightReach,
-          inks.ground,
-          inks.groundEdge,
-        ),
-    );
-    canvas.drawRect(
-      bounds,
-      Paint()
-        ..shader = _ellipse(
-          size.center(Offset.zero),
-          _glowSize.width / 2,
-          _glowSize.height / 2,
-          inks.glow,
-          inks.glow.withValues(alpha: 0),
-        ),
-    );
-  }
-
-  ui.Shader _ellipse(
-    Offset centre,
-    double reachX,
-    double reachY,
-    Color inner,
-    Color outer,
-  ) {
-    return ui.Gradient.radial(
-      Offset.zero,
-      1,
-      <Color>[inner, outer],
-      const <double>[0, 1],
-      TileMode.clamp,
-      Matrix4.translationValues(
-        centre.dx,
-        centre.dy,
-        0,
-      ).multiplied(Matrix4.diagonal3Values(reachX, reachY, 1)).storage,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_GroundPainter oldDelegate) => oldDelegate.inks != inks;
-}
-
-const int _moteCount = 14;
-const double _moteRadius = 2;
-const double _moteRestOpacity = 0.15;
-const double _moteTypingOpacity = 0.75;
-const double _moteEnergyPerKey = 0.22;
-const double _moteEnergyFadePerSecond = 0.5;
-const double _moteLowOffset = 12;
-const double _moteTravel = 26;
-
-class _Motes extends StatefulWidget {
-  const _Motes({required this.typing, required this.color});
-
-  final Listenable typing;
-  final Color color;
-
-  @override
-  State<_Motes> createState() => _MotesState();
-}
-
-class _MotesState extends State<_Motes> with SingleTickerProviderStateMixin {
-  late final Ticker _ticker = createTicker(_tick);
-  final ValueNotifier<int> _frames = ValueNotifier<int>(0);
-  bool _still = false;
-  double _energy = 0;
-  double _seconds = 0;
-  Duration _lastFrame = Duration.zero;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.typing.addListener(_pulse);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _still = MediaQuery.disableAnimationsOf(context);
-    if (_still) {
-      _settle();
-    }
-  }
-
-  @override
-  void didUpdateWidget(_Motes oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.typing, widget.typing)) {
-      oldWidget.typing.removeListener(_pulse);
-      widget.typing.addListener(_pulse);
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.typing.removeListener(_pulse);
-    _ticker.dispose();
-    _frames.dispose();
-    super.dispose();
-  }
-
-  void _pulse() {
-    if (_still) {
-      return;
-    }
-    _energy = math.min(1, _energy + _moteEnergyPerKey);
-    if (!_ticker.isActive) {
-      _lastFrame = Duration.zero;
-      _ticker.start();
-    }
-  }
-
-  void _tick(Duration elapsed) {
-    final double delta =
-        (elapsed - _lastFrame).inMicroseconds / Duration.microsecondsPerSecond;
-    _lastFrame = elapsed;
-    _seconds += delta;
-    _energy = math.max(0, _energy - delta * _moteEnergyFadePerSecond);
-    _frames.value += 1;
-    if (_energy == 0) {
-      _ticker.stop();
-    }
-  }
-
-  void _settle() {
-    _ticker.stop();
-    _energy = 0;
-    _frames.value += 1;
-  }
+  final int? seed;
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _MotesPainter(
-        repaint: _frames,
-        color: widget.color,
-        energy: () => _energy,
-        seconds: () => _seconds,
-      ),
+    return ColoredBox(
+      color: ComposerStageInks.of(context).ground,
+      child: NightSky(kind: NightSkyKind.note, seed: seed),
     );
   }
-}
-
-class _MotesPainter extends CustomPainter {
-  _MotesPainter({
-    required super.repaint,
-    required this.color,
-    required this.energy,
-    required this.seconds,
-  });
-
-  final Color color;
-  final ValueGetter<double> energy;
-  final ValueGetter<double> seconds;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = color.withValues(
-        alpha: _moteRestOpacity + energy() * _moteTypingOpacity,
-      );
-    final double now = seconds();
-    for (int index = 0; index < _moteCount; index++) {
-      final double x = ((index * 53 + 7) % 100) / 100 * size.width;
-      final double y = ((index * 37 + 19) % 100) / 100 * size.height;
-      final double period = 5.0 + index % 5;
-      final double swing =
-          (1 - math.cos(math.pi * (now + index * 0.9) / period)) / 2;
-      canvas.drawCircle(
-        Offset(x, y + _moteLowOffset - _moteTravel * swing),
-        _moteRadius,
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_MotesPainter oldDelegate) => oldDelegate.color != color;
 }
 
 class _ComposerScrim extends StatelessWidget {

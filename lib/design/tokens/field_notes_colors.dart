@@ -60,6 +60,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     required this.viewerStageEdge,
     required this.viewerFadeStart,
     required this.viewerFadeEnd,
+    required this.skyStar,
+    required this.skyComet,
   });
 
   static const FieldNotesColors light = FieldNotesColors(
@@ -119,6 +121,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     viewerStageEdge: Color(0xFFCDBD9F),
     viewerFadeStart: Color(0x00FBF3E4),
     viewerFadeEnd: Color(0xF5FBF3E4),
+    skyStar: Color(0x5C6F605B),
+    skyComet: Color(0xCC5C4E4A),
   );
 
   static const FieldNotesColors dark = FieldNotesColors(
@@ -178,6 +182,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     viewerStageEdge: Color(0xFF0E0B09),
     viewerFadeStart: Color(0x001C1919),
     viewerFadeEnd: Color(0xF01C1919),
+    skyStar: Color(0x8AF3E6D1),
+    skyComet: Color(0xB3FBF3E4),
   );
 
   static FieldNotesColors of(BuildContext context) =>
@@ -239,6 +245,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
   final Color viewerStageEdge;
   final Color viewerFadeStart;
   final Color viewerFadeEnd;
+  final Color skyStar;
+  final Color skyComet;
 
   Color get ink08 => ink.withAlpha(0x14);
   Color get ink12 => ink.withAlpha(0x1F);
@@ -315,6 +323,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     Color? viewerStageEdge,
     Color? viewerFadeStart,
     Color? viewerFadeEnd,
+    Color? skyStar,
+    Color? skyComet,
   }) {
     return FieldNotesColors(
       page: page ?? this.page,
@@ -373,6 +383,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
       viewerStageEdge: viewerStageEdge ?? this.viewerStageEdge,
       viewerFadeStart: viewerFadeStart ?? this.viewerFadeStart,
       viewerFadeEnd: viewerFadeEnd ?? this.viewerFadeEnd,
+      skyStar: skyStar ?? this.skyStar,
+      skyComet: skyComet ?? this.skyComet,
     );
   }
 
@@ -449,6 +461,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
       viewerStageEdge: Color.lerp(viewerStageEdge, other.viewerStageEdge, t)!,
       viewerFadeStart: Color.lerp(viewerFadeStart, other.viewerFadeStart, t)!,
       viewerFadeEnd: Color.lerp(viewerFadeEnd, other.viewerFadeEnd, t)!,
+      skyStar: Color.lerp(skyStar, other.skyStar, t)!,
+      skyComet: Color.lerp(skyComet, other.skyComet, t)!,
     );
   }
 
@@ -509,6 +523,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     viewerStageEdge,
     viewerFadeStart,
     viewerFadeEnd,
+    skyStar,
+    skyComet,
   ];
 
   @override

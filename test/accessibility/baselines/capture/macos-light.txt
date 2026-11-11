@@ -54,11 +54,8 @@ text-contrast | c10-discard-dialog-sidebar | ⌘ Return | New note, Today · 9:3
 text-contrast | c10-discard-dialog-sidebar@2x | 6 words | New note, Today · 9:30 AM # measured: 6.38:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | Add a title | ⌘ Return / keep / Esc / leave / 6 words # measured: 6.38:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | Esc | New note, Today · 9:30 AM # measured: 7.64:1 by token arithmetic
-text-contrast | c10-discard-dialog-sidebar@2x | Leave | ⌘ Return / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
-text-contrast | c10-discard-dialog-sidebar@2x | Let it go | ⌘ Return / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | Friday, September 18 | ⌘ Return / keep / Esc / leave / 6 words # measured: 6.38:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | today | ⌘ Return / keep / Esc / leave / 6 words # measured: 5.12:1 by token arithmetic
-text-contrast | c10-discard-dialog-sidebar@2x | There’s no wrong way to say it. | ⌘ Return / keep / Esc / leave / 6 words # measured: 7.64:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | keep | New note, Today · 9:30 AM # measured: 6.38:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | leave | New note, Today · 9:30 AM # measured: 6.38:1 by token arithmetic
 text-contrast | c10-discard-dialog-sidebar@2x | ⌘ Return | New note, Today · 9:30 AM # measured: 7.64:1 by token arithmetic

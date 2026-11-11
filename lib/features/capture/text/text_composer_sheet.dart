@@ -188,7 +188,6 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   final FocusNode _titleFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
   final UndoHistoryController _undoController = UndoHistoryController();
-  final ValueNotifier<int> _typing = ValueNotifier<int>(0);
   late final _TitleThenPagePolicy _titleThenPage = _TitleThenPagePolicy(
     title: _titleFocusNode,
     page: _focusNode,
@@ -268,7 +267,6 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     _titleFocusNode.dispose();
     _scrollController.dispose();
     _undoController.dispose();
-    _typing.dispose();
     super.dispose();
   }
 
@@ -326,7 +324,6 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     _seenTitle = title;
     _seenBody = body;
     _mirrorOut(title, body);
-    _typing.value += 1;
     _setTraversing(false);
     if (_pointerResting && !_keepChromeVisible) {
       _setChromeHidden(true);
@@ -462,7 +459,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: <Widget>[
-                      ComposerStageGround(typing: _typing),
+                      const ComposerStageGround(),
                       LayoutBuilder(builder: _layout),
                     ],
                   ),
