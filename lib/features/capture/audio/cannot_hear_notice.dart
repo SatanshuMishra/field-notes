@@ -4,6 +4,7 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/capture/audio/microphone_glyph.dart';
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
+import 'package:field_notes/features/capture/immersive/recorder_inks.dart';
 import 'package:field_notes/features/capture/immersive/stage_phase.dart';
 import 'package:flutter/widgets.dart';
 
@@ -18,7 +19,6 @@ const Key cannotHearNoticeKey = ValueKey<String>('cannot-hear-notice');
 const Key cannotHearPointerKey = ValueKey<String>('cannot-hear-pointer');
 const Key soundLostWarningKey = ValueKey<String>('sound-lost-warning');
 
-const Color _statusInk = Color(0xFFDCCAB0);
 const double _sidebarStatusSize = 21;
 const double _bottomBarStatusSize = 18;
 const double _lineGap = 8;
@@ -32,7 +32,7 @@ TextStyle _statusStyle(BuildContext context) => TextStyle(
       ? _sidebarStatusSize
       : _bottomBarStatusSize,
   fontWeight: FontWeight.w600,
-  color: _statusInk,
+  color: RecorderInks.of(context).status,
 );
 
 class CannotHearNotice extends StatelessWidget {
@@ -40,6 +40,7 @@ class CannotHearNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final RecorderInks inks = RecorderInks.of(context);
     return Padding(
       key: cannotHearNoticeKey,
       padding: const EdgeInsets.only(top: _lineGap),
@@ -60,12 +61,12 @@ class CannotHearNotice extends StatelessWidget {
               ),
             ),
             const SizedBox(width: _glyphGap),
-            const MicrophoneGlyph(),
+            MicrophoneGlyph(color: inks.glassGlyph),
             const SizedBox(width: _glyphGap / 2),
-            const SizedBox.square(
+            SizedBox.square(
               key: cannotHearPointerKey,
               dimension: _pointerSize,
-              child: CustomPaint(painter: _UpwardPointerPainter(_statusInk)),
+              child: CustomPaint(painter: _UpwardPointerPainter(inks.status)),
             ),
           ],
         ),

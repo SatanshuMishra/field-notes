@@ -19,12 +19,14 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/features/capture/core/capture_day_line.dart';
+import 'package:field_notes/features/capture/core/night_sky.dart';
 import 'package:field_notes/features/entry_cards/cards/video_controls_overlay.dart'
     show canAutoHideVideoControls, videoControlsVisible;
 import 'package:field_notes/state/repository_providers.dart';
 
 import 'recorder_chrome.dart';
 import 'recorder_glass_button.dart';
+import 'recorder_inks.dart';
 import 'stage_phase.dart';
 
 enum RecorderArrangement { voice, video }
@@ -40,11 +42,6 @@ const String recorderTitleFailedMessage =
     'Could not save your title. Try again.';
 
 const Color recorderStageColor = Palette.mediaGround;
-
-const Color _chromeInk = Color(0xFFB7A58C);
-const Color _dayLineLeadInk = Color(0xFFE692A0);
-const Color _leaveGlyphInk = Color(0xCCFFFFFF);
-const Color _leaveGlyphInkBottomBar = Color(0xBFFFFFFF);
 
 const double _minTapTarget = 48;
 const double _bandHeight = _minTapTarget;
@@ -85,10 +82,7 @@ const double _voiceActionsFootBottomBar = 26;
 const double _videoActionsFootSidebar = 10;
 const double _videoActionsFootBottomBar = 22;
 
-const Color _titleInk = Color(0xFFF3E6D1);
-const Color _titlePlaceholderOnStage = _chromeInk;
 const Color _titlePlaceholderOverPicture = Color(0xFFE7D9C2);
-const Color _titleCaret = Color(0xFFE3889A);
 const Color _titleShadow = Color(0xB80E0B09);
 const Offset _titleShadowOffset = Offset(0, 1);
 const double _titleShadowBlur = 10;
@@ -152,6 +146,7 @@ class RecorderSurface extends StatelessWidget {
     this.dayLine,
     this.arrangement = RecorderArrangement.voice,
     this.glow = true,
+    this.holdComets = false,
     this.background,
     this.trailing,
     this.title,
@@ -169,6 +164,7 @@ class RecorderSurface extends StatelessWidget {
   final VoidCallback? onLeave;
   final RecorderArrangement arrangement;
   final bool glow;
+  final bool holdComets;
   final Widget? background;
   final Widget? trailing;
   final Widget? title;
@@ -181,15 +177,25 @@ class RecorderSurface extends StatelessWidget {
   final Widget? feedGestures;
   final Animation<double> chromeOpacity;
 
+  Brightness _brightness(BuildContext context) =>
+      arrangement == RecorderArrangement.voice
+      ? Theme.of(context).brightness
+      : Brightness.dark;
+
   @override
   Widget build(BuildContext context) {
     final bool sidebar = stageLayoutOf(context) == ShellLayout.sidebar;
-    final Widget stage = _Stage(surface: this, sidebar: sidebar);
+    final Brightness brightness = _brightness(context);
+    final bool dark = brightness == Brightness.dark;
+    final Widget stage = RecorderInkScope(
+      brightness: brightness,
+      child: _Stage(surface: this, sidebar: sidebar),
+    );
     if (sidebar) {
-      return DarkCaptionSurface(child: stage);
+      return DarkCaptionSurface(dark: dark, child: stage);
     }
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: stage,
     );
   }
@@ -207,8 +213,9 @@ class _Stage extends StatelessWidget {
   Widget build(BuildContext context) {
     final Widget? background = surface.background;
     final Widget? feedGestures = surface.feedGestures;
+    final RecorderInks inks = RecorderInks.of(context);
     return ColoredBox(
-      color: recorderStageColor,
+      color: inks.ground,
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
@@ -219,12 +226,14 @@ class _Stage extends StatelessWidget {
               child: const DecoratedBox(decoration: _veil),
             ),
           ],
-          if (surface.glow)
+          if (_voice)
+            NightSky(kind: NightSkyKind.voice, holdComets: surface.holdComets)
+          else if (surface.glow)
             DecoratedBox(decoration: sidebar ? _sidebarGlow : _bottomBarGlow),
           if (feedGestures != null) _quietWhenHidden(feedGestures),
           Column(
             children: <Widget>[
-              _band(context),
+              _band(context, inks),
               _titleSlot(),
               Expanded(
                 child: Padding(
@@ -241,18 +250,18 @@ class _Stage extends StatelessWidget {
     );
   }
 
-  Widget _band(BuildContext context) {
+  Widget _band(BuildContext context, RecorderInks inks) {
     final Widget row = LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final CaptureDayLine? line = surface.dayLine;
         if (!sidebar) {
           return Row(
             children: <Widget>[
-              _faded(_leave()),
+              _faded(_leave(inks)),
               Expanded(
                 child: line == null
                     ? const SizedBox.shrink()
-                    : Center(child: _faded(_dayLine(context, line))),
+                    : Center(child: _faded(_dayLine(inks, line))),
               ),
               if (surface.trailing case final Widget trailing) trailing,
             ],
@@ -263,7 +272,7 @@ class _Stage extends StatelessWidget {
             Expanded(
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: _faded(_leave()),
+                child: _faded(_leave(inks)),
               ),
             ),
             if (line != null)
@@ -271,7 +280,7 @@ class _Stage extends StatelessWidget {
                 constraints: BoxConstraints(
                   maxWidth: constraints.maxWidth * _dayLineShare,
                 ),
-                child: _faded(_dayLine(context, line)),
+                child: _faded(_dayLine(inks, line)),
               ),
             Expanded(
               child: Align(
@@ -354,7 +363,7 @@ class _Stage extends StatelessWidget {
     );
   }
 
-  Widget _leave() {
+  Widget _leave(RecorderInks inks) {
     final VoidCallback? onLeave = surface.onLeave;
     final bool enabled = onLeave != null;
     if (surface.glassLeave) {
@@ -362,9 +371,9 @@ class _Stage extends StatelessWidget {
         key: surface.leaveKey,
         label: recorderLeaveLabel,
         onPressed: onLeave,
-        glyph: const IconStickerGlyphIcon(
+        glyph: IconStickerGlyphIcon(
           glyph: IconStickerGlyph.close,
-          color: _leaveGlyphInkBottomBar,
+          color: inks.leaveGlyphBottomBar,
           size: _glassLeaveGlyph,
         ),
       );
@@ -373,22 +382,22 @@ class _Stage extends StatelessWidget {
       key: surface.leaveKey,
       label: recorderLeaveLabel,
       onPressed: onLeave,
-      surface: FocusRingSurface.dark,
+      surface: inks.focus,
       borderRadius: _leaveRadius,
       child: Opacity(
         opacity: enabled ? 1.0 : _disabledOpacity,
-        child: sidebar ? _leaveText() : _leaveGlyph(),
+        child: sidebar ? _leaveText(inks) : _leaveGlyph(inks),
       ),
     );
   }
 
-  Widget _leaveText() {
+  Widget _leaveText(RecorderInks inks) {
     return ConstrainedBox(
       constraints: const BoxConstraints(
         minWidth: _minTapTarget,
         minHeight: _minTapTarget,
       ),
-      child: const Center(
+      child: Center(
         widthFactor: 1,
         heightFactor: 1,
         child: Padding(
@@ -398,17 +407,17 @@ class _Stage extends StatelessWidget {
             children: <Widget>[
               IconStickerGlyphIcon(
                 glyph: IconStickerGlyph.close,
-                color: _leaveGlyphInk,
+                color: inks.leaveGlyph,
                 size: _sidebarLeaveGlyph,
               ),
-              SizedBox(width: _leaveGap),
+              const SizedBox(width: _leaveGap),
               Text(
                 recorderLeaveLabel,
                 style: TextStyle(
                   fontFamily: TypographyTokens.sans,
                   fontSize: _sidebarChromeSize,
                   fontWeight: FontWeight.w500,
-                  color: _chromeInk,
+                  color: inks.chrome,
                 ),
               ),
             ],
@@ -418,20 +427,20 @@ class _Stage extends StatelessWidget {
     );
   }
 
-  Widget _leaveGlyph() {
-    return const SizedBox.square(
+  Widget _leaveGlyph(RecorderInks inks) {
+    return SizedBox.square(
       dimension: _minTapTarget,
       child: Center(
         child: IconStickerGlyphIcon(
           glyph: IconStickerGlyph.close,
-          color: _leaveGlyphInkBottomBar,
+          color: inks.leaveGlyphBottomBar,
           size: _bottomBarLeaveGlyph,
         ),
       ),
     );
   }
 
-  Widget _dayLine(BuildContext context, CaptureDayLine line) {
+  Widget _dayLine(RecorderInks inks, CaptureDayLine line) {
     final List<Shadow>? shadows = surface.background == null
         ? null
         : const <Shadow>[
@@ -454,7 +463,7 @@ class _Stage extends StatelessWidget {
               fontFamily: TypographyTokens.accent,
               fontSize: sidebar ? _sidebarLeadSize : _bottomBarLeadSize,
               fontWeight: FontWeight.w600,
-              color: _dayLineLeadInk,
+              color: inks.dayLead,
               shadows: shadows,
             ),
           ),
@@ -467,7 +476,7 @@ class _Stage extends StatelessWidget {
                 fontFamily: TypographyTokens.sans,
                 fontSize: sidebar ? _sidebarChromeSize : _bottomBarChromeSize,
                 fontWeight: FontWeight.w500,
-                color: _chromeInk,
+                color: inks.chrome,
                 shadows: shadows,
               ),
             ),
@@ -893,12 +902,12 @@ class _RecorderTitleFieldState extends State<RecorderTitleField> {
     return KeyEventResult.handled;
   }
 
-  TextStyle _style(bool sidebar) => TextStyle(
+  TextStyle _style(bool sidebar, RecorderInks inks) => TextStyle(
     fontFamily: TypographyTokens.serif,
     fontSize: sidebar ? _sidebarTitleSize : _bottomBarTitleSize,
     fontWeight: FontWeight.w400,
     height: _titleLeading,
-    color: _titleInk,
+    color: inks.title,
     shadows: widget.overPicture
         ? const <Shadow>[
             Shadow(
@@ -913,7 +922,8 @@ class _RecorderTitleFieldState extends State<RecorderTitleField> {
   @override
   Widget build(BuildContext context) {
     final bool sidebar = stageLayoutOf(context) == ShellLayout.sidebar;
-    final TextStyle style = _style(sidebar);
+    final RecorderInks inks = RecorderInks.of(context);
+    final TextStyle style = _style(sidebar, inks);
     return Material(
       type: MaterialType.transparency,
       child: KeyboardFocusBuilder(
@@ -922,15 +932,15 @@ class _RecorderTitleFieldState extends State<RecorderTitleField> {
           fit: StackFit.passthrough,
           clipBehavior: Clip.none,
           children: <Widget>[
-            _field(sidebar, style),
-            if (shown) _keyboardRing(context),
+            _field(sidebar, style, inks),
+            if (shown) _keyboardRing(context, inks.focus),
           ],
         ),
       ),
     );
   }
 
-  Widget _field(bool sidebar, TextStyle style) {
+  Widget _field(bool sidebar, TextStyle style, RecorderInks inks) {
     return Focus(
       canRequestFocus: false,
       skipTraversal: true,
@@ -953,14 +963,14 @@ class _RecorderTitleFieldState extends State<RecorderTitleField> {
               textAlign: TextAlign.center,
               textInputAction: TextInputAction.done,
               textCapitalization: TextCapitalization.sentences,
-              cursorColor: _titleCaret,
+              cursorColor: inks.caret,
               style: style,
               decoration: InputDecoration.collapsed(
                 hintText: recorderTitlePlaceholder,
                 hintStyle: style.copyWith(
                   color: widget.overPicture
                       ? _titlePlaceholderOverPicture
-                      : _titlePlaceholderOnStage,
+                      : inks.chrome,
                 ),
               ),
               onEditingComplete: _returnToStage,
@@ -972,8 +982,7 @@ class _RecorderTitleFieldState extends State<RecorderTitleField> {
     );
   }
 
-  Widget _keyboardRing(BuildContext context) {
-    const FocusRingSurface surface = FocusRingSurface.dark;
+  Widget _keyboardRing(BuildContext context, FocusRingSurface surface) {
     return Positioned.fill(
       left: -_titleRingOutset,
       top: -_titleRingOutset,

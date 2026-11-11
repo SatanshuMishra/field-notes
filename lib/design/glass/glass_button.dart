@@ -22,9 +22,11 @@ class GlassCircleButton extends StatelessWidget {
     this.toggled,
     this.tint,
     this.grouped = false,
+    this.surface = FocusRingSurface.dark,
   });
 
   final GlassTone tone;
+  final FocusRingSurface surface;
   final double face;
   final String label;
   final Widget glyph;
@@ -41,7 +43,7 @@ class GlassCircleButton extends StatelessWidget {
       label: label,
       toggled: toggled,
       onPressed: onPressed,
-      surface: FocusRingSurface.dark,
+      surface: surface,
       shape: HoverShape.circle,
       borderRadius: round,
       paintsHover: false,
@@ -52,7 +54,7 @@ class GlassCircleButton extends StatelessWidget {
             opacity: enabled ? 1 : _disabledOpacity,
             child: HoverFill(
               hovered: hovered,
-              surface: FocusRingSurface.dark,
+              surface: surface,
               shape: HoverShape.circle,
               borderRadius: round,
               child: GlassSurface(

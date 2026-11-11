@@ -8,6 +8,7 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/state/settings_providers.dart';
 
+import 'recorder_inks.dart';
 import 'stage_phase.dart';
 
 const List<String> reflectionQuestions = <String>[
@@ -26,8 +27,6 @@ const Key reflectionQuestionKey = ValueKey<String>('reflection-question');
 
 const double reflectionUnderwayOpacity = 0.45;
 const Duration reflectionFadeDuration = Duration(milliseconds: 1400);
-
-const Color _questionInk = Color(0xFFF3E6D1);
 
 const double _kickerSize = 18;
 const double _sidebarQuestionSize = 38;
@@ -92,7 +91,6 @@ TextStyle _questionStyle(bool sidebar, double scale) {
     fontWeight: FontWeight.w400,
     fontStyle: FontStyle.italic,
     height: sidebar ? _sidebarQuestionLeading : _bottomBarQuestionLeading,
-    color: _questionInk,
   );
 }
 
@@ -345,6 +343,7 @@ class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
 
   Widget _words(bool sidebar, _Fit fit) {
     final double? kicker = widget.showKicker ? fit.kicker : null;
+    final RecorderInks inks = RecorderInks.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -352,8 +351,7 @@ class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
           Text(
             reflectionKicker,
             textAlign: TextAlign.center,
-            style: _kickerStyle(kicker)
-                .copyWith(color: context.colors.accentSoft),
+            style: _kickerStyle(kicker).copyWith(color: inks.kicker),
           ),
           SizedBox(height: _kickerGap(sidebar, fit.gap)),
         ],
@@ -361,7 +359,10 @@ class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
           key: reflectionQuestionKey,
           text: reflectionQuestions[_index],
           maxLines: _questionLines(sidebar),
-          style: _questionStyle(sidebar, fit.question),
+          style: _questionStyle(
+            sidebar,
+            fit.question,
+          ).copyWith(color: inks.question),
         ),
       ],
     );

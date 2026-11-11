@@ -18,6 +18,7 @@ import 'package:field_notes/features/capture/audio/microphone_glyph.dart';
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/audio/recorder_input_ring.dart';
 import 'package:field_notes/features/capture/immersive/recorder_glass_button.dart';
+import 'package:field_notes/features/capture/immersive/recorder_inks.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
@@ -261,7 +262,7 @@ class _RecorderInputButtonState extends State<RecorderInputButton> {
     final Widget button = RecorderGlassButton(
       key: recorderInputKey,
       label: recorderInputLabel,
-      glyph: const MicrophoneGlyph(),
+      glyph: MicrophoneGlyph(color: RecorderInks.of(context).glassGlyph),
       onPressed: _toggle,
     );
     final Stream<double>? ringLevels = widget.ringLevels;

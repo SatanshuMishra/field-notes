@@ -6,18 +6,12 @@ import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/entry_cards/util/duration_format.dart';
 
+import 'recorder_inks.dart';
 import 'stage_phase.dart';
 
 const Key recorderStatusTextKey = ValueKey<String>('recorder-status-text');
 const Key recorderTimerKey = ValueKey<String>('recorder-timer');
 const Key recorderStatusDotKey = ValueKey<String>('recorder-status-dot');
-
-const Color _statusInk = Color(0xFFDCCAB0);
-const Color _timerInk = Color(0xFFB7A58C);
-const Color _pausedDot = Color(0xFFD9B36B);
-const Color _numeralInk = Color(0xFFF3E6D1);
-const Color _takeTimeInk = Color(0xFFF3E6D1);
-const Color _takeTimeShadow = Color(0x73000000);
 
 const double _takeGap = 7;
 const double _takeTrailingGap = 10;
@@ -88,11 +82,11 @@ int _numeralAt(Duration elapsed) =>
     (_countdownFrom - elapsed.inMicroseconds ~/ _countdownStep.inMicroseconds)
         .clamp(_countdownTo, _countdownFrom);
 
-TextStyle _statusStyle(double size) => TextStyle(
+TextStyle _statusStyle(double size, Color ink) => TextStyle(
   fontFamily: TypographyTokens.accent,
   fontSize: size,
   fontWeight: FontWeight.w600,
-  color: _statusInk,
+  color: ink,
 );
 
 class RecorderStatusLine extends StatefulWidget {
@@ -164,7 +158,7 @@ class _RecorderStatusLineState extends State<RecorderStatusLine>
   Widget build(BuildContext context) {
     final ShellLayout layout = stageLayoutOf(context);
     final Widget status = _status(context, layout);
-    final Widget? timer = _phase.showsTimer ? _timer() : null;
+    final Widget? timer = _phase.showsTimer ? _timer(context) : null;
     if (widget.inline) {
       final Widget? dot = _dot(context);
       return Row(
@@ -223,7 +217,7 @@ class _RecorderStatusLineState extends State<RecorderStatusLine>
           text,
           key: recorderStatusTextKey,
           textAlign: TextAlign.center,
-          style: _statusStyle(size),
+          style: _statusStyle(size, RecorderInks.of(context).status),
         ),
       ),
     );
@@ -243,7 +237,7 @@ class _RecorderStatusLineState extends State<RecorderStatusLine>
             key: recorderStatusTextKey,
             maxLines: 1,
             softWrap: false,
-            style: _statusStyle(size),
+            style: _statusStyle(size, RecorderInks.of(context).status),
           ),
           SizedBox(width: em * _numeralGap),
           _CountdownNumeral(
@@ -257,19 +251,19 @@ class _RecorderStatusLineState extends State<RecorderStatusLine>
     );
   }
 
-  Widget _timer() {
+  Widget _timer(BuildContext context) {
     return Semantics(
       container: true,
       child: Text(
         formatMediaDuration(widget.elapsed.inMilliseconds),
         key: recorderTimerKey,
         maxLines: 1,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: TypographyTokens.sans,
           fontSize: _timerSize,
           fontWeight: FontWeight.w500,
           letterSpacing: _timerTracking,
-          color: _timerInk,
+          color: RecorderInks.of(context).timer,
         ),
       ),
     );
@@ -286,9 +280,9 @@ class _RecorderStatusLineState extends State<RecorderStatusLine>
       );
     }
     if (_phase == StagePhase.paused) {
-      return const _Dot(
+      return _Dot(
         key: recorderStatusDotKey,
-        color: _pausedDot,
+        color: RecorderInks.of(context).pausedDot,
         glow: false,
       );
     }
@@ -303,6 +297,7 @@ class RecorderTakeIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final RecorderInks inks = RecorderInks.of(context);
     return Padding(
       padding: const EdgeInsets.only(right: _takeTrailingGap),
       child: Row(
@@ -314,16 +309,16 @@ class RecorderTakeIndicator extends StatelessWidget {
             formatMediaDuration(elapsed.inMilliseconds),
             maxLines: 1,
             softWrap: false,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: TypographyTokens.sans,
               fontSize: _takeTimeSize,
               fontWeight: FontWeight.w500,
               letterSpacing: _takeTimeTracking,
-              fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
-              color: _takeTimeInk,
+              fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+              color: inks.takeTime,
               shadows: <Shadow>[
                 Shadow(
-                  color: _takeTimeShadow,
+                  color: inks.takeTimeShadow,
                   offset: _takeTimeShadowOffset,
                   blurRadius: _takeTimeShadowBlur,
                 ),
@@ -404,7 +399,7 @@ class _CountdownNumeralState extends State<_CountdownNumeral>
               fontFamily: TypographyTokens.accent,
               fontSize: widget.size * _numeralSize,
               fontWeight: FontWeight.w600,
-              color: _numeralInk,
+              color: RecorderInks.of(context).numeral,
             ),
           ),
         ),

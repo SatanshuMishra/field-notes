@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
@@ -995,7 +996,7 @@ void main() {
   });
 
   testWidgets(
-    'voice recorder geometry matches the prototype orb and dark surface',
+    'voice recorder geometry matches the prototype orb on the theme ground',
     (WidgetTester tester) async {
       for (final TargetPlatform platform in _layouts) {
         final bool sidebar = platform == TargetPlatform.macOS;
@@ -1009,7 +1010,7 @@ void main() {
               )
               .first,
         );
-        expect(stage.color, const Color(0xFF1C1713));
+        expect(stage.color, FieldNotesColors.light.viewerStage);
         expect(
           tester.getSize(find.byKey(voiceRecordButtonKey)),
           Size.square(sidebar ? 124 : 100),
