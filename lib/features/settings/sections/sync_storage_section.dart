@@ -100,13 +100,19 @@ const String offlineLine =
 const String syncingNowLabel = 'Syncing…';
 const String syncedNowLabel = 'Synced';
 const String tryAgainLabel = 'Try again';
+const String syncFailedLabel = "Couldn't sync just now.";
 const Duration syncNowShownFor = Duration(milliseconds: 1600);
 const Duration syncedShownFor = Duration(seconds: 2);
+const double syncNowMinWidth = 132;
 const double _syncNowMarkSize = 13;
 const double _syncNowSpinnerStroke = 1.8;
 
 String lastSyncedLabel(DateTime at, DateTime now) =>
-    'Last synced ${shortSyncTime(at, now)}';
+    'Last synced ${relativeSyncTime(at, now)}';
+
+String syncFailedLine(DateTime? lastSynced, DateTime now) => lastSynced == null
+    ? syncFailedLabel
+    : '$syncFailedLabel ${lastSyncedLabel(lastSynced, now)}.';
 
 String syncConnectionLabel(SyncStatus status, DateTime now) => switch (status) {
   SyncedStatus() ||
@@ -196,6 +202,7 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
     debugLabel: manageDevicesLabel,
   );
   DateTime? _lastSynced;
+  bool _syncFailed = false;
 
   @override
   void initState() {
@@ -229,7 +236,10 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
     ) {
       final SyncStatus? status = next.value;
       if (status is SyncedStatus) {
-        setState(() => _lastSynced = status.at);
+        setState(() {
+          _syncFailed = _syncFailed && status.at == _lastSynced;
+          _lastSynced = status.at;
+        });
       }
     });
     final SyncStatus? status = ref.watch(syncStatusProvider).value;
@@ -288,12 +298,15 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
           rows: <Widget>[
             if (status != null)
               SettingsFieldRow(
-                label: syncConnectionLabel(status, now),
-                leading: _statusDot(status),
+                label: syncConnectionLabel(_shownStatus(status), now),
+                leading: _statusDot(_shownStatus(status)),
                 description: _lastSyncedLine(status, now),
+                descriptionColor: _showsSyncFailure(status)
+                    ? context.colors.dangerInk
+                    : null,
                 control: status is PausedStatus
                     ? const SizedBox.shrink()
-                    : _syncNowButton(),
+                    : _syncNowButton(status),
               ),
             ..._fixRows(status),
             _pauseRow(status),
@@ -390,7 +403,7 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
                 ),
                 if (status is! PausedStatus) ...<Widget>[
                   const SizedBox(width: 12),
-                  _syncNowButton(),
+                  _syncNowButton(status),
                 ],
               ],
             ),
@@ -452,8 +465,18 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
     child: const SizedBox.square(dimension: _statusDotSize),
   );
 
+  bool _showsSyncFailure(SyncStatus status) =>
+      _syncFailed && status is! OfflineStatus && status is! PausedStatus;
+
+  SyncStatus _shownStatus(SyncStatus status) => _showsSyncFailure(status)
+      ? const AttentionStatus(AttentionReason.unreachable)
+      : status;
+
   String? _lastSyncedLine(SyncStatus status, DateTime now) {
     final DateTime? at = status is SyncedStatus ? status.at : _lastSynced;
+    if (_showsSyncFailure(status)) {
+      return syncFailedLine(at, now);
+    }
     if (status is OfflineStatus) {
       return offlineLine;
     }
@@ -468,7 +491,18 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
     };
   }
 
-  Widget _syncNowButton() => MinTarget(child: SyncNowButton(onSync: _syncNow));
+  Widget _syncNowButton(SyncStatus? status) => MinTarget(
+    child: SyncNowButton(
+      onSync: status is OfflineStatus ? null : _syncNow,
+      onSettled: _syncSettled,
+    ),
+  );
+
+  void _syncSettled(bool synced) {
+    if (mounted) {
+      setState(() => _syncFailed = !synced);
+    }
+  }
 
   Future<bool> _syncNow() async {
     try {
@@ -738,9 +772,10 @@ class _ChangeServerAddressFlowState
 enum _SyncNowPhase { idle, syncing, synced }
 
 class SyncNowButton extends StatefulWidget {
-  const SyncNowButton({super.key, required this.onSync});
+  const SyncNowButton({super.key, required this.onSync, this.onSettled});
 
-  final Future<bool> Function() onSync;
+  final Future<bool> Function()? onSync;
+  final ValueChanged<bool>? onSettled;
 
   @override
   State<SyncNowButton> createState() => _SyncNowButtonState();
@@ -750,22 +785,36 @@ class _SyncNowButtonState extends State<SyncNowButton> {
   _SyncNowPhase _phase = _SyncNowPhase.idle;
   bool _failed = false;
   Timer? _timer;
+  Completer<void>? _shown;
 
   @override
   void dispose() {
     _timer?.cancel();
+    final Completer<void>? shown = _shown;
+    if (shown != null && !shown.isCompleted) {
+      shown.complete();
+    }
     super.dispose();
   }
 
-  Future<void> _press() async {
+  Future<void> _press(Future<bool> Function() onSync) async {
     if (_phase != _SyncNowPhase.idle) {
       return;
     }
     setState(() => _phase = _SyncNowPhase.syncing);
     final Completer<void> shown = Completer<void>();
+    _shown = shown;
     _timer = Timer(syncNowShownFor, shown.complete);
-    final bool synced = await widget.onSync();
-    await shown.future;
+    bool synced = false;
+    try {
+      synced = await onSync();
+    } finally {
+      await shown.future;
+      _finish(synced);
+    }
+  }
+
+  void _finish(bool synced) {
     if (!mounted) {
       return;
     }
@@ -773,6 +822,7 @@ class _SyncNowButtonState extends State<SyncNowButton> {
       _failed = !synced;
       _phase = synced ? _SyncNowPhase.synced : _SyncNowPhase.idle;
     });
+    widget.onSettled?.call(synced);
     if (synced) {
       _timer = Timer(syncedShownFor, _settle);
     }
@@ -789,14 +839,17 @@ class _SyncNowButtonState extends State<SyncNowButton> {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
+    final Future<bool> Function()? onSync = widget.onSync;
     return switch (_phase) {
       _SyncNowPhase.idle => SettingsActionButton(
-        label: _failed ? tryAgainLabel : syncNowLabel,
-        onPressed: _press,
+        label: _failed && onSync != null ? tryAgainLabel : syncNowLabel,
+        onPressed: onSync == null ? null : () => _press(onSync),
+        minWidth: syncNowMinWidth,
       ),
       _SyncNowPhase.syncing => SettingsActionButton(
         label: syncingNowLabel,
         onPressed: _hold,
+        minWidth: syncNowMinWidth,
         leading: SizedBox.square(
           dimension: _syncNowMarkSize,
           child: CircularProgressIndicator(
@@ -809,6 +862,7 @@ class _SyncNowButtonState extends State<SyncNowButton> {
       _SyncNowPhase.synced => SettingsActionButton(
         label: syncedNowLabel,
         onPressed: _hold,
+        minWidth: syncNowMinWidth,
         leading: IconStickerGlyphIcon(
           glyph: IconStickerGlyph.check,
           color: colors.sage,

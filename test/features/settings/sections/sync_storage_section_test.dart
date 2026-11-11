@@ -117,19 +117,49 @@ final Finder _syncNowSpinner = find.descendant(
 Finder _inSyncNow(String label) =>
     find.descendant(of: find.byType(SyncNowButton), matching: find.text(label));
 
+Future<_SyncNowEngine> _pumpWithEngine(
+  WidgetTester tester,
+  Future<bool> Function() answer, {
+  SyncStatus? status,
+}) async {
+  final _SyncNowEngine engine = _SyncNowEngine(answer);
+  await _pumpOn(tester, TargetPlatform.macOS, <Override>[
+    ...syncOnOverrides(status: status ?? SyncedStatus(DateTime.now().toUtc())),
+    syncEngineProvider.overrideWithValue(engine),
+  ]);
+  return engine;
+}
+
 Future<_SyncNowEngine> _pumpSyncNow(
   WidgetTester tester,
   Future<bool> Function() answer,
 ) async {
-  final _SyncNowEngine engine = _SyncNowEngine(answer);
-  await _pumpOn(tester, TargetPlatform.macOS, <Override>[
-    ...syncOnOverrides(status: SyncedStatus(DateTime.now().toUtc())),
-    syncEngineProvider.overrideWithValue(engine),
-  ]);
+  final _SyncNowEngine engine = await _pumpWithEngine(tester, answer);
   await tester.tap(_inSyncNow(syncNowLabel));
   await tester.pump();
   return engine;
 }
+
+double _syncNowWidth(WidgetTester tester) => tester
+    .getSize(
+      find.descendant(
+        of: find.byType(SyncNowButton),
+        matching: find.byType(SettingsActionButton),
+      ),
+    )
+    .width;
+
+SettingsFieldRow _statusRow(WidgetTester tester, String label) =>
+    tester.widget<SettingsFieldRow>(_rowOf(label));
+
+Color? _statusRowDot(WidgetTester tester, String label) =>
+    (tester
+                .widget<DecoratedBox>(
+                  find.descendant(of: _rowOf(label), matching: _statusDot),
+                )
+                .decoration
+            as BoxDecoration)
+        .color;
 
 Future<void> _pumpSection(
   WidgetTester tester,
@@ -881,5 +911,145 @@ void main() {
     expect(_syncNowSpinner, findsOneWidget);
     await tester.pump(const Duration(milliseconds: 1600));
     expect(_inSyncNow('Try again'), findsOneWidget);
+  }, variant: _macOS);
+
+  testWidgets('Sync now is disabled while offline and a tap starts no sync', (
+    WidgetTester tester,
+  ) async {
+    final _SyncNowEngine engine = await _pumpWithEngine(
+      tester,
+      () async => true,
+      status: const OfflineStatus(),
+    );
+
+    expect(
+      tester
+          .widget<SettingsActionButton>(
+            find.descendant(
+              of: find.byType(SyncNowButton),
+              matching: find.byType(SettingsActionButton),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+    await tester.tap(_inSyncNow(syncNowLabel), warnIfMissed: false);
+    await tester.pump(const Duration(seconds: 2));
+    expect(engine.syncs, 0);
+    expect(_syncNowSpinner, findsNothing);
+    expect(_inSyncNow(syncNowLabel), findsOneWidget);
+  }, variant: _macOS);
+
+  testWidgets('Sync & storage gives the last sync time in words', (
+    WidgetTester tester,
+  ) async {
+    final DateTime now = DateTime.now().toUtc();
+    await _pumpWithEngine(
+      tester,
+      () async => true,
+      status: SyncedStatus(now.subtract(const Duration(minutes: 4))),
+    );
+
+    expect(find.text('Last synced 4 minutes ago'), findsOneWidget);
+    expect(find.text('Last synced 4 min ago'), findsNothing);
+  }, variant: _macOS);
+
+  testWidgets(
+    'a failed Sync now shows the server cannot be reached until a sync goes '
+    'through',
+    (WidgetTester tester) async {
+      final FieldNotesColors colors = FieldNotesColors.light;
+      final DateTime now = DateTime.now().toUtc();
+      bool succeeds = false;
+      await _pumpWithEngine(
+        tester,
+        () async => succeeds,
+        status: SyncedStatus(now.subtract(const Duration(minutes: 4))),
+      );
+
+      await tester.tap(_inSyncNow(syncNowLabel));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1600));
+
+      expect(find.text('Connected'), findsNothing);
+      final SettingsFieldRow failed = _statusRow(
+        tester,
+        "Can't reach your server",
+      );
+      expect(
+        failed.description,
+        "Couldn't sync just now. Last synced 4 minutes ago.",
+      );
+      expect(failed.descriptionColor, colors.dangerInk);
+      expect(
+        _statusRowDot(tester, "Can't reach your server")?.toARGB32(),
+        colors.dangerInk.toARGB32(),
+      );
+
+      succeeds = true;
+      await tester.tap(_inSyncNow('Try again'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1600));
+
+      expect(find.text("Can't reach your server"), findsNothing);
+      final SettingsFieldRow recovered = _statusRow(tester, 'Connected');
+      expect(recovered.description, 'Last synced 4 minutes ago');
+      expect(recovered.descriptionColor, isNull);
+      expect(
+        _statusRowDot(tester, 'Connected')?.toARGB32(),
+        colors.sage.toARGB32(),
+      );
+      await tester.pump(syncedShownFor);
+    },
+    variant: _macOS,
+  );
+
+  testWidgets('Sync now keeps one width through its states', (
+    WidgetTester tester,
+  ) async {
+    await _pumpWithEngine(tester, () async => true);
+    final double idle = _syncNowWidth(tester);
+
+    await tester.tap(_inSyncNow(syncNowLabel));
+    await tester.pump();
+    expect(_syncNowSpinner, findsOneWidget);
+    final double syncing = _syncNowWidth(tester);
+
+    await tester.pump(syncNowShownFor);
+    expect(_inSyncNow('Synced'), findsOneWidget);
+    final double synced = _syncNowWidth(tester);
+
+    expect(<double>[idle, syncing, synced], <double>[132, 132, 132]);
+    await tester.pump(syncedShownFor);
+  }, variant: _macOS);
+
+  testWidgets('a Sync now that throws ends on Try again after the minimum', (
+    WidgetTester tester,
+  ) async {
+    final List<Object> errors = <Object>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+        home: Scaffold(
+          body: Center(
+            child: SyncNowButton(
+              onSync: () async => throw StateError('the relay went away'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await runZonedGuarded(
+      () => tester.tap(_inSyncNow(syncNowLabel)),
+      (Object error, StackTrace _) => errors.add(error),
+    );
+    await tester.pump();
+    expect(_syncNowSpinner, findsOneWidget);
+    await tester.pump(syncNowShownFor);
+
+    expect(_syncNowSpinner, findsNothing);
+    expect(_inSyncNow(tryAgainLabel), findsOneWidget);
+    expect(errors, <Matcher>[isStateError]);
   }, variant: _macOS);
 }

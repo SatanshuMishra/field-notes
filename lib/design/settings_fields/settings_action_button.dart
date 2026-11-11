@@ -29,12 +29,14 @@ class SettingsActionButton extends StatelessWidget {
     required this.onPressed,
     this.tone = SettingsActionTone.neutral,
     this.leading,
+    this.minWidth = 0,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final SettingsActionTone tone;
   final Widget? leading;
+  final double minWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -45,34 +47,47 @@ class SettingsActionButton extends StatelessWidget {
         onPressed: onPressed,
         tone: _PillTone.neutral,
         leading: leading,
+        minWidth: minWidth,
       ),
       (ShellLayout.sidebar, SettingsActionTone.primary) => _ActionPill(
         label: label,
         onPressed: onPressed,
         tone: _PillTone.primary,
         leading: leading,
+        minWidth: minWidth,
       ),
-      (ShellLayout.sidebar, SettingsActionTone.danger) => StickerButton(
-        label: label,
-        onPressed: onPressed,
-        padTapTarget: true,
-        variant: StickerButtonVariant.danger,
-        labelStyle: _pillLabelStyle(context),
-        icon: leading,
+      (ShellLayout.sidebar, SettingsActionTone.danger) => _atLeastMinWidth(
+        StickerButton(
+          label: label,
+          onPressed: onPressed,
+          padTapTarget: true,
+          variant: StickerButtonVariant.danger,
+          labelStyle: _pillLabelStyle(context),
+          icon: leading,
+        ),
       ),
-      (ShellLayout.bottomBar, _) => StickerButton(
-        label: label,
-        onPressed: onPressed,
-        padTapTarget: true,
-        icon: leading,
-        variant: switch (tone) {
-          SettingsActionTone.neutral => StickerButtonVariant.secondary,
-          SettingsActionTone.primary => StickerButtonVariant.primary,
-          SettingsActionTone.danger => StickerButtonVariant.danger,
-        },
+      (ShellLayout.bottomBar, _) => _atLeastMinWidth(
+        StickerButton(
+          label: label,
+          onPressed: onPressed,
+          padTapTarget: true,
+          icon: leading,
+          variant: switch (tone) {
+            SettingsActionTone.neutral => StickerButtonVariant.secondary,
+            SettingsActionTone.primary => StickerButtonVariant.primary,
+            SettingsActionTone.danger => StickerButtonVariant.danger,
+          },
+        ),
       ),
     };
   }
+
+  Widget _atLeastMinWidth(Widget button) => minWidth == 0
+      ? button
+      : ConstrainedBox(
+          constraints: BoxConstraints(minWidth: minWidth),
+          child: button,
+        );
 }
 
 TextStyle _pillLabelStyle(BuildContext context) => context.textStyles.labelSans
@@ -85,12 +100,14 @@ class _ActionPill extends StatelessWidget {
     required this.label,
     required this.onPressed,
     required this.tone,
+    required this.minWidth,
     this.leading,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final _PillTone tone;
+  final double minWidth;
   final Widget? leading;
 
   @override
@@ -144,6 +161,7 @@ class _ActionPill extends StatelessWidget {
               ? words
               : Row(
                   mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
                     leading,
                     const SizedBox(width: _leadingGap),
@@ -160,18 +178,21 @@ class _ActionPill extends StatelessWidget {
             child: Center(
               widthFactor: 1,
               heightFactor: 1,
-              child: DecoratedBox(
-                decoration: decoration,
-                child: tone != _PillTone.primary
-                    ? text
-                    : HoverFill(
-                        hovered: hovered,
-                        surface: hoverSurface,
-                        shape: HoverShape.pill,
-                        borderRadius: _pillRadius,
-                        position: DecorationPosition.background,
-                        child: text,
-                      ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: minWidth),
+                child: DecoratedBox(
+                  decoration: decoration,
+                  child: tone != _PillTone.primary
+                      ? text
+                      : HoverFill(
+                          hovered: hovered,
+                          surface: hoverSurface,
+                          shape: HoverShape.pill,
+                          borderRadius: _pillRadius,
+                          position: DecorationPosition.background,
+                          child: text,
+                        ),
+                ),
               ),
             ),
           ),
