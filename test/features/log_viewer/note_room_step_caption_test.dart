@@ -44,6 +44,8 @@ Future<void> _openMiddleNote(
   WidgetTester tester, {
   required Entry earlier,
   required Entry later,
+  List<Entry> before = const <Entry>[],
+  List<Entry> after = const <Entry>[],
 }) async {
   tester.view.physicalSize = _compactPhone;
   tester.view.devicePixelRatio = 1;
@@ -52,9 +54,11 @@ Future<void> _openMiddleNote(
   addTearDown(tester.view.reset);
   final FakeJournalRepository repository = FakeJournalRepository(
     entries: <Entry>[
+      ...before,
       earlier,
       _entry(id: 'middle', type: EntryType.text, hour: 23, minute: 0),
       later,
+      ...after,
     ],
   );
   await tester.pumpWidget(
@@ -183,4 +187,45 @@ void main() {
       expect(tester.takeException(), isNull);
     }, variant: TargetPlatformVariant.only(TargetPlatform.android));
   }
+
+  testWidgets('on a 360 wide phone a "12 of 15" position still leaves '
+      '"10:58 PM · video" on one line inside its fill', (
+    WidgetTester tester,
+  ) async {
+    await _openMiddleNote(
+      tester,
+      earlier: _entry(
+        id: 'earlier',
+        type: EntryType.video,
+        hour: 22,
+        minute: 58,
+      ),
+      later: _entry(id: 'later', type: EntryType.voice, hour: 23, minute: 10),
+      before: <Entry>[
+        for (int hour = 8; hour < 18; hour++)
+          _entry(
+            id: 'morning-$hour',
+            type: EntryType.text,
+            hour: hour,
+            minute: 0,
+          ),
+      ],
+      after: <Entry>[
+        _entry(id: 'late-1', type: EntryType.text, hour: 23, minute: 30),
+        _entry(id: 'late-2', type: EntryType.text, hour: 23, minute: 58),
+      ],
+    );
+    expect(find.text('12 of 15'), findsOneWidget);
+    _expectOneLineInsideItsFill(
+      tester,
+      step: logViewerEarlierKey,
+      caption: '10:58 PM · video',
+    );
+    _expectOneLineInsideItsFill(
+      tester,
+      step: logViewerLaterKey,
+      caption: '11:10 PM · voice',
+    );
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 }
