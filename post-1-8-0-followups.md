@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-11T00:35:58.355Z
+Updated: 2026-11-11T00:37:08.718Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
@@ -46,3 +46,4 @@ Needs: D1, D2, D3, D5, D6, D7, R1.
 - Prototype canvas: https://claude.ai/artifact/6Jhnx5E1BxCPH9DgNu9R1m, page "1.8 follow-ups" (boards DayModal18, HoverPadding, SyncStatus, Transitions, NightSky, Reminders); local copy in the session scratchpad artifact-files folder
 - Read-only worktree at origin/main for tracing: ~/.mitosis/fireplace/explore-180
 - Fanout items and plan: session scratchpad fn/fanout18 (items.json holds each leaf's task, files and acceptance; brief-day-modal-tidy.md, brief-night-sky.md and brief-reminder-schedules.md are the ready briefs for the stacked builds; rules.md holds the shared build rules and report format)
+- Integration worktree: ~/.mitosis/fireplace/integ-180 (detached, never pushed; merges built with session scratchpad integ_merge.sh, which merges named branches in order and stops on a conflict)
