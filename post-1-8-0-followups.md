@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-11T01:37:17.773Z
+Updated: 2026-11-11T01:37:20.601Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
@@ -27,7 +27,7 @@ Root causes found: rounded outlines break where an opaque child is clipped only 
 
 ## Next step
 
-Review feat/reminder-schedules; trace each integration failure to its branch and send fixes to that branch's builder; once hover-padding's follow-ups land, merge all ten in integ-180, run the full suite, then push and open the ten PRs (day-modal-tidy and night-sky based on fix/outlined-surface, hover-padding on feat/day-modal-tidy, reminder-schedules on feat/streak-late-night) assigned to the owner.
+Once the streak and reminders branch runs finish, fill final-results.json, run fn/fanout18/render_all.sh, push the ten branches and open the ten PRs (day-modal-tidy and night-sky based on fix/outlined-surface, hover-padding on feat/day-modal-tidy, reminder-schedules on feat/streak-late-night) assigned to the owner.
 
 Needs: D1, D2, D3, D5, D6, D7, R1.
 
