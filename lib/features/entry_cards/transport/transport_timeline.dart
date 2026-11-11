@@ -12,6 +12,7 @@ import '../../../design/focus/input_modality.dart';
 import '../../../design/interaction/pressable.dart';
 import '../../../design/motion/motion.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../design/widgets/outlined_surface.dart';
 import '../../../domain/platform/desktop_platform.dart';
 import '../util/duration_format.dart';
 
@@ -567,22 +568,17 @@ class _TransportTimelineState extends State<TransportTimeline> {
   }
 
   Widget _frameFace(BuildContext context, Uint8List frame) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: _frameRadius,
-        border: context.shadows.outline,
-        boxShadow: context.shadows.emphasis,
-      ),
-      child: ClipRRect(
-        borderRadius: _frameRadius,
-        child: Image.memory(
-          frame,
-          key: transportFrameKey,
-          width: widget.frameSize.width,
-          height: widget.frameSize.height,
-          fit: BoxFit.cover,
-          gaplessPlayback: true,
-        ),
+    return OutlinedSurface(
+      borderRadius: _frameRadius,
+      borderColor: context.colors.line,
+      boxShadow: context.shadows.emphasis,
+      child: Image.memory(
+        frame,
+        key: transportFrameKey,
+        width: widget.frameSize.width,
+        height: widget.frameSize.height,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
       ),
     );
   }

@@ -516,20 +516,14 @@ void main() {
         final Rect bar = tester.getRect(find.byKey(aboutProgressKey));
         expect(bar.width, closeTo(300, _tolerance), reason: name);
         expect(bar.height, closeTo(8, _tolerance), reason: name);
-        final BoxDecoration frame =
-            tester
-                    .widget<DecoratedBox>(
-                      find
-                          .descendant(
-                            of: find.byKey(aboutProgressKey),
-                            matching: find.byType(DecoratedBox),
-                          )
-                          .first,
-                    )
-                    .decoration
-                as BoxDecoration;
+        final OutlinedSurface frame = tester.widget<OutlinedSurface>(
+          find.descendant(
+            of: find.byKey(aboutProgressKey),
+            matching: find.byType(OutlinedSurface),
+          ),
+        );
         expect(frame.color?.toARGB32(), colors.cardBright.toARGB32());
-        expect((frame.border! as Border).top.width, 1.5);
+        expect(frame.borderWidth, 1.5);
         expect(frame.borderRadius, BorderRadius.circular(4));
         final Rect fill = tester.getRect(
           find.descendant(

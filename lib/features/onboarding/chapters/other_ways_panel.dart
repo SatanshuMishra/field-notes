@@ -6,6 +6,7 @@ import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/motion/waveform_bob.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/outlined_surface.dart';
 import 'package:field_notes/features/onboarding/chapters/moment_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
 import 'package:flutter/widgets.dart';
@@ -368,15 +369,10 @@ class _Viewfinder extends StatelessWidget {
     return SizedBox(
       width: 78,
       height: 104,
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: _bracket.withValues(alpha: 0.3),
-            width: 1.5,
-          ),
-        ),
+      child: OutlinedSurface(
+        borderRadius: radius,
+        borderColor: _bracket.withValues(alpha: 0.3),
+        padding: const EdgeInsets.all(Shapes.outlineWidth),
         child: CustomPaint(
           painter: const _StripePainter(),
           child: Stack(

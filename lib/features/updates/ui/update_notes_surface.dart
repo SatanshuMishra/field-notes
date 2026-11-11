@@ -269,21 +269,16 @@ class UpdateProgressBar extends StatelessWidget {
     return ExcludeSemantics(
       child: SizedBox(
         height: height,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.cardBright,
-            border: Border.all(color: colors.line, width: Shapes.outlineWidth),
-            borderRadius: radius,
-          ),
-          child: ClipRRect(
-            borderRadius: radius,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FractionallySizedBox(
-                widthFactor: filled,
-                heightFactor: 1,
-                child: const ColoredBox(color: Palette.coral),
-              ),
+        child: OutlinedSurface(
+          color: colors.cardBright,
+          borderRadius: radius,
+          borderColor: colors.line,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FractionallySizedBox(
+              widthFactor: filled,
+              heightFactor: 1,
+              child: const ColoredBox(color: Palette.coral),
             ),
           ),
         ),
@@ -360,60 +355,51 @@ class UpdateNotesPanel extends ConsumerWidget {
                   namesRoute: true,
                   explicitChildNodes: true,
                   label: notesTitle(content.version),
-                  child: DecoratedBox(
+                  child: OutlinedSurface(
                     key: updateNotesPanelKey,
-                    decoration: BoxDecoration(
-                      color: colors.cardWarm,
-                      border: Border.all(
-                        color: colors.line,
-                        width: _panelBorder,
-                      ),
-                      borderRadius: const BorderRadius.all(
-                        Radius.circular(_panelRadius),
-                      ),
-                      boxShadow: context.shadows.hero,
+                    color: colors.cardWarm,
+                    borderRadius: const BorderRadius.all(
+                      Radius.circular(_panelRadius),
                     ),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.all(
-                        Radius.circular(_panelRadius - _panelBorder),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          Padding(
-                            padding: _desktopHeaderPadding,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Expanded(
-                                  child: _NotesHeader(
-                                    content: content,
-                                    phone: false,
-                                  ),
+                    borderColor: colors.line,
+                    borderWidth: _panelBorder,
+                    boxShadow: context.shadows.hero,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        Padding(
+                          padding: _desktopHeaderPadding,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Expanded(
+                                child: _NotesHeader(
+                                  content: content,
+                                  phone: false,
                                 ),
-                                _CloseButton(onPressed: locked ? null : close),
-                              ],
-                            ),
+                              ),
+                              _CloseButton(onPressed: locked ? null : close),
+                            ],
                           ),
-                          const Padding(
-                            padding: _desktopRulePadding,
-                            child: DashedDivider(),
+                        ),
+                        const Padding(
+                          padding: _desktopRulePadding,
+                          child: DashedDivider(),
+                        ),
+                        Flexible(
+                          child: SingleChildScrollView(
+                            padding: _desktopNotesPadding,
+                            child: _NotesBody(content: content, phone: false),
                           ),
-                          Flexible(
-                            child: SingleChildScrollView(
-                              padding: _desktopNotesPadding,
-                              child: _NotesBody(content: content, phone: false),
-                            ),
+                        ),
+                        if (footing != null)
+                          _DesktopFooter(
+                            footing: footing,
+                            onLater: locked ? null : close,
+                            onAct: locked || route == null ? null : act,
                           ),
-                          if (footing != null)
-                            _DesktopFooter(
-                              footing: footing,
-                              onLater: locked ? null : close,
-                              onAct: locked || route == null ? null : act,
-                            ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                 ),

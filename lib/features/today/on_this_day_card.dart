@@ -144,18 +144,15 @@ class OnThisDayCard extends StatelessWidget {
     VoidCallback? onOpen,
     String? label,
   }) {
-    Widget card({bool hovered = false}) => StickerCard(
-      surface: context.colors.cardWarm,
+    Widget card({bool hovered = false}) => OutlinedSurface(
+      color: context.colors.cardWarm,
       borderRadius: _cardRadius,
-      shadow: context.shadows.cardDefault,
-      padding: EdgeInsets.zero,
-      child: ClipRRect(
+      borderColor: context.colors.line,
+      boxShadow: context.shadows.cardDefault,
+      child: HoverFill(
+        hovered: hovered,
         borderRadius: _cardRadius,
-        child: HoverFill(
-          hovered: hovered,
-          borderRadius: _cardRadius,
-          child: child,
-        ),
+        child: child,
       ),
     );
     return Column(
