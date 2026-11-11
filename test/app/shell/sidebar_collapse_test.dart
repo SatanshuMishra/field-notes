@@ -163,7 +163,7 @@ void _expectCollapsed(WidgetTester tester) {
   final Rect settings = tester.getRect(find.byKey(_settingsButton));
   final Rect sound = tester.getRect(find.byKey(_soundButton));
   expect(sound.center.dx, settings.center.dx);
-  expect(sound.top - settings.bottom, 8);
+  expect(sound.top - settings.bottom, 10);
   expect(
     find.descendant(of: find.byKey(_rail), matching: find.text('0')),
     findsOneWidget,

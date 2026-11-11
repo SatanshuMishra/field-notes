@@ -10,6 +10,7 @@ import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
+import 'package:field_notes/features/streak/streak.dart';
 
 import '../../support/sync_overrides.dart';
 import '../app_harness.dart';
@@ -21,6 +22,37 @@ const Key _soundButton = ValueKey<String>('sound-button');
 final TargetPlatformVariant _macOS = TargetPlatformVariant.only(
   TargetPlatform.macOS,
 );
+
+final Matcher _boardGap = moreOrLessEquals(10, epsilon: 0.01);
+
+Rect _streakRect(WidgetTester tester) => tester.getRect(
+  find.descendant(
+    of: find.byKey(sidebarRailKey),
+    matching: find.byType(StreakPill),
+  ),
+);
+
+Rect _faceRect(WidgetTester tester, Key button) {
+  final Iterable<DecoratedBox> faces = tester
+      .widgetList<DecoratedBox>(
+        find.descendant(
+          of: find.byKey(button),
+          matching: find.byType(DecoratedBox),
+        ),
+      )
+      .where(
+        (DecoratedBox box) => switch (box.decoration) {
+          BoxDecoration(color: Color(), border: BoxBorder()) => true,
+          _ => false,
+        },
+      );
+  return tester.getRect(find.byWidget(faces.single));
+}
+
+List<double> _gapsBetween(List<Rect> stacked) => <double>[
+  for (int index = 1; index < stacked.length; index += 1)
+    stacked[index].top - stacked[index - 1].bottom,
+];
 
 List<BoxDecoration> _faceDecorations(WidgetTester tester, Finder box) =>
     <BoxDecoration>[
@@ -416,5 +448,68 @@ void main() {
       },
       variant: _macOS,
     );
+
+    testWidgets('collapsed rail boxes are evenly spaced', (
+      WidgetTester tester,
+    ) async {
+      await pumpMacAppShell(
+        tester,
+        sync: syncOnOverrides(status: SyncedStatus(DateTime.now().toUtc())),
+        collapsed: true,
+      );
+
+      expect(
+        _gapsBetween(<Rect>[
+          _streakRect(tester),
+          tester.getRect(find.byKey(sidebarSyncStatusKey)),
+          _faceRect(tester, _settingsButton),
+          _faceRect(tester, _soundButton),
+        ]),
+        <Matcher>[_boardGap, _boardGap, _boardGap],
+      );
+
+      await pumpMacAppShell(tester, sync: syncOffOverrides(), collapsed: true);
+
+      expect(
+        _gapsBetween(<Rect>[
+          _streakRect(tester),
+          _faceRect(tester, _settingsButton),
+          _faceRect(tester, _soundButton),
+        ]),
+        <Matcher>[_boardGap, _boardGap],
+      );
+    }, variant: _macOS);
+
+    testWidgets('expanded sidebar boxes are evenly spaced', (
+      WidgetTester tester,
+    ) async {
+      await pumpMacAppShell(
+        tester,
+        sync: syncOnOverrides(status: SyncedStatus(DateTime.now().toUtc())),
+      );
+
+      expect(
+        _gapsBetween(<Rect>[
+          _streakRect(tester),
+          tester.getRect(find.byKey(sidebarSyncStatusKey)),
+          _faceRect(tester, _settingsButton),
+        ]),
+        <Matcher>[_boardGap, _boardGap],
+      );
+      expect(
+        _faceRect(tester, _soundButton).top,
+        _faceRect(tester, _settingsButton).top,
+      );
+
+      await pumpMacAppShell(tester, sync: syncOffOverrides());
+
+      expect(
+        _gapsBetween(<Rect>[
+          _streakRect(tester),
+          _faceRect(tester, _settingsButton),
+        ]),
+        <Matcher>[_boardGap],
+      );
+    }, variant: _macOS);
   });
 }

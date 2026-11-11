@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/min_target.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/features/streak/streak.dart';
@@ -48,7 +50,7 @@ const double _navItemGap = 6;
 const double _navItemPaddingVertical = 4;
 const double _navIconSize = 18;
 const double _navLabelGap = 10;
-const double _streakGap = 12;
+const double _boxGap = 10;
 const double _footerGap = 8;
 const double _updateNoticeGap = 8;
 const double _settingsBadgeSize = 10;
@@ -89,7 +91,6 @@ const double sidebarRailBoxExtent = 44;
 const double sidebarSyncBoxMinHeight = 40;
 
 const double _railGlyphExtent = 18;
-const double _syncGap = 8;
 const double _syncBoxPadding = 10;
 const double _syncMarkSlot = 12;
 const double _syncMarkGap = 7;
@@ -451,7 +452,9 @@ class _SidebarShellState extends State<SidebarShell> {
                           : StreakPillForm.sidebar,
                     ),
                 ?widget.syncStatus?.call(context, collapsed),
-                const SizedBox(height: _streakGap),
+                SizedBox(
+                  height: math.max(0, _boxGap - _footerFaceInset(context)),
+                ),
                 _footer(context),
               ],
             ),
@@ -491,14 +494,24 @@ class _SidebarShellState extends State<SidebarShell> {
     );
   }
 
+  double get _footerExtent =>
+      _collapsed ? sidebarRailBoxExtent : iconStickerButtonExtent;
+
+  double _footerFaceInset(BuildContext context) {
+    final double extent = _footerExtent;
+    final double target = math.max(
+      minIconTargetOn(Theme.of(context).platform),
+      extent,
+    );
+    return (target - extent) / 2;
+  }
+
   Widget _footer(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final bool settingsSelected = widget.selected == ShellDestination.settings;
     final bool soundOn = widget.soundOn;
     final bool collapsed = _collapsed;
-    final double extent = collapsed
-        ? sidebarRailBoxExtent
-        : iconStickerButtonExtent;
+    final double extent = _footerExtent;
     final double glyphExtent = collapsed
         ? _railGlyphExtent
         : iconStickerGlyphExtent;
@@ -533,7 +546,9 @@ class _SidebarShellState extends State<SidebarShell> {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           buttons.first,
-          const SizedBox(height: _footerGap),
+          SizedBox(
+            height: math.max(0, _boxGap - 2 * _footerFaceInset(context)),
+          ),
           buttons.last,
         ],
       );
@@ -794,7 +809,7 @@ class SidebarSyncBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     return Padding(
-      padding: const EdgeInsets.only(top: _syncGap),
+      padding: const EdgeInsets.only(top: _boxGap),
       child: Pressable(
         key: sidebarSyncStatusKey,
         label: words,
