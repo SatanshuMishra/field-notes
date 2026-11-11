@@ -1,7 +1,7 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T05:04:57.027Z
-Next ids: c1 D1 R1 S1
+Updated: 2026-11-11T05:07:27.177Z
+Next ids: c1 D2 R1 S1
 
 ## Goal
 
@@ -18,6 +18,8 @@ Full lane, interphase bug pathway, unattended after the intent round (owner: "Wo
 Fix what the spec reviewer reports, re-render and re-check, set the record to handed-off and delete the guard; then pipeline guarantees, the hand-off decision, copy items.json, pipeline prevent into worker-rules.txt, plan-only and the drive.
 
 ## Decisions in force
+
+- D1 hand-off: build the petal gusts spec unattended: Build now: run the mitosis plan and build for petal-gusts, then review, validate, fix and open the pull request without asking, never merging.
 
 ## Open risks
 
