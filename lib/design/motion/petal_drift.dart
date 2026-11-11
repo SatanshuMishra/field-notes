@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -99,6 +100,23 @@ List<_Petal> _scatter(_Pace pace) {
 final List<_Petal> _widePetals = _scatter(_widePace);
 final List<_Petal> _narrowPetals = _scatter(_narrowPace);
 
+@immutable
+class _PetalSet {
+  const _PetalSet({required this.pace, required this.petals});
+
+  final _Pace pace;
+  final List<_Petal> petals;
+}
+
+final _PetalSet _wideSet = _PetalSet(pace: _widePace, petals: _widePetals);
+final _PetalSet _narrowSet = _PetalSet(
+  pace: _narrowPace,
+  petals: _narrowPetals,
+);
+
+_PetalSet _petalSetFor(double width) =>
+    width >= _wideArea ? _wideSet : _narrowSet;
+
 double _fallAt(double progress, double fall) => progress < _midway
     ? fall * _midwayFall * progress / _midway
     : fall * (_midwayFall + (1 - _midwayFall) * (progress - _midway) / _midway);
@@ -190,6 +208,11 @@ class _Shed {
       wide.every((_Fall fall) => fall.art == null) &&
       narrow.every((_Fall fall) => fall.art == null);
 
+  List<_Fall> fallsOn(PetalScreen screen) => switch (screen) {
+    PetalScreen.wide => wide,
+    PetalScreen.narrow => narrow,
+  };
+
   _Shed at(double now, PetalArt? current) => _Shed(
     seconds: now,
     wide: _falling(_widePetals, wide, now, current),
@@ -207,16 +230,68 @@ class _Shed {
   );
 }
 
-class PetalDrift extends StatefulWidget {
-  const PetalDrift({super.key, this.flower});
+void _paintPetal(
+  Canvas canvas, {
+  required Size size,
+  required PetalScreen screen,
+  required PetalArt art,
+  required double progress,
+  required double top,
+  required double fall,
+  required double opacityFactor,
+  required bool alternate,
+}) {
+  final double span = math.max(0, size.height - _topReserve);
+  final double travel = size.width + _exitReach;
+  final Size box = art.sizeOn(screen);
+  final Offset centre = Offset(
+    _entryLeft + box.width / 2 + travel * progress,
+    _topInset + top * span + box.height / 2 + _fallAt(progress, fall),
+  );
+  canvas
+    ..save()
+    ..translate(centre.dx, centre.dy)
+    ..rotate(_turnRadians * progress);
+  art.paint(
+    canvas,
+    opacity: _opacityAt(progress) * opacityFactor,
+    size: box,
+    alternate: alternate,
+  );
+  canvas.restore();
+}
+
+enum PetalRhythm { steady, gusts }
+
+class PetalDrift extends StatelessWidget {
+  const PetalDrift({super.key, this.flower, this.rhythm = PetalRhythm.steady});
+
+  final FlowerKind? flower;
+  final PetalRhythm rhythm;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: ExcludeSemantics(
+        child: switch (rhythm) {
+          PetalRhythm.steady => _SteadyDrift(flower: flower),
+          PetalRhythm.gusts => _GustDrift(flower: flower),
+        },
+      ),
+    );
+  }
+}
+
+class _SteadyDrift extends StatefulWidget {
+  const _SteadyDrift({required this.flower});
 
   final FlowerKind? flower;
 
   @override
-  State<PetalDrift> createState() => _PetalDriftState();
+  State<_SteadyDrift> createState() => _SteadyDriftState();
 }
 
-class _PetalDriftState extends State<PetalDrift>
+class _SteadyDriftState extends State<_SteadyDrift>
     with SingleTickerProviderStateMixin {
   final ValueNotifier<_Shed> _shed = ValueNotifier<_Shed>(_Shed.start(null));
   late final Ticker _ticker = createTicker(_tick);
@@ -259,7 +334,7 @@ class _PetalDriftState extends State<PetalDrift>
   }
 
   @override
-  void didUpdateWidget(PetalDrift oldWidget) {
+  void didUpdateWidget(_SteadyDrift oldWidget) {
     super.didUpdateWidget(oldWidget);
     final PetalArt? current = _current;
     if (current == null ||
@@ -282,18 +357,14 @@ class _PetalDriftState extends State<PetalDrift>
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: ExcludeSemantics(
-        child: MediaQuery.disableAnimationsOf(context)
-            ? const SizedBox.expand()
-            : RepaintBoundary(
-                child: CustomPaint(
-                  painter: _PetalPainter(shed: _shed),
-                  child: const SizedBox.expand(),
-                ),
-              ),
-      ),
-    );
+    return MediaQuery.disableAnimationsOf(context)
+        ? const SizedBox.expand()
+        : RepaintBoundary(
+            child: CustomPaint(
+              painter: _PetalPainter(shed: _shed),
+              child: const SizedBox.expand(),
+            ),
+          );
   }
 }
 
@@ -304,47 +375,305 @@ class _PetalPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bool wide = size.width >= _wideArea;
-    final PetalScreen screen = (wide ? _widePace : _narrowPace).screen;
-    final List<_Petal> petals = wide ? _widePetals : _narrowPetals;
+    final _PetalSet set = _petalSetFor(size.width);
+    final PetalScreen screen = set.pace.screen;
     final _Shed now = shed.value;
-    final List<_Fall> falls = wide ? now.wide : now.narrow;
+    final List<_Fall> falls = now.fallsOn(screen);
     if (falls.every((_Fall fall) => fall.art == null)) {
       return;
     }
-    final double span = math.max(0, size.height - _topReserve);
-    final double travel = size.width + _exitReach;
     canvas.clipRect(Offset.zero & size);
-    for (int index = 0; index < petals.length; index++) {
-      final _Petal petal = petals[index];
+    for (int index = 0; index < set.petals.length; index++) {
+      final _Petal petal = set.petals[index];
       final _Fall fall = falls[index];
       final PetalArt? art = fall.art;
       if (art == null) {
         continue;
       }
-      final double progress = petal.progressAt(now.seconds);
-      final Size box = art.sizeOn(screen);
-      final Offset centre = Offset(
-        _entryLeft + box.width / 2 + travel * progress,
-        _topInset +
-            petal.top * span +
-            box.height / 2 +
-            _fallAt(progress, petal.fall),
-      );
-      canvas
-        ..save()
-        ..translate(centre.dx, centre.dy)
-        ..rotate(_turnRadians * progress);
-      art.paint(
+      _paintPetal(
         canvas,
-        opacity: _opacityAt(progress) * fall.revealAt(now.seconds),
-        size: box,
+        size: size,
+        screen: screen,
+        art: art,
+        progress: petal.progressAt(now.seconds),
+        top: petal.top,
+        fall: petal.fall,
+        opacityFactor: fall.revealAt(now.seconds),
         alternate: index.isOdd,
       );
-      canvas.restore();
     }
   }
 
   @override
   bool shouldRepaint(_PetalPainter oldDelegate) => oldDelegate.shed != shed;
+}
+
+const int _restLeastGusts = 5;
+
+@immutable
+class _Flight {
+  const _Flight({
+    required this.entry,
+    required this.top,
+    this.entered = false,
+    this.art,
+  });
+
+  final double entry;
+  final double top;
+  final bool entered;
+  final PetalArt? art;
+
+  double progressAt(_Petal petal, double seconds) =>
+      (seconds - entry) / petal.loopSeconds;
+
+  bool leftAt(_Petal petal, double seconds) => progressAt(petal, seconds) >= 1;
+
+  bool airborneAt(_Petal petal, double seconds) =>
+      entered && art != null && !leftAt(petal, seconds);
+
+  _Flight at(double seconds, PetalArt? current) => entered || seconds < entry
+      ? this
+      : _Flight(entry: entry, top: top, entered: true, art: current);
+}
+
+@immutable
+class _Gust {
+  const _Gust({
+    required this.set,
+    required this.flower,
+    required this.flights,
+    required this.seconds,
+  });
+
+  factory _Gust.start(_PetalSet set, FlowerKind flower, math.Random random) {
+    final double spread = set.pace.shortestSeconds / 4;
+    return _Gust(
+      set: set,
+      flower: flower,
+      seconds: 0,
+      flights: List<_Flight>.unmodifiable(<_Flight>[
+        for (int index = 0; index < set.petals.length; index++)
+          _Flight(
+            entry: random.nextDouble() * spread,
+            top: random.nextDouble(),
+          ),
+      ]),
+    );
+  }
+
+  final _PetalSet set;
+  final FlowerKind flower;
+  final List<_Flight> flights;
+  final double seconds;
+
+  double get length => <double>[
+    for (int index = 0; index < flights.length; index++)
+      flights[index].entry + set.petals[index].loopSeconds,
+  ].reduce(math.max);
+
+  bool get spent => <bool>[
+    for (int index = 0; index < flights.length; index++)
+      flights[index].leftAt(set.petals[index], seconds),
+  ].every((bool left) => left);
+
+  bool get empty => <bool>[
+    for (int index = 0; index < flights.length; index++)
+      flights[index].airborneAt(set.petals[index], seconds),
+  ].every((bool airborne) => !airborne);
+
+  _Gust at(double now, PetalArt? current) => _Gust(
+    set: set,
+    flower: flower,
+    seconds: now,
+    flights: List<_Flight>.unmodifiable(<_Flight>[
+      for (final _Flight flight in flights) flight.at(now, current),
+    ]),
+  );
+}
+
+class _GustDrift extends StatefulWidget {
+  const _GustDrift({required this.flower});
+
+  final FlowerKind? flower;
+
+  @override
+  State<_GustDrift> createState() => _GustDriftState();
+}
+
+class _GustDriftState extends State<_GustDrift>
+    with SingleTickerProviderStateMixin {
+  final ValueNotifier<_Gust?> _gust = ValueNotifier<_Gust?>(null);
+  final math.Random _random = math.Random();
+  late final Ticker _ticker = createTicker(_tick);
+  Timer? _rest;
+  Duration _origin = Duration.zero;
+  _PetalSet? _laidOut;
+  bool? _still;
+
+  PetalArt? get _current {
+    final FlowerKind? flower = widget.flower;
+    return flower == null ? null : petalArtFor(flower);
+  }
+
+  void _blow() {
+    _rest?.cancel();
+    _rest = null;
+    _gust.value = null;
+    if (!_ticker.isActive) {
+      _ticker.start();
+    }
+  }
+
+  void _halt() {
+    _rest?.cancel();
+    _rest = null;
+    _gust.value = null;
+    _ticker.stop();
+  }
+
+  void _restAfter(_Gust gust) {
+    _halt();
+    final double gusts = _restLeastGusts + _random.nextDouble();
+    _rest = Timer(
+      Duration(
+        microseconds: (gust.length * gusts * Duration.microsecondsPerSecond)
+            .round(),
+      ),
+      _restEnded,
+    );
+  }
+
+  void _restEnded() {
+    _rest = null;
+    if (widget.flower != null && !MediaQuery.disableAnimationsOf(context)) {
+      _blow();
+    }
+  }
+
+  void _tick(Duration elapsed) {
+    final _PetalSet? set = _laidOut;
+    if (set == null) {
+      return;
+    }
+    final FlowerKind? flower = widget.flower;
+    final _Gust? gust = _gust.value;
+    if (gust == null || !identical(gust.set, set)) {
+      if (flower == null) {
+        _halt();
+        return;
+      }
+      _origin = elapsed;
+      _gust.value = _Gust.start(set, flower, _random);
+      return;
+    }
+    final double seconds =
+        (elapsed - _origin).inMicroseconds / Duration.microsecondsPerSecond;
+    final _Gust moved = gust.at(seconds, _current);
+    if (flower == null && moved.empty) {
+      _halt();
+    } else if (!moved.spent) {
+      _gust.value = moved;
+    } else if (flower != moved.flower) {
+      _gust.value = null;
+    } else {
+      _restAfter(moved);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final bool still = MediaQuery.disableAnimationsOf(context);
+    if (still == _still) {
+      return;
+    }
+    _still = still;
+    if (still) {
+      _halt();
+    } else if (widget.flower != null) {
+      _blow();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_GustDrift oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.flower == oldWidget.flower ||
+        MediaQuery.disableAnimationsOf(context)) {
+      return;
+    }
+    if (widget.flower == null) {
+      _rest?.cancel();
+      _rest = null;
+    } else if (!_ticker.isActive) {
+      _blow();
+    }
+  }
+
+  @override
+  void dispose() {
+    _rest?.cancel();
+    _ticker.dispose();
+    _gust.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return const SizedBox.expand();
+    }
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final _PetalSet set = _petalSetFor(constraints.maxWidth);
+        _laidOut = set;
+        return RepaintBoundary(
+          child: CustomPaint(
+            painter: _GustPainter(gust: _gust, set: set),
+            child: const SizedBox.expand(),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _GustPainter extends CustomPainter {
+  _GustPainter({required this.gust, required this.set}) : super(repaint: gust);
+
+  final ValueListenable<_Gust?> gust;
+  final _PetalSet set;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final _Gust? now = gust.value;
+    if (now == null || !identical(now.set, set) || now.empty) {
+      return;
+    }
+    canvas.clipRect(Offset.zero & size);
+    for (int index = 0; index < set.petals.length; index++) {
+      final _Petal petal = set.petals[index];
+      final _Flight flight = now.flights[index];
+      final PetalArt? art = flight.art;
+      if (art == null || !flight.airborneAt(petal, now.seconds)) {
+        continue;
+      }
+      _paintPetal(
+        canvas,
+        size: size,
+        screen: set.pace.screen,
+        art: art,
+        progress: flight.progressAt(petal, now.seconds),
+        top: flight.top,
+        fall: petal.fall,
+        opacityFactor: 1,
+        alternate: index.isOdd,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GustPainter oldDelegate) =>
+      oldDelegate.gust != gust || !identical(oldDelegate.set, set);
 }

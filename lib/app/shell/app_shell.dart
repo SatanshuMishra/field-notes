@@ -148,7 +148,9 @@ class _AppShellState extends ConsumerState<AppShell> {
             shell,
             if (!obscured && selected != ShellDestination.garden)
               IgnorePointer(
-                child: ExcludeFocus(child: PetalDrift(flower: flower)),
+                child: ExcludeFocus(
+                  child: PetalDrift(flower: flower, rhythm: PetalRhythm.gusts),
+                ),
               ),
             const UpdateGreeting(),
           ],
