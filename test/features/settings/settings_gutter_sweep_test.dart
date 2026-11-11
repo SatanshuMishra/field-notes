@@ -14,6 +14,7 @@ import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart'
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -176,6 +177,30 @@ double _textColumnLeft(
   return card.left + _phoneCardTextInset;
 }
 
+bool _drawsOutline(Element element) {
+  if (element.widget is OutlinedSurface) {
+    return true;
+  }
+  if (element is! RenderObjectElement) {
+    return false;
+  }
+  final RenderObject box = element.renderObject;
+  return box is RenderDecoratedBox &&
+      box.decoration is BoxDecoration &&
+      (box.decoration as BoxDecoration).border != null;
+}
+
+Element? _outermostOutlineBetween(Element row, Element pressable) {
+  Element? outermost;
+  pressable.visitAncestorElements((Element ancestor) {
+    if (_drawsOutline(ancestor)) {
+      outermost = ancestor;
+    }
+    return ancestor != row;
+  });
+  return outermost;
+}
+
 typedef _Sweep = ({List<String> faults, Set<String> hoverRows});
 
 _Sweep _sweep(String page, {required bool phone}) {
@@ -208,11 +233,6 @@ _Sweep _sweep(String page, {required bool phone}) {
         }
         final Rect textRect = _rectOfElement(text);
         final String name = '$page: "${_textOf(text)}"';
-        if ((textRect.left - textColumn).abs() > _tolerance) {
-          faults.add(
-            '$name text starts at ${textRect.left}, heading at $textColumn',
-          );
-        }
         final List<Element> hover = find
             .ancestor(
               of: _only(text),
@@ -224,6 +244,21 @@ _Sweep _sweep(String page, {required bool phone}) {
             )
             .evaluate()
             .toList();
+        final Element? outline = hover.isEmpty
+            ? null
+            : _outermostOutlineBetween(rowElement, hover.last);
+        final double leadingEdge = outline == null
+            ? textRect.left
+            : _rectOfElement(outline).left;
+        if ((leadingEdge - textColumn).abs() > _tolerance) {
+          faults.add(
+            outline == null
+                ? '$name text starts at ${textRect.left}, '
+                      'heading at $textColumn'
+                : '$name outline starts at $leadingEdge, '
+                      'heading at $textColumn',
+          );
+        }
         if (hover.isEmpty) {
           continue;
         }
