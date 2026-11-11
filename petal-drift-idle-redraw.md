@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: parked
-Updated: 2026-11-11T06:58:17.288Z
+Updated: 2026-11-11T07:10:18.026Z
 Next ids: c1 D2 R2 S1
 
 ## Goal
