@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T04:55:37.827Z
+Updated: 2026-11-11T05:01:21.160Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -11,11 +11,11 @@ Once today has a bloom, the drifting petals keep the whole app redrawing at the 
 
 ## Where things stand
 
-Full lane, interphase bug pathway, unattended after the intent round (owner: "Work autonomously. Complete the task."). The spec, record and items file are written and pass check_spec and check_items; the single spec-reviewer pass is running. Design: over the app, petals fall in gusts (PetalRhythm.gusts) with rests of four to five gust lengths; onboarding stays steady. The owner asked to tag and release once the fix is resolved, which means after they merge it into main.
+Full lane, interphase bug pathway, unattended after the intent round (owner: "Work autonomously. Complete the task."). The spec, record and items file pass check_spec and check_items; the single spec-reviewer pass is running. The glossary terms (petal gust, petal rest) and ADR 0010 are written, and the tree guard verified clean. The FEATURE branch fix/petal-drift-idle-redraw is pushed at b7ccaea2, and the run home holds feature.json, CHARTER.md, run.zsh, worker scripts, worker-rules.base.txt, do-not-flag.md and graph.json. Design: over the app, petals fall in gusts (PetalRhythm.gusts) with rests of four to five gust lengths; onboarding stays steady. The owner asked to tag and release once the fix is merged into main; the release would be 1.9.0, covering PRs #370 to #379 and this fix.
 
 ## Next step
 
-Fix what the spec reviewer reports, re-render and re-check, then hand off (glossary entry for petal gust, tree guard verify, status handed-off) and start pipeline stage 2 (feature branch, run home, mitosis build of the petal-gusts Step).
+Fix what the spec reviewer reports, re-render and re-check, set the record to handed-off and delete the guard; then pipeline guarantees, the hand-off decision, copy items.json, pipeline prevent into worker-rules.txt, plan-only and the drive.
 
 ## Decisions in force
 
