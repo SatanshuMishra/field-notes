@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-11T01:21:46.853Z
+Updated: 2026-11-11T01:21:48.158Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
@@ -52,4 +52,4 @@ Needs: D1, D2, D3, D5, D6, D7, R1.
 - Read-only worktree at origin/main for tracing: ~/.mitosis/fireplace/explore-180
 - Fanout items and plan: session scratchpad fn/fanout18 (items.json holds each leaf's task, files and acceptance; review-bar.md the review criteria; rules.md the shared build rules and report format; pr-notes.md each branch's assumptions, trade-offs and open problems for its PR body)
 - Integration worktree: ~/.mitosis/fireplace/integ-180 (detached, never pushed; session scratchpad integ_merge.sh merges named branches in order and stops on a conflict)
-- Integration test log: session scratchpad integ8-test.log (failures-only output of the full suite on the eight-branch merge)
+- Integration test log: session scratchpad integ10-test.log (failures-only output of the full suite on the ten-branch merge)
