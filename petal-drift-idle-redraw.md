@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T06:33:49.693Z
+Updated: 2026-11-11T06:35:46.244Z
 Next ids: c1 D2 R2 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Once today has a bloom, the drifting petals keep the whole app redrawing at the 
 
 ## Where things stand
 
-Full lane, unattended (owner: "Work autonomously. Complete the task."). The spec is handed off with the reviewer's four fixes: rests of five to six gusts, an immediate gust after a mid-gust flower change, one shared wide-or-phone rule with a fresh gust on a set change (criterion C4.4), and one shared per-petal draw. MSP petal-gusts is open as PR #381 (mitosis/petal-gusts into FEATURE branch fix/petal-drift-idle-redraw, base b7ccaea2), assigned to the owner; the drive is in awaiting-merge and watches its CI. Round 1 was green; advisories C1 (ADR rest wording) and C2 (flights carry their petal) are fixed and pushed as 1f7290f6, with all 18 petal tests passing, and the branch's ADR and glossary now match the checkout. The tree guard's only difference at hand-off was the README agent's worktree, recorded in D1. The owner's separate README request is open as PR #380 (README and 21 screenshots, no lab or personal setup, checks green); the 1.9.0 release notes should not need it. The owner asked to tag and release once the fix is merged into main: release 1.9.0, covering PRs #370 to #379 and this fix, notes drafted. Criterion 5.6 passed on the Note 10+ with a profile build of 1f7290f6 and today's bloom set to Grateful, five idle minutes per page: Today 12.4% of 60 fps frames and 8.5% raster CPU, Calendar 18.8% and 13.8%, Settings 12.2% and 8.2% (posted on #381). The owner asked whether missing petals were a regression: a gust came back on Settings after a 108 s rest with four chrysanthemum petals on screen, so gusts recur; main and 1.8.0 lack the fix, and petals need today's bloom. #381 is bound in the app with CI green. Next, the 1.9.0 changelog pull request opens against main, to merge only after the FEATURE pull request.
+Full lane, unattended (owner: "Work autonomously. Complete the task."). MSP petal-gusts is open as PR #381 (mitosis/petal-gusts into FEATURE branch fix/petal-drift-idle-redraw, base b7ccaea2) at 1f7290f6, assigned to the owner, bound in the app, CI green; round 1 review was green and both advisories are fixed. The drive is in awaiting-merge. Criterion 5.6 passed on the Note 10+ (Today 12.4% of 60 fps frames and 8.5% raster CPU, Calendar 18.8% and 13.8%, Settings 12.2% and 8.2%, posted on #381), and gusts recur on device. The owner's README request is open as PR #380. The 1.9.0 release notes are open as PR #382 against main, assigned, to merge after the FEATURE pull request; once both are on main, tag v1.9.0 on main and confirm the release workflow publishes.
 
 ## Next step
 
