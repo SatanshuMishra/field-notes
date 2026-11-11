@@ -294,7 +294,17 @@ void main() {
       expect(chip, findsOneWidget);
       expect(find.text('Update available'), findsNothing);
       expect(find.text('Version 2.4.0'), findsNothing);
-      expect(tester.getSize(face), const Size(40, 40));
+      expect(tester.getSize(face), const Size.square(sidebarRailBoxExtent));
+      final Rect railStreak = tester.getRect(
+        find.descendant(
+          of: find.byKey(sidebarRailKey),
+          matching: find.byType(StreakPill),
+        ),
+      );
+      expect(
+        railStreak.top - tester.getRect(face).bottom,
+        moreOrLessEquals(10, epsilon: _tolerance),
+      );
       expect(
         tester.getCenter(face).dx,
         closeTo(tester.getCenter(find.byKey(sidebarRailKey)).dx, 0.5),

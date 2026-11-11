@@ -443,7 +443,7 @@ class _SidebarShellState extends State<SidebarShell> {
                     case final Widget Function(BuildContext, bool)
                         notice) ...<Widget>[
                   notice(context, collapsed),
-                  const SizedBox(height: _updateNoticeGap),
+                  SizedBox(height: collapsed ? _boxGap : _updateNoticeGap),
                 ],
                 widget.streak ??
                     StreakPill(

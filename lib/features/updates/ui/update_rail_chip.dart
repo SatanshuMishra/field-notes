@@ -12,7 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const Key updateRailChipKey = ValueKey<String>('update-rail-chip');
 
-const double updateRailChipCollapsedSize = 40;
+const double updateRailChipCollapsedSize = 44;
 const double updateRailChipIconSize = 16;
 const double updateRailChipBorderOpacity = 0.6;
 const double updateRailChipFillOpacity = 0.07;
