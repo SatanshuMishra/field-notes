@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-11T01:32:37.628Z
+Updated: 2026-11-11T01:37:17.773Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
@@ -21,7 +21,7 @@ Fanout split a to h into ten branches (one PR each) from origin/main f454ef02, e
 - Also ready: fix/hover-padding 78552789 on feat/day-modal-tidy 59756fe7 (agent-a6532085534a30cd2; stacked so the day modal's OutlinedSurface keeps the Later hover fill inside the outline's corner; step glyph gap 2 px so a two-digit position keeps captions on one line; the sweep measures a bordered card's edge instead of its words).
 - Also ready: feat/reminder-schedules fad95699 on d5891f05 (agent-a00deb7378308fb28): failed bookings retried on the next trigger; a device-only settings row remembers bookings; 4:00 to 5:59 AM custom times pin to the timeline's morning start; a custom time from midnight to 3:59 AM is the previous day's last call, per D3; the Last call line names the time the last call really rings.
 - Integration in integ-180 at c5ea063a (all ten merged): flutter analyze on lib, test and integration_test is clean; the full suite passes 7648 with 5 failures, all golden tests that fail on main with byte-identical images (note_float, three sticker_button, meadow_page); reminders, settings (with the gutter sweep), onboarding, domain and accessibility pass 2608 after the last two reminder commits. Timing tests (natural_voice_chain_test, push_limits_test) can fail under load and pass when rerun alone.
-- Each branch's touched test folders are being rerun on the branch alone for the PR Testing rows.
+- Each branch's touched test folders rerun on the branch alone: eight pass so far (page-transitions fails only the meadow_page golden that fails on main); streak and reminders are still running. PR descriptions render cleanly from fn/fanout18/pr_fields.py.
 
 Root causes found: rounded outlines break where an opaque child is clipped only to the border's outer curve (day_detail_panel.dart:487-535 on f454ef02, and five other sites), fixed by OutlinedSurface; hover fills hug text because Pressable sizes its fill to its child and rows pad outside it (pressable.dart:116-129 on f454ef02), fixed by SettingsGutter.
 
