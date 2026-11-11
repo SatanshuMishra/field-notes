@@ -375,7 +375,7 @@ Future<void> _sidebarRows(WidgetTester tester, TestGesture mouse) async {
       _Row(
         'mac reminder choice',
         find.byKey(reminderChoiceKey(ReminderChoice.off)),
-        'Off, no nudge',
+        'Not now, no nudge',
         _lightRow,
         _Shape.rounded,
         12,
@@ -555,7 +555,7 @@ Future<void> _phoneRows(WidgetTester tester, TestGesture mouse) async {
       _Row(
         'phone reminder row',
         find.byKey(reminderChoiceKey(ReminderChoice.off)),
-        "No reminder, You'll open it when you want",
+        "Not now, You'll open it when you want",
         _lightRow,
         _Shape.rounded,
         0,

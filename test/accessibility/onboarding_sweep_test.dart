@@ -99,7 +99,7 @@ final Map<String, bool Function(OnboardingFlow flow)> _v7States =
       'reminder-time': (OnboardingFlow flow) => _running(
         flow,
         OnboardingChapter.reminder,
-        (OnboardingDraft draft) => draft.reminder.time != null,
+        (OnboardingDraft draft) => draft.reminder.schedule != null,
       ),
       'reminder-off': (OnboardingFlow flow) => _running(
         flow,
@@ -115,7 +115,7 @@ final Map<String, bool Function(OnboardingFlow flow)> _v7States =
         flow,
         OnboardingChapter.reminder,
         (OnboardingDraft draft) =>
-            draft.notificationsOff && draft.reminder.time != null,
+            draft.notificationsOff && draft.reminder.schedule != null,
       ),
     };
 

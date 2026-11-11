@@ -125,18 +125,33 @@ void main() {
     );
   });
 
-  test('the reminder choices map to their preset times', () {
+  test('the reminder choices map to their schedules, Not now to none', () {
     expect(
-      <ReminderTime?>[
-        for (final ReminderChoice choice in ReminderChoice.values) choice.time,
+      <ReminderSchedule?>[
+        for (final ReminderChoice choice in ReminderChoice.values)
+          choice.schedule,
       ],
-      <ReminderTime?>[
-        const ReminderTime(hour: 8, minute: 0),
-        const ReminderTime(hour: 12, minute: 30),
-        const ReminderTime(hour: 20, minute: 30),
+      <ReminderSchedule?>[
+        ReminderSchedule.evenings,
+        ReminderSchedule.middayAndEvening,
+        ReminderSchedule.custom,
         null,
       ],
     );
+  });
+
+  test('choosing a custom time holds it and picks Custom time', () {
+    final ProviderContainer us = _container();
+    _controller(us).start();
+    expect(_draft(us).customTime, ReminderTime.defaultTime);
+
+    _controller(us).chooseCustomTime(const ReminderTime(hour: 7, minute: 15));
+    expect(_draft(us).reminder, ReminderChoice.custom);
+    expect(_draft(us).customTime, const ReminderTime(hour: 7, minute: 15));
+
+    _controller(us).chooseReminder(ReminderChoice.evenings);
+    expect(_draft(us).reminder, ReminderChoice.evenings);
+    expect(_draft(us).customTime, const ReminderTime(hour: 7, minute: 15));
   });
 
   test('start captures today and the region week and opens the Opening', () {
@@ -157,7 +172,7 @@ void main() {
     expect(_draft(us).mood, Mood.happy);
     expect(_draft(us).noteText, '');
     expect(_draft(us).noteSave, NoteSaveState.idle);
-    expect(_draft(us).reminder, ReminderChoice.evening);
+    expect(_draft(us).reminder, ReminderChoice.evenings);
 
     final ProviderContainer germany = _container(country: 'DE');
     _controller(germany).start();

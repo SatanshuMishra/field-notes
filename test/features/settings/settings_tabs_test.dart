@@ -88,7 +88,7 @@ const Map<String, List<String>> _rowsByTab = <String, List<String>>{
     'Join my journal',
     'Restore with recovery phrase',
   ],
-  _remindersSound: <String>['Daily reminder', 'Reminder time', 'Sound effects'],
+  _remindersSound: <String>['Daily reminder', 'Evenings', 'Sound effects'],
   _voice: <String>[
     'Input profile',
     'Input device',

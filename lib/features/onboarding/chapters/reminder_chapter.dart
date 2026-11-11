@@ -4,21 +4,24 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/toast.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/format/clock_format.dart';
+import 'package:field_notes/design/settings_fields/settings_time_field.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/services/reminder_service.dart';
-import 'package:field_notes/domain/settings/reminder_time.dart';
+import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
 import 'package:field_notes/features/onboarding/reminder_choice.dart';
 import 'package:field_notes/features/reminders/local_notifications_reminder_scheduler.dart';
 import 'package:field_notes/features/reminders/notifications_off_notice.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
+import 'package:field_notes/features/reminders/reminder_schedule_labels.dart';
 import 'package:field_notes/features/reminders/reminder_scheduler.dart';
+import 'package:field_notes/features/settings/sections/reminders_sound_section.dart'
+    show TimeOfDayPicker, showSettingsTimePicker;
 import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,7 +29,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 const String _kicker = 'and you';
 const String _title = 'When should we check in?';
 const String _noTime = '—';
-const String _offLabel = 'Off';
+const String _offLabel = 'Not now';
+const String _offCaption = 'no nudge';
 const String _offClock = 'off';
 const String _offBody = 'No nudges. Your meadow waits quietly.';
 const String _goOnHelp =
@@ -34,6 +38,9 @@ const String _goOnHelp =
 
 const Key reminderTimeKey = ValueKey<String>('reminder-time');
 const Key reminderPreviewKey = ValueKey<String>('reminder-preview');
+const Key reminderChapterCustomTimeKey = ValueKey<String>(
+  'reminder-chapter-custom-time',
+);
 
 Key reminderChoiceKey(ReminderChoice choice) =>
     ValueKey<String>('reminder-choice-${choice.name}');
@@ -54,6 +61,7 @@ const double _sidebarChoiceHeight = 58;
 const double _sidebarChoiceInset = 8;
 const double _sidebarChoiceGap = 8;
 const double _sidebarHelpGap = 16;
+const double _customTimeGap = 14;
 
 const double _sidebarHeadingSide = 40;
 const double _bottomBarHeadingSide = 20;
@@ -141,50 +149,90 @@ const Cubic _dotCurve = Cubic(0.2, 0.9, 0.3, 1.3);
 
 const List<FontFeature> _tabular = <FontFeature>[FontFeature.tabularFigures()];
 
-String _clock(BuildContext context, ReminderChoice choice) =>
-    switch (choice.time) {
-      final ReminderTime time => formatClock(
-        context,
-        TimeOfDay(hour: time.hour, minute: time.minute),
+List<ReminderSlot> _slots(ReminderChoice choice, ReminderTime customTime) =>
+    switch (choice.schedule) {
+      final ReminderSchedule schedule => const ReminderService().slotsFor(
+        schedule,
+        customTime,
       ),
-      null => _offLabel,
+      null => const <ReminderSlot>[],
     };
 
-String _bigTime(BuildContext context, ReminderChoice choice) =>
-    choice.time == null ? _noTime : _clock(context, choice);
+List<ReminderSlot> _ownSlots(ReminderChoice choice, ReminderTime customTime) {
+  final List<ReminderSlot> slots = _slots(choice, customTime);
+  return slots.length == 1
+      ? slots
+      : <ReminderSlot>[
+          for (final ReminderSlot slot in slots)
+            if (slot.nudge != ReminderNudge.lastCall) slot,
+        ];
+}
 
-String _previewClock(BuildContext context, ReminderChoice choice) =>
-    choice.time == null ? _offClock : _clock(context, choice);
+String _clocks(
+  BuildContext context,
+  ReminderChoice choice,
+  ReminderTime customTime,
+) => <String>[
+  for (final ReminderSlot slot in _ownSlots(choice, customTime))
+    reminderClockLabel(context, slot.time),
+].join(' · ');
 
-String _previewBody(ReminderChoice choice) =>
-    choice.time == null ? _offBody : reminderEveningBody;
+String _bigTime(
+  BuildContext context,
+  ReminderChoice choice,
+  ReminderTime customTime,
+) => choice.schedule == null ? _noTime : _clocks(context, choice, customTime);
 
-String _sidebarCaption(ReminderChoice choice) => switch (choice) {
-  ReminderChoice.morning => 'morning',
-  ReminderChoice.midday => 'midday',
-  ReminderChoice.evening => 'evening',
-  ReminderChoice.off => 'no nudge',
+String _previewClock(
+  BuildContext context,
+  ReminderChoice choice,
+  ReminderTime customTime,
+) => switch (_slots(choice, customTime)) {
+  <ReminderSlot>[final ReminderSlot first, ...] => reminderClockLabel(
+    context,
+    first.time,
+  ),
+  _ => _offClock,
 };
 
-String _rowLabel(BuildContext context, ReminderChoice choice) =>
-    switch (choice) {
-      ReminderChoice.morning ||
-      ReminderChoice.midday ||
-      ReminderChoice.evening => _clock(context, choice),
-      ReminderChoice.off => 'No reminder',
+String _previewBody(ReminderChoice choice, ReminderTime customTime) =>
+    switch (_slots(choice, customTime)) {
+      <ReminderSlot>[final ReminderSlot first, ...] =>
+        const ReminderService().bodyFor(first.nudge, const ReminderDay()),
+      _ => _offBody,
     };
 
-String _rowCaption(ReminderChoice choice) => switch (choice) {
-  ReminderChoice.morning => 'Morning · start the day',
-  ReminderChoice.midday => 'Midday · a pause',
-  ReminderChoice.evening => 'Evening · look back',
-  ReminderChoice.off => "You'll open it when you want",
+String _choiceTitle(ReminderChoice choice) => switch (choice.schedule) {
+  final ReminderSchedule schedule => reminderScheduleTitle(schedule),
+  null => _offLabel,
 };
+
+String _sidebarCaption(
+  BuildContext context,
+  ReminderChoice choice,
+  ReminderTime customTime,
+) => choice.schedule == null
+    ? _offCaption
+    : _clocks(context, choice, customTime);
+
+String _rowCaption(BuildContext context, ReminderChoice choice) =>
+    switch (choice.schedule) {
+      final ReminderSchedule schedule => reminderScheduleDetail(
+        context,
+        schedule,
+      ),
+      null => "You'll open it when you want",
+    };
 
 class ReminderChapter extends ConsumerWidget {
-  const ReminderChapter({super.key, required this.layout});
+  const ReminderChapter({
+    super.key,
+    required this.layout,
+    this.pickTime = showSettingsTimePicker,
+  });
 
   final ShellLayout layout;
+  final TimeOfDayPicker pickTime;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -193,24 +241,42 @@ class ReminderChapter extends ConsumerWidget {
       return const SizedBox.expand();
     }
     final ReminderChoice choice = flow.draft.reminder;
-    final ValueChanged<ReminderChoice> onChoose = ref
-        .read(onboardingControllerProvider.notifier)
-        .chooseReminder;
+    final ReminderTime customTime = flow.draft.customTime;
+    final OnboardingController controller = ref.read(
+      onboardingControllerProvider.notifier,
+    );
+    final ValueChanged<ReminderChoice> onChoose = controller.chooseReminder;
+    Future<void> onCustomTime() async {
+      final TimeOfDay? picked = await pickTime(
+        context,
+        TimeOfDay(hour: customTime.hour, minute: customTime.minute),
+      );
+      if (picked != null) {
+        controller.chooseCustomTime(
+          ReminderTime(hour: picked.hour, minute: picked.minute),
+        );
+      }
+    }
+
     final bool notificationsOff =
         flow.draft.notificationsOff &&
-        choice.time != null &&
+        choice.schedule != null &&
         ref.watch(reminderPermissionStatusProvider).value !=
             ReminderPermission.granted;
     return SizedBox.expand(
       child: switch (layout) {
         ShellLayout.sidebar => _SidebarReminder(
           choice: choice,
+          customTime: customTime,
           onChoose: onChoose,
+          onCustomTime: onCustomTime,
           notificationsOff: notificationsOff,
         ),
         ShellLayout.bottomBar => _BottomBarReminder(
           choice: choice,
+          customTime: customTime,
           onChoose: onChoose,
+          onCustomTime: onCustomTime,
           notificationsOff: notificationsOff,
         ),
       },
@@ -221,12 +287,16 @@ class ReminderChapter extends ConsumerWidget {
 class _SidebarReminder extends StatelessWidget {
   const _SidebarReminder({
     required this.choice,
+    required this.customTime,
     required this.onChoose,
+    required this.onCustomTime,
     required this.notificationsOff,
   });
 
   final ReminderChoice choice;
+  final ReminderTime customTime;
   final ValueChanged<ReminderChoice> onChoose;
+  final VoidCallback onCustomTime;
   final bool notificationsOff;
 
   @override
@@ -252,6 +322,7 @@ class _SidebarReminder extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     child: _BigTime(
                       choice: choice,
+                      customTime: customTime,
                       size: _sidebarTimeSize,
                       tracking: _sidebarTimeTracking,
                     ),
@@ -261,6 +332,7 @@ class _SidebarReminder extends StatelessWidget {
                     width: _sidebarPreviewWidth,
                     child: _Preview(
                       choice: choice,
+                      customTime: customTime,
                       height: _sidebarPreviewHeight,
                       bodySize: 12.5,
                     ),
@@ -278,6 +350,7 @@ class _SidebarReminder extends StatelessWidget {
                           _ChoiceButton(
                             key: reminderChoiceKey(option),
                             choice: option,
+                            customTime: customTime,
                             selected: option == choice,
                             onPressed: () => onChoose(option),
                           ),
@@ -285,6 +358,10 @@ class _SidebarReminder extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (choice == ReminderChoice.custom) ...<Widget>[
+                    const SizedBox(height: _customTimeGap),
+                    _CustomTimeField(time: customTime, onTap: onCustomTime),
+                  ],
                   if (notificationsOff) ...<Widget>[
                     const SizedBox(height: _sidebarHelpGap),
                     const _NotificationsHelp(),
@@ -302,12 +379,16 @@ class _SidebarReminder extends StatelessWidget {
 class _BottomBarReminder extends StatelessWidget {
   const _BottomBarReminder({
     required this.choice,
+    required this.customTime,
     required this.onChoose,
+    required this.onCustomTime,
     required this.notificationsOff,
   });
 
   final ReminderChoice choice;
+  final ReminderTime customTime;
   final ValueChanged<ReminderChoice> onChoose;
+  final VoidCallback onCustomTime;
   final bool notificationsOff;
 
   @override
@@ -352,12 +433,14 @@ class _BottomBarReminder extends StatelessWidget {
                                     fit: BoxFit.scaleDown,
                                     child: _BigTime(
                                       choice: choice,
+                                      customTime: customTime,
                                       size: _bottomBarTimeSize,
                                     ),
                                   ),
                                   const SizedBox(height: _bottomBarTimeGap),
                                   _Preview(
                                     choice: choice,
+                                    customTime: customTime,
                                     height: _bottomBarPreviewHeight,
                                     bodySize: 11.5,
                                   ),
@@ -377,6 +460,13 @@ class _BottomBarReminder extends StatelessWidget {
                               onChoose: onChoose,
                             ),
                           ),
+                          if (choice == ReminderChoice.custom) ...<Widget>[
+                            const SizedBox(height: _customTimeGap),
+                            _CustomTimeField(
+                              time: customTime,
+                              onTap: onCustomTime,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -446,17 +536,42 @@ class _Heading extends StatelessWidget {
   }
 }
 
+class _CustomTimeField extends StatelessWidget {
+  const _CustomTimeField({required this.time, required this.onTap});
+
+  final ReminderTime time;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SettingsTimeField(
+        key: reminderChapterCustomTimeKey,
+        semanticLabel: reminderScheduleTitle(ReminderSchedule.custom),
+        value: TimeOfDay(hour: time.hour, minute: time.minute),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
 class _BigTime extends StatelessWidget {
-  const _BigTime({required this.choice, required this.size, this.tracking});
+  const _BigTime({
+    required this.choice,
+    required this.customTime,
+    required this.size,
+    this.tracking,
+  });
 
   final ReminderChoice choice;
+  final ReminderTime customTime;
   final double size;
   final double? tracking;
 
   @override
   Widget build(BuildContext context) {
     return Text(
-      _bigTime(context, choice),
+      _bigTime(context, choice, customTime),
       key: reminderTimeKey,
       textAlign: TextAlign.center,
       maxLines: 1,
@@ -476,18 +591,20 @@ class _BigTime extends StatelessWidget {
 class _Preview extends StatelessWidget {
   const _Preview({
     required this.choice,
+    required this.customTime,
     required this.height,
     required this.bodySize,
   });
 
   final ReminderChoice choice;
+  final ReminderTime customTime;
   final double height;
   final double bodySize;
 
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    final bool quiet = choice.time == null;
+    final bool quiet = choice.schedule == null;
     final Widget banner = Container(
       constraints: BoxConstraints(minHeight: height),
       padding: _previewPadding,
@@ -539,7 +656,7 @@ class _Preview extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      _previewClock(context, choice),
+                      _previewClock(context, choice, customTime),
                       maxLines: 1,
                       style: TextStyle(
                         fontFamily: TypographyTokens.sans,
@@ -553,7 +670,7 @@ class _Preview extends StatelessWidget {
                 ),
                 const SizedBox(height: 1),
                 Text(
-                  _previewBody(choice),
+                  _previewBody(choice, customTime),
                   style: TextStyle(
                     fontFamily: TypographyTokens.sans,
                     fontSize: bodySize,
@@ -583,21 +700,23 @@ class _ChoiceButton extends StatelessWidget {
   const _ChoiceButton({
     super.key,
     required this.choice,
+    required this.customTime,
     required this.selected,
     required this.onPressed,
   });
 
   final ReminderChoice choice;
+  final ReminderTime customTime;
   final bool selected;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    final String clock = _clock(context, choice);
-    final String caption = _sidebarCaption(choice);
+    final String title = _choiceTitle(choice);
+    final String caption = _sidebarCaption(context, choice, customTime);
     return Pressable(
-      label: '$clock, $caption',
+      label: '$title, $caption',
       selected: selected,
       onPressed: onPressed,
       borderRadius: _choiceRadius,
@@ -632,13 +751,12 @@ class _ChoiceButton extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Text(
-                  clock,
+                  title,
                   maxLines: 1,
                   style: TextStyle(
                     fontFamily: TypographyTokens.sans,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    fontFeatures: _tabular,
                     color: selected ? Palette.onAccent : colors.ink,
                   ),
                 ),
@@ -650,6 +768,7 @@ class _ChoiceButton extends StatelessWidget {
                     fontFamily: TypographyTokens.sans,
                     fontSize: 10.5,
                     fontWeight: FontWeight.w500,
+                    fontFeatures: _tabular,
                     color: selected ? Palette.onAccent : colors.muted,
                   ),
                 ),
@@ -716,12 +835,12 @@ class _ChoiceRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final bool still = MediaQuery.disableAnimationsOf(context);
-    final String label = _rowLabel(context, choice);
-    final String caption = _rowCaption(choice);
+    final String label = _choiceTitle(choice);
+    final String caption = _rowCaption(context, choice);
     return Pressable(
       checked: selected,
       inMutuallyExclusiveGroup: true,
-      label: '$label, ${caption.replaceAll(' · ', ', ')}',
+      label: '$label, $caption',
       onPressed: onPressed,
       placement: FocusRingPlacement.edge,
       paintsHover: false,
@@ -755,7 +874,6 @@ class _ChoiceRow extends StatelessWidget {
                           fontFamily: TypographyTokens.sans,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          fontFeatures: _tabular,
                           color: selected ? colors.accentInk : colors.ink,
                         ),
                       ),
@@ -766,6 +884,7 @@ class _ChoiceRow extends StatelessWidget {
                           fontFamily: TypographyTokens.sans,
                           fontSize: 11.5,
                           fontWeight: FontWeight.w500,
+                          fontFeatures: _tabular,
                           color: colors.muted,
                         ),
                       ),

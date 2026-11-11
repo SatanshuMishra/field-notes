@@ -1,12 +1,12 @@
-import 'package:field_notes/domain/settings/reminder_time.dart';
+import 'package:field_notes/domain/settings/reminder_schedule.dart';
 
 enum ReminderChoice {
-  morning(ReminderTime(hour: 8, minute: 0)),
-  midday(ReminderTime(hour: 12, minute: 30)),
-  evening(ReminderTime(hour: 20, minute: 30)),
+  evenings(ReminderSchedule.evenings),
+  middayAndEvening(ReminderSchedule.middayAndEvening),
+  custom(ReminderSchedule.custom),
   off(null);
 
-  const ReminderChoice(this.time);
+  const ReminderChoice(this.schedule);
 
-  final ReminderTime? time;
+  final ReminderSchedule? schedule;
 }

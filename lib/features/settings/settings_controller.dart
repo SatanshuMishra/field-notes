@@ -39,6 +39,13 @@ class SettingsController {
     );
   }
 
+  Future<SettingsWriteResult> setReminderSchedule(ReminderSchedule value) {
+    return _write(
+      () => _repository.setReminderSchedule(value),
+      'Could not save your reminder schedule.',
+    );
+  }
+
   Future<SettingsWriteResult> setSoundEnabled(bool value) {
     return _write(
       () => _repository.setSoundEnabled(value),

@@ -25,6 +25,9 @@ const double _statusBar = 34;
 const double _gestureBar = 24;
 
 final Finder _sheet = find.byType(PhoneSheet);
+final AppSettings _custom = AppSettings.defaults.copyWith(
+  reminderSchedule: ReminderSchedule.custom,
+);
 
 Finder _inSheet(String text) =>
     find.descendant(of: _sheet, matching: find.text(text));
@@ -61,13 +64,13 @@ Future<void> _pumpSection(
       key: UniqueKey(),
       child: settingsFeatureHarness(
         RemindersSoundSection(
-          settings: AppSettings.defaults,
+          settings: _custom,
           onFeedback: (String message) {},
         ),
         overrides: <Override>[
           settingsRepositoryProvider.overrideWithValue(repository),
           appSettingsProvider.overrideWith(
-            (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
+            (Ref ref) => Stream<AppSettings>.value(_custom),
           ),
           entriesForDateProvider.overrideWith(
             (Ref ref, String date) =>
