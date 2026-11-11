@@ -1,6 +1,6 @@
 # post-1-8-0-followups: Post-1.8.0 follow-ups: day modal polish, launch sync and update check, page transitions, sync feedback, hover padding, modal video controls, night-sky composer, reminder schedules and late-night streak
 Status: active
-Updated: 2026-11-11T02:50:03.063Z
+Updated: 2026-11-11T02:50:04.316Z
 Next ids: c4 D8 R2 S1
 
 ## Goal
@@ -42,7 +42,7 @@ Found on main by the device pass, not caused by these PRs: once today has a bloo
 
 Fix whatever Auto-fix reports on its PR's branch, checking the PR is still open before pushing; once the owner merges, stacked PRs merge in opened order with merge commits.
 
-Needs: D1, D2, D3, D5, D6, D7, R1.
+Needs: D1, D2, D3, D5, D6, D7.
 
 ## Decisions in force
 
