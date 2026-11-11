@@ -4,13 +4,19 @@ import 'package:field_notes/data/sync/devices/device_service.dart';
 import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/settings_icons.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
+import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
+import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
+import 'package:field_notes/features/settings/widgets/devices_dialog.dart';
+import 'package:field_notes/features/sync/ui/start_sync_flow.dart'
+    show serverAddressLabel;
 import 'package:field_notes/features/settings/spell_check_availability.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/state/journal_providers.dart';
@@ -37,6 +43,13 @@ const double _contentMaxWidth = 680;
 const double _tolerance = 0.01;
 
 const Key _settingsButton = ValueKey<String>('settings-button');
+
+const Map<String, double> _desktopLefts = <String, double>{
+  'title': 257,
+  'heading': 257,
+  'server address': 257,
+  'manage devices': 257,
+};
 
 List<JournalDevice> _devices(DateTime now) => <JournalDevice>[
   JournalDevice(
@@ -143,6 +156,14 @@ Future<void> _pumpScreen(WidgetTester tester) async {
       ),
     ),
   );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openManageDevices(WidgetTester tester) async {
+  await _pumpScreen(tester);
+  await tester.tap(find.byKey(settingsTabKey(SettingsTab.syncStorage)));
+  await tester.pumpAndSettle();
+  await tester.ensureVisible(find.text(manageDevicesLabel));
   await tester.pumpAndSettle();
 }
 
@@ -269,7 +290,10 @@ void main() {
     final DashedDivider rule = tester.widget<DashedDivider>(_rule);
     expect(rule.thickness, 1);
     expect(rule.color?.toARGB32(), FieldNotesColors.light.ink22.toARGB32());
-    expect(mac['content']!.width, closeTo(_contentMaxWidth, _tolerance));
+    expect(
+      mac['content']!.width,
+      closeTo(_contentMaxWidth + 2 * settingsGutter, _tolerance),
+    );
   });
 
   testWidgets(
@@ -412,9 +436,13 @@ void main() {
       expect(tester.takeException(), isNull, reason: tab.label);
       expect(_title(tester), tab.label);
       final Rect content = tester.getRect(find.byKey(settingsContentColumnKey));
-      expect(content.width, lessThan(_contentMaxWidth), reason: tab.label);
       expect(
-        content.right,
+        content.width - 2 * settingsGutter,
+        lessThan(_contentMaxWidth),
+        reason: tab.label,
+      );
+      expect(
+        content.right - settingsGutter,
         lessThanOrEqualTo(
           tester.getRect(find.byType(SettingsScreen)).right - 34 + _tolerance,
         ),
@@ -426,4 +454,46 @@ void main() {
       expect(tester.takeException(), isNull, reason: tab.label);
     }
   });
+
+  testWidgets('the sync words and headings keep their place', (
+    WidgetTester tester,
+  ) async {
+    await _openManageDevices(tester);
+    final Offset origin = tester.getTopLeft(find.byType(SettingsScreen));
+    double leftOf(Finder finder) => tester.getRect(finder).left - origin.dx;
+    final Map<String, double> lefts = <String, double>{
+      'title': leftOf(_titleText),
+      'heading': leftOf(find.text(serverAndDevicesGroupLabel)),
+      'server address': leftOf(find.text(serverAddressLabel)),
+      'manage devices': leftOf(find.text(manageDevicesLabel)),
+    };
+    expect(lefts, _desktopLefts);
+  });
+
+  testWidgets(
+    'Manage devices takes a hover and a click 6 px left of its words',
+    (WidgetTester tester) async {
+      await _openManageDevices(tester);
+      final Rect words = tester.getRect(find.text(manageDevicesLabel));
+      final Offset beside = Offset(words.left - 6, words.center.dy);
+      final TestGesture mouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+      );
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(beside);
+      await tester.pump();
+      final DecoratedBox fill = tester.widget<DecoratedBox>(
+        find.descendant(
+          of: find.widgetWithText(SettingsFieldRow, manageDevicesLabel),
+          matching: find.byKey(pressableHoverFillKey),
+        ),
+      );
+      expect((fill.decoration as BoxDecoration).color, isNotNull);
+
+      await tester.tapAt(beside);
+      await tester.pumpAndSettle();
+      expect(find.byType(DevicesDialog), findsOneWidget);
+    },
+  );
 }

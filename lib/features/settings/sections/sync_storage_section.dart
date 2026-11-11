@@ -6,7 +6,6 @@ import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/data/sync/erase/device_unlink_service.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -283,21 +282,23 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
                 ),
               ),
             ),
-            Focus(
-              focusNode: _manageDevicesFocus,
-              canRequestFocus: false,
-              skipTraversal: true,
-              child: MinTarget(
-                child: SettingsFieldRow(
-                  label: manageDevicesLabel,
-                  description: devices == null
-                      ? devicesFallbackCaption
-                      : deviceCountLabel(devices.length),
-                  control: ChevronGlyph(
-                    pointsBack: false,
-                    color: context.colors.muted,
+            SettingsGutterCarrier(
+              child: Focus(
+                focusNode: _manageDevicesFocus,
+                canRequestFocus: false,
+                skipTraversal: true,
+                child: MinTarget(
+                  child: SettingsFieldRow(
+                    label: manageDevicesLabel,
+                    description: devices == null
+                        ? devicesFallbackCaption
+                        : deviceCountLabel(devices.length),
+                    control: ChevronGlyph(
+                      pointsBack: false,
+                      color: context.colors.muted,
+                    ),
+                    onPressed: _openDevices,
                   ),
-                  onPressed: _openDevices,
                 ),
               ),
             ),
@@ -544,7 +545,7 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
   }
 }
 
-class SyncActionRow extends StatelessWidget {
+class SyncActionRow extends StatelessWidget implements CarriesSettingsGutter {
   const SyncActionRow({
     super.key,
     required this.label,
@@ -566,34 +567,35 @@ class SyncActionRow extends StatelessWidget {
       onPressed: onPressed,
       placement: FocusRingPlacement.edge,
       borderRadius: Shapes.buttonBorderRadius,
-      bleed: HoverStyle.rowBleed,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: _actionRowMinHeight),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(label, style: context.textStyles.labelSans),
-                  const SizedBox(height: 2),
-                  Text(
-                    description,
-                    style: context.textStyles.captionSans.copyWith(
-                      color: colors.muted,
+      child: SettingsRowFrame(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: _actionRowMinHeight),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(label, style: context.textStyles.labelSans),
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: context.textStyles.captionSans.copyWith(
+                        color: colors.muted,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Icon(
-              Icons.chevron_right,
-              size: _actionChevronSize,
-              color: colors.muted,
-            ),
-          ],
+              const SizedBox(width: 12),
+              Icon(
+                Icons.chevron_right,
+                size: _actionChevronSize,
+                color: colors.muted,
+              ),
+            ],
+          ),
         ),
       ),
     );

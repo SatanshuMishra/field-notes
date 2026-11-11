@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:drift/native.dart';
@@ -19,6 +20,7 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/icons/settings_icons.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -47,6 +49,7 @@ import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 import 'package:field_notes/state/sync_providers.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -109,6 +112,14 @@ const List<String> _journalRows = <String>[
   'Spell check',
   'Show the tour again',
 ];
+
+const Map<String, double> _phoneLefts = <String, double>{
+  'tile': 30,
+  'label': 84,
+  'page title': 16,
+  'appearance': 30,
+  'text size': 30,
+};
 
 final Finder _list = find.byType(SettingsSectionList);
 final Finder _pill = find.byType(SettingsBackPill);
@@ -837,7 +848,7 @@ void main() {
       expect(tileRect.size, const Size(42, 42), reason: label);
       expect(
         tileRect.left,
-        moreOrLessEquals(rowRect.left, epsilon: _tolerance),
+        moreOrLessEquals(rowRect.left + settingsGutter, epsilon: _tolerance),
       );
       expect(
         tileRect.center.dy,
@@ -1056,4 +1067,103 @@ void main() {
     }
     _expectPill(tester, settingsListTitle);
   });
+
+  testWidgets('the phone settings words keep their place', (
+    WidgetTester tester,
+  ) async {
+    await _pumpPhone(tester);
+    final Finder row = _row(SettingsTab.journal);
+    final double tileLeft = tester
+        .getRect(find.byKey(settingsSectionTileKey(SettingsTab.journal)))
+        .left;
+    final double labelLeft = tester
+        .getRect(_inside(row, find.text('Journal')))
+        .left;
+    await _open(tester, SettingsTab.journal);
+    final Map<String, double> lefts = <String, double>{
+      'tile': tileLeft,
+      'label': labelLeft,
+      'page title': tester
+          .getRect(_inside(_heading, find.text('Journal')))
+          .left,
+      'appearance': tester.getRect(find.text('Appearance')).left,
+      'text size': tester.getRect(find.text('Text size')).left,
+    };
+    expect(lefts, _phoneLefts);
+  });
+
+  testWidgets(
+    'a phone settings row takes a hover and a tap 6 px left of its tile',
+    (WidgetTester tester) async {
+      await _pumpPhone(tester);
+      final Finder row = _row(SettingsTab.journal);
+      final Rect tile = tester.getRect(
+        find.byKey(settingsSectionTileKey(SettingsTab.journal)),
+      );
+      final Offset beside = Offset(tile.left - 6, tile.center.dy);
+      final TestGesture mouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+      );
+      await mouse.addPointer(location: Offset.zero);
+      await mouse.moveTo(beside);
+      await tester.pump();
+      final DecoratedBox fill = tester.widget<DecoratedBox>(
+        _inside(row, find.byKey(pressableHoverFillKey)),
+      );
+      expect((fill.decoration as BoxDecoration).color, isNotNull);
+      await mouse.removePointer();
+      await tester.pump();
+
+      await tester.tapAt(beside);
+      await tester.pumpAndSettle();
+      _expectPageHeading(tester, 'Journal');
+    },
+  );
+
+  testWidgets(
+    'the first and last phone list rows keep their fill inside the card '
+    'corners',
+    (WidgetTester tester) async {
+      await _pumpPhone(tester);
+      final Finder card = _inside(_list, find.byType(StickerCard));
+      final Rect cardRect = tester.getRect(
+        _inside(card, find.byType(DecoratedBox)).first,
+      );
+      final RRect inner = RRect.fromRectAndRadius(
+        cardRect,
+        Shapes.cardRadius,
+      ).deflate(Shapes.outlineWidth);
+      for (final SettingsTab tab in <SettingsTab>[
+        SettingsTab.values.first,
+        SettingsTab.values.last,
+      ]) {
+        final Rect fill = tester.getRect(
+          _inside(_row(tab), find.byKey(pressableHoverFillKey)),
+        );
+        final RRect outline = RRect.fromRectAndRadius(
+          fill,
+          Shapes.buttonBorderRadius.topLeft,
+        );
+        for (final Offset point in _cornerPoints(outline)) {
+          expect(inner.contains(point), isTrue, reason: '${tab.name} $point');
+        }
+      }
+    },
+  );
+}
+
+Iterable<Offset> _cornerPoints(RRect outline) sync* {
+  final double radius = outline.tlRadiusX;
+  final List<Offset> centres = <Offset>[
+    Offset(outline.left + radius, outline.top + radius),
+    Offset(outline.right - radius, outline.top + radius),
+    Offset(outline.right - radius, outline.bottom - radius),
+    Offset(outline.left + radius, outline.bottom - radius),
+  ];
+  for (int corner = 0; corner < centres.length; corner++) {
+    for (int step = 0; step <= 6; step++) {
+      final double angle = math.pi + corner * math.pi / 2 + step * math.pi / 12;
+      yield centres[corner] + Offset(math.cos(angle), math.sin(angle)) * radius;
+    }
+  }
 }

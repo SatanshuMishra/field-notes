@@ -51,26 +51,26 @@ class VoiceSection extends ConsumerWidget {
         SettingsGroup(
           label: _profileGroupLabel,
           rows: <Widget>[
-            InputProfileRow(
-              describe: voiceProfileDescription,
-              onSaveFailed: () => onFeedback(inputProfileSaveFailed),
-              rowBuilder:
-                  (
-                    BuildContext context,
-                    String title,
-                    String value,
-                    bool open,
-                    VoidCallback toggle,
-                  ) => ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: _rowMinHeight),
-                    child: SettingsFieldRow(
+            SettingsGutterCarrier(
+              child: InputProfileRow(
+                describe: voiceProfileDescription,
+                onSaveFailed: () => onFeedback(inputProfileSaveFailed),
+                rowBuilder:
+                    (
+                      BuildContext context,
+                      String title,
+                      String value,
+                      bool open,
+                      VoidCallback toggle,
+                    ) => SettingsFieldRow(
                       label: title,
                       control: _DropdownValue(value: value, open: open),
                       onPressed: toggle,
                       semanticsValue: value,
                       expanded: open,
+                      minHeight: _rowMinHeight,
                     ),
-                  ),
+              ),
             ),
           ],
         ),

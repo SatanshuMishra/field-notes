@@ -132,6 +132,63 @@ Iterable<RenderObject> _renderPath(RenderObject from, RenderObject to) sync* {
   }
 }
 
+Future<void> _pumpPressableSection(
+  WidgetTester tester,
+  VoidCallback onPressed,
+) async {
+  tester.view.physicalSize = const Size(1140, 726);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+      home: Scaffold(
+        body: Align(
+          alignment: Alignment.topLeft,
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: SizedBox(
+              width: 640,
+              child: SettingsSection.grouped(
+                groups: <SettingsGroup>[
+                  SettingsGroup(
+                    label: _headingLabel,
+                    rows: <Widget>[
+                      SettingsFieldRow(
+                        label: _plainLabel,
+                        control: const SizedBox(width: 16, height: 16),
+                        onPressed: () {},
+                      ),
+                      SettingsFieldRow(
+                        label: _pressLabel,
+                        description: _pressDescription,
+                        control: const SizedBox(
+                          key: _plainControlKey,
+                          width: 16,
+                          height: 16,
+                        ),
+                        onPressed: onPressed,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+Finder _hairlines() => find.byWidgetPredicate(
+  (Widget widget) =>
+      widget is ColoredBox &&
+      widget.color.toARGB32() ==
+          FieldNotesColors.light.ink.withValues(alpha: 0.13).toARGB32(),
+);
+
 void main() {
   group('SettingsFieldRow', () {
     testWidgets('renders the label, description, and control', (
@@ -467,14 +524,7 @@ void main() {
       addTearDown(mouse.removePointer);
       await mouse.moveTo(pressRow.center);
       await tester.pump();
-      expect(filled(), <Rect>[
-        Rect.fromLTRB(
-          pressRow.left - _fillBleed,
-          pressRow.top,
-          pressRow.right + _fillBleed,
-          pressRow.bottom,
-        ),
-      ]);
+      expect(filled(), <Rect>[pressRow]);
       await mouse.moveTo(Offset.zero);
       await tester.pump();
       expect(filled(), isEmpty);
@@ -485,57 +535,28 @@ void main() {
   );
 
   testWidgets(
-    'a hovered row fills 12 px past its words on both sides, keeps the words '
-    'on its heading and rings the same fill',
+    'a pressable row in a section takes a hover and a click 6 px left of its '
+    'words, keeps its words on the heading and draws its ring on the fill',
     (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(1140, 726);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      await tester.pumpWidget(
-        MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: fieldNotesTheme(platform: TargetPlatform.macOS),
-          home: Scaffold(
-            body: Align(
-              alignment: Alignment.topLeft,
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: SizedBox(
-                  width: 640,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      const Text(_headingLabel),
-                      SettingsFieldRow(
-                        label: _pressLabel,
-                        description: _pressDescription,
-                        control: const SizedBox(
-                          key: _plainControlKey,
-                          width: 16,
-                          height: 16,
-                        ),
-                        onPressed: () {},
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
+      int presses = 0;
+      await _pumpPressableSection(tester, () => presses++);
       final Finder row = find.widgetWithText(SettingsFieldRow, _pressLabel);
       final Finder fill = find.descendant(
         of: row,
         matching: find.byKey(pressableHoverFillKey),
       );
+      final Rect heading = tester.getRect(find.text(_headingLabel));
+      final Rect label = tester.getRect(find.text(_pressLabel));
+      final Rect control = tester.getRect(find.byKey(_plainControlKey));
+      expect(label.left, heading.left);
+
+      final Offset beside = Offset(label.left - 6, label.center.dy);
       final TestGesture mouse = await tester.createGesture(
         kind: PointerDeviceKind.mouse,
       );
       await mouse.addPointer(location: Offset.zero);
-      await mouse.moveTo(tester.getCenter(find.text(_pressLabel)));
+      await mouse.moveTo(beside);
       await tester.pump();
-
       final BoxDecoration painted =
           tester.widget<DecoratedBox>(fill).decoration as BoxDecoration;
       expect(
@@ -544,19 +565,16 @@ void main() {
       );
       expect(painted.borderRadius, Shapes.buttonBorderRadius);
       final Rect fillRect = tester.getRect(fill);
-      final Rect heading = tester.getRect(find.text(_headingLabel));
-      final Rect label = tester.getRect(find.text(_pressLabel));
-      final Rect control = tester.getRect(find.byKey(_plainControlKey));
-      final Rect rowRect = _rowRect(tester, _pressLabel);
-      expect(label.left, heading.left);
-      expect(rowRect.left, heading.left);
       expect(label.left - fillRect.left, greaterThanOrEqualTo(_fillBleed));
       expect(fillRect.right - control.right, greaterThanOrEqualTo(_fillBleed));
-      expect(fillRect.top, rowRect.top);
-      expect(fillRect.bottom, rowRect.bottom);
+
+      await tester.tapAt(beside);
+      await tester.pump();
+      expect(presses, 1);
 
       await mouse.removePointer();
       await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pump();
       final Finder ring = find.descendant(
@@ -565,7 +583,36 @@ void main() {
       );
       expect(ring, findsOneWidget);
       expect(tester.getRect(ring), fillRect);
+      expect(
+        tester.renderObject(ring),
+        paints..drrect(
+          outer: RRect.fromRectAndRadius(
+            Offset.zero & fillRect.size,
+            Shapes.buttonBorderRadius.topLeft,
+          ),
+        ),
+      );
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'a pressable row in a section fills its whole band from hairline to edge',
+    (WidgetTester tester) async {
+      await _pumpPressableSection(tester, () {});
+      final Rect fill = tester.getRect(
+        find.descendant(
+          of: find.widgetWithText(SettingsFieldRow, _pressLabel),
+          matching: find.byKey(pressableHoverFillKey),
+        ),
+      );
+      final Rect label = tester.getRect(find.text(_pressLabel));
+      final Rect hairline = tester.getRect(_hairlines());
+      final Rect section = tester.getRect(find.byType(SettingsSection));
+      expect(fill.top, hairline.bottom);
+      expect(fill.bottom, section.bottom);
+      expect(fill.height, greaterThanOrEqualTo(56));
+      expect(label.top - fill.top, greaterThanOrEqualTo(_fillBleed));
     },
   );
 }

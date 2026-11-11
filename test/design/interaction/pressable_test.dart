@@ -389,10 +389,14 @@ void main() {
   });
 
   testWidgets(
-    'a row bleed paints the fill and the focus ring 12 px past the face on '
-    'both sides while the face keeps its place',
+    'a row that pads its words inside the pressable takes a hover and a tap '
+    '6 px left of them and draws its fill and focus ring 12 px past them',
     (WidgetTester tester) async {
       const Key headingKey = ValueKey<String>('heading');
+      const Key wordsKey = ValueKey<String>('words');
+      const EdgeInsets gutter = EdgeInsets.symmetric(
+        horizontal: HoverStyle.fillInset,
+      );
       int presses = 0;
       await _pump(
         tester,
@@ -400,40 +404,50 @@ void main() {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const SizedBox(key: headingKey, width: 80, height: 20),
+            const Padding(
+              padding: gutter,
+              child: SizedBox(key: headingKey, width: 80, height: 20),
+            ),
             Pressable(
               key: _rowKey,
               label: 'Manage devices',
               onPressed: () => presses++,
               placement: FocusRingPlacement.edge,
               borderRadius: _rowRadius,
-              bleed: HoverStyle.rowBleed,
-              child: _face(),
+              child: Padding(
+                padding: gutter,
+                child: SizedBox.fromSize(key: wordsKey, size: _controlSize),
+              ),
             ),
           ],
         ),
       );
-      expect(HoverStyle.rowBleed, const EdgeInsets.symmetric(horizontal: 12));
       final Finder fill = find.descendant(
         of: find.byKey(_rowKey),
         matching: find.byKey(pressableHoverFillKey),
       );
+      final Rect words = tester.getRect(find.byKey(wordsKey));
+      final Rect heading = tester.getRect(find.byKey(headingKey));
+      final Rect fillRect = tester.getRect(fill);
+      expect(words.left, heading.left);
+      expect(
+        fillRect,
+        Rect.fromLTRB(
+          words.left - 12,
+          words.top,
+          words.right + 12,
+          words.bottom,
+        ),
+      );
+
+      final Offset beside = Offset(words.left - 6, words.center.dy);
       final TestGesture mouse = await tester.createGesture(
         kind: PointerDeviceKind.mouse,
         pointer: _mousePointerId,
       );
       await mouse.addPointer(location: Offset.zero);
-      await _hover(tester, mouse, _rowKey);
-
-      final Rect face = tester.getRect(find.byKey(_rowKey));
-      final Rect heading = tester.getRect(find.byKey(headingKey));
-      final Rect fillRect = tester.getRect(fill);
-      expect(face.size, _controlSize);
-      expect(face.left, heading.left);
-      expect(
-        fillRect,
-        Rect.fromLTRB(face.left - 12, face.top, face.right + 12, face.bottom),
-      );
+      await mouse.moveTo(beside);
+      await tester.pump();
       final BoxDecoration row = _fillOf(tester, _rowKey);
       expect(
         row.color?.toARGB32(),
@@ -448,8 +462,17 @@ void main() {
       final Finder ring = find.byKey(focusRingKey);
       expect(ring, findsOneWidget);
       expect(tester.getRect(ring), fillRect);
+      expect(
+        tester.renderObject(ring),
+        paints..drrect(
+          outer: RRect.fromRectAndRadius(
+            Offset.zero & fillRect.size,
+            _rowRadius.topLeft,
+          ),
+        ),
+      );
 
-      await tester.tapAt(tester.getCenter(find.text('Face')));
+      await tester.tapAt(beside);
       await tester.pump();
       expect(presses, 1);
     },

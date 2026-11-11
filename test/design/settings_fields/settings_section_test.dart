@@ -214,34 +214,48 @@ void main() {
     );
     final Rect hairline = _rects(_hairlines()).single;
     expect(hairline.height, 1);
-    expect(hairline.width, _sectionWidth);
+    expect(hairline.left, settingsGutter);
+    expect(hairline.width, _sectionWidth - 2 * settingsGutter);
+    expect(look.left, settingsGutter);
+    expect(subtitleRect.left, settingsGutter);
+    expect(_rectOf(tester, 'Appearance').left, look.left);
+    expect(_rectOf(tester, 'erase').left, look.left);
+    expect(_rectOf(tester, 'Delete all').left, look.left);
 
     final Rect appearanceRow = tester.getRect(
       find.widgetWithText(SettingsFieldRow, 'Appearance'),
     );
-    expect(appearanceRow.left, 2);
-    expect(appearanceRow.right, _sectionWidth - 2);
-    expect(appearanceRow.top, moreOrLessEquals(subtitleRect.bottom + 6 + 15));
-    expect(hairline.top, moreOrLessEquals(appearanceRow.bottom + 15));
+    expect(appearanceRow.left, 0);
+    expect(appearanceRow.right, _sectionWidth);
+    expect(appearanceRow.top, moreOrLessEquals(subtitleRect.bottom + 6));
+    expect(hairline.top, moreOrLessEquals(appearanceRow.bottom));
+    expect(
+      _textColumn(tester, 'Appearance').top - appearanceRow.top,
+      moreOrLessEquals(15),
+    );
     expect(hairline.top - (subtitleRect.bottom + 6), greaterThanOrEqualTo(56));
 
     final Rect textSizeRow = tester.getRect(
       find.widgetWithText(SettingsFieldRow, 'Text size'),
     );
-    expect(textSizeRow.height, lessThan(56 - 30));
-    expect(textSizeRow.center.dy, moreOrLessEquals(hairline.bottom + 28));
+    expect(textSizeRow.top, moreOrLessEquals(hairline.bottom));
+    expect(textSizeRow.height, 56);
+    expect(
+      _rectOf(tester, 'Text size').center.dy,
+      moreOrLessEquals(hairline.bottom + 28),
+    );
     final Rect erase = _rectOf(tester, 'erase');
     expect(erase.top - hairline.bottom, moreOrLessEquals(56 + 15));
 
     final Rect deleteRow = tester.getRect(
       find.widgetWithText(SettingsFieldRow, 'Delete all'),
     );
-    expect(deleteRow.top, moreOrLessEquals(erase.bottom + 6 + 15));
+    expect(deleteRow.top, moreOrLessEquals(erase.bottom + 6));
 
     final Rect control = tester.getRect(
       find.byKey(const ValueKey<String>('appearance-control')),
     );
-    expect(control.right, appearanceRow.right);
+    expect(control.right, appearanceRow.right - settingsGutter);
     expect(control.width, 120);
     expect(
       control.left - _textColumn(tester, 'Appearance').right,
@@ -328,14 +342,24 @@ void main() {
               tester.getRect(find.widgetWithText(SettingsFieldRow, label)),
         )
         .toList();
+    final List<Rect> labels = <String>[
+      'Appearance',
+      'Text size',
+      'Delete all',
+    ].map((String label) => _rectOf(tester, label)).toList();
     for (int index = 0; index < untitledDividers.length; index++) {
+      expect(untitledDividers[index].top, moreOrLessEquals(rows[index].bottom));
       expect(
-        untitledDividers[index].top - rows[index].bottom,
-        moreOrLessEquals(12),
+        rows[index + 1].top,
+        moreOrLessEquals(untitledDividers[index].bottom),
       );
       expect(
-        rows[index + 1].top - untitledDividers[index].bottom,
-        moreOrLessEquals(12),
+        untitledDividers[index].top - labels[index].bottom,
+        greaterThanOrEqualTo(12),
+      );
+      expect(
+        labels[index + 1].top - untitledDividers[index].bottom,
+        greaterThanOrEqualTo(12),
       );
     }
     final Rect untitledCard = tester.getRect(
@@ -345,7 +369,14 @@ void main() {
       ),
     );
     expect(rows.first.top, greaterThan(untitledCard.top));
-    expect(untitledDividers.first.top, greaterThan(rows.first.bottom));
+    expect(rows.first.left, untitledCard.left + 16 - settingsGutter);
+    for (final Rect label in labels) {
+      expect(label.left, untitledCard.left + 16);
+    }
+    for (final Rect divider in untitledDividers) {
+      expect(divider.left, untitledCard.left + 16);
+      expect(divider.right, untitledCard.right - 16);
+    }
 
     final TextStyle title = _styleOf(tester, 'Performance');
     expect(title.fontFamily, TypographyTokens.accent);
@@ -367,7 +398,15 @@ void main() {
       titledDividers.single.top,
       greaterThan(_rectOf(tester, 'Motion and battery').bottom),
     );
-    expect(pauseRow.top - titledDividers.single.bottom, moreOrLessEquals(12));
+    expect(pauseRow.top, moreOrLessEquals(titledDividers.single.bottom));
+    expect(
+      _rectOf(tester, 'Pause the Meadow').top - titledDividers.single.bottom,
+      greaterThanOrEqualTo(12),
+    );
+    expect(
+      _rectOf(tester, 'Performance').left,
+      _rectOf(tester, 'Pause the Meadow').left,
+    );
     expect(tester.takeException(), isNull);
   });
 }

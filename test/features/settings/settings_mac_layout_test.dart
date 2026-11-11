@@ -330,10 +330,20 @@ void main() {
     expect(tester.getSemantics(title), isNotNull);
     final Rect titleRect = tester.getRect(title);
     final Rect content = tester.getRect(find.byKey(settingsContentColumnKey));
-    expect(content.left, closeTo(ruleRect.right + _contentLeft, _tolerance));
-    expect(content.width, lessThanOrEqualTo(_contentMaxWidth + _tolerance));
-    expect(content.width, closeTo(_contentMaxWidth, _tolerance));
-    expect(titleRect.left, closeTo(content.left, _tolerance));
+    expect(
+      content.left,
+      closeTo(ruleRect.right + _contentLeft - settingsGutter, _tolerance),
+    );
+    expect(
+      content.width,
+      lessThanOrEqualTo(_contentMaxWidth + 2 * settingsGutter + _tolerance),
+    );
+    expect(
+      content.width,
+      closeTo(_contentMaxWidth + 2 * settingsGutter, _tolerance),
+    );
+    expect(titleRect.left, closeTo(ruleRect.right + _contentLeft, _tolerance));
+    expect(titleRect.left, closeTo(content.left + settingsGutter, _tolerance));
     expect(
       titleRect.top,
       closeTo(area.top + _contentTop + _titleAbove, _tolerance),
@@ -365,9 +375,14 @@ void main() {
           );
           expect(
             column.width,
-            lessThanOrEqualTo(_contentMaxWidth + _tolerance),
+            lessThanOrEqualTo(
+              _contentMaxWidth + 2 * settingsGutter + _tolerance,
+            ),
           );
-          expect(column.right, lessThanOrEqualTo(area.right - 34 + _tolerance));
+          expect(
+            column.right - settingsGutter,
+            lessThanOrEqualTo(area.right - 34 + _tolerance),
+          );
           final List<Element> rows = find
               .descendant(
                 of: find.byKey(settingsTabContentKey),

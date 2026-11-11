@@ -1,5 +1,4 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:flutter/gestures.dart';
@@ -40,7 +39,6 @@ class Pressable extends StatefulWidget {
     this.behavior = HitTestBehavior.opaque,
     this.ringsFace = false,
     this.includeFocusSemantics = true,
-    this.bleed = EdgeInsets.zero,
   }) : assert(
          (child == null) != (builder == null),
          'Give exactly one of child and builder.',
@@ -70,7 +68,6 @@ class Pressable extends StatefulWidget {
   final HitTestBehavior behavior;
   final bool ringsFace;
   final bool includeFocusSemantics;
-  final EdgeInsets bleed;
 
   bool get enabled => onPressed != null || onPressedAt != null;
 
@@ -116,14 +113,15 @@ class _PressableState extends State<Pressable> {
     final Widget content = builder == null
         ? widget.child!
         : builder(context, hovered);
-    final Widget face = HoverFill(
-      fillKey: pressableHoverFillKey,
-      hovered: widget.paintsHover && hovered,
-      surface: widget.surface,
-      shape: widget.shape,
-      borderRadius: widget.borderRadius,
-      position: DecorationPosition.background,
-      bleed: widget.bleed,
+    final Widget face = DecoratedBox(
+      key: pressableHoverFillKey,
+      decoration: HoverStyle.decoration(
+        color: widget.paintsHover && hovered
+            ? HoverStyle.of(context, widget.surface, widget.shape)
+            : null,
+        shape: widget.shape,
+        borderRadius: widget.borderRadius,
+      ),
       child: ExcludeSemantics(
         excluding: widget.excludeSemantics,
         child: content,
@@ -151,7 +149,6 @@ class _PressableState extends State<Pressable> {
           placement: widget.placement,
           paintsRing: !widget.ringsFace,
           includeFocusSemantics: widget.includeFocusSemantics,
-          bleed: widget.bleed,
           child: face,
         ),
       ),

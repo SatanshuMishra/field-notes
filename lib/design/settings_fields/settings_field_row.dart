@@ -3,11 +3,11 @@ import 'dart:math' as math;
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/text_extent.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
+import 'settings_gutter.dart';
 
 const double _sidebarControlGap = 20;
 const double _sidebarDescriptionGap = 1;
@@ -19,7 +19,8 @@ const double _markerHang = 16;
 const double _markerDrop = 7;
 const double _belowGap = 8;
 
-class SettingsFieldRow extends StatelessWidget {
+class SettingsFieldRow extends StatelessWidget
+    implements CarriesSettingsGutter {
   const SettingsFieldRow({
     super.key,
     required this.label,
@@ -33,6 +34,7 @@ class SettingsFieldRow extends StatelessWidget {
     this.onPressed,
     this.semanticsValue,
     this.expanded,
+    this.minHeight = 0,
   });
 
   final String label;
@@ -46,6 +48,7 @@ class SettingsFieldRow extends StatelessWidget {
   final VoidCallback? onPressed;
   final String? semanticsValue;
   final bool? expanded;
+  final double minHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -146,8 +149,14 @@ class SettingsFieldRow extends StatelessWidget {
         },
       ),
     };
+    final Widget framed = SettingsRowFrame(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: minHeight),
+        child: row,
+      ),
+    );
     if (onPressed == null) {
-      return Semantics(container: true, child: row);
+      return Semantics(container: true, child: framed);
     }
     return Pressable(
       includeFocusSemantics: false,
@@ -157,11 +166,10 @@ class SettingsFieldRow extends StatelessWidget {
       onPressed: onPressed,
       placement: FocusRingPlacement.edge,
       borderRadius: Shapes.buttonBorderRadius,
-      bleed: HoverStyle.rowBleed,
       excludeSemantics: false,
       child: Semantics(
         expanded: expanded,
-        child: ExcludeSemantics(child: row),
+        child: ExcludeSemantics(child: framed),
       ),
     );
   }

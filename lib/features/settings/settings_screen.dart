@@ -45,7 +45,8 @@ const String settingsSidebarKicker = 'settings';
 const String _loadFailedTitle = 'Your settings could not be loaded.';
 const String _loadFailedMessage = 'Your logs are safe. Try again in a moment.';
 
-const double settingsContentMaxWidth = 680;
+const double _textMeasure = 680;
+const double settingsContentMaxWidth = _textMeasure + 2 * settingsGutter;
 
 const double _sectionGap = 16;
 const double _desktopGroupGap = 15;
@@ -53,8 +54,18 @@ const EdgeInsets _sidebarColumnPadding = EdgeInsets.fromLTRB(24, 26, 14, 20);
 const EdgeInsets _kickerPadding = EdgeInsets.symmetric(horizontal: 10);
 const double _kickerGap = 6;
 const double _ruleThickness = 1;
-const EdgeInsets _contentPadding = EdgeInsets.fromLTRB(28, 26, 34, 34);
-const EdgeInsets _contentTitlePadding = EdgeInsets.only(top: 17, bottom: 26);
+const EdgeInsets _contentPadding = EdgeInsets.fromLTRB(
+  28 - settingsGutter,
+  26,
+  34 - settingsGutter,
+  34,
+);
+const EdgeInsets _contentTitlePadding = EdgeInsets.fromLTRB(
+  settingsGutter,
+  17,
+  settingsGutter,
+  26,
+);
 const EdgeInsets _desktopStatePadding = EdgeInsets.all(Spacing.space24);
 
 const double _phoneSideInset = 14;
@@ -261,9 +272,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: SingleChildScrollView(
           padding: _desktopStatePadding,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: settingsContentMaxWidth,
-            ),
+            constraints: const BoxConstraints(maxWidth: _textMeasure),
             child: block,
           ),
         ),

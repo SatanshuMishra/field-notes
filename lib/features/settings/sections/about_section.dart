@@ -5,7 +5,6 @@ import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -105,7 +104,10 @@ const double _phoneButtonTopGap = 16;
 const double _phonePulseDot = 7;
 const EdgeInsets _phoneUpdatesPadding = EdgeInsets.symmetric(
   vertical: 4,
-  horizontal: 16,
+  horizontal: 16 - settingsGutter,
+);
+const EdgeInsets _gutterInsets = EdgeInsets.symmetric(
+  horizontal: settingsGutter,
 );
 const double _phoneUpdatesRowPadding = 12;
 const double _phoneNavGap = 12;
@@ -384,7 +386,10 @@ class AboutSection extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _IdentityCard(version: version, phone: false),
+        Padding(
+          padding: _gutterInsets,
+          child: _IdentityCard(version: version, phone: false),
+        ),
         const SizedBox(height: _desktopGroupsGap),
         SettingsSection.grouped(
           groups: <SettingsGroup>[
@@ -533,26 +538,29 @@ class AboutSection extends ConsumerWidget {
           key: aboutUpdatesCardKey,
           padding: _phoneUpdatesPadding,
           shadow: aboutCardShadow(colors),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: _phoneUpdatesRowPadding,
+          child: SettingsGutter(
+            padding: _gutterInsets,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: _phoneUpdatesRowPadding,
+                  ),
+                  child: _AutomaticRow(automatic: automatic, actions: actions),
                 ),
-                child: _AutomaticRow(automatic: automatic, actions: actions),
-              ),
-              const DashedDivider(),
-              _PhoneNavRow(
-                key: aboutReleaseNotesRowKey,
-                label: releaseNotesLabel,
-                description: version == null
-                    ? ''
-                    : releaseNotesDescription(version),
-                onPressed: actions.openInstalled,
-              ),
-            ],
+                const Padding(padding: _gutterInsets, child: DashedDivider()),
+                _PhoneNavRow(
+                  key: aboutReleaseNotesRowKey,
+                  label: releaseNotesLabel,
+                  description: version == null
+                      ? ''
+                      : releaseNotesDescription(version),
+                  onPressed: actions.openInstalled,
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: _phoneBlockGap),
@@ -1029,34 +1037,35 @@ class _PhoneNavRow extends StatelessWidget {
       onPressed: onPressed,
       placement: FocusRingPlacement.edge,
       borderRadius: Shapes.buttonBorderRadius,
-      bleed: HoverStyle.rowBleed,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minHeight: aboutPhoneReleaseNotesHeight,
-        ),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(label, style: context.textStyles.labelSans),
-                  if (description.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: _phoneNavDescriptionGap),
-                    Text(
-                      description,
-                      style: context.textStyles.captionSans.copyWith(
-                        color: colors.muted,
+      child: SettingsRowFrame(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: aboutPhoneReleaseNotesHeight,
+          ),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(label, style: context.textStyles.labelSans),
+                    if (description.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: _phoneNavDescriptionGap),
+                      Text(
+                        description,
+                        style: context.textStyles.captionSans.copyWith(
+                          color: colors.muted,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            const SizedBox(width: _phoneNavGap),
-            ChevronGlyph(pointsBack: false, color: colors.muted),
-          ],
+              const SizedBox(width: _phoneNavGap),
+              ChevronGlyph(pointsBack: false, color: colors.muted),
+            ],
+          ),
         ),
       ),
     );
