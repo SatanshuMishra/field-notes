@@ -1,7 +1,7 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T05:53:53.169Z
-Next ids: c1 D2 R1 S1
+Updated: 2026-11-11T05:53:54.736Z
+Next ids: c1 D2 R2 S1
 
 ## Goal
 
@@ -22,6 +22,8 @@ The drive entered ship and runs it next.
 - D1 hand-off: build the petal gusts spec unattended: Build now: run the mitosis plan and build for petal-gusts, then review, validate, fix and open the pull request without asking, never merging.
 
 ## Open risks
+
+- R1 The checkout's ADR 0010 now says five to six gusts; if the branch copy keeps four to five, the post-merge sync refuses to fast-forward over it, so check the branch copy before the pull request opens.
 
 ## Settled, do not reopen
 
