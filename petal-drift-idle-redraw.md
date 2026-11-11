@@ -1,6 +1,6 @@
 # petal-drift-idle-redraw: Stop the drifting petals redrawing every page at 60 fps
 Status: active
-Updated: 2026-11-11T05:53:41.624Z
+Updated: 2026-11-11T05:53:42.099Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ Full lane, unattended (owner: "Work autonomously. Complete the task."). The spec
 
 ## Next step
 
-The drive entered ship-check and runs it next.
+The drive entered ship and runs it next.
 
 ## Decisions in force
 
