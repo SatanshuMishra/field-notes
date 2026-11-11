@@ -238,6 +238,7 @@ class _StepControl extends StatelessWidget {
     return Pressable(
       label: label,
       onPressed: step,
+      placement: FocusRingPlacement.edge,
       borderRadius: _stepBorderRadius,
       child: ConstrainedBox(
         constraints: BoxConstraints(minWidth: target, minHeight: target),

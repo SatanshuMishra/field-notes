@@ -27,8 +27,8 @@ Entry _entry(String id, int hour) => Entry(
 
 void main() {
   testWidgets(
-    'the previous log button fills 12 px past its arrow and words and rings '
-    'the same fill',
+    'the previous log button fills 12 px past its arrow and words and draws '
+    'its focus ring on the fill',
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1140, 726);
       tester.view.devicePixelRatio = 1;
@@ -93,6 +93,15 @@ void main() {
       );
       expect(ring, findsOneWidget);
       expect(tester.getRect(ring), fillRect);
+      expect(
+        tester.renderObject(ring),
+        paints..drrect(
+          outer: RRect.fromRectAndRadius(
+            Offset.zero & fillRect.size,
+            const Radius.circular(Shapes.radiusControl),
+          ),
+        ),
+      );
       expect(tester.takeException(), isNull);
     },
   );
