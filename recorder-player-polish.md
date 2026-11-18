@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-18T22:27:51.079Z
+Updated: 2026-11-18T22:37:10.819Z
 Next ids: c9 D4 R1 S1
 
 ## Goal
@@ -20,11 +20,13 @@ Fix eight owner-reported issues across the settings page, the voice and video re
 
 ## Where things stand
 
-Intent and frontier round 1 are answered and recorded except the video controls, which the owner reopened. Two video boards (an interactive player and a fade explainer) are drafted but unpublished, waiting on a code inventory of today's player and an outside survey of other players.
+Intent and frontier round 1 are answered and recorded except the video controls, which the owner reopened. The code inventory and the outside player survey are in; three video boards (the Watch19 player, the FadeLine19 fade explainer and the VideoFit19 upright clip) are published as canvas version 24, and frontier round 2 on the video experience is with the owner.
 
 ## Next step
 
-When the code inventory and the player survey report, align the Today side of the Watch19 and FadeLine19 boards with them, publish both, and report the problem and the proposed fix to the owner.
+When the owner answers frontier round 2 on the video experience, record each answer in docs/specs/recorder-player-polish.decisions.md and its record.json as a frontier round, run check_record.py, then write the criteria and Steps and present the read-back.
+
+Needs: D2, D3.
 
 ## Decisions in force
 
