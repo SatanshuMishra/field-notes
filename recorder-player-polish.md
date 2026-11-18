@@ -1,7 +1,7 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-18T22:37:10.819Z
-Next ids: c9 D4 R1 S1
+Updated: 2026-11-18T22:39:12.294Z
+Next ids: c9 D4 R2 S1
 
 ## Goal
 
@@ -35,6 +35,8 @@ Needs: D2, D3.
 - D3 Item g covers the whole video viewing experience: the space around a picture whose shape does not fit, the controls' look and feel, hover and idle animations, and how play and pause feel.
 
 ## Open risks
+
+- R1 The Watch19, FadeLine19 and VideoFit19 boards have not been seen rendered, because the browser pane is not signed in to claude.ai; only their logic was run. Bears on c7.
 
 ## Settled, do not reopen
 
