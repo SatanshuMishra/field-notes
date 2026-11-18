@@ -1,7 +1,7 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-18T22:17:58.543Z
-Next ids: c9 D3 R1 S1
+Updated: 2026-11-18T22:21:16.641Z
+Next ids: c9 D4 R1 S1
 
 ## Goal
 
@@ -15,7 +15,7 @@ Fix eight owner-reported issues across the settings page, the voice and video re
 - [ ] c4 The recorder's microphone panel shows the input level as soon as it opens and carries no Voice settings entry
 - [ ] c5 Full screen in the full view takes the app full screen and back to windowed, or the button is removed
 - [ ] c6 The past-day voice preview follows light and dark mode and uses the same player as the Today cards and full view
-- [ ] c7 Video edge fades in the full view and past-day preview blend with no visible line in light and dark, and the full view's arrow buttons render crisp
+- [ ] c7 The video viewing experience in the full view and the day-window preview (the space around the picture, the controls' look, their hover and idle animations, and play and pause feedback) feels calm and smooth with no visible line in light and dark, and the arrow buttons render crisp (reworded by D3)
 - [ ] c8 A report explains why the sound effects never played, with no change made to them
 
 ## Where things stand
@@ -24,12 +24,13 @@ Intent and frontier round 1 are answered and recorded except the video controls,
 
 ## Next step
 
-Finish the video-controls investigation (article, YouTube's measured player, the researcher's player survey), publish a new video board, and put the findings and a revised video-controls question to the owner.
+Collect the code inventory and the player survey, then draw the whole-experience video boards and report the problem and the proposed fix to the owner.
 
 ## Decisions in force
 
 - D1 Item b concerns the saved waveform, drawn by loudness; the live meters keep their decibel scale.
 - D2 Video controls carry no blur and no glass panel behind them, with YouTube as the reference; the exact treatment waits on the investigation.
+- D3 Item g covers the whole video viewing experience: the space around a picture whose shape does not fit, the controls' look and feel, hover and idle animations, and how play and pause feel.
 
 ## Open risks
 
