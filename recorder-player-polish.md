@@ -1,7 +1,7 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-18T23:26:12.879Z
-Next ids: c9 D5 R2 S1
+Updated: 2026-11-18T23:29:58.007Z
+Next ids: c9 D6 R2 S1
 
 ## Goal
 
@@ -33,7 +33,8 @@ Needs: D2, D3, D4.
 - D1 Item b concerns the saved waveform, drawn by loudness; the live meters keep their decibel scale.
 - D2 Video controls carry no blur and no glass panel behind them, with YouTube as the reference; the exact treatment waits on the investigation.
 - D3 Item g covers the whole video viewing experience: the space around a picture whose shape does not fit, the controls' look and feel, hover and idle animations, and how play and pause feel.
-- D4 The spare space around a fitted video glows with a blurred colour sampled from the video file at the playing position, resampled as it plays and blended between samples, as YouTube's ambient mode does.
+- D4 The spare space around a fitted video glows with a dim, heavily blurred live copy of the video, through the recorder's existing CameraPictureStage, as YouTube's ambient mode fills it.
+- D5 One-time test for this run only: once the MSP pull requests are merged into the FEATURE branch and before the drive's product test runs, drive the FEATURE build in Flutter's headless mode (no VM) for every changed surface, send only what headless cannot reach to the VM lab, and report what headless covered; the lighthouse profile and every rule stay unchanged.
 
 ## Open risks
 
