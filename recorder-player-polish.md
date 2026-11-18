@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-18T21:53:02.521Z
+Updated: 2026-11-18T22:06:02.961Z
 Next ids: c9 D1 R1 S1
 
 ## Goal
@@ -20,11 +20,11 @@ Fix eight owner-reported issues across the settings page, the voice and video re
 
 ## Where things stand
 
-Not started.
+Prototype boards for a, b, d, f and e with g are published; the intent round and frontier round 1 (Q1 to Q16) await the owner's answers.
 
 ## Next step
 
-Publish the 1.9 follow-ups page on the cohesion canvas, then put the intent and first frontier round to the owner with the grounded causes.
+Record the owner's answers to the intent round and frontier round 1 in the decisions file and the record, then ask the next round or hold the read-back.
 
 ## Decisions in force
 
@@ -33,3 +33,6 @@ Publish the 1.9 follow-ups page on the cohesion canvas, then put the intent and 
 ## Settled, do not reopen
 
 ## Where the details live
+
+- https://claude.ai/artifact/6Jhnx5E1BxCPH9DgNu9R1m: cohesion canvas; its 1.9 follow-ups page holds the prototype boards
+- docs/specs/recorder-player-polish.decisions.md and docs/specs/recorder-player-polish.record.json: the interview's answers and record
