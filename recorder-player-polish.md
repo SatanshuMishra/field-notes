@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-18T23:29:58.007Z
+Updated: 2026-11-18T23:32:51.613Z
 Next ids: c9 D6 R2 S1
 
 ## Goal
@@ -20,13 +20,13 @@ Fix eight owner-reported issues across the settings page, the voice and video re
 
 ## Where things stand
 
-The interview is finished: the owner approved round 2, chose a video-coloured blurred surround instead of flat black, and told the run to proceed autonomously, so the run is unattended. The Watch19, FadeLine19 and VideoFit19 boards show the approved video experience, surround included. The spec's criteria and Steps are being written.
+The interview is finished: the owner approved round 2, chose a video-coloured blurred surround instead of flat black, and told the run to proceed autonomously, so the run is unattended. The Watch19, FadeLine19 and VideoFit19 boards show the approved video experience, surround included. docs/specs/recorder-player-polish.md holds the problem, user stories, decisions and out of scope; its criteria, Steps, assumptions and risks wait on two code fact sheets (items a to f, and the video viewer).
 
 ## Next step
 
-Write the criteria, test rows and Steps for items a to g into docs/specs/recorder-player-polish.record.json, run the probes, feasibility and complete checks, then write and review the spec and hand off.
+When both code fact sheets report, write the criteria, test rows and Steps for items a to g into docs/specs/recorder-player-polish.record.json, run the probes, feasibility and complete checks, then finish, review and hand off the spec.
 
-Needs: D2, D3, D4.
+Needs: D2, D3, D4, D5.
 
 ## Decisions in force
 
