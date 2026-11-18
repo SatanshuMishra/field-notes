@@ -1,7 +1,7 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-18T22:06:02.961Z
-Next ids: c9 D1 R1 S1
+Updated: 2026-11-18T22:17:58.543Z
+Next ids: c9 D3 R1 S1
 
 ## Goal
 
@@ -10,7 +10,7 @@ Fix eight owner-reported issues across the settings page, the voice and video re
 ## Done when
 
 - [ ] c1 Settings content keeps a readable width and sits balanced in a wide window without stretching its rows
-- [ ] c2 The live voice level bars vary with how loudly the owner speaks instead of flipping between full and empty
+- [ ] c2 The saved voice waveform on Today cards, the full view and the day window varies with how loudly the owner speaks instead of flipping between full and empty (reworded by D1: item b concerns the saved waveform)
 - [ ] c3 Clicking empty space on the voice and video recorders plays no sound and does nothing, while video keeps its tap-to-focus
 - [ ] c4 The recorder's microphone panel shows the input level as soon as it opens and carries no Voice settings entry
 - [ ] c5 Full screen in the full view takes the app full screen and back to windowed, or the button is removed
@@ -20,13 +20,16 @@ Fix eight owner-reported issues across the settings page, the voice and video re
 
 ## Where things stand
 
-Prototype boards for a, b, d, f and e with g are published; the intent round and frontier round 1 (Q1 to Q16) await the owner's answers.
+Intent and frontier round 1 are answered and recorded except the video controls, which the owner reopened for deeper investigation; the investigation is under way.
 
 ## Next step
 
-Record the owner's answers to the intent round and frontier round 1 in the decisions file and the record, then ask the next round or hold the read-back.
+Finish the video-controls investigation (article, YouTube's measured player, the researcher's player survey), publish a new video board, and put the findings and a revised video-controls question to the owner.
 
 ## Decisions in force
+
+- D1 Item b concerns the saved waveform, drawn by loudness; the live meters keep their decibel scale.
+- D2 Video controls carry no blur and no glass panel behind them, with YouTube as the reference; the exact treatment waits on the investigation.
 
 ## Open risks
 
