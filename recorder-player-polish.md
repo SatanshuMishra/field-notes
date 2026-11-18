@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-18T21:40:32.218Z
+Updated: 2026-11-18T21:53:02.521Z
 Next ids: c9 D1 R1 S1
 
 ## Goal
@@ -24,7 +24,7 @@ Not started.
 
 ## Next step
 
-Investigate the code behind each issue, build the visual prototype, and run the interphase interview to a read-back the owner approves.
+Publish the 1.9 follow-ups page on the cohesion canvas, then put the intent and first frontier round to the owner with the grounded causes.
 
 ## Decisions in force
 
