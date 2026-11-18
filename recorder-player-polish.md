@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-18T22:21:16.641Z
+Updated: 2026-11-18T22:27:51.079Z
 Next ids: c9 D4 R1 S1
 
 ## Goal
@@ -20,11 +20,11 @@ Fix eight owner-reported issues across the settings page, the voice and video re
 
 ## Where things stand
 
-Intent and frontier round 1 are answered and recorded except the video controls, which the owner reopened for deeper investigation; the investigation is under way.
+Intent and frontier round 1 are answered and recorded except the video controls, which the owner reopened. Two video boards (an interactive player and a fade explainer) are drafted but unpublished, waiting on a code inventory of today's player and an outside survey of other players.
 
 ## Next step
 
-Collect the code inventory and the player survey, then draw the whole-experience video boards and report the problem and the proposed fix to the owner.
+When the code inventory and the player survey report, align the Today side of the Watch19 and FadeLine19 boards with them, publish both, and report the problem and the proposed fix to the owner.
 
 ## Decisions in force
 
