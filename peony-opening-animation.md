@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-19T22:59:29.809Z
+Updated: 2026-11-19T23:07:08.789Z
 Next ids: c6 D3 R3 S2
 
 ## Goal
@@ -17,13 +17,11 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Where things stand
 
-The opening is on main through pull request #393, its pipeline run is cleaned up, and the VM lab pass is done: every criterion holds, and the one defect found is the Windows white window in R2. The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
+The opening is on main through pull request #393, its pipeline run is cleaned up, and the VM lab pass is done: every criterion holds. The owner asked to fix R2 here: branch fix/windows-white-window shows the window cloaked and reveals it after the next frame lands in the shown window, with a one-second fallback; its source test fails on main and passes with the fix, and the lab check of its CI build is next. The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
 
 ## Next step
 
-The work is done and the thread can close once the owner decides whether to fix R2, the Windows white window, as a separate change; if yes, give the runner window a paper-coloured background or keep it hidden until Flutter has drawn, then recheck in the VM lab with the high-priority capture.
-
-Needs: R2.
+Check the CI Windows build of fix/windows-white-window (release run 44634815356) in a VM lab instance over several launches, light and dark and first launch after install; if no white frame shows, open the pull request.
 
 ## Decisions in force
 
