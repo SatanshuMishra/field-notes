@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,9 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/data/database/app_database.dart' as db;
+import 'package:field_notes/data/media/filesystem_media_store.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/design/feedback/dialog_host.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart'
@@ -26,11 +30,10 @@ import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
+import 'package:field_notes/state/media_provider.dart';
 
-import '../entry_cards/support/entry_cards_harness.dart';
 import '../entry_cards/support/fake_video_player.dart';
 
-const String _videoId = 'video-media';
 const Color _white = Color(0xFFFFFFFF);
 const double _textContrast = 4.5;
 const double _iconContrast = 3;
@@ -48,28 +51,61 @@ void _window(
   addTearDown(tester.view.reset);
 }
 
-FakeMediaResolver _resolver() {
-  final Directory folder = Directory.systemTemp.createTempSync('video-shade');
-  addTearDown(() => folder.deleteSync(recursive: true));
-  final File clip = File('${folder.path}/clip.mp4')
-    ..writeAsBytesSync(List<int>.filled(8, 0));
-  return FakeMediaResolver()..set(
-    _videoId,
-    ResolvedMedia.available(
-      blob: blobOf(id: _videoId, relPath: 'clip.mp4', kind: MediaKind.video),
-      file: clip,
-    ),
+typedef _StoredVideo = ({
+  ProviderContainer container,
+  MediaResolver resolver,
+  String mediaId,
+});
+
+Future<_StoredVideo> _storeLandscapeVideo(WidgetTester tester) async {
+  final db.AppDatabase database = db.AppDatabase(NativeDatabase.memory());
+  final Directory root = Directory.systemTemp.createTempSync('video-shade');
+  addTearDown(
+    () => tester.runAsync(() async {
+      await database.close();
+      await root.delete(recursive: true);
+    }),
   );
+  final FilesystemMediaStore store = FilesystemMediaStore(
+    database: database,
+    recorder: ChangeRecorder(database),
+    root: root,
+  );
+  final ProviderContainer container = ProviderContainer(
+    overrides: <Override>[
+      mediaStoreProvider.overrideWith((Ref ref) async => store),
+    ],
+  );
+  addTearDown(container.dispose);
+  final MediaStoreResolver resolver = MediaStoreResolver(store);
+  final MediaBlob? blob = await tester.runAsync(() async {
+    final MediaBlob stored = await store.putBytes(
+      bytes: List<int>.filled(8, 0),
+      mime: 'video/mp4',
+      kind: MediaKind.video,
+      width: 1920,
+      height: 1080,
+      durationMs: 65000,
+    );
+    await resolver.resolve(stored.id);
+    container.listen(
+      videoAspectProvider(stored.id),
+      (AsyncValue<double?>? previous, AsyncValue<double?> next) {},
+    );
+    await container.read(videoAspectProvider(stored.id).future);
+    return stored;
+  });
+  return (container: container, resolver: resolver, mediaId: blob!.id);
 }
 
-LogViewerScene _scene({bool neighbours = false}) {
+LogViewerScene _scene(String mediaId, {bool neighbours = false}) {
   return LogViewerScene(
-    entry: const Entry(
+    entry: Entry(
       id: 'video-entry',
       dayId: 'd1',
       type: EntryType.video,
       title: 'Harbour',
-      mediaId: _videoId,
+      mediaId: mediaId,
       durationMs: 65000,
       createdAt: 0,
       updatedAt: 0,
@@ -97,23 +133,21 @@ Future<void> _open(
   bool embedded = false,
   bool neighbours = false,
 }) async {
+  final _StoredVideo video = await _storeLandscapeVideo(tester);
   final LruVideoSlots slots = LruVideoSlots(cap: 2);
   addTearDown(slots.dispose);
   final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
   final Widget view = VideoViewerView(
-    scene: _scene(neighbours: neighbours),
-    resolver: _resolver(),
+    scene: _scene(video.mediaId, neighbours: neighbours),
+    resolver: video.resolver,
     playerFactory: () => player,
     slots: slots,
     focus: PlaybackFocus(),
     embedded: embedded,
   );
   await tester.pumpWidget(
-    ProviderScope(
-      key: ValueKey<String>('$platform-$brightness-$embedded'),
-      overrides: <Override>[
-        videoAspectProvider.overrideWith((Ref ref, String mediaId) => 16 / 9),
-      ],
+    UncontrolledProviderScope(
+      container: video.container,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: fieldNotesTheme(platform: platform, brightness: brightness),
