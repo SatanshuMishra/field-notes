@@ -1,7 +1,7 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T09:56:19.249Z
-Next ids: c6 D2 R1 S1
+Updated: 2026-11-19T09:56:22.324Z
+Next ids: c6 D2 R2 S1
 
 ## Goal
 
@@ -28,6 +28,8 @@ Wait for the pipeline drive to rest; when it does, relay its next sentence and p
 - D1 hand-off: build the opening through the standard-lane pipeline drive: Hand the spec to the pipeline drive; the owner merges the resulting pull request.
 
 ## Open risks
+
+- R1 Spec criterion 5.15 is unproven by the build: the launch flash, real-renderer smoothness and platform screen readers are seen only on VM lab devices after the build. Bears on c5.
 
 ## Settled, do not reopen
 
