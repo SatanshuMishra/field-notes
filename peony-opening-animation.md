@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T09:55:56.407Z
+Updated: 2026-11-19T09:56:01.115Z
 Next ids: c6 D2 R1 S1
 
 ## Goal
@@ -17,11 +17,11 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Where things stand
 
-Spec handed off (5 Steps, 15 criteria, criterion 5.15 unproven: real-device launch and smoothness); Flutter build not started.
+The pipeline drive holds the run on feat/peony-opening-animation (run home ~/.mitosis/fireplace/peony-opening-animation): mitosis builds the 5 Steps, then reviewers judge and it opens the pull request. Criterion 5.15 (real-device launch and smoothness) stays unproven for the VM lab.
 
 ## Next step
 
-The drive entered build and runs it next.
+Wait for the pipeline drive to rest; when it does, relay its next sentence and pull request links, then park the thread for the owner's merge.
 
 ## Decisions in force
 
