@@ -238,7 +238,7 @@ final class SyncEngineProvider
   }
 }
 
-String _$syncEngineHash() => r'ed25e7e6f5a0cdec31d67542d2df75966045f28c';
+String _$syncEngineHash() => r'2f388becd545720f65de9e43fe06bbdd0098a682';
 
 @ProviderFor(syncStatus)
 final syncStatusProvider = SyncStatusProvider._();
