@@ -1405,33 +1405,39 @@ class _CardVideoState extends State<_CardVideo> {
   Widget _cover(bool started) {
     return IgnorePointer(
       ignoring: started,
-      child: Pressable(
-        key: compactLogPosterKey,
-        label: videoSurfacePointerLabel,
-        focusNode: _posterFocus,
-        onPressed: _requestPlay,
-        paintsHover: false,
-        borderRadius: _cardPosterRadius,
-        placement: FocusRingPlacement.edge,
-        child: ColoredBox(
-          color: Palette.mediaBlack,
-          child: VideoStill(
-            resolver: widget.resolver,
-            mediaId: widget.entry.thumbnailMediaId,
-            builder:
-                (BuildContext context, ImageProvider? still, double? aspect) =>
-                    Stack(
-                      fit: StackFit.expand,
-                      children: <Widget>[
-                        if (still != null)
-                          VideoStillStage(
-                            image: still,
-                            aspectRatio:
-                                _aspect ?? aspect ?? defaultVideoAspectRatio,
-                          ),
-                        if (started) const Center(child: VideoLoadingRing()),
-                      ],
-                    ),
+      child: ExcludeSemantics(
+        excluding: started,
+        child: Pressable(
+          key: compactLogPosterKey,
+          label: videoSurfacePointerLabel,
+          focusNode: _posterFocus,
+          onPressed: started ? null : _requestPlay,
+          paintsHover: false,
+          borderRadius: _cardPosterRadius,
+          placement: FocusRingPlacement.edge,
+          child: ColoredBox(
+            color: Palette.mediaBlack,
+            child: VideoStill(
+              resolver: widget.resolver,
+              mediaId: widget.entry.thumbnailMediaId,
+              builder:
+                  (
+                    BuildContext context,
+                    ImageProvider? still,
+                    double? aspect,
+                  ) => Stack(
+                    fit: StackFit.expand,
+                    children: <Widget>[
+                      if (still != null)
+                        VideoStillStage(
+                          image: still,
+                          aspectRatio:
+                              _aspect ?? aspect ?? defaultVideoAspectRatio,
+                        ),
+                      if (started) const Center(child: VideoLoadingRing()),
+                    ],
+                  ),
+            ),
           ),
         ),
       ),

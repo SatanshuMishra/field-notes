@@ -1,8 +1,13 @@
+import 'dart:ui' show SemanticsAction, Tristate;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/entry_cards/cards/video_controls_overlay.dart'
+    show videoSurfacePointerLabel;
 import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart'
     show ResolvedMedia;
@@ -91,6 +96,14 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 400));
 }
 
+List<SemanticsNode> _surfaceButtons(WidgetTester tester) => find.semantics
+    .byLabel(videoSurfacePointerLabel)
+    .evaluate()
+    .where(
+      (SemanticsNode node) => node.getSemanticsData().flagsCollection.isButton,
+    )
+    .toList();
+
 void main() {
   testWidgets(
     'a Today card video that cannot play shows its notice and Retry after play',
@@ -104,6 +117,31 @@ void main() {
       expect(find.byType(CorruptMediaPlaceholder), findsOneWidget);
       expect(find.byKey(compactLogPosterKey), findsNothing);
       expect(find.text("Can't play this video").hitTestable(), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'while a Today card video loads every play or pause button a screen reader finds can be activated',
+    (WidgetTester tester) async {
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      await _pumpCard(tester, videoOnDisk: true);
+
+      await tester.tap(find.byKey(compactLogVideoPlayKey));
+      await _settle(tester);
+
+      expect(find.byKey(compactLogPosterKey), findsOneWidget);
+      final List<SemanticsNode> buttons = _surfaceButtons(tester);
+      expect(buttons, hasLength(1));
+      for (final SemanticsNode button in buttons) {
+        if (button.getSemanticsData().flagsCollection.isEnabled ==
+            Tristate.isTrue) {
+          expect(
+            button.getSemanticsData().hasAction(SemanticsAction.tap),
+            isTrue,
+          );
+        }
+      }
+      semantics.dispose();
     },
   );
 }
