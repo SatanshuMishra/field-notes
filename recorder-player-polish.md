@@ -1,7 +1,7 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-19T00:03:12.466Z
-Next ids: c9 D7 R2 S1
+Updated: 2026-11-19T00:27:29.057Z
+Next ids: c9 D8 R2 S1
 
 ## Goal
 
@@ -34,6 +34,7 @@ When the spec reviewer reports, fix each real issue once, switch the spec, recor
 - D4 The spare space around a fitted video glows with a dim, heavily blurred live copy of the video, through the recorder's existing CameraPictureStage, as YouTube's ambient mode fills it.
 - D5 One-time test for this run only: once the MSP pull requests are merged into the FEATURE branch and before the drive's product test runs, drive the FEATURE build in Flutter's headless mode (no VM) for every changed surface, send only what headless cannot reach to the VM lab, and report what headless covered; the lighthouse profile and every rule stay unchanged.
 - D6 Items a to e each ship as their own pull request; f ships with g in one, because their existing tests share the day window's test files, as the owner allowed.
+- D7 hand-off: build recorder-player-polish unattended through the pipeline drive: Hand the package to the pipeline drive in the full lane, unattended. Each later gap becomes an assumption citing an intent line, and the D5 headless pass runs once the MSP pull requests are merged into the FEATURE branch.
 
 ## Open risks
 
