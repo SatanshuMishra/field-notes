@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T10:32:57.465Z
+Updated: 2026-11-19T10:32:59.230Z
 Next ids: c6 D3 R2 S1
 
 ## Goal
@@ -21,7 +21,7 @@ The retimed, title-free spec docs/specs/peony-opening.md is reviewed and handed 
 
 ## Next step
 
-The drive entered plan and runs it next.
+The drive entered build and runs it next.
 
 ## Decisions in force
 
