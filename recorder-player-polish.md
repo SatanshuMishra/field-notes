@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: parked
-Updated: 2026-11-19T06:55:26.525Z
+Updated: 2026-11-19T06:55:28.914Z
 Next ids: c9 D8 R2 S1
 
 ## Goal
@@ -24,9 +24,7 @@ The run is unattended. The interphase package is handed off: 12 criteria, two of
 
 ## Next step
 
-Send pipeline drive event --name merged so the drive runs its product test, and wait for it in the background.
-
-Needs: D5.
+The drive entered post-merge and runs it next.
 
 ## Decisions in force
 
