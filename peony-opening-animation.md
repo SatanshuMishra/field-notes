@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T08:14:26.366Z
+Updated: 2026-11-19T09:05:28.692Z
 Next ids: c6 D1 R1 S1
 
 ## Goal
@@ -9,7 +9,7 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Done when
 
-- [ ] c1 The owner has picked one of the prototyped versions
+- [x] c1 The owner has picked one of the prototyped versions evidence: Owner picked B (Ink sketch) on 2026-11-19 and asked for its drawing, Mac wind and a blow-away title to be reworked and built; round two at https://claude.ai/artifact/KMyaKfwrCB2XcdPisHSpU7 preselects the mix being built: Flower first + Curls + Signed beneath
 - [ ] c2 Opening the app fresh plays the picked animation and fades smoothly into Today (or wherever the app opens), with Today built underneath and ready when it shows
 - [ ] c3 Returning to the app from the background and the very first launch with onboarding play no animation
 - [ ] c4 A tap, click or any key skips to Today within a quarter of a second, and with reduce motion on the peony shows still before a short crossfade
@@ -17,11 +17,11 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Where things stand
 
-Not started.
+Round two published at https://claude.ai/artifact/KMyaKfwrCB2XcdPisHSpU7 with the diagnosis and the mix to build; Flutter build not started.
 
 ## Next step
 
-Wait for the owner to pick a version (A Gust, B Ink sketch, C Linger or D Quick breeze) on the prototype page, then build the picked version in Flutter through the standard lane with one review round and open a pull request.
+Build the round-two mix (Flower first one-pen ink, Curls wind, Signed beneath title) in Flutter through the standard lane: an opening cover above the app on a fresh start, skipped on resume and on first launch with onboarding, tap or key skips within 0.25 s, reduce motion shows the still drawing, and paper-coloured launch screens.
 
 ## Decisions in force
 
@@ -32,6 +32,7 @@ Wait for the owner to pick a version (A Gust, B Ink sketch, C Linger or D Quick 
 ## Where the details live
 
 - Prototype page: https://claude.ai/artifact/Q71f1M1joThu2rWHkUC6k6 holds the four versions, their timings and the shared defaults
+- Round two: https://claude.ai/artifact/KMyaKfwrCB2XcdPisHSpU7 is the reference engine for the build (visible-arc pen schedule, blob washes, plant-unit curl ribbons, title write and blow-away, timings); local source in the session scratchpad peony-opening/peony-ink.html
 - Peony art: lib/design/flowers/garden_plant_geometry.dart (peonyPlantParts) and lib/design/flowers/petal_art.dart (drift petal)
 - App root and start-up wait: lib/app/app.dart; similar splash: lib/features/updates/ui/update_restart_splash.dart
 - Android launch screen: android/app/src/main/res/drawable/launch_background.xml and values/styles.xml
