@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-19T20:57:50.890Z
+Updated: 2026-11-19T20:57:54.827Z
 Next ids: c6 D3 R2 S2
 
 ## Goal
@@ -21,7 +21,7 @@ The opening is on main through pull request #393 and its pipeline run is cleaned
 
 ## Next step
 
-Wait for the drive's clean-up of peony-opening to rest; then close the thread if it ends in ready-pr, or park it with the wait's next sentence.
+With the owner's go-ahead, run a VM lab pass on a debug build of main, Windows first, then macOS, then Android, one platform at a time: cold-start each and confirm the paper colour shows before the peony with no white or black flash, and that the drawing plays smoothly into a ready Today; tick c2 and c5 with what was seen, retire R1, then close the thread.
 
 Needs: R1.
 
