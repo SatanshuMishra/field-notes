@@ -14,6 +14,10 @@ namespace {
 
 constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
 
+constexpr COLORREF kLightOpeningPaper = RGB(0xEF, 0xE2, 0xCE);
+
+constexpr COLORREF kDarkOpeningPaper = RGB(0x1C, 0x19, 0x19);
+
 constexpr const wchar_t kGetPreferredBrightnessRegKey[] =
     L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
 constexpr const wchar_t kGetPreferredBrightnessRegValue[] =
@@ -149,7 +153,9 @@ bool Win32Window::Create(const std::wstring& title,
 }
 
 bool Win32Window::Show() {
-  return ShowWindow(window_handle_, SW_SHOWNORMAL);
+  const bool was_visible = ShowWindow(window_handle_, SW_SHOWNORMAL) != 0;
+  UpdateWindow(window_handle_);
+  return was_visible;
 }
 
 LRESULT CALLBACK Win32Window::WndProc(HWND const window,
@@ -238,6 +244,24 @@ Win32Window::MessageHandler(HWND hwnd,
         UpdateTheme();
       }
       return 0;
+
+    case WM_ERASEBKGND:
+      if (paints_opening_paper_) {
+        RECT area;
+        GetClientRect(hwnd, &area);
+        HBRUSH paper = CreateSolidBrush(
+            UsesDarkAppearance() ? kDarkOpeningPaper : kLightOpeningPaper);
+        FillRect(reinterpret_cast<HDC>(wparam), &area, paper);
+        DeleteObject(paper);
+        return 1;
+      }
+      break;
+
+    case WM_PAINT: {
+      const LRESULT painted = DefWindowProc(hwnd, message, wparam, lparam);
+      paints_opening_paper_ = false;
+      return painted;
+    }
   }
 
   return DefWindowProc(window_handle_, message, wparam, lparam);
@@ -300,14 +324,17 @@ void Win32Window::UpdateTheme() {
   if (window_handle_ == nullptr) {
     return;
   }
-  const BOOL enable_dark_mode =
-      appearance_ == Appearance::kSystem ? SystemPrefersDark()
-      : appearance_ == Appearance::kDark ? TRUE
-                                         : FALSE;
+  const BOOL enable_dark_mode = UsesDarkAppearance();
   if (FAILED(DwmSetWindowAttribute(window_handle_,
                                    DWMWA_USE_IMMERSIVE_DARK_MODE,
                                    &enable_dark_mode,
                                    sizeof(enable_dark_mode)))) {
     OutputDebugStringW(L"Field Notes could not set the window appearance.\n");
   }
+}
+
+BOOL Win32Window::UsesDarkAppearance() const {
+  return appearance_ == Appearance::kSystem ? SystemPrefersDark()
+         : appearance_ == Appearance::kDark ? TRUE
+                                            : FALSE;
 }

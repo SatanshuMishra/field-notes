@@ -7,6 +7,7 @@ import 'package:field_notes/design/tokens/field_notes_colors.dart';
 
 const String _res = 'android/app/src/main/res';
 const String _macWindow = 'macos/Runner/MainFlutterWindow.swift';
+const String _winRunner = 'windows/runner';
 
 String _read(String path) => File(path).readAsStringSync();
 
@@ -53,6 +54,18 @@ String _swiftColour(Color color) {
   final List<String> rgb = _rgbHex(color);
   return 'NSColor(srgbRed: 0x${rgb[0]} / 255.0, green: 0x${rgb[1]} / 255.0, '
       'blue: 0x${rgb[2]} / 255.0, alpha: 1)';
+}
+
+String _cppColour(Color color) {
+  final List<String> rgb = _rgbHex(color);
+  return 'RGB(0x${rgb[0]}, 0x${rgb[1]}, 0x${rgb[2]})';
+}
+
+String _cppBlock(String source, String opening) {
+  final int start = source.indexOf(opening);
+  expect(start, isNot(-1), reason: 'the Windows runner has no $opening');
+  final int end = source.indexOf(RegExp(r'\n    case |\n}\n'), start + 1);
+  return source.substring(start, end == -1 ? source.length : end);
 }
 
 String _awakeFromNibBody(String swift) {
@@ -150,6 +163,54 @@ void main() {
       awake,
       contains('self.backgroundColor = $name'),
       reason: 'the window does not open on $name',
+    );
+  });
+
+  test('the Windows window paints the shell paper until its first paint', () {
+    final String window = _read('$_winRunner/win32_window.cpp');
+    expect(
+      window,
+      contains(
+        'constexpr COLORREF kLightOpeningPaper = '
+        '${_cppColour(FieldNotesColors.light.panelTop)};',
+      ),
+    );
+    expect(
+      window,
+      contains(
+        'constexpr COLORREF kDarkOpeningPaper = '
+        '${_cppColour(FieldNotesColors.dark.panelTop)};',
+      ),
+    );
+    expect(
+      _read('$_winRunner/win32_window.h'),
+      contains('bool paints_opening_paper_ = true;'),
+    );
+
+    final String erase = _cppBlock(window, 'case WM_ERASEBKGND:');
+    expect(erase, contains('if (paints_opening_paper_) {'));
+    expect(
+      erase,
+      contains('UsesDarkAppearance() ? kDarkOpeningPaper : kLightOpeningPaper'),
+    );
+    expect(erase, contains('FillRect(reinterpret_cast<HDC>(wparam), &area'));
+
+    final String paint = _cppBlock(window, 'case WM_PAINT:');
+    final int painted = paint.indexOf('DefWindowProc(hwnd, message');
+    expect(painted, isNot(-1));
+    expect(
+      paint.indexOf('paints_opening_paper_ = false;'),
+      greaterThan(painted),
+      reason: 'the first paint erases to paper before the paper stops',
+    );
+
+    final String show = _cppBlock(window, 'bool Win32Window::Show() {');
+    final int shown = show.indexOf('ShowWindow(window_handle_, SW_SHOWNORMAL)');
+    expect(shown, isNot(-1));
+    expect(
+      show.indexOf('UpdateWindow(window_handle_);'),
+      greaterThan(shown),
+      reason: 'the window paints its paper as soon as it is shown',
     );
   });
 }
