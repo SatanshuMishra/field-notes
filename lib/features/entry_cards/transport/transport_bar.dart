@@ -53,7 +53,7 @@ final FieldNotesColors videoChromeColors = FieldNotesColors.dark.copyWith(
 );
 
 const double _dockSkipSize = 26;
-const double _dockPlayDiameter = 64;
+const double transportDockPlayDiameter = 64;
 const double _playGlyphShare = 0.42;
 const double _playGlyphNudge = 0.05;
 const double _disabledAlpha = 0.5;
@@ -74,7 +74,7 @@ const double _strokeWidth = 1.7;
 const double _viewBox = 24;
 const double _tenFontSize = 7.5;
 const double _tenBaseline = 16.2;
-const double _dockRowGap = 4;
+const double transportDockRowGap = 4;
 const double _readoutBorder = 1;
 const double _readoutFontSize = 16;
 const double _readoutFadeIn = 0.18;
@@ -1137,6 +1137,7 @@ class TransportDock extends StatelessWidget {
     this.onBack,
     this.backLabel = 'Back',
     this.onMore,
+    this.timeline,
   });
 
   final TransportValue value;
@@ -1147,34 +1148,51 @@ class TransportDock extends StatelessWidget {
   final VoidCallback? onBack;
   final String backLabel;
   final VoidCallback? onMore;
+  final Widget? timeline;
 
   Widget _slot(Widget? child) =>
       Expanded(child: Center(child: child ?? const SizedBox.shrink()));
+
+  Widget _timeRow(BuildContext context) {
+    final TextStyle now = transportTimeStyle(context);
+    final Widget position = Text(
+      formatMediaDuration(value.position.inMilliseconds),
+      style: now,
+    );
+    final Widget total = Text(
+      formatMediaDuration(value.total?.inMilliseconds),
+      style: now.copyWith(color: context.colors.muted),
+    );
+    final Widget speed = TransportSpeedButton(tuning: tuning);
+    final Widget? timeline = this.timeline;
+    if (timeline == null) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[position, speed, total],
+      );
+    }
+    return Row(
+      children: <Widget>[
+        position,
+        const SizedBox(width: _timeInset),
+        Expanded(child: timeline),
+        const SizedBox(width: _timeInset),
+        total,
+        speed,
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final VoidCallback? back = onBack;
     final VoidCallback? more = onMore;
-    final TextStyle now = transportTimeStyle(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            Text(
-              formatMediaDuration(value.position.inMilliseconds),
-              style: now,
-            ),
-            TransportSpeedButton(tuning: tuning),
-            Text(
-              formatMediaDuration(value.total?.inMilliseconds),
-              style: now.copyWith(color: context.colors.muted),
-            ),
-          ],
-        ),
-        const SizedBox(height: _dockRowGap),
+        _timeRow(context),
+        const SizedBox(height: transportDockRowGap),
         Row(
           children: <Widget>[
             _slot(
@@ -1201,7 +1219,7 @@ class TransportDock extends StatelessWidget {
                 key: playKey,
                 face: TransportPlayFace.cta,
                 playing: value.isPlaying,
-                diameter: _dockPlayDiameter,
+                diameter: transportDockPlayDiameter,
                 onPressed: value.onToggle,
               ),
             ),

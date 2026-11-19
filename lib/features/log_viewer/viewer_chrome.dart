@@ -1386,15 +1386,16 @@ class ViewerLogBar extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
-        const Positioned(
+        Positioned(
           left: 0,
           right: 0,
           top: 0,
           child: VideoShade(
             key: videoTopShadeKey,
-            height: videoTopShadeHeight,
+            height: statusBar + videoTopShadeHeight,
             peak: videoTopShadePeak,
             fromTop: true,
+            hold: statusBar,
           ),
         ),
         Align(alignment: Alignment.topCenter, child: row),
