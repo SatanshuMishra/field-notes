@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-19T19:44:43.180Z
+Updated: 2026-11-19T19:44:52.877Z
 Next ids: c6 D3 R2 S2
 
 ## Goal
@@ -17,11 +17,13 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Where things stand
 
-The pipeline drive holds the run on feat/peony-opening (run home ~/.mitosis/fireplace/peony-opening): mitosis builds the 5 Steps, then reviewers judge and it opens the pull request. The stopped first run's pushed branch feat/peony-opening-animation and run home ~/.mitosis/fireplace/peony-opening-animation remain until the owner says to clean them up. The first run, with the title and the faster pen, is stopped; its pushed branch feat/peony-opening-animation and run home ~/.mitosis/fireplace/peony-opening-animation remain.
+The owner merged pull request #392 into feat/peony-opening on 2026-11-19, and the drive took the merged event: it bumps the version and opens the FEATURE pull request into main. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
 
 ## Next step
 
-The drive entered post-merge and runs it next.
+Wait for the drive on feat/peony-opening to rest after the merged event; then relay its next sentence and the FEATURE pull request link, and park the thread for the owner's merge.
+
+Needs: D2, R1.
 
 ## Decisions in force
 
