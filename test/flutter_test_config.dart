@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import 'package:field_notes/features/capture/core/night_sky.dart';
+import 'package:field_notes/features/capture/immersive/reflection_prompt.dart';
+import 'package:field_notes/features/capture/immersive/voice_level_field.dart';
 
 import 'support/ax_update_checker.dart';
 
@@ -30,5 +32,8 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     await loader.load();
   }
   debugNightSkyStill = true;
+  debugNightSkySeed = 7;
+  debugVoiceLevelFieldSeed = 7;
+  debugReflectionQuestionIndex = 0;
   return testMain();
 }

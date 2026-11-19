@@ -20,6 +20,8 @@ const Duration nightSkyCometFlight = Duration(milliseconds: 1100);
 
 bool debugNightSkyStill = false;
 
+int? debugNightSkySeed;
+
 const int _seedRange = 1 << 32;
 const int _cometSeedOffset = 7919;
 const int _sparkleSeedOffset = 104729;
@@ -95,6 +97,15 @@ bool get _debugStill {
     return true;
   }());
   return still;
+}
+
+int? get _debugSeed {
+  int? seed;
+  assert(() {
+    seed = debugNightSkySeed;
+    return true;
+  }());
+  return seed;
 }
 
 extension on NightSkyKind {
@@ -311,7 +322,8 @@ class NightSky extends StatefulWidget {
 
 class _NightSkyState extends State<NightSky>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  late final int _seed = widget.seed ?? math.Random().nextInt(_seedRange);
+  late final int _seed =
+      widget.seed ?? _debugSeed ?? math.Random().nextInt(_seedRange);
   late final math.Random _cometRandom = math.Random(_seed + _cometSeedOffset);
   late final AnimationController _flight = AnimationController(
     vsync: this,

@@ -477,7 +477,7 @@ final List<A11yState> immersiveStates = <A11yState>[
     proof: <A11yProof>[
       A11yProof(find.byType(InputPanel)),
       A11yProof(find.byKey(inputDeviceRowKey)),
-      A11yProof(find.byKey(voiceSettingsRowKey)),
+      A11yProof(find.byKey(inputProfileRowKey)),
     ],
   ),
 ];

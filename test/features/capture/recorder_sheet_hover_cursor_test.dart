@@ -53,7 +53,6 @@ const List<_Row> _panelRows = <_Row>[
   _Row(ValueKey<String>('input-device-row'), 'Input device', _Shape.row),
   _Row(ValueKey<String>('input-profile-row'), 'Input profile', _Shape.row),
   _Row(ValueKey<String>('output-device-row'), 'Output device', _Shape.row),
-  _Row(ValueKey<String>('voice-settings-row'), 'Voice settings', _Shape.row),
 ];
 
 class _FakeRecorder extends Fake implements AudioRecorder {
@@ -216,7 +215,7 @@ void main() {
     );
     await _expectRows(tester, mouse, _voiceRows);
 
-    await _pump(tester, Center(child: InputPanel(onVoiceSettings: () {})));
+    await _pump(tester, const Center(child: InputPanel()));
     await _expectRows(tester, mouse, _panelRows);
 
     await tester.pumpWidget(const SizedBox.shrink());

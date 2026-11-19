@@ -31,7 +31,6 @@ const String inputProfileTitle = 'Input profile';
 const String inputVolumeTitle = 'Input volume';
 const String outputDeviceTitle = 'Output device';
 const String outputVolumeTitle = 'Output volume';
-const String voiceSettingsLabel = 'Voice settings';
 const String chosenByAndroidLabel = 'Chosen by Android';
 const String recorderInputLabel = 'Input';
 const int inputVolumeMaximum = 200;
@@ -47,7 +46,6 @@ const Key outputVolumeRowKey = ValueKey<String>('output-volume-row');
 const Key inputDeviceMenuKey = ValueKey<String>('input-device-menu');
 const Key inputProfileMenuKey = ValueKey<String>('input-profile-menu');
 const Key outputDeviceMenuKey = ValueKey<String>('output-device-menu');
-const Key voiceSettingsRowKey = ValueKey<String>('voice-settings-row');
 
 const double _rowHeight = kMinInteractiveDimension;
 const double _panelRadius = 18;
@@ -128,14 +126,14 @@ class RecorderInputButton extends StatefulWidget {
   const RecorderInputButton({
     super.key,
     this.androidVideo = false,
-    this.onVoiceSettings,
+    this.levels,
     this.takeLevels,
     this.ringLevels,
     this.ringHearing = MicrophoneHearing.hearing,
   });
 
   final bool androidVideo;
-  final VoidCallback? onVoiceSettings;
+  final Stream<double>? levels;
   final Stream<double>? takeLevels;
   final Stream<double>? ringLevels;
   final MicrophoneHearing ringHearing;
@@ -153,11 +151,37 @@ class _RecorderInputButtonState extends State<RecorderInputButton> {
   );
   final Object _tapGroup = Object();
   FocusNode? _returnFocus;
+  StreamSubscription<double>? _heard;
+  double? _lastHeard;
+
+  Stream<double>? get _followed => widget.levels ?? widget.takeLevels;
+
+  @override
+  void initState() {
+    super.initState();
+    _hear(_followed);
+  }
+
+  @override
+  void didUpdateWidget(RecorderInputButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final Stream<double>? followed = _followed;
+    if (!identical(followed, oldWidget.levels ?? oldWidget.takeLevels)) {
+      _hear(followed);
+    }
+  }
 
   @override
   void dispose() {
+    unawaited(_heard?.cancel());
     _panelFocus.dispose();
     super.dispose();
+  }
+
+  void _hear(Stream<double>? levels) {
+    unawaited(_heard?.cancel());
+    _lastHeard = null;
+    _heard = levels?.listen((double level) => _lastHeard = level);
   }
 
   void _toggle() {
@@ -190,11 +214,6 @@ class _RecorderInputButtonState extends State<RecorderInputButton> {
         previous.canRequestFocus) {
       previous.requestFocus();
     }
-  }
-
-  void _openVoiceSettings() {
-    _close();
-    widget.onVoiceSettings?.call();
   }
 
   double _panelHeightLimit(BuildContext context) {
@@ -239,11 +258,10 @@ class _RecorderInputButtonState extends State<RecorderInputButton> {
                   ),
                   child: InputPanel(
                     androidVideo: widget.androidVideo,
+                    levels: widget.levels,
+                    startingLevel: _lastHeard,
                     takeLevels: widget.takeLevels,
                     tapRegionGroupId: _tapGroup,
-                    onVoiceSettings: widget.onVoiceSettings == null
-                        ? null
-                        : _openVoiceSettings,
                   ),
                 ),
               ),
@@ -288,14 +306,16 @@ class InputPanel extends ConsumerWidget {
   const InputPanel({
     super.key,
     this.androidVideo = false,
-    this.onVoiceSettings,
     this.tapRegionGroupId,
+    this.levels,
+    this.startingLevel,
     this.takeLevels,
   });
 
   final bool androidVideo;
-  final VoidCallback? onVoiceSettings;
   final Object? tapRegionGroupId;
+  final Stream<double>? levels;
+  final double? startingLevel;
   final Stream<double>? takeLevels;
 
   @override
@@ -350,6 +370,8 @@ class InputPanel extends ConsumerWidget {
                   child: InputLevelRow(
                     ink: ink,
                     mutedInk: mutedInk,
+                    levels: levels,
+                    startingLevel: startingLevel,
                     takeLevels: takeLevels,
                   ),
                 ),
@@ -360,15 +382,6 @@ class InputPanel extends ConsumerWidget {
                     tone: inks.glass,
                     tapRegionGroupId: tapRegionGroupId,
                   ),
-                _PanelRow(
-                  key: voiceSettingsRowKey,
-                  title: voiceSettingsLabel,
-                  ink: ink,
-                  mutedInk: mutedInk,
-                  surface: inks.focus,
-                  trailing: const _Glyph(Icons.chevron_right),
-                  onTap: onVoiceSettings,
-                ),
               ],
             ),
           ),
@@ -398,10 +411,19 @@ class _HeldDuringTake extends StatelessWidget {
 }
 
 class InputLevelRow extends ConsumerWidget {
-  const InputLevelRow({super.key, this.ink, this.mutedInk, this.takeLevels});
+  const InputLevelRow({
+    super.key,
+    this.ink,
+    this.mutedInk,
+    this.levels,
+    this.startingLevel,
+    this.takeLevels,
+  });
 
   final Color? ink;
   final Color? mutedInk;
+  final Stream<double>? levels;
+  final double? startingLevel;
   final Stream<double>? takeLevels;
 
   @override
@@ -428,7 +450,8 @@ class InputLevelRow extends ConsumerWidget {
           volume: _settingsOf(ref).inputVolume,
           recorderFactory: ref.watch(inputLevelRecorderProvider),
           ink: ink,
-          levels: takeLevels,
+          levels: levels ?? takeLevels,
+          startingLevel: startingLevel,
         ),
       ],
     );

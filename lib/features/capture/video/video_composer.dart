@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/data/media/media_work_budget.dart';
 import 'package:field_notes/design/feedback/toast.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -20,12 +19,9 @@ import 'package:field_notes/features/capture/voice/voice_composer.dart'
     show voiceSavedToastMessage;
 import 'package:field_notes/features/capture/voice/voice_recorder.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
-import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/features/today/today_date.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
-import 'package:field_notes/state/settings_section_request.dart';
-import 'package:field_notes/state/shell_navigation.dart';
 
 import 'audio_input_selectable.dart';
 import 'camera_access_reporting.dart';
@@ -785,21 +781,6 @@ class _VideoComposerConnectorState
     }
   }
 
-  Future<void> _openVoiceSettings() async {
-    if (_closing || _asking || _phase != VideoRecorderPhase.idle) {
-      return;
-    }
-    final SettingsSectionRequest request = ref.read(
-      settingsSectionRequestProvider.notifier,
-    );
-    final ShellNavigation navigation = ref.read(
-      shellNavigationProvider.notifier,
-    );
-    await _cancel();
-    request.request(SettingsTab.voice);
-    navigation.select(ShellDestination.settings);
-  }
-
   void _keepGoing() {
     if (!_asking || _closing) {
       return;
@@ -920,7 +901,6 @@ class _VideoComposerConnectorState
       letGoKey: videoDiscardConfirmKey,
       supportsPause: _takeSupportsPause,
       savingHint: videoSavingHint,
-      onVoiceSettings: _openVoiceSettings,
       levels: _cameraOn ? _recorder.level : _voice.level,
       hearing: _cameraOn ? _recorder.hearingNow : _voice.hearingNow,
       titleController: _title,

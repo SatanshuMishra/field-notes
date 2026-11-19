@@ -10,6 +10,17 @@ import 'voice_level_smoother.dart';
 
 enum VoiceLevelStage { breathing, recording, paused }
 
+int? debugVoiceLevelFieldSeed;
+
+int? get _debugSeed {
+  int? seed;
+  assert(() {
+    seed = debugVoiceLevelFieldSeed;
+    return true;
+  }());
+  return seed;
+}
+
 const int _cometCount = 4;
 const int _starCount = 16;
 
@@ -671,7 +682,7 @@ class VoiceLevelField extends StatefulWidget {
 
 class VoiceLevelFieldState extends State<VoiceLevelField>
     with SingleTickerProviderStateMixin {
-  late final math.Random _random = widget.random ?? math.Random();
+  late final math.Random _random = widget.random ?? math.Random(_debugSeed);
   late final Ticker _ticker = createTicker(_tick);
   final ValueNotifier<int> _frames = ValueNotifier<int>(0);
   late StreamSubscription<double> _subscription;

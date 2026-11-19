@@ -81,6 +81,7 @@ class InputLevelMeter extends StatefulWidget {
     this.recorderFactory = AudioRecorder.new,
     this.ink = Palette.mediaInk,
     this.levels,
+    this.startingLevel,
   });
 
   final AudioInput input;
@@ -88,6 +89,7 @@ class InputLevelMeter extends StatefulWidget {
   final AudioRecorderFactory recorderFactory;
   final Color ink;
   final Stream<double>? levels;
+  final double? startingLevel;
 
   @override
   State<InputLevelMeter> createState() => _InputLevelMeterState();
@@ -182,6 +184,7 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
     _stopFollowingTake();
     _followedTake = take;
     _unavailable = false;
+    _level = widget.startingLevel ?? 0;
     _takeLevels = take.listen((double level) {
       if (mounted) {
         setState(() => _level = level);

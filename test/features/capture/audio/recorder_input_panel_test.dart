@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/data/media/audio_output.dart';
 import 'package:field_notes/design/glass/glass_surface.dart';
@@ -8,18 +7,9 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
 import 'package:field_notes/features/capture/audio/input_level.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
-import 'package:field_notes/features/capture/core/capture_providers.dart';
-import 'package:field_notes/features/capture/video/video_composer.dart';
-import 'package:field_notes/features/capture/video/video_recorder_provider.dart';
 import 'package:field_notes/features/capture/video/video_recorder_sheet.dart';
-import 'package:field_notes/features/capture/voice/voice_composer.dart';
-import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
-import 'package:field_notes/features/settings/settings_screen.dart';
-import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart';
-import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/state/repository_providers.dart';
-import 'package:field_notes/state/settings_section_request.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -28,19 +18,10 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:record/record.dart';
 
-import '../../../app/support/app_shell_harness.dart';
 import '../../settings/support/fake_settings_repository.dart';
 import '../video/video_test_support.dart'
-    show
-        FakeCaptureService,
-        FakeVideoRecorder,
-        fakeVideoDevices,
-        reflectionPromptsOff;
-import '../voice/voice_test_support.dart' show FakeVoiceRecorder;
+    show fakeVideoDevices, reflectionPromptsOff;
 
-const String _date = '2026-10-14';
-const Duration _fade = Duration(milliseconds: 600);
-const Duration _step = Duration(milliseconds: 50);
 const double _tolerance = 0.5;
 
 const InputDevice _macBook = InputDevice(
@@ -143,55 +124,6 @@ Future<void> _pumpSheet(
   await tester.pump();
 }
 
-Future<void> _pumpShell(WidgetTester tester, TargetPlatform platform) async {
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: <Override>[
-        ...shellOverrides(),
-        voiceRecorderProvider.overrideWith((Ref ref) => FakeVoiceRecorder()),
-        videoRecorderProvider.overrideWith((Ref ref) => FakeVideoRecorder()),
-        captureServiceProvider.overrideWith((Ref ref) => FakeCaptureService()),
-        reflectionPromptsOff(),
-        ..._audioOverrides(),
-      ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: fieldNotesTheme(platform: platform),
-        home: const AppShell(),
-      ),
-    ),
-  );
-  await tester.pumpAndSettle();
-}
-
-Future<void> _settle(WidgetTester tester) async {
-  for (int index = 0; index < 14; index += 1) {
-    await tester.pump(_step);
-  }
-}
-
-Future<void> _openFromShell(
-  WidgetTester tester,
-  Future<String?> Function(BuildContext context, String date) open,
-) async {
-  unawaited(open(tester.element(find.byType(AppShell)), _date));
-  await tester.pump();
-  await tester.pump(_fade);
-  await _settle(tester);
-}
-
-Future<void> _leaveForSettings(WidgetTester tester) async {
-  await tester.tap(find.byKey(recorderInputKey));
-  await tester.pump();
-  await tester.pump();
-  expect(find.byType(InputPanel), findsOneWidget);
-  await tester.tap(find.byKey(voiceSettingsRowKey));
-  await tester.pump();
-  await tester.pump(_fade);
-  await _settle(tester);
-  await tester.pumpAndSettle();
-}
-
 VoiceRecorderSheet _voiceSheet(
   VoiceRecorderPhase phase, {
   VoidCallback? onStart,
@@ -286,7 +218,6 @@ void main() {
           inputProfileTitle,
           inputVolumeTitle,
           outputDeviceTitle,
-          voiceSettingsLabel,
         ]) {
           expect(_panelInkOf(tester, title), ink, reason: '$room $title');
         }
@@ -484,62 +415,4 @@ void main() {
     expect(microphonesOpened, 0);
     await tester.pumpWidget(const SizedBox.shrink());
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
-
-  testWidgets('Voice settings opens the Voice tab on the desktop', (
-    WidgetTester tester,
-  ) async {
-    final SemanticsHandle semantics = tester.ensureSemantics();
-    _desktopView(tester);
-    await _pumpShell(tester, TargetPlatform.macOS);
-    await _openFromShell(tester, showVoiceComposer);
-    expect(find.byType(VoiceComposerConnector), findsOneWidget);
-    expect(find.byKey(voiceRecordButtonKey), findsOneWidget);
-
-    await _leaveForSettings(tester);
-
-    expect(find.byType(VoiceComposerConnector), findsNothing);
-    expect(find.byType(InputPanel), findsNothing);
-    expect(find.byType(SettingsScreen), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(settingsContentTitleKey),
-        matching: find.text('Voice'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      tester.getSemantics(find.byKey(settingsTabKey(SettingsTab.voice))),
-      isSemantics(label: 'Voice', isSelected: true),
-    );
-    final ProviderContainer container = ProviderScope.containerOf(
-      tester.element(find.byType(SettingsScreen)),
-    );
-    expect(container.read(settingsSectionRequestProvider), isNull);
-    semantics.dispose();
-  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
-
-  testWidgets('Voice settings opens the Voice page on the phone', (
-    WidgetTester tester,
-  ) async {
-    _phoneView(tester);
-    await _pumpShell(tester, TargetPlatform.android);
-    await _openFromShell(tester, showVideoComposer);
-    expect(find.byType(VideoComposerConnector), findsOneWidget);
-    expect(find.byKey(videoShutterKey), findsOneWidget);
-
-    await _leaveForSettings(tester);
-
-    expect(find.byType(VideoComposerConnector), findsNothing);
-    expect(find.byType(InputPanel), findsNothing);
-    expect(find.byType(SettingsScreen), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(SettingsPageHeading),
-        matching: find.text('Voice'),
-      ),
-      findsOneWidget,
-    );
-    expect(find.byType(SettingsSectionList), findsNothing);
-    expect(find.text('Input device'), findsOneWidget);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 }

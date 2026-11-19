@@ -11,6 +11,17 @@ import 'package:field_notes/state/settings_providers.dart';
 import 'recorder_inks.dart';
 import 'stage_phase.dart';
 
+int? debugReflectionQuestionIndex;
+
+int? get _debugQuestionIndex {
+  int? index;
+  assert(() {
+    index = debugReflectionQuestionIndex;
+    return true;
+  }());
+  return index;
+}
+
 const List<String> reflectionQuestions = <String>[
   'What’s been on your mind today?',
   'What felt heavier than it needed to?',
@@ -262,7 +273,7 @@ class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
   _FitMemo? _fitMemo;
 
   int _startIndex() {
-    final int? initial = widget.initialIndex;
+    final int? initial = widget.initialIndex ?? _debugQuestionIndex;
     return initial == null
         ? math.Random().nextInt(reflectionQuestions.length)
         : initial % reflectionQuestions.length;

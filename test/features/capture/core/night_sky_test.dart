@@ -20,6 +20,12 @@ void _letTheSkyMove() {
   addTearDown(() => debugNightSkyStill = before);
 }
 
+void _scatterFreely() {
+  final int? before = debugNightSkySeed;
+  debugNightSkySeed = null;
+  addTearDown(() => debugNightSkySeed = before);
+}
+
 Widget _sky({int? seed, bool holdComets = false}) {
   return MaterialApp(
     debugShowCheckedModeBanner: false,
@@ -118,10 +124,26 @@ void main() {
     },
   );
 
+  testWidgets(
+    'a sky with no seed of its own paints the same stars in every test',
+    (WidgetTester tester) async {
+      _useWindow(tester);
+      await tester.pumpWidget(_sky());
+      final List<Offset> first = _paintedStars(tester);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(_sky());
+      final List<Offset> second = _paintedStars(tester);
+
+      expect(first, hasLength(nightSkyStarCount));
+      expect(second, first);
+    },
+  );
+
   testWidgets('each opening scatters the stars anew', (
     WidgetTester tester,
   ) async {
     _useWindow(tester);
+    _scatterFreely();
     await tester.pumpWidget(_sky());
     final List<Offset> first = _paintedStars(tester);
     await tester.pumpWidget(const SizedBox.shrink());
