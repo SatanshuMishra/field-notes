@@ -17,8 +17,16 @@ The words and controls of the video recorder that fade away a few seconds into a
 _Avoid_: Overlay, HUD, controls layer
 
 **Picture fill**:
-The dim, heavily blurred live copy of the camera picture that fills the window behind the whole recorded frame.
-_Avoid_: Letterbox, bands, background
+The dim, heavily blurred live copy of the picture that fills the space around the whole picture, behind the recorded frame in the video recorder and behind the playing video in every video player.
+_Avoid_: Letterbox, bands, background, glow, ambient
+
+**Microphone panel**:
+The drop-down from a recorder's microphone button that chooses the input and shows the level the recorder hears.
+_Avoid_: Mic dropdown, input menu
+
+**Full-window route**:
+A surface that covers the whole window over a backdrop that does nothing when clicked: the voice and video recorders, the note composer, the full view and the photo viewer.
+_Avoid_: Modal, dialog (for these)
 
 **Keep**:
 The act that saves a take as a log.
@@ -53,6 +61,22 @@ _Avoid_: Speaker (for the setting), sink
 **Output volume**:
 The level of everything the app plays, under the system volume.
 _Avoid_: Playback gain
+
+**Waveform**:
+The bars drawn from a saved voice log's stored levels, each as tall as the sound was loud against the loudest moment of that log.
+_Avoid_: Visualiser, spectrum, level meter (the recorders' live meters are separate)
+
+**Full view**:
+The full-window view of one log, opened from a card or the day pop-up, with its own transport and previous and next arrows.
+_Avoid_: Log viewer (to people), lightbox
+
+**Shade**:
+The soft black gradient, eased at both ends, behind the controls over a video, the same in light and dark and fading with the controls.
+_Avoid_: Scrim (for this), fade band, overlay
+
+**Play mark**:
+The circle that swells and fades in the centre of a video after a click, showing the new play state.
+_Avoid_: Flash, toast
 
 ## Days
 
