@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-19T20:57:24.487Z
+Updated: 2026-11-19T20:57:50.890Z
 Next ids: c6 D3 R2 S2
 
 ## Goal
@@ -11,13 +11,13 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 - [x] c1 The owner has picked one of the prototyped versions evidence: Owner picked B (Ink sketch) on 2026-11-19 and asked for its drawing, Mac wind and a blow-away title to be reworked and built; the owner then skipped the title for now and asked for a slower drawing; round two at https://claude.ai/artifact/KMyaKfwrCB2XcdPisHSpU7 now preselects the mix being built: Flower first + Curls, no title, the pen at two thirds of its round-two speed
 - [ ] c2 Opening the app fresh plays the picked animation and fades smoothly into Today (or wherever the app opens), with Today built underneath and ready when it shows
-- [ ] c3 Returning to the app from the background and the very first launch with onboarding play no animation
-- [ ] c4 A tap, click or any key skips to Today within a quarter of a second, and with reduce motion on the peony shows still before a short crossfade
+- [x] c3 Returning to the app from the background and the very first launch with onboarding play no animation evidence: on main via #393: test/app/opening_start_test.dart decides the opening once per program start at the entry point and skips it when onboarding shows; all 42 spec checks pass on the merged tree
+- [x] c4 A tap, click or any key skips to Today within a quarter of a second, and with reduce motion on the peony shows still before a short crossfade evidence: on main via #393: test/features/opening/opening_cover_test.dart and its clock-step and decision-arrival tests pass for tap, click and key skips within 0.25 s and the reduce-motion still drawing then 0.3 s crossfade
 - [ ] c5 Android's launch screen and the Mac window open on the paper colour, so no white flash appears before the peony
 
 ## Where things stand
 
-The opening is on main through pull request #393, and the drive holds the run for clean-up. Its five opening test files, all 42 spec checks, pass on that tree. The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
+The opening is on main through pull request #393 and its pipeline run is cleaned up. What stays open is the VM lab pass on a debug build of main: the opening plays smoothly into Today (c2) and Android, macOS and Windows open on the paper colour with no flash (c5). The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
 
 ## Next step
 
@@ -42,7 +42,6 @@ Needs: R1.
 - Prototype page: https://claude.ai/artifact/Q71f1M1joThu2rWHkUC6k6 holds the four versions, their timings and the shared defaults
 - Round two: https://claude.ai/artifact/KMyaKfwrCB2XcdPisHSpU7 is the reference engine for the build (visible-arc pen schedule, blob washes, plant-unit curl ribbons, slower pen timings)
 - Build spec: docs/specs/peony-opening.md with its .record.json, .items.json, .decisions.md and .mock/ frames and prototype copy; glossary term Opening in GLOSSARY.md and docs/adr/0012-decide-the-opening-once-per-program-start-at-the-entry-point.md
-- Run facts: ~/.mitosis/fireplace/peony-opening/facts.json
 - Peony art: lib/design/flowers/garden_plant_geometry.dart (peonyPlantParts) and lib/design/flowers/petal_art.dart (drift petal)
 - App root and start-up wait: lib/app/app.dart; similar splash: lib/features/updates/ui/update_restart_splash.dart
 - Android launch screen: android/app/src/main/res/drawable/launch_background.xml and values/styles.xml
