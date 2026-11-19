@@ -615,16 +615,23 @@ class VideoSkipLabel extends StatelessWidget {
         ),
       ),
     );
-    return ExcludeSemantics(
-      child: still
-          ? face
-          : TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0, end: 1),
-              duration: _skipLabelHold,
-              builder: (BuildContext context, double progress, Widget? child) =>
-                  Opacity(opacity: _opacityAt(progress), child: child),
-              child: face,
-            ),
+    return Semantics(
+      liveRegion: true,
+      label: text,
+      child: ExcludeSemantics(
+        child: still
+            ? face
+            : TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0, end: 1),
+                duration: _skipLabelHold,
+                builder: (
+                  BuildContext context,
+                  double progress,
+                  Widget? child,
+                ) => Opacity(opacity: _opacityAt(progress), child: child),
+                child: face,
+              ),
+      ),
     );
   }
 }
