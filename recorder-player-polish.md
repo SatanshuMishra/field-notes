@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
-Status: parked
-Updated: 2026-11-19T07:24:20.567Z
+Status: done
+Updated: 2026-11-19T07:24:21.452Z
 Next ids: c9 D8 R2 S1
 
 ## Goal
