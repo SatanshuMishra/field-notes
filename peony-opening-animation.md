@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T10:32:32.704Z
+Updated: 2026-11-19T10:32:45.102Z
 Next ids: c6 D3 R2 S1
 
 ## Goal
@@ -17,11 +17,13 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Where things stand
 
-The retimed, title-free spec docs/specs/peony-opening.md passes interphase's checks and is with the spec reviewer. The first run, with the title and the faster pen, is stopped; its pushed branch feat/peony-opening-animation and run home ~/.mitosis/fireplace/peony-opening-animation remain.
+The retimed, title-free spec docs/specs/peony-opening.md is reviewed and handed off; its run under slug peony-opening is being set up. The first run, with the title and the faster pen, is stopped; its pushed branch feat/peony-opening-animation and run home ~/.mitosis/fireplace/peony-opening-animation remain.
 
 ## Next step
 
-When the spec reviewer reports, apply its blockers to docs/specs/peony-opening.md, hand it off, and start a new standard-lane drive under slug peony-opening.
+Run pipeline setup and drive start for slug peony-opening, then wait for the drive to rest.
+
+Needs: D2.
 
 ## Decisions in force
 
