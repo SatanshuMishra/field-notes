@@ -6,6 +6,26 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-11-19
+
+This release smooths out recording and playback: videos sit in a soft glow of their own colours, every voice player looks and works the same, and clicking empty space stays silent.
+
+### Improved
+
+- Videos show their whole picture, and the space around a video that doesn't fill its window glows softly with the video's own colours instead of black. With reduced motion on, that space stays dark.
+- Video controls are white over a soft dark shade that fades into the picture, in light and dark. The previous and next arrows are round buttons.
+- Video controls hide 3 seconds after you stop moving the pointer, or 4 seconds after a tap on a touch screen. Clicking the picture plays or pauses it and briefly shows a mark in the middle, and skipping with the keyboard shows a short label.
+- On Android, a video's times and speed sit just above its play buttons.
+- In a wide window on Mac and Windows, Settings keeps a comfortable reading width and sits centred beside its sections.
+- Saved voice notes draw their waveform by how loudly you spoke, so quiet and loud moments look different. Voice notes you already have are drawn this way too.
+- A voice note in an earlier day's window plays with the same player as on Today and in the full view, and follows your light or dark theme.
+- The microphone menu in the voice and video recorders shows your input level as soon as it opens. Its Voice settings entry is gone; those settings are still in Settings.
+
+### Fixed
+
+- Clicking empty space in the voice or video recorder, the note editor or the viewers no longer plays the system's "not allowed" sound.
+- The full-screen button in the full view, and the F key, now make Field Notes full screen on Mac and Windows. Press the button again or Esc to go back to the window. On Android the button is no longer shown.
+
 ## [1.9.0] - 2026-11-11
 
 This release lets you choose when Field Notes reminds you, keeps your notes syncing on their own, and adds a quiet night sky behind your notes.
