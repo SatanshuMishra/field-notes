@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-19T19:44:52.877Z
+Updated: 2026-11-19T19:45:05.586Z
 Next ids: c6 D3 R2 S2
 
 ## Goal
@@ -17,7 +17,7 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Where things stand
 
-The owner merged pull request #392 into feat/peony-opening on 2026-11-19, and the drive took the merged event: it bumps the version and opens the FEATURE pull request into main. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
+Pull request #392 is merged into feat/peony-opening and the drive holds the run: it bumps the version and opens the FEATURE pull request into main. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
 
 ## Next step
 
