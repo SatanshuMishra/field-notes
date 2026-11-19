@@ -1,7 +1,7 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-18T23:32:51.613Z
-Next ids: c9 D6 R2 S1
+Updated: 2026-11-19T00:01:22.436Z
+Next ids: c9 D7 R2 S1
 
 ## Goal
 
@@ -20,13 +20,11 @@ Fix eight owner-reported issues across the settings page, the voice and video re
 
 ## Where things stand
 
-The interview is finished: the owner approved round 2, chose a video-coloured blurred surround instead of flat black, and told the run to proceed autonomously, so the run is unattended. The Watch19, FadeLine19 and VideoFit19 boards show the approved video experience, surround included. docs/specs/recorder-player-polish.md holds the problem, user stories, decisions and out of scope; its criteria, Steps, assumptions and risks wait on two code fact sheets (items a to f, and the video viewer).
+The run is unattended. The spec and its items file are written and rendered: 12 criteria, two of them unproven and left to lab checks, and 10 Steps in five pull requests; every surface probe, the feasibility check and the complete record check pass, and the spec reviewer's one pass is under way.
 
 ## Next step
 
-When both code fact sheets report, write the criteria, test rows and Steps for items a to g into docs/specs/recorder-player-polish.record.json, run the probes, feasibility and complete checks, then finish, review and hand off the spec.
-
-Needs: D2, D3, D4, D5.
+When the spec reviewer reports, fix each real issue once, re-render and rerun the spec and items checks, then hand off: glossary and ADRs, the guard verify, delete the guard file and set the record handed-off; then record the hand-off decision and set up and start the pipeline drive.
 
 ## Decisions in force
 
@@ -35,6 +33,7 @@ Needs: D2, D3, D4, D5.
 - D3 Item g covers the whole video viewing experience: the space around a picture whose shape does not fit, the controls' look and feel, hover and idle animations, and how play and pause feel.
 - D4 The spare space around a fitted video glows with a dim, heavily blurred live copy of the video, through the recorder's existing CameraPictureStage, as YouTube's ambient mode fills it.
 - D5 One-time test for this run only: once the MSP pull requests are merged into the FEATURE branch and before the drive's product test runs, drive the FEATURE build in Flutter's headless mode (no VM) for every changed surface, send only what headless cannot reach to the VM lab, and report what headless covered; the lighthouse profile and every rule stay unchanged.
+- D6 Items a to e each ship as their own pull request; f ships with g in one, because their existing tests share the day window's test files, as the owner allowed.
 
 ## Open risks
 
