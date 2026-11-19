@@ -6,10 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/data/sync/background/sync_availability.dart';
+import 'package:field_notes/design/tokens/field_notes_colors.dart';
 import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
 import 'package:field_notes/features/onboarding/onboarding.dart';
+import 'package:field_notes/features/opening/opening_cover.dart';
+import 'package:field_notes/features/opening/opening_providers.dart';
 import 'package:field_notes/features/sound/output_route.dart';
 import 'package:field_notes/features/updates/ui/update_restart_splash.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -30,13 +33,18 @@ Future<FieldNotesApp> fieldNotesAppForThisDevice() async {
   final bool syncAvailable = await syncAvailableOnThisDevice(
     platform: defaultTargetPlatform,
   );
-  return FieldNotesApp(syncAvailable: syncAvailable);
+  return FieldNotesApp(syncAvailable: syncAvailable, playsOpening: true);
 }
 
 class FieldNotesApp extends StatelessWidget {
-  const FieldNotesApp({super.key, this.syncAvailable = true});
+  const FieldNotesApp({
+    super.key,
+    this.syncAvailable = true,
+    this.playsOpening = false,
+  });
 
   final bool syncAvailable;
+  final bool playsOpening;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +53,7 @@ class FieldNotesApp extends StatelessWidget {
       overrides: [
         captureRoutesProvider.overrideWithValue(appCaptureRoutes),
         syncAvailableProvider.overrideWithValue(syncAvailable),
+        playsOpeningProvider.overrideWithValue(playsOpening),
       ],
       child: const _ThemedApp(),
     );
@@ -52,7 +61,7 @@ class FieldNotesApp extends StatelessWidget {
 
   static Widget _appBuilder(BuildContext context, Widget? child) {
     final Widget scaled = AppTextScale(
-      child: UpdateRestartCover(child: child!),
+      child: UpdateRestartCover(child: OpeningCover(child: child!)),
     );
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemBarsOver(Theme.of(context).brightness),
@@ -118,7 +127,13 @@ class _ThemedAppState extends ConsumerState<_ThemedApp> {
   @override
   Widget build(BuildContext context) {
     if (!_settingsReady) {
-      return const SizedBox.shrink();
+      final Color paper = switch (View.of(context)
+          .platformDispatcher
+          .platformBrightness) {
+        Brightness.dark => FieldNotesColors.dark.panelTop,
+        Brightness.light => FieldNotesColors.light.panelTop,
+      };
+      return ColoredBox(color: paper, child: const SizedBox.expand());
     }
     return MaterialApp(
       title: 'Field Notes',

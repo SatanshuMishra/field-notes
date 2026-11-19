@@ -62,7 +62,7 @@ class BloomPartPainter {
           );
         }
       case BloomShape():
-        final Path path = _shapePath(part);
+        final Path path = bloomShapePath(part);
         if (fill != null) {
           canvas.drawPath(path, fill);
         }
@@ -95,33 +95,6 @@ class BloomPartPainter {
     canvas.restore();
   }
 
-  Path _shapePath(BloomShape shape) {
-    final Path path = Path();
-    for (final BloomCmd cmd in shape.commands) {
-      switch (cmd) {
-        case BloomMoveTo():
-          path.moveTo(cmd.x, cmd.y);
-        case BloomLineTo():
-          path.lineTo(cmd.x, cmd.y);
-        case BloomQuadTo():
-          path.quadraticBezierTo(cmd.cx, cmd.cy, cmd.x, cmd.y);
-        case BloomCubicTo():
-          path.cubicTo(cmd.c1x, cmd.c1y, cmd.c2x, cmd.c2y, cmd.x, cmd.y);
-        case BloomArcTo():
-          path.arcToPoint(
-            Offset(cmd.x, cmd.y),
-            radius: Radius.elliptical(cmd.rx, cmd.ry),
-            largeArc: cmd.largeArc,
-            clockwise: cmd.clockwise,
-          );
-      }
-    }
-    if (shape.close) {
-      path.close();
-    }
-    return path;
-  }
-
   Color _tint(Color color) {
     final Color Function(Color)? map = recolour;
     return map == null ? color : map(color);
@@ -131,4 +104,31 @@ class BloomPartPainter {
     ..color = color
     ..style = PaintingStyle.fill
     ..isAntiAlias = true;
+}
+
+Path bloomShapePath(BloomShape shape) {
+  final Path path = Path();
+  for (final BloomCmd cmd in shape.commands) {
+    switch (cmd) {
+      case BloomMoveTo():
+        path.moveTo(cmd.x, cmd.y);
+      case BloomLineTo():
+        path.lineTo(cmd.x, cmd.y);
+      case BloomQuadTo():
+        path.quadraticBezierTo(cmd.cx, cmd.cy, cmd.x, cmd.y);
+      case BloomCubicTo():
+        path.cubicTo(cmd.c1x, cmd.c1y, cmd.c2x, cmd.c2y, cmd.x, cmd.y);
+      case BloomArcTo():
+        path.arcToPoint(
+          Offset(cmd.x, cmd.y),
+          radius: Radius.elliptical(cmd.rx, cmd.ry),
+          largeArc: cmd.largeArc,
+          clockwise: cmd.clockwise,
+        );
+    }
+  }
+  if (shape.close) {
+    path.close();
+  }
+  return path;
 }
