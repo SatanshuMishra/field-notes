@@ -98,6 +98,7 @@ final class VideoControlsState {
     this.mediaPath,
     this.onSkip,
     this.showsPicture = false,
+    this.showsNotice = false,
   });
 
   final bool ready;
@@ -116,6 +117,7 @@ final class VideoControlsState {
   final String? mediaPath;
   final ValueChanged<Duration>? onSkip;
   final bool showsPicture;
+  final bool showsNotice;
 
   TransportValue get transport => TransportValue(
     position: position,
@@ -145,7 +147,8 @@ final class VideoControlsState {
       identical(other.tuning, tuning) &&
       other.mediaPath == mediaPath &&
       other.onSkip == onSkip &&
-      other.showsPicture == showsPicture;
+      other.showsPicture == showsPicture &&
+      other.showsNotice == showsNotice;
 
   @override
   int get hashCode => Object.hash(
@@ -165,6 +168,7 @@ final class VideoControlsState {
     mediaPath,
     onSkip,
     showsPicture,
+    showsNotice,
   );
 }
 
@@ -758,6 +762,14 @@ class _VideoBodyState extends State<VideoBody> {
 
   bool get _hasCapturedPoster => widget.entry.thumbnailMediaId != null;
 
+  bool get _showsUnavailable => _phase == _VideoPhase.unavailable;
+
+  bool get _showsDownloadStatus =>
+      !_isRenderingVideo && (_download != null || _downloaded);
+
+  bool get _showsNotice =>
+      _showsUnavailable || _showsDownloadStatus || _claimDenied;
+
   bool get _loadingPicture =>
       !_isRenderingVideo &&
       _download == null &&
@@ -945,6 +957,7 @@ class _VideoBodyState extends State<VideoBody> {
       mediaPath: _mediaFile?.path,
       onSkip: ready ? _skip : null,
       showsPicture: _isRenderingVideo,
+      showsNotice: _showsNotice,
     );
   }
 
@@ -1041,7 +1054,7 @@ class _VideoBodyState extends State<VideoBody> {
   }
 
   Widget _frame() {
-    if (_phase == _VideoPhase.unavailable) {
+    if (_showsUnavailable) {
       return CorruptMediaPlaceholder(
         label: "Can't play this video",
         borderRadius: BorderRadius.zero,
@@ -1055,7 +1068,7 @@ class _VideoBodyState extends State<VideoBody> {
     return <Widget>[
       if (_loadingPicture)
         const Center(child: VideoLoadingRing(key: videoLoadingRingKey)),
-      if (!_isRenderingVideo && (_download != null || _downloaded))
+      if (_showsDownloadStatus)
         _VideoDownloadStatus(
           progress: _download,
           durationMs: widget.entry.durationMs,

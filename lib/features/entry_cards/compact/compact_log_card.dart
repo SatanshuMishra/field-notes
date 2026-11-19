@@ -1395,6 +1395,13 @@ class _CardVideoState extends State<_CardVideo> {
         : _narrowPosterWidth;
   }
 
+  bool _coverShown(VideoControlsState? state) {
+    if (!_started || state == null) {
+      return true;
+    }
+    return !state.showsPicture && !state.showsNotice;
+  }
+
   Widget _cover(bool started) {
     return IgnorePointer(
       ignoring: started,
@@ -1477,7 +1484,7 @@ class _CardVideoState extends State<_CardVideo> {
               fit: StackFit.expand,
               children: <Widget>[
                 if (_started) _stage(),
-                if (!(state?.showsPicture ?? false)) _cover(_started),
+                if (_coverShown(state)) _cover(_started),
                 IgnorePointer(
                   child: ValueListenableBuilder<bool>(
                     valueListenable: _posterHovered,
