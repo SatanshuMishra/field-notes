@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: parked
-Updated: 2026-11-19T07:13:01.501Z
+Updated: 2026-11-19T07:23:14.937Z
 Next ids: c9 D8 R2 S1
 
 ## Goal
@@ -24,9 +24,7 @@ The run is unattended. The interphase package is handed off: 12 criteria, two of
 
 ## Next step
 
-The drive entered draft-pr and the run has ended: draft FEATURE pull request #389, unmet check U1 (five golden tests that fail the same way on main on this Mac). Before the owner merges it, remove the 28 golden failure images and the three generated-hash changes commit a042d924 added to fix/recorder-player-polish; after the owner merges, send pipeline drive event --name feature-merged to run clean-up.
-
-Needs: D5.
+The drive entered clean-up and runs it next.
 
 ## Decisions in force
 
