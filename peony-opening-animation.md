@@ -1,7 +1,7 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T10:12:28.309Z
-Next ids: c6 D2 R2 S1
+Updated: 2026-11-19T10:32:32.704Z
+Next ids: c6 D3 R2 S1
 
 ## Goal
 
@@ -25,7 +25,7 @@ When the spec reviewer reports, apply its blockers to docs/specs/peony-opening.m
 
 ## Decisions in force
 
-- D1 hand-off: build the opening through the standard-lane pipeline drive: Hand the spec to the pipeline drive; the owner merges the resulting pull request.
+- D2 hand-off: build the retimed, title-free opening as a new standard-lane drive under slug peony-opening: Start a new standard-lane drive under slug peony-opening from docs/specs/peony-opening.md; the owner merges the resulting pull request. The stopped run's branch and run home stay until the owner says to clean them up.
 
 ## Open risks
 
