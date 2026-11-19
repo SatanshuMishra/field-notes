@@ -42,6 +42,32 @@ double _seconds(Duration duration) =>
 double _share(Duration elapsed, Duration span) =>
     (elapsed.inMicroseconds / span.inMicroseconds).clamp(0.0, 1.0).toDouble();
 
+sealed class _Arrival {
+  const _Arrival({required this.measured, required this.frameBefore});
+
+  final Duration measured;
+  final Duration frameBefore;
+
+  bool get landedOnFrame => measured == frameBefore;
+
+  Duration settledBy(Duration frameAfter) =>
+      measured <= frameAfter ? measured : frameBefore;
+}
+
+final class _SkipArrival extends _Arrival {
+  const _SkipArrival({required super.measured, required super.frameBefore});
+}
+
+final class _DecisionArrival extends _Arrival {
+  const _DecisionArrival({
+    required this.visibility,
+    required super.measured,
+    required super.frameBefore,
+  });
+
+  final OnboardingVisibility visibility;
+}
+
 class OpeningCover extends ConsumerStatefulWidget {
   const OpeningCover({super.key, required this.child});
 
@@ -61,6 +87,7 @@ class _OpeningCoverState extends ConsumerState<OpeningCover>
   Duration? _openingAt;
   Duration? _exitAt;
   bool _decided = false;
+  List<_Arrival> _unsettled = const <_Arrival>[];
   ProviderSubscription<AsyncValue<OnboardingVisibility>>? _gate;
   bool _handlesKeys = false;
   Set<PhysicalKeyboardKey> _heldKeys = const <PhysicalKeyboardKey>{};
@@ -118,7 +145,51 @@ class _OpeningCoverState extends ConsumerState<OpeningCover>
     if (_exitAt != null || _gone) {
       return;
     }
-    final Duration arrival = _arrival;
+    _receive(
+      _DecisionArrival(
+        visibility: visibility,
+        measured: _measuredArrival,
+        frameBefore: _now,
+      ),
+    );
+  }
+
+  void _skip() {
+    if (_exitAt != null || _gone) {
+      return;
+    }
+    _receive(_SkipArrival(measured: _measuredArrival, frameBefore: _now));
+  }
+
+  void _receive(_Arrival arrival) {
+    if (_unsettled.isEmpty && arrival.landedOnFrame) {
+      _apply(arrival, arrival.measured);
+      return;
+    }
+    _unsettled = <_Arrival>[..._unsettled, arrival];
+  }
+
+  void _settleArrivals(Duration frameAfter) {
+    final List<_Arrival> unsettled = _unsettled;
+    _unsettled = const <_Arrival>[];
+    for (final _Arrival arrival in unsettled) {
+      _apply(arrival, arrival.settledBy(frameAfter));
+    }
+  }
+
+  void _apply(_Arrival arrival, Duration at) {
+    if (_exitAt != null || _gone) {
+      return;
+    }
+    switch (arrival) {
+      case _SkipArrival():
+        _exitAt = at;
+      case _DecisionArrival(:final OnboardingVisibility visibility):
+        _applyDecision(visibility, at);
+    }
+  }
+
+  void _applyDecision(OnboardingVisibility visibility, Duration arrival) {
     switch (visibility) {
       case OnboardingVisibility.hidden when arrival < _decisionWait:
         _openingAt = arrival;
@@ -129,14 +200,7 @@ class _OpeningCoverState extends ConsumerState<OpeningCover>
     }
   }
 
-  void _skip() {
-    if (_exitAt != null || _gone) {
-      return;
-    }
-    _exitAt = _arrival;
-  }
-
-  Duration get _arrival {
+  Duration get _measuredArrival {
     final DateTime? clockAtTickerZero = _clockAtTickerZero;
     if (clockAtTickerZero == null) {
       return _now;
@@ -163,6 +227,7 @@ class _OpeningCoverState extends ConsumerState<OpeningCover>
   }
 
   void _onTick(Duration elapsed) {
+    _settleArrivals(elapsed);
     _now = elapsed;
     _clockAtTickerZero = clock.now().subtract(elapsed);
     final Duration? exitAt = _exitAt;
