@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/video/camera_picture_fill.dart'
+    show cameraPictureKey;
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
@@ -155,7 +157,7 @@ void main() {
     expect(find.byType(VideoBody), findsOneWidget);
     expect(tester.widget<VideoBody>(find.byType(VideoBody)).slots, same(slots));
     expect(find.byType(CorruptMediaPlaceholder), findsNothing);
-    expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
+    expect(find.byType(NeutralMediaPlaceholder), findsNothing);
     expect(playersBuilt, 0);
   });
 
@@ -198,7 +200,10 @@ void main() {
     expect(built, hasLength(1));
     expect(built.single.loadCalls, <String>[file.path]);
     expect(
-      find.byKey(const ValueKey<String>('fake-video-surface')),
+      find.descendant(
+        of: find.byKey(cameraPictureKey),
+        matching: find.byKey(const ValueKey<String>('fake-video-surface')),
+      ),
       findsOneWidget,
     );
   });

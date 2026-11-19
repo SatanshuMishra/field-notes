@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -11,30 +10,15 @@ import 'package:field_notes/features/entry_cards/playback/audio_playback.dart';
 import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
 import 'package:field_notes/features/entry_cards/playback/voice_playback.dart';
 import 'package:field_notes/features/entry_cards/transport/transport.dart';
-import 'package:field_notes/features/entry_cards/util/duration_format.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart'
     show LogViewerPlace;
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
-import 'package:field_notes/features/log_viewer/viewer_waveform.dart';
 
 const String _unavailableLabel = "Can't play this recording";
 
-const Duration _seekStep = Duration(seconds: 5);
-
-const double _totalSize = 17;
-const double _totalAlpha = 0.6;
-
 const Alignment _unavailableAlignment = Alignment(0, -0.45);
 const EdgeInsets _unavailablePadding = EdgeInsets.symmetric(horizontal: 72);
-
-const double _embeddedWaveMaxWidth = 720;
-const double _embeddedWaveHeight = 140;
-const double _embeddedWaveSide = 28;
-const double _embeddedElapsedSize = 44;
-const double _embeddedPrimary = 56;
-const double _embeddedGap = 18;
-const EdgeInsets _embeddedPadding = EdgeInsets.symmetric(vertical: 24);
 
 class VoicePlayerView extends StatefulWidget {
   const VoicePlayerView({
@@ -123,17 +107,11 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
     }
   }
 
-  String _positionPhrase(Duration position) =>
-      '${formatMediaDuration(position.inMilliseconds)}'
-      ' of ${formatMediaDuration(_playback.total.inMilliseconds)}';
-
   @override
   Widget build(BuildContext context) {
     final LogViewerScene scene = widget.scene;
-    final VoicePlayback playback = _playback;
-    final VoidCallback? toggle = playback.ready ? playback.toggle : null;
     if (widget.embedded) {
-      return ViewerKeys(onSpace: toggle, child: _embeddedPlayer(toggle));
+      return _transportOnly(context);
     }
     return ViewerKeys(
       autofocus: false,
@@ -146,63 +124,6 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
         onSwipePrevious: scene.onEarlier,
         child: _viewerPlayer(context),
       ),
-    );
-  }
-
-  Widget _media(double height) {
-    final VoicePlayback playback = _playback;
-    if (playback.unavailable) {
-      return SizedBox(
-        height: height,
-        child: Center(
-          child: Text(
-            _unavailableLabel,
-            textAlign: TextAlign.center,
-            style: context.textStyles.captionSans.copyWith(
-              color: Palette.mediaInk,
-            ),
-          ),
-        ),
-      );
-    }
-    final bool ready = playback.ready;
-    return ViewerWaveform(
-      peaks: widget.scene.entry.peaks,
-      progress: playback.progress,
-      active: playback.isActive,
-      height: height,
-      onSeek: ready ? playback.seekToFraction : null,
-      semanticValue: _positionPhrase(playback.position),
-      increasedValue: _positionPhrase(playback.stepped(_seekStep)),
-      decreasedValue: _positionPhrase(playback.stepped(-_seekStep)),
-      onIncrease: ready ? () => playback.seekBy(_seekStep) : null,
-      onDecrease: ready ? () => playback.seekBy(-_seekStep) : null,
-    );
-  }
-
-  Widget _elapsed(double size) {
-    final VoicePlayback playback = _playback;
-    final TextStyle elapsed = context.textStyles.displaySerif.copyWith(
-      fontSize: size,
-      color: Palette.mediaInk,
-      fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
-    );
-    return Text.rich(
-      TextSpan(
-        text: formatMediaDuration(playback.position.inMilliseconds),
-        style: elapsed,
-        children: <InlineSpan>[
-          TextSpan(
-            text: ' / ${formatMediaDuration(playback.total.inMilliseconds)}',
-            style: elapsed.copyWith(
-              fontSize: _totalSize,
-              color: Palette.mediaInk.withValues(alpha: _totalAlpha),
-            ),
-          ),
-        ],
-      ),
-      maxLines: 1,
-      softWrap: false,
     );
   }
 
@@ -228,20 +149,7 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
             fullScreen: scene.fullScreen,
           ),
         ),
-        if (playback.unavailable)
-          Align(
-            alignment: _unavailableAlignment,
-            child: Padding(
-              padding: _unavailablePadding,
-              child: Text(
-                _unavailableLabel,
-                textAlign: TextAlign.center,
-                style: context.textStyles.captionSans.copyWith(
-                  color: context.colors.ink,
-                ),
-              ),
-            ),
-          ),
+        if (playback.unavailable) _unavailableNotice(context),
         ViewerFullScreenHide(
           fullScreen: scene.fullScreen,
           child: Stack(
@@ -259,42 +167,37 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
     );
   }
 
-  Widget _embeddedPlayer(VoidCallback? toggle) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final double waveWidth = math.min(
-          _embeddedWaveMaxWidth,
-          math.max(0.0, constraints.maxWidth - _embeddedWaveSide * 2),
-        );
-        return ClipRect(
-          child: OverflowBox(
-            minHeight: 0,
-            maxHeight: double.infinity,
-            alignment: Alignment.center,
-            child: Padding(
-              padding: _embeddedPadding,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  SizedBox(
-                    width: waveWidth,
-                    height: _embeddedWaveHeight,
-                    child: _media(_embeddedWaveHeight),
-                  ),
-                  const SizedBox(height: _embeddedGap),
-                  _elapsed(_embeddedElapsedSize),
-                  const SizedBox(height: _embeddedGap),
-                  ViewerPrimaryButton(
-                    playing: _playback.isPlaying,
-                    diameter: _embeddedPrimary,
-                    onPressed: toggle,
-                  ),
-                ],
-              ),
-            ),
+  Widget _transportOnly(BuildContext context) {
+    final VoicePlayback playback = _playback;
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        Transport(
+          kind: TransportKind.voice,
+          mode: TransportMode.viewer,
+          value: voiceTransportValue(playback),
+          peaks: widget.scene.entry.peaks,
+          tuning: playback.tuning,
+          autofocus: true,
+        ),
+        if (playback.unavailable) _unavailableNotice(context),
+      ],
+    );
+  }
+
+  Widget _unavailableNotice(BuildContext context) {
+    return Align(
+      alignment: _unavailableAlignment,
+      child: Padding(
+        padding: _unavailablePadding,
+        child: Text(
+          _unavailableLabel,
+          textAlign: TextAlign.center,
+          style: context.textStyles.captionSans.copyWith(
+            color: context.colors.ink,
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

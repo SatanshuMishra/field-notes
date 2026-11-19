@@ -15,7 +15,14 @@ import 'transport_bar.dart';
 import 'transport_keys.dart';
 import 'transport_timeline.dart';
 
-export 'transport_bar.dart' show TransportValue, transportReadoutHold;
+export 'transport_bar.dart'
+    show
+        TransportValue,
+        VideoChrome,
+        transportReadoutHold,
+        videoChromeColors,
+        videoChromeEdge,
+        videoChromeInk;
 
 enum TransportKind { video, voice }
 
@@ -23,6 +30,71 @@ enum TransportMode { card, viewer }
 
 const String transportVideoPositionLabel = 'Video position';
 const Key transportVideoTimelineKey = ValueKey<String>('video-scrub-bar');
+const Key videoSkipLabelKey = ValueKey<String>('video-skip-label');
+const Key videoBottomShadeKey = ValueKey<String>('video-bottom-shade');
+
+const double videoShadeFullHeight = 168;
+const double videoShadeDayHeight = 132;
+const double videoBottomShadePeak = 0.72;
+const Color _shadeBlack = Color(0xFF000000);
+const int _shadeSteps = 16;
+const EdgeInsets _viewerVideoDayPadding = EdgeInsets.fromLTRB(24, 72, 24, 6);
+
+double videoShadeAt(
+  double distance, {
+  required double height,
+  required double peak,
+}) {
+  final double t = (distance / height).clamp(0.0, 1.0);
+  return peak * (1 - t * t * (3 - 2 * t));
+}
+
+LinearGradient videoShadeGradient({
+  required bool fromTop,
+  required double peak,
+}) {
+  return LinearGradient(
+    begin: fromTop ? Alignment.topCenter : Alignment.bottomCenter,
+    end: fromTop ? Alignment.bottomCenter : Alignment.topCenter,
+    colors: <Color>[
+      for (int step = 0; step <= _shadeSteps; step += 1)
+        _shadeBlack.withValues(
+          alpha: videoShadeAt(step / _shadeSteps, height: 1, peak: peak),
+        ),
+    ],
+    stops: <double>[
+      for (int step = 0; step <= _shadeSteps; step += 1) step / _shadeSteps,
+    ],
+  );
+}
+
+class VideoShade extends StatelessWidget {
+  const VideoShade({
+    super.key,
+    required this.height,
+    required this.peak,
+    required this.fromTop,
+  });
+
+  final double height;
+  final double peak;
+  final bool fromTop;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: SizedBox(
+        height: height,
+        width: double.infinity,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: videoShadeGradient(fromTop: fromTop, peak: peak),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 const double _railTimelineHeight = 24;
 const double _viewerVoiceHeight = 128;
@@ -30,8 +102,18 @@ const double _viewerVoiceCompactHeight = 112;
 const double _timelineGap = 4;
 const double _viewerVoiceGap = 16;
 const double _viewerVoiceMaxWidth = 880;
-const double _fadeStop = 0.62;
 const Alignment _readoutAlignment = Alignment(0, -0.08);
+const Alignment _skipLabelAlignment = Alignment(0, -0.6);
+const Duration _skipLabelHold = Duration(milliseconds: 1200);
+const double _skipLabelFadeFrom = 0.5;
+const Color _skipLabelFace = Color(0x80000000);
+const Color _skipLabelInk = Color(0xFFFFFFFF);
+const EdgeInsets _skipLabelPadding = EdgeInsets.symmetric(
+  horizontal: 14,
+  vertical: 8,
+);
+const BorderRadius _skipLabelRadius = BorderRadius.all(Radius.circular(18));
+const double _skipLabelFontSize = 15;
 const EdgeInsets _viewerVideoPadding = EdgeInsets.fromLTRB(24, 72, 24, 16);
 const double _fitSidePadding = 24;
 const double _fitNarrowSidePadding = 16;
@@ -56,6 +138,12 @@ const EdgeInsets _viewerVoiceCompactPadding = EdgeInsets.fromLTRB(
 String transportSeekReadout(Duration delta) =>
     '${delta.isNegative ? '-' : '+'}${delta.inSeconds.abs()} s';
 
+String transportSkipLabel(Duration delta) {
+  final int seconds = delta.inSeconds.abs();
+  final String unit = seconds == 1 ? 'second' : 'seconds';
+  return '${delta.isNegative ? 'Back' : 'Forward'} $seconds $unit';
+}
+
 class TransportActivityNotification extends Notification {
   const TransportActivityNotification();
 }
@@ -78,6 +166,7 @@ class Transport extends StatefulWidget {
     this.onBack,
     this.backLabel = 'Back',
     this.onMore,
+    this.videoShadeHeight = videoShadeFullHeight,
   });
 
   final TransportKind kind;
@@ -95,6 +184,7 @@ class Transport extends StatefulWidget {
   final VoidCallback? onBack;
   final String backLabel;
   final VoidCallback? onMore;
+  final double videoShadeHeight;
 
   @override
   State<Transport> createState() => _TransportState();
@@ -134,7 +224,10 @@ class _TransportState extends State<Transport> {
       _readout = text;
       _readoutSerial += 1;
     });
-    _readoutTimer = Timer(transportReadoutHold, _clearReadout);
+    _readoutTimer = Timer(
+      _isVideo ? _skipLabelHold : transportReadoutHold,
+      _clearReadout,
+    );
   }
 
   void _clearReadout() {
@@ -156,7 +249,7 @@ class _TransportState extends State<Transport> {
 
   void _seekBy(Duration delta) {
     _seekTo(widget.value.position + delta);
-    _flash(transportSeekReadout(delta));
+    _flash(_isVideo ? transportSkipLabel(delta) : transportSeekReadout(delta));
   }
 
   void _seekToShare(double share) {
@@ -341,13 +434,22 @@ class _TransportState extends State<Transport> {
     return _Fit.bare;
   }
 
+  EdgeInsets _viewerVideoInsets(bool compact, _Fit fit) {
+    if (compact) {
+      return _viewerVideoCompactPadding;
+    }
+    final EdgeInsets base = widget.videoShadeHeight < videoShadeFullHeight
+        ? _viewerVideoDayPadding
+        : _viewerVideoPadding;
+    return base.copyWith(left: fit.sidePadding, right: fit.sidePadding);
+  }
+
   Widget _viewerVideo(
     BuildContext context,
     Widget track,
     bool compact,
     _Fit fit,
   ) {
-    final FieldNotesColors colors = context.colors;
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
@@ -355,24 +457,20 @@ class _TransportState extends State<Transport> {
           left: 0,
           right: 0,
           bottom: 0,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: <Color>[colors.viewerFadeStart, colors.viewerFadeEnd],
-                stops: const <double>[0, _fadeStop],
-              ),
-            ),
-            child: Padding(
-              padding: compact
-                  ? _viewerVideoCompactPadding
-                  : _viewerVideoPadding.copyWith(
-                      left: fit.sidePadding,
-                      right: fit.sidePadding,
-                    ),
-              child: track,
-            ),
+          child: VideoShade(
+            key: videoBottomShadeKey,
+            height: widget.videoShadeHeight,
+            peak: videoBottomShadePeak,
+            fromTop: false,
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: Padding(
+            padding: _viewerVideoInsets(compact, fit),
+            child: track,
           ),
         ),
         ..._readoutLayer(),
@@ -408,10 +506,12 @@ class _TransportState extends State<Transport> {
       Positioned.fill(
         child: IgnorePointer(
           child: Align(
-            alignment: _readoutAlignment,
-            child: TransportReadout(
+            alignment: _isVideo ? _skipLabelAlignment : _readoutAlignment,
+            child: KeyedSubtree(
               key: ValueKey<int>(_readoutSerial),
-              text: readout,
+              child: _isVideo
+                  ? VideoSkipLabel(key: videoSkipLabelKey, text: readout)
+                  : TransportReadout(text: readout),
             ),
           ),
         ),
@@ -450,6 +550,14 @@ class _TransportState extends State<Transport> {
 
   @override
   Widget build(BuildContext context) {
+    final Widget laidOut = _fitted(context);
+    if (_inViewer && _isVideo) {
+      return VideoChrome(child: laidOut);
+    }
+    return laidOut;
+  }
+
+  Widget _fitted(BuildContext context) {
     final bool compact = _compactIn(context);
     if (!widget.fitWidth) {
       return _laidOut(context, compact, _Fit.roomy);
@@ -471,4 +579,52 @@ enum _Fit {
   final double sidePadding;
   final bool volumeOpen;
   final bool speed;
+}
+
+class VideoSkipLabel extends StatelessWidget {
+  const VideoSkipLabel({super.key, required this.text});
+
+  final String text;
+
+  double _opacityAt(double progress) => progress < _skipLabelFadeFrom
+      ? 1
+      : (1 - progress) / (1 - _skipLabelFadeFrom);
+
+  @override
+  Widget build(BuildContext context) {
+    final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final Widget face = DecoratedBox(
+      decoration: const BoxDecoration(
+        color: _skipLabelFace,
+        borderRadius: _skipLabelRadius,
+      ),
+      child: Padding(
+        padding: _skipLabelPadding,
+        child: Text(
+          text,
+          maxLines: 1,
+          softWrap: false,
+          style: context.textStyles.captionSans.copyWith(
+            color: _skipLabelInk,
+            fontSize: _skipLabelFontSize,
+            fontWeight: FontWeight.w600,
+            height: 1,
+            decoration: TextDecoration.none,
+            shadows: videoChromeEdge,
+          ),
+        ),
+      ),
+    );
+    return ExcludeSemantics(
+      child: still
+          ? face
+          : TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: 1),
+              duration: _skipLabelHold,
+              builder: (BuildContext context, double progress, Widget? child) =>
+                  Opacity(opacity: _opacityAt(progress), child: child),
+              child: face,
+            ),
+    );
+  }
 }

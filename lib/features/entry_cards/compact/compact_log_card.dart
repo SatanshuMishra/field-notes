@@ -16,7 +16,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show CustomSemanticsAction;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'
-    show ProviderContainer, UncontrolledProviderScope;
+    show
+        AsyncValue,
+        ProviderContainer,
+        ProviderSubscription,
+        UncontrolledProviderScope;
 
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/widgets.dart';
@@ -992,6 +996,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
           resolver: widget.resolver,
           playerFactory: scope.read(todayVideoPlayerFactoryProvider),
           slots: scope.read(videoSlotsProvider),
+          scope: scope,
         ),
       );
     }
@@ -1241,12 +1246,14 @@ class _CardVideo extends StatefulWidget {
     required this.resolver,
     required this.playerFactory,
     required this.slots,
+    required this.scope,
   });
 
   final Entry entry;
   final MediaResolver resolver;
   final EntryVideoPlayerFactory playerFactory;
   final VideoSlots slots;
+  final ProviderContainer scope;
 
   @override
   State<_CardVideo> createState() => _CardVideoState();
@@ -1264,15 +1271,49 @@ class _CardVideoState extends State<_CardVideo> {
   bool _started = false;
   bool _playOnArrival = false;
   Duration? _seekOnArrival;
+  ProviderSubscription<AsyncValue<double?>>? _storedAspect;
+  double? _aspect;
 
   @override
   void initState() {
     super.initState();
     _handle.addListener(_onControls);
+    _followStoredAspect();
+  }
+
+  @override
+  void didUpdateWidget(_CardVideo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.entry.mediaId != widget.entry.mediaId ||
+        !identical(oldWidget.scope, widget.scope)) {
+      _followStoredAspect();
+    }
+  }
+
+  void _followStoredAspect() {
+    _storedAspect?.close();
+    _storedAspect = null;
+    _aspect = null;
+    final String? mediaId = widget.entry.mediaId;
+    if (mediaId == null || mediaId.isEmpty) {
+      return;
+    }
+    final ProviderSubscription<AsyncValue<double?>> subscription = widget.scope
+        .listen<AsyncValue<double?>>(videoAspectProvider(mediaId), (
+          AsyncValue<double?>? previous,
+          AsyncValue<double?> next,
+        ) {
+          if (mounted) {
+            setState(() => _aspect = next.value);
+          }
+        });
+    _storedAspect = subscription;
+    _aspect = subscription.read().value;
   }
 
   @override
   void dispose() {
+    _storedAspect?.close();
     _handle
       ..removeListener(_onControls)
       ..dispose();
@@ -1354,31 +1395,38 @@ class _CardVideoState extends State<_CardVideo> {
         : _narrowPosterWidth;
   }
 
-  Widget _cover() {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) => Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          HatchedMediaImage(
+  Widget _cover(bool started) {
+    return IgnorePointer(
+      ignoring: started,
+      child: Pressable(
+        key: compactLogPosterKey,
+        label: videoSurfacePointerLabel,
+        focusNode: _posterFocus,
+        onPressed: _requestPlay,
+        paintsHover: false,
+        borderRadius: _cardPosterRadius,
+        placement: FocusRingPlacement.edge,
+        child: ColoredBox(
+          color: Palette.mediaBlack,
+          child: VideoStill(
             resolver: widget.resolver,
             mediaId: widget.entry.thumbnailMediaId,
-            width: constraints.maxWidth,
-            height: constraints.maxHeight,
-            borderRadius: _cardPosterRadius,
-            variant: CrossHatchVariant.video,
-            errorLabel: _posterUnavailableLabel,
+            builder:
+                (BuildContext context, ImageProvider? still, double? aspect) =>
+                    Stack(
+                      fit: StackFit.expand,
+                      children: <Widget>[
+                        if (still != null)
+                          VideoStillStage(
+                            image: still,
+                            aspectRatio:
+                                _aspect ?? aspect ?? defaultVideoAspectRatio,
+                          ),
+                        if (started) const Center(child: VideoLoadingRing()),
+                      ],
+                    ),
           ),
-          Pressable(
-            key: compactLogPosterKey,
-            label: videoSurfacePointerLabel,
-            focusNode: _posterFocus,
-            onPressed: _requestPlay,
-            paintsHover: false,
-            borderRadius: _cardPosterRadius,
-            placement: FocusRingPlacement.edge,
-            child: const SizedBox.expand(),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1386,15 +1434,14 @@ class _CardVideoState extends State<_CardVideo> {
   Widget _stage() {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final double width = math.max(
-          constraints.maxWidth,
-          _posterStageMinWidth,
-        );
+        final double scale = constraints.maxWidth <= 0
+            ? 1
+            : math.max(1.0, _posterStageMinWidth / constraints.maxWidth);
         return FittedBox(
           fit: BoxFit.contain,
           child: SizedBox(
-            width: width,
-            height: width / defaultVideoAspectRatio,
+            width: constraints.maxWidth * scale,
+            height: constraints.maxHeight * scale,
             child: VideoBody(
               entry: widget.entry,
               resolver: widget.resolver,
@@ -1402,7 +1449,7 @@ class _CardVideoState extends State<_CardVideo> {
               slots: widget.slots,
               handle: _handle,
               controlModel: VideoControlModel.pointer,
-              aspectRatio: defaultVideoAspectRatio,
+              aspectRatio: _aspect,
               controls: (BuildContext context, VideoControlsState state) =>
                   const SizedBox.shrink(),
             ),
@@ -1429,7 +1476,8 @@ class _CardVideoState extends State<_CardVideo> {
             child: Stack(
               fit: StackFit.expand,
               children: <Widget>[
-                if (_started) _stage() else _cover(),
+                if (_started) _stage(),
+                if (!(state?.showsPicture ?? false)) _cover(_started),
                 IgnorePointer(
                   child: ValueListenableBuilder<bool>(
                     valueListenable: _posterHovered,

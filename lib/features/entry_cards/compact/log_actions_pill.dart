@@ -58,11 +58,8 @@ const double _menuLabelSize = 14;
 const EdgeInsets _menuPadding = EdgeInsets.all(4);
 const EdgeInsets _menuSheetPadding = EdgeInsets.fromLTRB(12, 2, 12, 12);
 
-final Color _actionHoverFill = Palette.onAccent.withValues(alpha: 0.14);
-
 final FocusTraversalPolicy _cardTabOrder = _TreeOrderTraversalPolicy();
 
-const BorderRadius _pillRadius = BorderRadius.all(Radius.circular(10));
 const BorderRadius _buttonRadius = BorderRadius.all(Radius.circular(7));
 const BorderRadius _cardActionRadius = BorderRadius.all(
   Radius.circular(Shapes.radius8),
@@ -101,57 +98,41 @@ class LogActionsPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final VoidCallback? edit = onEdit;
-    final Color dangerInk = StickerButtonVariant.danger.inkOn(
-      StickerGround.media,
-      context.colors,
-    );
+    final FieldNotesColors colors = context.colors;
     final _PillGeometry geometry = _PillGeometry(
       buttonExtent: buttonExtent,
       paired: edit != null,
       growDown: growDown,
     );
-    return Stack(
-      children: <Widget>[
-        Positioned.fill(
-          child: Padding(
-            padding: geometry.pillInset,
-            child: const DecoratedBox(
-              decoration: BoxDecoration(
-                color: Palette.toolbarInk,
-                borderRadius: _pillRadius,
-                boxShadow: Shadows.toastLift,
-              ),
+    return Padding(
+      padding: geometry.rowPadding,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (edit != null)
+            _LogActionButton(
+              key: logActionsEditKey,
+              glyph: IconStickerGlyph.edit,
+              label: logActionsEditLabel,
+              glyphColor: colors.ink,
+              extent: buttonExtent,
+              margin: geometry.leadingMargin,
+              onPressed: edit,
             ),
+          _LogActionButton(
+            key: logActionsDeleteKey,
+            glyph: IconStickerGlyph.trash,
+            label: logActionsDeleteLabel,
+            glyphColor: StickerButtonVariant.danger.inkOn(
+              StickerGround.page,
+              colors,
+            ),
+            extent: buttonExtent,
+            margin: geometry.trailingMargin,
+            onPressed: onDelete,
           ),
-        ),
-        Padding(
-          padding: geometry.rowPadding,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              if (edit != null)
-                _LogActionButton(
-                  key: logActionsEditKey,
-                  glyph: IconStickerGlyph.edit,
-                  label: logActionsEditLabel,
-                  glyphColor: Palette.onAccent,
-                  extent: buttonExtent,
-                  margin: geometry.leadingMargin,
-                  onPressed: edit,
-                ),
-              _LogActionButton(
-                key: logActionsDeleteKey,
-                glyph: IconStickerGlyph.trash,
-                label: logActionsDeleteLabel,
-                glyphColor: dangerInk,
-                extent: buttonExtent,
-                margin: geometry.trailingMargin,
-                onPressed: onDelete,
-              ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -239,7 +220,6 @@ class _LogActionButtonState extends State<_LogActionButton> {
       label: widget.label,
       onPressed: widget.onPressed,
       focusNode: _focusNode,
-      surface: FocusRingSurface.dark,
       placement: FocusRingPlacement.edge,
       borderRadius: _buttonRadius,
       paintsHover: false,
@@ -256,7 +236,11 @@ class _LogActionButtonState extends State<_LogActionButton> {
                     DecoratedBox(
                       decoration: BoxDecoration(
                         color: hovered || keyboardFocused
-                            ? _actionHoverFill
+                            ? HoverStyle.of(
+                                context,
+                                FocusRingSurface.light,
+                                HoverShape.rounded,
+                              )
                             : null,
                         borderRadius: _buttonRadius,
                       ),

@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart';
-import 'package:field_notes/features/entry_cards/media/media_image.dart';
 import 'package:field_notes/features/entry_cards/media/media_placeholders.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
@@ -52,10 +51,8 @@ Widget _columnOfMediaIds({
 const String _busyNotice = "Can't start this video right now";
 const String _busyHint = 'Tap to try again';
 
-Finder _labelledIn(int card, String label) => find.descendant(
-      of: cardAt(card),
-      matching: find.bySemanticsLabel(label),
-    );
+Finder _labelledIn(int card, String label) =>
+    find.descendant(of: cardAt(card), matching: find.bySemanticsLabel(label));
 
 Completer<void> releasableVideoGate() {
   final Completer<void> gate = Completer<void>();
@@ -314,7 +311,7 @@ void main() {
 
       expect(built, isEmpty);
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
-      expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
+      expect(find.byType(NeutralMediaPlaceholder), findsNothing);
       expect(find.text(_busyNotice), findsNothing);
 
       await tester.tap(inCard(0, videoPlayToggleKey));
@@ -561,46 +558,48 @@ void main() {
       expect(surfaceMounted(tester, 0), isTrue);
     });
 
-    testWidgets('a mid playback error reclaims a slot from an unpinned sibling',
-        (WidgetTester tester) async {
-      final LruVideoSlots slots = slotsWithCapOf(2);
-      final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
+    testWidgets(
+      'a mid playback error reclaims a slot from an unpinned sibling',
+      (WidgetTester tester) async {
+        final LruVideoSlots slots = slotsWithCapOf(2);
+        final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
 
-      await tester.pumpWidget(
-        videoCardColumn(
-          resolver: videoResolverFor(videoFixtureFile()),
-          playerFactory: videoFactoryInto(built),
-          slots: slots,
-          indices: <int>[0, 1, 2],
-        ),
-      );
-      await tester.pump();
+        await tester.pumpWidget(
+          videoCardColumn(
+            resolver: videoResolverFor(videoFixtureFile()),
+            playerFactory: videoFactoryInto(built),
+            slots: slots,
+            indices: <int>[0, 1, 2],
+          ),
+        );
+        await tester.pump();
 
-      expect(built, hasLength(2));
-      expect(surfaceMounted(tester, 2), isFalse);
+        expect(built, hasLength(2));
+        expect(surfaceMounted(tester, 2), isFalse);
 
-      built[0].emitState(VideoPlaybackState.playing);
-      built[0].emitPosition(const Duration(seconds: 5));
-      await tester.pump();
+        built[0].emitState(VideoPlaybackState.playing);
+        built[0].emitPosition(const Duration(seconds: 5));
+        await tester.pump();
 
-      built[0].emitState(VideoPlaybackState.error);
-      await tester.pump();
-      await tester.pump();
+        built[0].emitState(VideoPlaybackState.error);
+        await tester.pump();
+        await tester.pump();
 
-      expect(built, hasLength(3));
-      expect(surfaceMounted(tester, 2), isTrue);
+        expect(built, hasLength(3));
+        expect(surfaceMounted(tester, 2), isTrue);
 
-      await tester.pump(pastFirstBackoff);
-      await tester.pump();
+        await tester.pump(pastFirstBackoff);
+        await tester.pump();
 
-      expect(built, hasLength(4));
-      expect(find.byType(CorruptMediaPlaceholder), findsNothing);
-      expect(surfaceMounted(tester, 0), isTrue);
-      expect(readyControlsEnabled(tester, 0), isTrue);
-      expect(built[0].disposeCalls, 1);
-      expect(built[1].disposeCalls, 1);
-      expect(built[3].seekCalls, <Duration>[const Duration(seconds: 5)]);
-    });
+        expect(built, hasLength(4));
+        expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+        expect(surfaceMounted(tester, 0), isTrue);
+        expect(readyControlsEnabled(tester, 0), isTrue);
+        expect(built[0].disposeCalls, 1);
+        expect(built[1].disposeCalls, 1);
+        expect(built[3].seekCalls, <Duration>[const Duration(seconds: 5)]);
+      },
+    );
   });
 
   group('VideoBody recovery of the control surface', () {
@@ -679,7 +678,8 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byType(MediaImage), findsOneWidget);
+      expect(find.byType(VideoStillStage), findsOneWidget);
+      expect(surfaceMounted(tester, 0), isFalse);
 
       await tester.tap(inCard(0, videoPlayToggleKey));
       await tester.pump();
@@ -688,7 +688,7 @@ void main() {
       built.single.emitState(VideoPlaybackState.playing);
       await tester.pump();
 
-      expect(find.byType(MediaImage), findsNothing);
+      expect(surfaceMounted(tester, 0), isTrue);
 
       built.single.emitState(VideoPlaybackState.paused);
       await tester.pump();
@@ -701,7 +701,7 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(find.byType(MediaImage), findsOneWidget);
+      expect(find.byType(VideoStillStage), findsOneWidget);
       expect(surfaceMounted(tester, 0), isFalse);
     });
   });

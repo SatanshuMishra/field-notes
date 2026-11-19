@@ -62,8 +62,8 @@ Map<LogicalKeyboardKey, VoidCallback> transportKeyBindings({
     if (onSeekBy != null) ...<LogicalKeyboardKey, VoidCallback>{
       LogicalKeyboardKey.keyJ: () => onSeekBy(-transportSkipStep),
       LogicalKeyboardKey.keyL: () => onSeekBy(transportSkipStep),
-      LogicalKeyboardKey.arrowLeft: () => onSeekBy(-transportNudgeStep),
-      LogicalKeyboardKey.arrowRight: () => onSeekBy(transportNudgeStep),
+      LogicalKeyboardKey.arrowLeft: () => onSeekBy(-transportSkipStep),
+      LogicalKeyboardKey.arrowRight: () => onSeekBy(transportSkipStep),
     },
     if (onVolumeBy != null) ...<LogicalKeyboardKey, VoidCallback>{
       LogicalKeyboardKey.arrowUp: () => onVolumeBy(transportVolumeStep),

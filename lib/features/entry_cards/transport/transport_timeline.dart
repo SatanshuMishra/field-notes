@@ -31,6 +31,9 @@ const double _ghostWidth = 2;
 const double _ghostRailHeight = 16;
 const double _ghostAlpha = 0.72;
 const double _bubbleGap = 6;
+const Duration _railEase = Duration(milliseconds: 180);
+const Curve _railEaseCurve = Curves.easeOut;
+const Duration _bubbleFadeIn = Duration(milliseconds: 120);
 const double _frameGap = 6;
 const double _timeHalfWidth = 26;
 const double _frameHalfOutset = 2;
@@ -498,7 +501,8 @@ class _TransportTimelineState extends State<TransportTimeline> {
       opacity: _enabled ? 1 : _disabledAlpha,
       child: TweenAnimationBuilder<double>(
         tween: Tween<double>(begin: 0, end: _hot ? 1 : 0),
-        duration: still ? Duration.zero : Motion.press,
+        duration: still ? Duration.zero : _railEase,
+        curve: _railEaseCurve,
         builder: (BuildContext context, double heat, Widget? child) =>
             CustomPaint(
               painter: _RailPainter(
@@ -553,16 +557,20 @@ class _TransportTimelineState extends State<TransportTimeline> {
       targetAnchor: Alignment.topLeft,
       followerAnchor: Alignment.bottomCenter,
       offset: Offset(centre, -_bubbleGap),
-      child: Column(
-        key: transportBubbleKey,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          if (frame != null) ...<Widget>[
-            _frameFace(context, frame),
-            const SizedBox(height: _frameGap),
+      child: FadeIn(
+        duration: _bubbleFadeIn,
+        animate: !(MediaQuery.maybeDisableAnimationsOf(context) ?? false),
+        child: Column(
+          key: transportBubbleKey,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (frame != null) ...<Widget>[
+              _frameFace(context, frame),
+              const SizedBox(height: _frameGap),
+            ],
+            _timeFace(context, _positionAt(fraction) ?? Duration.zero),
           ],
-          _timeFace(context, _positionAt(fraction) ?? Duration.zero),
-        ],
+        ),
       ),
     );
   }

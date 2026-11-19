@@ -30,6 +30,28 @@ Key transportSpeedChoiceKey(double speed) =>
     ValueKey<String>('transport-speed-$speed');
 
 const double _iconSize = 20;
+const Color videoChromeInk = Color(0xFFFFFFFF);
+const List<Shadow> videoChromeEdge = <Shadow>[
+  Shadow(color: Color(0x99000000), blurRadius: 2, offset: Offset(0, 0.5)),
+];
+const double _videoRailAlpha = 0.5;
+const double _videoBubbleAlpha = 0.86;
+const Color _chromeBlack = Color(0xFF000000);
+const Offset _edgeOffset = Offset(0, 0.75);
+const Color _edgeInk = Color(0x99000000);
+
+final FieldNotesColors videoChromeColors = FieldNotesColors.dark.copyWith(
+  ink: videoChromeInk,
+  inkSoft: videoChromeInk,
+  muted: videoChromeInk,
+  mutedDeep: videoChromeInk,
+  accentInk: videoChromeInk,
+  mediaPlayed: videoChromeInk,
+  mediaBubble: _chromeBlack.withValues(alpha: _videoBubbleAlpha),
+  mediaBubbleInk: videoChromeInk,
+  viewerRail: videoChromeInk.withValues(alpha: _videoRailAlpha),
+);
+
 const double _dockSkipSize = 26;
 const double _dockPlayDiameter = 64;
 const double _playGlyphShare = 0.42;
@@ -124,9 +146,47 @@ class PlayPauseGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
+    return _EdgedGlyph(
+      size: size,
+      painter: (Color ink) =>
+          _PlayPauseGlyphPainter(playing: playing, color: ink),
+      color: color,
+    );
+  }
+}
+
+class _EdgedGlyph extends StatelessWidget {
+  const _EdgedGlyph({
+    required this.size,
+    required this.painter,
+    required this.color,
+  });
+
+  final double size;
+  final CustomPainter Function(Color ink) painter;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget glyph = CustomPaint(
       size: Size.square(size),
-      painter: _PlayPauseGlyphPainter(playing: playing, color: color),
+      painter: painter(color),
+    );
+    if (!VideoChrome.of(context)) {
+      return glyph;
+    }
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Transform.translate(
+          offset: _edgeOffset,
+          child: CustomPaint(
+            size: Size.square(size),
+            painter: painter(_edgeInk),
+          ),
+        ),
+        glyph,
+      ],
     );
   }
 }
@@ -187,9 +247,10 @@ class TransportGlyphIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size.square(size),
-      painter: _TransportGlyphPainter(glyph: glyph, color: color),
+    return _EdgedGlyph(
+      size: size,
+      painter: (Color ink) => _TransportGlyphPainter(glyph: glyph, color: ink),
+      color: color,
     );
   }
 }
@@ -495,6 +556,7 @@ class TransportTimeLabel extends StatelessWidget {
 TextStyle transportTimeStyle(BuildContext context) =>
     context.textStyles.captionSans.copyWith(
       color: context.colors.ink,
+      shadows: VideoChrome.edgeOf(context),
       fontSize: _timeSize,
       fontWeight: FontWeight.w500,
       fontFeatures: _tabular,
@@ -1230,4 +1292,32 @@ class TransportReadout extends StatelessWidget {
       ),
     );
   }
+}
+
+class VideoChrome extends StatelessWidget {
+  const VideoChrome({super.key, required this.child});
+
+  final Widget child;
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_VideoChromeScope>() != null;
+
+  static List<Shadow>? edgeOf(BuildContext context) =>
+      of(context) ? videoChromeEdge : null;
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: Theme.of(context)
+          .copyWith(extensions: <ThemeExtension<dynamic>>[videoChromeColors]),
+      child: _VideoChromeScope(child: child),
+    );
+  }
+}
+
+class _VideoChromeScope extends InheritedWidget {
+  const _VideoChromeScope({required super.child});
+
+  @override
+  bool updateShouldNotify(_VideoChromeScope oldWidget) => false;
 }

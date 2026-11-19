@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -25,14 +24,12 @@ import 'package:field_notes/design/widgets/sticker_button.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart'
     show VideoDownloadRing;
-import 'package:field_notes/features/entry_cards/cards/video_controls_overlay.dart'
-    show canAutoHideVideoControls;
 import 'package:field_notes/features/entry_cards/cards/voice_body.dart'
     show PlayPauseGlyph;
 import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart'
     show logActionsDeleteKey;
 import 'package:field_notes/features/entry_cards/transport/transport.dart'
-    show TransportActivityNotification;
+    show VideoChrome, VideoShade;
 import 'package:field_notes/features/log_viewer/log_viewer.dart'
     show LogViewerExit;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
@@ -61,6 +58,10 @@ const String viewerDeleteLogLabel = 'Delete log';
 const Key viewerTitleFieldKey = ValueKey<String>('viewer-title-field');
 const Key viewerRenameRowKey = ValueKey<String>('viewer-rename-row');
 const Key viewerSaveTitleKey = ValueKey<String>('viewer-save-title');
+
+const Key videoTopShadeKey = ValueKey<String>('video-top-shade');
+const double videoTopShadeHeight = 128;
+const double videoTopShadePeak = 0.66;
 
 const String _playLabel = 'Play';
 const String _pauseLabel = 'Pause';
@@ -120,8 +121,6 @@ const Alignment _stageCentre = Alignment(0, -0.2);
 const double _stageRadius = 1.2;
 const double _stageEdgeShare = 0.4;
 
-const Duration _doubleTapWindow = Duration(milliseconds: 300);
-
 const String _escapeShortcut = 'Esc';
 const String _earlierShortcut = 'Page Up';
 const String _laterShortcut = 'Page Down';
@@ -136,16 +135,16 @@ const double _edgeHoverDark = 0.92;
 const double _edgeRestLight = 0.9;
 const double _edgeLineDark = 0.32;
 const double _edgeLineLight = 0.55;
+const Color _videoArrowFace = Color(0x7A000000);
+const Color _videoArrowHover = Color(0x99000000);
+const Color _videoArrowInk = Color(0xFFFFFFFF);
 const BorderRadius _edgeArrowRadius = BorderRadius.all(
   Radius.circular(_edgeArrowSize / 2),
 );
 
 const double _logBarTop = 12;
 const double _logBarSide = 16;
-const double _logBarFadeBelow = 40;
 const double _logBarGap = 8;
-const double _dockBackingHeight = 200;
-const double _dockBackingFadeStop = 0.35;
 const double _logBarGlyph = 18;
 const double _logBarTitleSize = 19;
 const double _logBarTitleLine = 1.3;
@@ -1061,7 +1060,7 @@ class ViewerOverlayShade extends StatelessWidget {
   }
 }
 
-class ViewerControlsFade extends StatefulWidget {
+class ViewerControlsFade extends StatelessWidget {
   const ViewerControlsFade({
     super.key,
     required this.ready,
@@ -1074,225 +1073,10 @@ class ViewerControlsFade extends StatefulWidget {
   final Widget child;
 
   @override
-  State<ViewerControlsFade> createState() => _ViewerControlsFadeState();
-}
-
-class _ViewerControlsFadeState extends State<ViewerControlsFade> {
-  final FocusNode _within = FocusNode(
-    debugLabel: 'viewer controls',
-    canRequestFocus: false,
-    skipTraversal: true,
-  );
-  Timer? _idle;
-  Timer? _pictureTap;
-  bool _hidden = false;
-  bool _accessibleNavigation = false;
-  bool _shownAtDown = true;
-  Set<int> _pressed = const <int>{};
-  int? _controlPointer;
-  _Stroke? _stroke;
-
-  @override
-  void initState() {
-    super.initState();
-    FocusManager.instance.addListener(_onFocusMoved);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _accessibleNavigation =
-        MediaQuery.maybeAccessibleNavigationOf(context) ?? false;
-    _hidden = false;
-    _restartIdle();
-  }
-
-  @override
-  void didUpdateWidget(ViewerControlsFade oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.ready != widget.ready ||
-        oldWidget.playing != widget.playing) {
-      _hidden = false;
-      _restartIdle();
-    }
-  }
-
-  @override
-  void dispose() {
-    FocusManager.instance.removeListener(_onFocusMoved);
-    _within.dispose();
-    _idle?.cancel();
-    _pictureTap?.cancel();
-    super.dispose();
-  }
-
-  void _onFocusMoved() {
-    if (mounted && _within.hasFocus) {
-      _wake();
-    }
-  }
-
-  bool get _canHide => canAutoHideVideoControls(
-    controlsEnabled: widget.ready,
-    isPlaying: widget.playing,
-    focusWithin: false,
-    accessibleNavigation: _accessibleNavigation,
-  );
-
-  bool get _focusOnControl {
-    final FocusNode? focus = FocusManager.instance.primaryFocus;
-    return focus != null && focus is! FocusScopeNode && !focus.skipTraversal;
-  }
-
-  bool get _touch => !_isSidebar(context);
-
-  void _restartIdle() {
-    _idle?.cancel();
-    _idle = _canHide ? Timer(viewerControlsIdle, _onIdle) : null;
-  }
-
-  void _onIdle() {
-    _idle = null;
-    if (!mounted || !_canHide) {
-      return;
-    }
-    if (_pressed.isNotEmpty || _focusOnControl) {
-      _restartIdle();
-      return;
-    }
-    setState(() => _hidden = true);
-  }
-
-  void _wake() {
-    if (_hidden) {
-      setState(() => _hidden = false);
-    }
-    _restartIdle();
-  }
-
-  bool _onTransportActivity(TransportActivityNotification notification) {
-    _wake();
-    return false;
-  }
-
-  void _onDown(PointerDownEvent event) {
-    _shownAtDown = !_hidden;
-    _pressed = <int>{..._pressed, event.pointer};
-    _stroke = _Stroke(
-      pointer: event.pointer,
-      start: event.position,
-      claimed: event.pointer == _controlPointer,
-    );
-    _controlPointer = null;
-    _wake();
-  }
-
-  void _onUp(PointerUpEvent event) {
-    _pressed = _pressed.difference(<int>{event.pointer});
-    final _Stroke? stroke = _stroke;
-    _stroke = null;
-    final bool tapped =
-        stroke != null &&
-        stroke.pointer == event.pointer &&
-        !stroke.claimed &&
-        (event.position - stroke.start).distance < kTouchSlop;
-    if (tapped && _touch) {
-      _onPictureTap();
-    }
-  }
-
-  void _onCancel(PointerCancelEvent event) {
-    _pressed = _pressed.difference(<int>{event.pointer});
-    if (_stroke?.pointer == event.pointer) {
-      _stroke = null;
-    }
-  }
-
-  void _onPictureTap() {
-    final Timer? pending = _pictureTap;
-    if (pending != null) {
-      pending.cancel();
-      _pictureTap = null;
-      return;
-    }
-    final bool hide = _shownAtDown;
-    _pictureTap = Timer(_doubleTapWindow, () {
-      _pictureTap = null;
-      if (mounted && hide && _canHide) {
-        _idle?.cancel();
-        _idle = null;
-        setState(() => _hidden = true);
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final bool visible = !_canHide || !_hidden;
-    final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    return MouseRegion(
-      opaque: false,
-      onEnter: (PointerEnterEvent _) => _wake(),
-      onHover: (PointerHoverEvent _) => _wake(),
-      onExit: (PointerExitEvent _) => _wake(),
-      child: Listener(
-        behavior: HitTestBehavior.translucent,
-        onPointerDown: _onDown,
-        onPointerMove: (PointerMoveEvent _) => _wake(),
-        onPointerUp: _onUp,
-        onPointerCancel: _onCancel,
-        child: AnimatedOpacity(
-          opacity: visible ? 1 : 0,
-          duration: still ? Duration.zero : Motion.fade,
-          curve: Motion.fadeCurve,
-          child: IgnorePointer(
-            ignoring: !visible,
-            child: AnnotatedRegion<SystemUiOverlayStyle>(
-              value: systemBarsOverColor(context.colors.viewerStage),
-              child: NotificationListener<TransportActivityNotification>(
-                onNotification: _onTransportActivity,
-                child: NoSwipe(
-                  behavior: HitTestBehavior.deferToChild,
-                  onPointerDown: (int pointer) => _controlPointer = pointer,
-                  child: Focus(
-                    focusNode: _within,
-                    includeSemantics: false,
-                    child: widget.child,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class ViewerDockBacking extends StatelessWidget {
-  const ViewerDockBacking({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    return IgnorePointer(
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: SizedBox(
-          height: _dockBackingHeight,
-          width: double.infinity,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: <Color>[colors.viewerFadeStart, colors.viewerFadeEnd],
-                stops: const <double>[0, _dockBackingFadeStop],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemBarsOverColor(context.colors.viewerStage),
+      child: NoSwipe(behavior: HitTestBehavior.deferToChild, child: child),
     );
   }
 }
@@ -1302,10 +1086,12 @@ class ViewerEdgeArrows extends StatelessWidget {
     super.key,
     required this.onPrevious,
     required this.onNext,
+    this.overVideo = false,
   });
 
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
+  final bool overVideo;
 
   @override
   Widget build(BuildContext context) {
@@ -1325,6 +1111,7 @@ class ViewerEdgeArrows extends StatelessWidget {
               child: NoSwipe(
                 child: _EdgeArrow(
                   key: logViewerEarlierKey,
+                  overVideo: overVideo,
                   pointsBack: true,
                   label: logViewerEarlierLabel,
                   shortcut: _earlierShortcut,
@@ -1341,6 +1128,7 @@ class ViewerEdgeArrows extends StatelessWidget {
               child: NoSwipe(
                 child: _EdgeArrow(
                   key: logViewerLaterKey,
+                  overVideo: overVideo,
                   pointsBack: false,
                   label: logViewerLaterLabel,
                   shortcut: _laterShortcut,
@@ -1418,15 +1206,44 @@ class _EdgeArrow extends StatelessWidget {
     required this.label,
     required this.shortcut,
     required this.onPressed,
+    required this.overVideo,
   });
 
   final bool pointsBack;
   final String label;
   final String shortcut;
   final VoidCallback onPressed;
+  final bool overVideo;
+
+  Widget _videoFace(bool hovered) => Container(
+    width: _edgeArrowSize,
+    height: _edgeArrowSize,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: hovered ? _videoArrowHover : _videoArrowFace,
+      shape: BoxShape.circle,
+    ),
+    child: ChevronGlyph(
+      pointsBack: pointsBack,
+      color: _videoArrowInk,
+      size: _edgeArrowGlyph,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
+    if (overVideo) {
+      return Pressable(
+        label: label,
+        tooltip: '$label ($shortcut)',
+        iconOnly: true,
+        onPressed: onPressed,
+        borderRadius: _edgeArrowRadius,
+        surface: FocusRingSurface.dark,
+        paintsHover: false,
+        builder: (BuildContext context, bool hovered) => _videoFace(hovered),
+      );
+    }
     final _EdgeArrowColors edge = _EdgeArrowColors.of(context);
     return Pressable(
       label: label,
@@ -1459,24 +1276,18 @@ String? _titleOrNull(String? raw) {
   return title.isEmpty ? null : title;
 }
 
-TextStyle _titleStyle(BuildContext context) => context.textStyles.headlineSerif
-    .copyWith(fontSize: _logBarTitleSize, height: _logBarTitleLine);
+TextStyle _titleStyle(BuildContext context) =>
+    context.textStyles.headlineSerif.copyWith(
+      fontSize: _logBarTitleSize,
+      height: _logBarTitleLine,
+      shadows: VideoChrome.edgeOf(context),
+    );
 
 class ViewerLogBar extends StatelessWidget {
   const ViewerLogBar({super.key, required this.scene, this.fades = false});
 
   final LogViewerScene scene;
   final bool fades;
-
-  BoxDecoration _fade(FieldNotesColors colors) {
-    return BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: <Color>[colors.viewerFadeEnd, colors.viewerFadeStart],
-      ),
-    );
-  }
 
   Widget _exitGlyph(Color color) {
     return switch (scene.exit) {
@@ -1508,6 +1319,7 @@ class ViewerLogBar extends StatelessWidget {
         softWrap: false,
         style: context.textStyles.captionSans.copyWith(
           color: ink,
+          shadows: VideoChrome.edgeOf(context),
           fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
         ),
       ),
@@ -1516,6 +1328,13 @@ class ViewerLogBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (fades) {
+      return VideoChrome(child: Builder(builder: _bar));
+    }
+    return _bar(context);
+  }
+
+  Widget _bar(BuildContext context) {
     final bool sidebar = _isSidebar(context);
     final String? position = scene.position;
     final FieldNotesColors colors = context.colors;
@@ -1545,6 +1364,7 @@ class ViewerLogBar extends StatelessWidget {
               scene: scene,
               editable: sidebar,
               softInk: softInk,
+              inline: fades,
             ),
           ),
           if (position != null) _count(context, position, softInk),
@@ -1560,23 +1380,25 @@ class ViewerLogBar extends StatelessWidget {
         ],
       ),
     );
-    return Align(
-      alignment: Alignment.topCenter,
-      child: fades
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                ColoredBox(color: colors.viewerFadeEnd, child: row),
-                IgnorePointer(
-                  child: SizedBox(
-                    height: _logBarFadeBelow,
-                    child: DecoratedBox(decoration: _fade(colors)),
-                  ),
-                ),
-              ],
-            )
-          : row,
+    if (!fades) {
+      return Align(alignment: Alignment.topCenter, child: row);
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        const Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          child: VideoShade(
+            key: videoTopShadeKey,
+            height: videoTopShadeHeight,
+            peak: videoTopShadePeak,
+            fromTop: true,
+          ),
+        ),
+        Align(alignment: Alignment.topCenter, child: row),
+      ],
     );
   }
 }
@@ -1621,11 +1443,13 @@ class _LogBarHeading extends StatelessWidget {
     required this.scene,
     required this.editable,
     required this.softInk,
+    this.inline = false,
   });
 
   final LogViewerScene scene;
   final bool editable;
   final Color softInk;
+  final bool inline;
 
   Widget? _title(BuildContext context) {
     if (!ViewerLogTitle.shows(scene, editable: editable)) {
@@ -1659,6 +1483,7 @@ class _LogBarHeading extends StatelessWidget {
               fontSize: _logBarStampSize,
               height: _logBarStampLine,
               color: softInk,
+              shadows: VideoChrome.edgeOf(context),
             ),
           ),
         ),
@@ -1669,6 +1494,24 @@ class _LogBarHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget? title = _title(context);
+    if (inline) {
+      return Row(
+        children: <Widget>[
+          if (title != null) ...<Widget>[
+            Flexible(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: _logBarTitleMaxWidth,
+                ),
+                child: title,
+              ),
+            ),
+            const SizedBox(width: _logBarGap),
+          ],
+          Flexible(child: _stamp(context)),
+        ],
+      );
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
