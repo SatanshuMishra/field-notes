@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-19T22:59:02.134Z
+Updated: 2026-11-19T22:59:29.809Z
 Next ids: c6 D3 R3 S2
 
 ## Goal
@@ -45,3 +45,5 @@ Needs: R2.
 - Peony art: lib/design/flowers/garden_plant_geometry.dart (peonyPlantParts) and lib/design/flowers/petal_art.dart (drift petal)
 - App root and start-up wait: lib/app/app.dart; similar splash: lib/features/updates/ui/update_restart_splash.dart
 - Android launch screen: android/app/src/main/res/drawable/launch_background.xml and values/styles.xml
+- Lab evidence: ~/VMLab/evidence/fireplace/peony-opening holds the proof frames for each platform and the two Windows white-window frames
+- Windows window start-up: windows/runner/flutter_window.cpp shows the window on the first-frame callback; windows/runner/win32_window.cpp registers the window class with no background
