@@ -2,6 +2,12 @@
 
 A private journal for Mac, Windows and Android where each day holds logs of text, voice, video and photos.
 
+## Opening
+
+**Opening**:
+The short drawing played once over the app when it starts fresh: one pen inks a planted peony, then three curls of wind blow it away to reveal Today.
+_Avoid_: Splash, intro, launch animation, launch screen
+
 ## Capture
 
 **Log**:
