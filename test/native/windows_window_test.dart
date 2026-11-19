@@ -26,6 +26,7 @@ const List<String> _windowMethods = <String>[
   windowStateMethod,
   stateChangedMethod,
   windowHandleMethod,
+  setFullScreenMethod,
 ];
 
 String _source(String name) {
@@ -186,6 +187,35 @@ void main() {
       expect(channel, contains('::GetForegroundWindow() == window'));
       expect(channel, contains('flutter::EncodableValue("maximized")'));
       expect(channel, contains('flutter::EncodableValue("active")'));
+      expect(channel, contains('flutter::EncodableValue("fullScreen")'));
+      expect(
+        channel,
+        contains(
+          'StateValue(IsMaximized(window), IsActive(window), full_screen_)',
+        ),
+      );
+      expect(
+        channel,
+        contains('StateValue(maximized_, active_, full_screen_)'),
+        reason: 'every stateChanged carries the full-screen state',
+      );
+      expect(channel, contains('::GetWindowPlacement(window, &placement)'));
+      expect(
+        channel,
+        contains('::MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST)'),
+        reason: 'full screen covers the monitor the window is on',
+      );
+      expect(channel, contains('monitor.rcMonitor'));
+      expect(channel, contains('style & ~kFrameStyle'));
+      expect(
+        channel,
+        contains('::SetWindowLongPtr(window, GWL_STYLE, windowed_style_)'),
+      );
+      expect(
+        channel,
+        contains('::SetWindowPlacement(window, &windowed_placement_)'),
+        reason: 'leaving full screen restores the exact size and place',
+      );
       final int handleBranch = channel.indexOf('method == kWindowHandleMethod');
       expect(handleBranch, isNot(-1));
       final String answer = channel.substring(

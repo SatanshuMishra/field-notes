@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -958,6 +959,24 @@ void main() {
     tester.view.padding = FakeViewPadding.zero;
     tester.view.viewPadding = FakeViewPadding.zero;
     addTearDown(tester.view.reset);
+    final List<Object?> fullScreenRequests = <Object?>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(windowChannel, (MethodCall call) async {
+          if (call.method == setFullScreenMethod) {
+            fullScreenRequests.add(call.arguments);
+          }
+          return call.method == windowStateMethod
+              ? <String, Object?>{
+                  'maximized': false,
+                  'active': true,
+                  'fullScreen': false,
+                }
+              : null;
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(windowChannel, null),
+    );
     final _Mixed session = await _openMixed(
       tester,
       entryId: 'video-log',
@@ -977,17 +996,20 @@ void main() {
     expect(title.hitTestable(), findsNothing);
     expect(earlier.hitTestable(), findsNothing);
     expect(fullScreenLabel(), 'Exit full screen');
+    expect(fullScreenRequests, <Object?>[true]);
 
     await press(LogicalKeyboardKey.keyF);
     expect(title.hitTestable(), findsOneWidget);
     expect(earlier.hitTestable(), findsOneWidget);
     expect(fullScreenLabel(), 'Full screen');
+    expect(fullScreenRequests, <Object?>[true, false]);
 
     await press(LogicalKeyboardKey.keyF);
     await press(LogicalKeyboardKey.escape);
     expect(title.hitTestable(), findsOneWidget);
     expect(fullScreenLabel(), 'Full screen');
     expect(session.outcomes, isEmpty);
+    expect(fullScreenRequests, <Object?>[true, false, true, false]);
 
     await tester.tap(title);
     await tester.pump();
@@ -995,5 +1017,6 @@ void main() {
     await tester.pump();
     expect(title.hitTestable(), findsOneWidget);
     expect(fullScreenLabel(), 'Full screen');
+    expect(fullScreenRequests, <Object?>[true, false, true, false]);
   }, variant: TargetPlatformVariant(_keyboardPlatforms));
 }

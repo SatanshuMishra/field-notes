@@ -33,6 +33,7 @@ class MainFlutterWindow: NSWindow {
   private var videoFramesBridge: VideoFramesBridge?
   private var stayAwakeActivity: NSObjectProtocol?
   private var appearanceObservation: NSKeyValueObservation?
+  private var windowChannel: FlutterMethodChannel?
   private var windowButtonPitch: CGFloat = 0
   private var isLayingOutWindowButtons = false
 
@@ -46,6 +47,7 @@ class MainFlutterWindow: NSWindow {
     self.titleVisibility = .hidden
     self.titlebarAppearsTransparent = true
     self.styleMask.insert(.fullSizeContentView)
+    self.collectionBehavior.insert(.fullScreenPrimary)
     self.setFrame(self.openingFrame(), display: true)
 
     RegisterGeneratedPlugins(registry: flutterViewController)
@@ -84,10 +86,57 @@ class MainFlutterWindow: NSWindow {
       case "setAppearance":
         NSApp.appearance = MainFlutterWindow.appearance(named: call.arguments as? String)
         result(nil)
+      case "windowState":
+        result(self?.windowStateValue())
+      case "setFullScreen":
+        guard let fullScreen = call.arguments as? Bool else {
+          result(
+            FlutterError(
+              code: "bad_arguments",
+              message: "setFullScreen expects a bool",
+              details: nil
+            )
+          )
+          return
+        }
+        self?.setFullScreen(fullScreen)
+        result(nil)
       default:
         result(FlutterMethodNotImplemented)
       }
     }
+    self.windowChannel = channel
+    for name in [NSWindow.didEnterFullScreenNotification, NSWindow.didExitFullScreenNotification] {
+      NotificationCenter.default.addObserver(
+        self,
+        selector: #selector(self.fullScreenDidChange(_:)),
+        name: name,
+        object: self
+      )
+    }
+  }
+
+  private var isFullScreen: Bool {
+    return self.styleMask.contains(.fullScreen)
+  }
+
+  private func windowStateValue() -> [String: Bool] {
+    return [
+      "maximized": self.isZoomed,
+      "active": self.isKeyWindow,
+      "fullScreen": self.isFullScreen,
+    ]
+  }
+
+  private func setFullScreen(_ fullScreen: Bool) {
+    guard fullScreen != self.isFullScreen else {
+      return
+    }
+    self.toggleFullScreen(nil)
+  }
+
+  @objc private func fullScreenDidChange(_ notification: Notification) {
+    self.windowChannel?.invokeMethod("stateChanged", arguments: self.windowStateValue())
   }
 
   private func registerNotificationSettingsChannel(_ messenger: FlutterBinaryMessenger) {

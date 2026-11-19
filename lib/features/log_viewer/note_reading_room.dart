@@ -204,7 +204,7 @@ class _NoteReadingRoomState extends State<NoteReadingRoom> {
     return ViewerKeys(
       onLeft: scene.onEarlier,
       onRight: scene.onLater,
-      onEscape: scene.onBack,
+      onEscape: scene.onEscape,
       onPageUp: scene.onEarlier,
       onPageDown: scene.onLater,
       onEdit: _renaming ? null : scene.onEdit,

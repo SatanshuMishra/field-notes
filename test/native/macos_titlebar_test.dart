@@ -15,16 +15,17 @@ double _constant(String source, String name) {
 
 void main() {
   group('macOS titlebar', () {
-    final String swift = File(
-      'macos/Runner/MainFlutterWindow.swift',
-    ).readAsStringSync();
+    final String swift = File('macos/Runner/MainFlutterWindow.swift')
+        .readAsStringSync();
 
-    test('the system titlebar is transparent, untitled and under the content',
-        () {
-      expect(swift, contains('self.titleVisibility = .hidden'));
-      expect(swift, contains('self.titlebarAppearsTransparent = true'));
-      expect(swift, contains('self.styleMask.insert(.fullSizeContentView)'));
-    });
+    test(
+      'the system titlebar is transparent, untitled and under the content',
+      () {
+        expect(swift, contains('self.titleVisibility = .hidden'));
+        expect(swift, contains('self.titlebarAppearsTransparent = true'));
+        expect(swift, contains('self.styleMask.insert(.fullSizeContentView)'));
+      },
+    );
 
     test('the window buttons are laid out inside the shell titlebar', () {
       expect(_constant(swift, 'titleBarHeight'), shellTitleBarHeight);
@@ -35,6 +36,24 @@ void main() {
       expect(swift, contains('"$windowChannelName"'));
       expect(swift, contains('case "$startDragMethod":'));
       expect(swift, contains('case "$titlebarDoubleClickMethod":'));
+    });
+
+    test('the window answers full-screen calls and reports each change', () {
+      expect(swift, contains('case "$windowStateMethod":'));
+      expect(swift, contains('case "$setFullScreenMethod":'));
+      expect(swift, contains('guard let fullScreen = call.arguments as? Bool'));
+      expect(swift, contains('self.styleMask.contains(.fullScreen)'));
+      expect(swift, contains('"fullScreen": self.isFullScreen'));
+      expect(swift, contains('self.toggleFullScreen(nil)'));
+      expect(swift, contains('NSWindow.didEnterFullScreenNotification'));
+      expect(swift, contains('NSWindow.didExitFullScreenNotification'));
+      expect(
+        swift,
+        contains(
+          'invokeMethod("$stateChangedMethod", '
+          'arguments: self.windowStateValue())',
+        ),
+      );
     });
 
     test('a titlebar double-click follows the system setting', () {

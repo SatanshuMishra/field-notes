@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart' show Theme;
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/platform/desktop_platform.dart';
@@ -73,8 +76,41 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   bool _deleting = false;
   bool _left = false;
   bool _stepped = false;
-  bool _fullScreen = false;
+  final ValueListenable<WindowState> _window =
+      WindowStateChannel.instance.state;
+  late bool _reportedFullScreen = _window.value.fullScreen;
+  bool? _requestedFullScreen;
+  bool _madeFullScreen = false;
   int _viewGeneration = 0;
+
+  bool get _fullScreen => _requestedFullScreen ?? _reportedFullScreen;
+
+  @override
+  void initState() {
+    super.initState();
+    _window.addListener(_onWindowChanged);
+  }
+
+  @override
+  void dispose() {
+    _window.removeListener(_onWindowChanged);
+    _returnWindowIfMade();
+    super.dispose();
+  }
+
+  void _onWindowChanged() {
+    final bool reported = _window.value.fullScreen;
+    if (!mounted || reported == _reportedFullScreen) {
+      return;
+    }
+    setState(() {
+      _reportedFullScreen = reported;
+      _requestedFullScreen = null;
+      if (!reported) {
+        _madeFullScreen = false;
+      }
+    });
+  }
 
   bool get _sidebar =>
       resolveShellLayout(Theme.of(context).platform) == ShellLayout.sidebar;
@@ -84,12 +120,45 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       return;
     }
     _left = true;
+    _returnWindowIfMade();
     Navigator.of(context).pop(outcome);
   }
 
   void _back() => _leave(LogViewerOutcome.returned);
 
-  void _toggleFullScreen() => setState(() => _fullScreen = !_fullScreen);
+  void _toggleFullScreen() {
+    final bool next = !_fullScreen;
+    setState(() {
+      _requestedFullScreen = next;
+      _madeFullScreen = next;
+    });
+    unawaited(_askWindowFullScreen(next));
+  }
+
+  void _returnWindowIfMade() {
+    if (!_madeFullScreen) {
+      return;
+    }
+    _madeFullScreen = false;
+    unawaited(_askWindowFullScreen(false));
+  }
+
+  Future<void> _askWindowFullScreen(bool fullScreen) async {
+    try {
+      await setWindowFullScreen(fullScreen);
+    } on PlatformException catch (error) {
+      debugPrint('Window full screen change failed: ${error.code}');
+      if (!mounted || _requestedFullScreen != fullScreen) {
+        return;
+      }
+      setState(() {
+        _requestedFullScreen = null;
+        if (fullScreen) {
+          _madeFullScreen = false;
+        }
+      });
+    }
+  }
 
   void _onPopInvoked(bool didPop, Object? result) {
     if (didPop || _editing) {
@@ -284,9 +353,9 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     final Entry entry = entries[index];
     final Entry? earlier = index > 0 ? entries[index - 1] : null;
     final Entry? later = index + 1 < entries.length ? entries[index + 1] : null;
-    final bool offersFullScreen =
-        entry.type != EntryType.text &&
-        isDesktopPlatform(Theme.of(context).platform);
+    final bool desktop = isDesktopPlatform(Theme.of(context).platform);
+    final bool fullScreen = desktop && _fullScreen;
+    final bool offersFullScreen = desktop && entry.type != EntryType.text;
     return LogViewerScene(
       entry: entry,
       date: widget.date,
@@ -303,8 +372,8 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       onDelete: () => _delete(entry),
       onEdit: entry.type == EntryType.text ? _edit : null,
       onRename: (String? title) => _rename(entry, title),
-      fullScreen: offersFullScreen && _fullScreen,
-      onFullScreen: offersFullScreen ? _toggleFullScreen : null,
+      fullScreen: fullScreen,
+      onFullScreen: offersFullScreen || fullScreen ? _toggleFullScreen : null,
     );
   }
 
