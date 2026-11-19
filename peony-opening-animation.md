@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-19T20:57:17.436Z
+Updated: 2026-11-19T20:57:24.487Z
 Next ids: c6 D3 R2 S2
 
 ## Goal
@@ -17,11 +17,13 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Where things stand
 
-The run ended in draft-pr: draft FEATURE pull request https://github.com/SatanshuMishra/field-notes/pull/393 (feat/peony-opening into main), drafted only for blocked check U1, five golden tests that fail on this Mac and identically on main, while the goldens CI passed on the same tree. The five opening test files, all 42 spec checks, pass on the branch's tree. The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
+The opening is on main through pull request #393, and the drive holds the run for clean-up. Its five opening test files, all 42 spec checks, pass on that tree. The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
 
 ## Next step
 
-The drive entered clean-up and runs it next.
+Wait for the drive's clean-up of peony-opening to rest; then close the thread if it ends in ready-pr, or park it with the wait's next sentence.
+
+Needs: R1.
 
 ## Decisions in force
 
