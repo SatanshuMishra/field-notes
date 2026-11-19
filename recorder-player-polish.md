@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-19T00:01:22.436Z
+Updated: 2026-11-19T00:03:12.466Z
 Next ids: c9 D7 R2 S1
 
 ## Goal
@@ -20,11 +20,11 @@ Fix eight owner-reported issues across the settings page, the voice and video re
 
 ## Where things stand
 
-The run is unattended. The spec and its items file are written and rendered: 12 criteria, two of them unproven and left to lab checks, and 10 Steps in five pull requests; every surface probe, the feasibility check and the complete record check pass, and the spec reviewer's one pass is under way.
+The run is unattended. The spec and its items file are written and rendered: 12 criteria, two of them unproven and left to lab checks, and 10 Steps in five pull requests; every surface probe, the feasibility check and the complete record check pass, and the spec reviewer's one pass is under way. The glossary terms and ADRs 0010 and 0011 are written, and the run's facts file is in the run home.
 
 ## Next step
 
-When the spec reviewer reports, fix each real issue once, re-render and rerun the spec and items checks, then hand off: glossary and ADRs, the guard verify, delete the guard file and set the record handed-off; then record the hand-off decision and set up and start the pipeline drive.
+When the spec reviewer reports, fix each real issue once, switch the spec, record and tasks to the glossary's words (day pop-up for day window, picture fill for glow), re-render and rerun the spec and items checks, then verify the guard, delete the guard file, set the record handed-off, record the hand-off decision and set up and start the pipeline drive.
 
 ## Decisions in force
 
@@ -45,3 +45,5 @@ When the spec reviewer reports, fix each real issue once, re-render and rerun th
 
 - https://claude.ai/artifact/6Jhnx5E1BxCPH9DgNu9R1m: cohesion canvas; its 1.9 follow-ups page holds the prototype boards
 - docs/specs/recorder-player-polish.decisions.md and docs/specs/recorder-player-polish.record.json: the interview's answers and record
+- docs/specs/recorder-player-polish.md and docs/specs/recorder-player-polish.items.json: the spec and the Steps builders receive
+- ~/.mitosis/fireplace/recorder-player-polish/: the pipeline run home, holding facts.json
