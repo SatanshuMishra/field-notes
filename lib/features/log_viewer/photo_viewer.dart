@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/dialog_host.dart';
+import 'package:field_notes/design/feedback/full_window_route.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
@@ -47,9 +48,8 @@ Future<void> showPhotoViewer(
 }) {
   playbackFocus.silence();
   final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-  return showGeneralDialog<void>(
-    context: context,
-    barrierDismissible: false,
+  return showFullWindowRoute<void>(
+    context,
     barrierLabel: _barrierLabel,
     barrierColor: _clearBarrier,
     transitionDuration: still ? Duration.zero : Motion.fade,

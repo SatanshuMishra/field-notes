@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/dialog_host.dart';
+import 'package:field_notes/design/feedback/full_window_route.dart';
 import 'package:field_notes/design/feedback/toast.dart';
 
 import 'stage_phase.dart';
@@ -20,9 +21,8 @@ Future<T?> showImmersiveRecorder<T>(
   required String barrierLabel,
   required WidgetBuilder builder,
 }) {
-  return showGeneralDialog<T>(
-    context: context,
-    barrierDismissible: false,
+  return showFullWindowRoute<T>(
+    context,
     barrierLabel: barrierLabel,
     barrierColor: _clearBarrier,
     transitionDuration: immersiveFadeFor(stageLayoutOf(context)),

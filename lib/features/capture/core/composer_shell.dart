@@ -10,6 +10,7 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/app/shell/windows_caption_buttons.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/feedback/full_window_route.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/outlined_surface.dart';
 import 'package:field_notes/features/capture/core/night_sky.dart';
@@ -99,9 +100,8 @@ Future<T?> showComposerRoute<T>(
   required Widget child,
 }) {
   final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-  return showGeneralDialog<T>(
-    context: context,
-    barrierDismissible: false,
+  return showFullWindowRoute<T>(
+    context,
     barrierLabel: barrierLabel,
     barrierColor: _clearBarrier,
     transitionDuration: still
