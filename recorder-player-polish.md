@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: parked
-Updated: 2026-11-19T07:23:14.937Z
+Updated: 2026-11-19T07:23:37.594Z
 Next ids: c9 D8 R2 S1
 
 ## Goal
@@ -24,7 +24,7 @@ The run is unattended. The interphase package is handed off: 12 criteria, two of
 
 ## Next step
 
-The drive entered clean-up and runs it next.
+The drive entered ready-pr and the run has ended. The project's version was left alone: release tag v1.9.0 on origin is ahead of 1.0.0, the highest version the version files hold.
 
 ## Decisions in force
 
