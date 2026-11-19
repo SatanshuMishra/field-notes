@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/misc.dart' show FutureProviderFamily;
 
-import 'package:field_notes/domain/models/models.dart';
-import 'package:field_notes/domain/platform/desktop_platform.dart';
-import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart';
+
+export 'package:field_notes/features/entry_cards/cards/video_body.dart'
+    show videoAspectProvider;
 import 'package:field_notes/features/entry_cards/cards/video_controls_overlay.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
@@ -16,20 +15,6 @@ import 'package:field_notes/features/log_viewer/log_viewer.dart'
     show LogViewerPlace;
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
-import 'package:field_notes/state/media_provider.dart';
-
-final FutureProviderFamily<double?, String> videoAspectProvider = FutureProvider
-    .autoDispose
-    .family<double?, String>((Ref ref, String mediaId) async {
-      final MediaStore store = await ref.watch(mediaStoreProvider.future);
-      final MediaBlob? blob = await blobForMediaReference(store, mediaId);
-      final int? width = blob?.width;
-      final int? height = blob?.height;
-      if (width == null || height == null || width <= 0 || height <= 0) {
-        return null;
-      }
-      return width / height;
-    });
 
 class VideoViewerView extends ConsumerStatefulWidget {
   const VideoViewerView({
@@ -187,6 +172,7 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
       mediaPath: state.mediaPath,
       tuning: state.tuning,
       onFullScreen: widget.scene.onFullScreen,
+      videoShadeHeight: videoShadeDayHeight,
     );
   }
 
@@ -198,8 +184,6 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          if (!isDesktopPlatform(Theme.of(context).platform))
-            const ViewerDockBacking(),
           Transport(
             kind: TransportKind.video,
             mode: TransportMode.viewer,
@@ -222,6 +206,7 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
                 ViewerEdgeArrows(
                   onPrevious: scene.onEarlier,
                   onNext: scene.onLater,
+                  overVideo: true,
                 ),
               ],
             ),

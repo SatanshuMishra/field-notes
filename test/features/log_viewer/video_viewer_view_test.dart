@@ -14,7 +14,8 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart';
 import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart';
-import 'package:field_notes/features/entry_cards/media/media_image.dart';
+import 'package:field_notes/features/capture/video/camera_picture_fill.dart'
+    show cameraPictureKey;
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
 import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
@@ -233,17 +234,8 @@ Finder _groundBox() {
 
 Finder get _play => find.byType(TransportPlayButton);
 
-bool _controlsShown(WidgetTester tester) {
-  final AnimatedOpacity fade = tester.widget<AnimatedOpacity>(
-    find
-        .descendant(
-          of: find.byType(ViewerControlsFade),
-          matching: find.byType(AnimatedOpacity),
-        )
-        .first,
-  );
-  return fade.opacity == 1;
-}
+bool _controlsShown(WidgetTester tester) =>
+    _play.hitTestable().evaluate().isNotEmpty;
 
 Future<void> _openOn(
   WidgetTester tester,
@@ -308,11 +300,14 @@ void main() {
       expect(frame.center.dy, closeTo(832 / 2, 0.01));
       _expectUnclipped(tester);
 
-      final MediaImage poster = tester.widget<MediaImage>(
-        find.descendant(of: _frame, matching: find.byType(MediaImage)),
+      final Finder poster = find.descendant(
+        of: find.byType(VideoStillStage),
+        matching: find.descendant(
+          of: find.byKey(cameraPictureKey),
+          matching: find.byType(Image),
+        ),
       );
-      expect(poster.mediaId, _posterId);
-      expect(poster.fit, BoxFit.contain);
+      _expectRect(tester.getRect(poster), fitted);
     }
 
     final FakeEntryVideoPlayer player = FakeEntryVideoPlayer()
@@ -341,7 +336,15 @@ void main() {
     player.emitState(VideoPlaybackState.playing);
     await tester.pump();
 
-    expect(find.byType(MediaImage), findsNothing);
+    _expectRect(
+      tester.getRect(
+        find.descendant(
+          of: find.byKey(cameraPictureKey),
+          matching: find.byKey(const ValueKey<String>('fake-video-surface')),
+        ),
+      ),
+      fitted,
+    );
     _expectRect(tester.getRect(_frame), fitted);
     _expectUnclipped(tester);
   });
@@ -402,50 +405,51 @@ void main() {
     _expectUnclipped(tester);
   });
 
-  testWidgets('controls fade after 3 seconds of playing and return on play', (
-    WidgetTester tester,
-  ) async {
-    _phone(tester);
-    final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
-    await _openOn(tester, _scene(_Calls()), player, TargetPlatform.android);
-    expect(player.loadCalls, hasLength(1));
-    expect(_controlsShown(tester), isTrue);
+  testWidgets(
+    'on touch controls fade after 4 seconds of playing and return on play',
+    (WidgetTester tester) async {
+      _phone(tester);
+      final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
+      await _openOn(tester, _scene(_Calls()), player, TargetPlatform.android);
+      expect(player.loadCalls, hasLength(1));
+      expect(_controlsShown(tester), isTrue);
 
-    await _startPlaying(tester, player);
-    expect(player.playCalls, 1);
+      await _startPlaying(tester, player);
+      expect(player.playCalls, 1);
 
-    await tester.pump(const Duration(milliseconds: 2900));
-    expect(_controlsShown(tester), isTrue);
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(_controlsShown(tester), isFalse);
-    expect(find.byKey(logViewerEarlierKey).hitTestable(), findsNothing);
+      await tester.pump(const Duration(milliseconds: 3900));
+      expect(_controlsShown(tester), isTrue);
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(_controlsShown(tester), isFalse);
+      expect(find.byKey(logViewerEarlierKey).hitTestable(), findsNothing);
 
-    await tester.tapAt(_phonePicture);
-    await tester.pump(_pastDoubleTap);
-    expect(_controlsShown(tester), isTrue);
-    await tester.tapAt(_phonePicture);
-    await tester.pump(_pastDoubleTap);
-    expect(_controlsShown(tester), isFalse);
-    await tester.tapAt(_phonePicture);
-    await tester.pump(_pastDoubleTap);
-    expect(_controlsShown(tester), isTrue);
+      await tester.tapAt(_phonePicture);
+      await tester.pump(_pastDoubleTap);
+      expect(_controlsShown(tester), isTrue);
+      await tester.tapAt(_phonePicture);
+      await tester.pump(_pastDoubleTap);
+      expect(_controlsShown(tester), isFalse);
+      await tester.tapAt(_phonePicture);
+      await tester.pump(_pastDoubleTap);
+      expect(_controlsShown(tester), isTrue);
 
-    await tester.pump(const Duration(milliseconds: 1200));
-    await tester.tap(_play);
-    await tester.pump();
-    expect(player.pauseCalls, 1);
-    player.emitState(VideoPlaybackState.paused);
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 5));
-    expect(_controlsShown(tester), isTrue);
+      await tester.pump(const Duration(milliseconds: 1200));
+      await tester.tap(_play);
+      await tester.pump();
+      expect(player.pauseCalls, 1);
+      player.emitState(VideoPlaybackState.paused);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 5));
+      expect(_controlsShown(tester), isTrue);
 
-    await _startPlaying(tester, player);
-    expect(player.playCalls, 2);
-    await tester.pump(const Duration(milliseconds: 2900));
-    expect(_controlsShown(tester), isTrue);
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(_controlsShown(tester), isFalse);
-  });
+      await _startPlaying(tester, player);
+      expect(player.playCalls, 2);
+      await tester.pump(const Duration(milliseconds: 3900));
+      expect(_controlsShown(tester), isTrue);
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(_controlsShown(tester), isFalse);
+    },
+  );
 
   testWidgets('a double tap on the picture skips and leaves controls shown', (
     WidgetTester tester,
@@ -692,12 +696,12 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pump();
-    expect(player.seekCalls.last, const Duration(seconds: 15));
+    expect(player.seekCalls.last, const Duration(seconds: 10));
     player.emitPosition(const Duration(seconds: 20));
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pump();
-    expect(player.seekCalls.last, const Duration(seconds: 25));
+    expect(player.seekCalls.last, const Duration(seconds: 30));
     expect(calls.earlier, 0);
     expect(calls.later, 0);
 
@@ -716,80 +720,56 @@ void main() {
     expect(calls.delete, 0);
   });
 
-  testWidgets('the top bar and edge arrows read the tokens of each theme', (
-    WidgetTester tester,
-  ) async {
-    _mac(tester);
-    for (final (Brightness brightness, FieldNotesColors colors)
-        in <(Brightness, FieldNotesColors)>[
-          (Brightness.light, FieldNotesColors.light),
-          (Brightness.dark, FieldNotesColors.dark),
-        ]) {
-      await _openOn(
-        tester,
-        _scene(_Calls(), title: 'Harbour'),
-        FakeEntryVideoPlayer(),
-        TargetPlatform.macOS,
-        brightness: brightness,
-      );
+  testWidgets(
+    'the top bar and edge arrows wear the white video chrome in each theme',
+    (WidgetTester tester) async {
+      _mac(tester);
+      for (final Brightness brightness in Brightness.values) {
+        await _openOn(
+          tester,
+          _scene(_Calls(), title: 'Harbour'),
+          FakeEntryVideoPlayer(),
+          TargetPlatform.macOS,
+          brightness: brightness,
+        );
 
-      final Finder inBar = find.descendant(
-        of: find.byType(ViewerLogBar),
-        matching: find.byWidgetPredicate(
-          (Widget widget) =>
-              widget is DecoratedBox &&
-              widget.decoration is BoxDecoration &&
-              (widget.decoration as BoxDecoration).gradient is LinearGradient,
-        ),
-      );
-      final LinearGradient fade =
-          (tester.widget<DecoratedBox>(inBar).decoration as BoxDecoration)
-                  .gradient!
-              as LinearGradient;
-      expect(fade.colors, <Color>[
-        colors.viewerFadeEnd,
-        colors.viewerFadeStart,
-      ]);
-      expect(
-        tester
-            .widget<ColoredBox>(
-              find
-                  .descendant(
-                    of: find.byType(ViewerLogBar),
-                    matching: find.byType(ColoredBox),
-                  )
-                  .first,
-            )
-            .color,
-        colors.viewerFadeEnd,
-      );
-
-      final Container arrow = tester.widget<Container>(
-        find.descendant(
-          of: find.byKey(logViewerEarlierKey),
-          matching: find.byType(Container),
-        ),
-      );
-      final BoxDecoration face = arrow.decoration! as BoxDecoration;
-      expect(
-        face.color!.withValues(alpha: 1),
-        brightness == Brightness.dark
-            ? colors.viewerFadeEnd.withValues(alpha: 1)
-            : colors.cardBright.withValues(alpha: 1),
-      );
-      final EditableText field = tester.widget<EditableText>(
-        find.descendant(
+        final Finder shade = find.descendant(
           of: find.byType(ViewerLogBar),
-          matching: find.byType(EditableText),
-        ),
-      );
-      expect(field.style.color, colors.ink);
-      expect(
-        tester.widget<Text>(find.text('2 of 3')).style!.color,
-        colors.inkSoft,
-      );
-    }
-  });
+          matching: find.byKey(videoTopShadeKey),
+        );
+        expect(shade, findsOneWidget, reason: brightness.name);
+        expect(
+          find.descendant(
+            of: find.byType(ViewerLogBar),
+            matching: find.byType(ColoredBox),
+          ),
+          findsNothing,
+          reason: brightness.name,
+        );
+
+        final Container arrow = tester.widget<Container>(
+          find.descendant(
+            of: find.byKey(logViewerEarlierKey),
+            matching: find.byType(Container),
+          ),
+        );
+        final BoxDecoration face = arrow.decoration! as BoxDecoration;
+        expect(face.color, const Color(0x7A000000), reason: brightness.name);
+        expect(face.border, isNull, reason: brightness.name);
+        final EditableText field = tester.widget<EditableText>(
+          find.descendant(
+            of: find.byType(ViewerLogBar),
+            matching: find.byType(EditableText),
+          ),
+        );
+        expect(field.style.color, const Color(0xFFFFFFFF));
+        expect(
+          tester.widget<Text>(find.text('2 of 3')).style!.color,
+          const Color(0xFFFFFFFF),
+        );
+      }
+    },
+  );
 
   testWidgets('the Mac title field saves on Enter and on losing focus', (
     WidgetTester tester,

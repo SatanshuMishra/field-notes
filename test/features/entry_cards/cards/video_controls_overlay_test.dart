@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,8 +25,14 @@ Future<void> _settleFade(WidgetTester tester) async {
   await tester.pump(Motion.fade + _fadeMargin);
 }
 
+Duration get _hideDelay =>
+    switch (resolveVideoControlModel(defaultTargetPlatform)) {
+      VideoControlModel.pointer => videoControlsMouseIdle,
+      VideoControlModel.touch => videoControlsTouchIdle,
+    };
+
 Future<void> _idlePastHideDelay(WidgetTester tester) async {
-  await tester.pump(kVideoControlsHideDelay);
+  await tester.pump(_hideDelay);
   await _settleFade(tester);
 }
 

@@ -44,7 +44,6 @@ const Color _mediaGround = Color(0xFF15110D);
 
 final int _lightRow = _ink.withValues(alpha: 0.06).toARGB32();
 final int _dark = _white.withValues(alpha: 0.12).toARGB32();
-final int _pillAction = _white.withValues(alpha: 0.14).toARGB32();
 
 const Size _desktop = Size(1440, 900);
 const Size _phone = Size(384, 832);
@@ -459,7 +458,7 @@ void main() {
         _Row(
           logActionsOpenTooltip,
           find.byKey(dayPaneOpenFullKey),
-          _dark,
+          _lightRow,
           _Shape.rounded,
           radius: 10,
         ),
@@ -522,14 +521,14 @@ void main() {
         _Row(
           'Edit note',
           find.byKey(logActionsEditKey),
-          _pillAction,
+          _lightRow,
           _Shape.rounded,
           radius: 7,
         ),
         _Row(
           'Delete entry',
           find.byKey(logActionsDeleteKey),
-          _pillAction,
+          _lightRow,
           _Shape.rounded,
           radius: 7,
         ),
@@ -591,17 +590,17 @@ void main() {
       );
       final Finder controls = find.ancestor(
         of: find.byKey(_overlayChildKey),
-        matching: find.byType(AnimatedOpacity),
+        matching: find.byType(FadeTransition),
       );
-      await tester.pump(kVideoControlsHideDelay);
+      await tester.pump(videoControlsMouseIdle);
       await tester.pumpAndSettle();
-      expect(tester.widget<AnimatedOpacity>(controls).opacity, 0);
+      expect(tester.widget<FadeTransition>(controls.first).opacity.value, 0);
 
       await mouse.moveTo(tester.getCenter(surface));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(_cursor(), SystemMouseCursors.click);
-      expect(tester.widget<AnimatedOpacity>(controls).opacity, 1);
+      expect(tester.widget<FadeTransition>(controls.first).opacity.value, 1);
       expect(
         tester.getSemantics(surface),
         isSemantics(label: 'Play or pause video', isButton: true),

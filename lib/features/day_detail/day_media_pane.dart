@@ -128,15 +128,15 @@ class _DayMediaPaneState extends ConsumerState<DayMediaPane> {
         onDelete: () => widget.onDelete(entry),
         body: Padding(
           padding: _stagePadding,
-          child: ClipRRect(
-            borderRadius: _stageRadius,
-            child: ColoredBox(
-              color: entry.type == EntryType.video
-                  ? Palette.mediaBlack
-                  : Palette.mediaGround,
-              child: SizedBox.expand(child: _view(_sceneOf(entry))),
-            ),
-          ),
+          child: entry.type == EntryType.video
+              ? ClipRRect(
+                  borderRadius: _stageRadius,
+                  child: ColoredBox(
+                    color: Palette.mediaBlack,
+                    child: SizedBox.expand(child: _view(_sceneOf(entry))),
+                  ),
+                )
+              : SizedBox.expand(child: _view(_sceneOf(entry))),
         ),
       ),
     );

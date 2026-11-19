@@ -429,7 +429,7 @@ void main() {
       find.bySemanticsLabel(RegExp('downloading 3.0 of 12.0 MB')),
       findsOneWidget,
     );
-    expect(find.byType(MediaImage), findsWidgets);
+    expect(find.byType(VideoStillStage), findsOneWidget);
     expect(player.loadCalls, isEmpty);
 
     progress.add(
