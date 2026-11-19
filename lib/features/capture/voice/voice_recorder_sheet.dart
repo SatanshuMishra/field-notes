@@ -160,7 +160,6 @@ class VoiceRecorderSheet extends StatefulWidget {
     this.letGoKey,
     this.levels = const Stream<double>.empty(),
     this.savingText = voiceSavingStatus,
-    this.onVoiceSettings,
     this.hearing = MicrophoneHearing.hearing,
     this.titleController,
     this.questionIndex,
@@ -183,7 +182,6 @@ class VoiceRecorderSheet extends StatefulWidget {
   final Key? letGoKey;
   final Stream<double> levels;
   final String savingText;
-  final VoidCallback? onVoiceSettings;
   final MicrophoneHearing hearing;
   final TextEditingController? titleController;
   final int? questionIndex;
@@ -363,7 +361,7 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet>
               : Padding(
                   padding: EdgeInsets.only(left: sidebar ? _inputGap : 0),
                   child: RecorderInputButton(
-                    onVoiceSettings: widget.onVoiceSettings,
+                    levels: widget.levels,
                     takeLevels: _phase == VoiceRecorderPhase.idle
                         ? null
                         : widget.levels,

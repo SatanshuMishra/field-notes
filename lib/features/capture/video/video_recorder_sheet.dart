@@ -185,7 +185,6 @@ class VideoRecorderSheet extends StatefulWidget {
     this.savingHint = videoSavingHint,
     this.capHint = 'Auto-stops at 30:00.',
     this.deniedMessage = cameraPermissionMessage,
-    this.onVoiceSettings,
     this.levels = const Stream<double>.empty(),
     this.hearing = MicrophoneHearing.hearing,
     this.titleController,
@@ -218,7 +217,6 @@ class VideoRecorderSheet extends StatefulWidget {
   final String savingHint;
   final String capHint;
   final String deniedMessage;
-  final VoidCallback? onVoiceSettings;
   final Stream<double> levels;
   final MicrophoneHearing hearing;
   final TextEditingController? titleController;
@@ -652,7 +650,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet>
               ? RecorderInputButton(
                   androidVideo:
                       Theme.of(context).platform == TargetPlatform.android,
-                  onVoiceSettings: widget.onVoiceSettings,
+                  levels: widget.cameraOn || taking ? widget.levels : null,
                   takeLevels: taking ? widget.levels : null,
                   ringLevels: widget.cameraOn ? widget.levels : null,
                   ringHearing: widget.hearing,
