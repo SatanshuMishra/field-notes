@@ -75,7 +75,6 @@ Future<void> _show(
   required _FakeOutput output,
   bool phone = false,
   bool androidVideo = false,
-  VoidCallback? onVoiceSettings,
 }) async {
   tester.view.physicalSize = phone
       ? const Size(384, 832)
@@ -102,10 +101,7 @@ Future<void> _show(
           body: SafeArea(
             child: Align(
               alignment: Alignment.topCenter,
-              child: InputPanel(
-                androidVideo: androidVideo,
-                onVoiceSettings: onVoiceSettings,
-              ),
+              child: InputPanel(androidVideo: androidVideo),
             ),
           ),
         ),
@@ -151,8 +147,8 @@ void main() {
         inGlass(find.text('Output device')),
         inGlass(find.text('System output')),
       ),
-      (inGlass(find.text('Voice settings')), null),
     ];
+    expect(inGlass(find.text('Voice settings')), findsNothing);
     double previous = double.negativeInfinity;
     for (final (Finder title, Finder? value) in rows) {
       expect(title, findsOneWidget);
@@ -421,7 +417,6 @@ void main() {
       lister: _Lister(<InputDevice>[_macBook, _corsair]),
       output: _FakeOutput('Speakers'),
       phone: true,
-      onVoiceSettings: () {},
     );
 
     final List<(Key, Matcher)> rows = <(Key, Matcher)>[
@@ -444,14 +439,6 @@ void main() {
           isButton: true,
           hasExpandedState: true,
           isExpanded: false,
-          hasTapAction: true,
-        ),
-      ),
-      (
-        voiceSettingsRowKey,
-        isSemantics(
-          label: 'Voice settings',
-          isButton: true,
           hasTapAction: true,
         ),
       ),

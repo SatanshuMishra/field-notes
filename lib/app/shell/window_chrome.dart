@@ -27,6 +27,7 @@ const String startResizeMethod = 'startResize';
 const String windowStateMethod = 'windowState';
 const String stateChangedMethod = 'stateChanged';
 const String windowHandleMethod = 'windowHandle';
+const String setFullScreenMethod = 'setFullScreen';
 
 const MethodChannel windowChannel = MethodChannel(windowChannelName);
 
@@ -59,6 +60,9 @@ Future<void> closeWindow() => _invokeWindow(closeMethod);
 Future<void> startWindowResize(String edge) =>
     _invokeWindow(startResizeMethod, edge);
 
+Future<void> setWindowFullScreen(bool fullScreen) =>
+    _invokeWindow(setFullScreenMethod, fullScreen);
+
 Future<int?> windowHandle() async {
   try {
     return await windowChannel.invokeMethod<int>(windowHandleMethod);
@@ -79,20 +83,26 @@ Future<void> _invokeWindow(String method, [Object? arguments]) async {
 
 @immutable
 final class WindowState {
-  const WindowState({required this.maximized, required this.active});
+  const WindowState({
+    required this.maximized,
+    required this.active,
+    this.fullScreen = false,
+  });
 
   final bool maximized;
   final bool active;
+  final bool fullScreen;
 
   @override
   bool operator ==(Object other) {
     return other is WindowState &&
         other.maximized == maximized &&
-        other.active == active;
+        other.active == active &&
+        other.fullScreen == fullScreen;
   }
 
   @override
-  int get hashCode => Object.hash(maximized, active);
+  int get hashCode => Object.hash(maximized, active, fullScreen);
 }
 
 final class WindowStateChannel {
@@ -172,10 +182,15 @@ WindowState? _windowStateFrom(Object? arguments) {
   }
   final Object? maximized = arguments['maximized'];
   final Object? active = arguments['active'];
-  if (maximized is! bool || active is! bool) {
+  final Object fullScreen = arguments['fullScreen'] ?? false;
+  if (maximized is! bool || active is! bool || fullScreen is! bool) {
     return null;
   }
-  return WindowState(maximized: maximized, active: active);
+  return WindowState(
+    maximized: maximized,
+    active: active,
+    fullScreen: fullScreen,
+  );
 }
 
 class WindowDragBand extends StatelessWidget {

@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/feedback/full_window_route.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
@@ -39,9 +40,8 @@ Future<LogViewerOutcome> showLogViewer(
   final bool phone =
       resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar;
   final Duration entrance = phone ? phoneSheetEntrance : Motion.modalPop;
-  final LogViewerOutcome? outcome = await showGeneralDialog<LogViewerOutcome>(
-    context: context,
-    barrierDismissible: false,
+  final LogViewerOutcome? outcome = await showFullWindowRoute<LogViewerOutcome>(
+    context,
     barrierLabel: _barrierLabel,
     barrierColor: const Color(0x00000000),
     transitionDuration: still ? Duration.zero : entrance,

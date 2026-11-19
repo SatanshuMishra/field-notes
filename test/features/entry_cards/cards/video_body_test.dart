@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/features/capture/video/camera_picture_fill.dart'
+    show cameraPictureKey;
+
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart';
 import 'package:field_notes/features/entry_cards/cards/video_scrubber.dart';
@@ -352,7 +355,10 @@ void main() {
       expect(player.loadCalls, <String>['/tmp/v.mp4']);
       expect(player.playCalls, 0);
       expect(
-        find.byKey(const ValueKey<String>('fake-video-surface')),
+        find.descendant(
+          of: find.byKey(cameraPictureKey),
+          matching: find.byKey(const ValueKey<String>('fake-video-surface')),
+        ),
         findsOneWidget,
       );
 
@@ -425,7 +431,8 @@ void main() {
         await tester.pump();
 
         expect(find.byType(CorruptMediaPlaceholder), findsNothing);
-        expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
+        expect(find.byType(NeutralMediaPlaceholder), findsNothing);
+        expect(find.byKey(videoLoadingRingKey), findsOneWidget);
         expect(
           find.byKey(const ValueKey<String>('video-play-toggle')),
           findsOneWidget,

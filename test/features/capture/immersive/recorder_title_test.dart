@@ -462,6 +462,12 @@ void main() {
       levels.stream,
     );
     expect(
+      tester
+          .widget<RecorderInputButton>(find.byType(RecorderInputButton))
+          .levels,
+      levels.stream,
+    );
+    expect(
       tester.widget<VoiceLevelField>(find.byType(VoiceLevelField)).levels,
       levels.stream,
     );

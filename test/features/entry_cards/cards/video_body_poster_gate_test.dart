@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart';
-import 'package:field_notes/features/entry_cards/media/media_image.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
 import 'package:field_notes/features/entry_cards/playback/video_slots.dart';
@@ -91,7 +90,7 @@ void main() {
       expect(slots.acquireCalls, isEmpty);
       expect(built, isEmpty);
       expect(surfaceMounted(tester, 0), isFalse);
-      expect(find.byType(MediaImage), findsOneWidget);
+      expect(find.byType(VideoStillStage), findsOneWidget);
       expect(tapEnabled(tester, inCard(0, videoPlayToggleKey)), isTrue);
     });
 
@@ -117,10 +116,9 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(
-        slots.acquireCalls,
-        <VideoSlotEvictionRights>[VideoSlotEvictionRights.evictUnpinned],
-      );
+      expect(slots.acquireCalls, <VideoSlotEvictionRights>[
+        VideoSlotEvictionRights.evictUnpinned,
+      ]);
       expect(built, hasLength(1));
       expect(built.single.loadCalls, <String>[file.path]);
       expect(built.single.playCalls, 1);
@@ -144,10 +142,9 @@ void main() {
       );
       await tester.pump();
 
-      expect(
-        slots.acquireCalls,
-        <VideoSlotEvictionRights>[VideoSlotEvictionRights.none],
-      );
+      expect(slots.acquireCalls, <VideoSlotEvictionRights>[
+        VideoSlotEvictionRights.none,
+      ]);
       expect(built, hasLength(1));
       expect(built.single.loadCalls, <String>[file.path]);
       expect(built.single.playCalls, 0);
@@ -194,10 +191,9 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(
-          slots.acquireCalls,
-          <VideoSlotEvictionRights>[VideoSlotEvictionRights.evictUnpinned],
-        );
+        expect(slots.acquireCalls, <VideoSlotEvictionRights>[
+          VideoSlotEvictionRights.evictUnpinned,
+        ]);
         expect(built, hasLength(1));
         expect(built.single.loadCalls, <String>[file.path]);
       },
@@ -345,11 +341,10 @@ void main() {
       expect(built, hasLength(1));
       expect(built.single.disposeCalls, 1);
       expect(surfaceMounted(tester, 0), isFalse);
-      expect(find.byType(MediaImage), findsOneWidget);
-      expect(
-        slots.acquireCalls,
-        <VideoSlotEvictionRights>[VideoSlotEvictionRights.evictUnpinned],
-      );
+      expect(find.byType(VideoStillStage), findsOneWidget);
+      expect(slots.acquireCalls, <VideoSlotEvictionRights>[
+        VideoSlotEvictionRights.evictUnpinned,
+      ]);
       expect(
         slots.acquire(
           onEvicted: () {},

@@ -639,32 +639,6 @@ void main() {
     },
   );
 
-  testWidgets(
-    'opening Voice settings while the camera reopens for a chosen input opens no camera',
-    (WidgetTester tester) async {
-      native.destroyDelay = const Duration(milliseconds: 100);
-      await _showComposer(
-        tester,
-        recorder: sound.recorder(),
-        settings: FakeSettingsRepository(initial: _storedInput('a')),
-        voice: CameraOffVoiceRecorder(),
-      );
-      await _openInputChoices(tester);
-      final int opened = native.cameraOpenings;
-
-      await tester.tap(find.byKey(inputChoiceKey('b')));
-      await tester.pump(const Duration(milliseconds: 30));
-      await tester.tap(find.byKey(voiceSettingsRowKey));
-      await tester.pump();
-      await _pass(tester, _second);
-
-      expect(find.byType(VideoRecorderSheet), findsNothing);
-      expect(native.cameraOpenings, opened);
-
-      await _closeComposer(tester);
-    },
-  );
-
   testWidgets('leaving during a camera switch opens no camera', (
     WidgetTester tester,
   ) async {

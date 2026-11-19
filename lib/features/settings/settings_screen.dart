@@ -486,7 +486,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       controller: _scrollController,
       padding: _contentPadding,
       child: Align(
-        alignment: Alignment.topLeft,
+        alignment: Alignment.topCenter,
         child: ConstrainedBox(
           key: settingsContentColumnKey,
           constraints: const BoxConstraints(maxWidth: settingsContentMaxWidth),

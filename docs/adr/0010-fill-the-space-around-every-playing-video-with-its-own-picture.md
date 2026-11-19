@@ -1,0 +1,5 @@
+# Fill the space around every playing video with its own picture
+
+Status: accepted
+
+A video whose shape does not match its box leaves spare space beside or above the picture, and flat black there made watching feel like a page laid over a film. Every video player, the Today card, the day pop-up and the full view, shows the whole picture centred in the same picture stage the video recorder uses, and fills the spare space with a dim, heavily blurred second draw of the same playing video texture under a warm dark scrim, the way YouTube's ambient mode fills the space beside a video. YouTube's web player instead samples a still every few seconds and crossfades between them, to spare the browser a second decode; the app can draw the one decoded texture twice, so the fill follows the video continuously with no sampling timers. Cropping to cover was rejected because it hides part of the recording, and flat black was turned down by the owner. The cost is a second large blur on every frame, so no copy is drawn when the picture fills its box or under reduced motion.

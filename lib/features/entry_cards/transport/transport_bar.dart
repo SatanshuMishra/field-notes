@@ -30,8 +30,30 @@ Key transportSpeedChoiceKey(double speed) =>
     ValueKey<String>('transport-speed-$speed');
 
 const double _iconSize = 20;
+const Color videoChromeInk = Color(0xFFFFFFFF);
+const List<Shadow> videoChromeEdge = <Shadow>[
+  Shadow(color: Color(0x99000000), blurRadius: 2, offset: Offset(0, 0.5)),
+];
+const double _videoRailAlpha = 0.5;
+const double _videoBubbleAlpha = 0.86;
+const Color _chromeBlack = Color(0xFF000000);
+const Offset _edgeOffset = Offset(0, 0.75);
+const Color _edgeInk = Color(0x99000000);
+
+final FieldNotesColors videoChromeColors = FieldNotesColors.dark.copyWith(
+  ink: videoChromeInk,
+  inkSoft: videoChromeInk,
+  muted: videoChromeInk,
+  mutedDeep: videoChromeInk,
+  accentInk: videoChromeInk,
+  mediaPlayed: videoChromeInk,
+  mediaBubble: _chromeBlack.withValues(alpha: _videoBubbleAlpha),
+  mediaBubbleInk: videoChromeInk,
+  viewerRail: videoChromeInk.withValues(alpha: _videoRailAlpha),
+);
+
 const double _dockSkipSize = 26;
-const double _dockPlayDiameter = 64;
+const double transportDockPlayDiameter = 64;
 const double _playGlyphShare = 0.42;
 const double _playGlyphNudge = 0.05;
 const double _disabledAlpha = 0.5;
@@ -52,7 +74,7 @@ const double _strokeWidth = 1.7;
 const double _viewBox = 24;
 const double _tenFontSize = 7.5;
 const double _tenBaseline = 16.2;
-const double _dockRowGap = 4;
+const double transportDockRowGap = 4;
 const double _readoutBorder = 1;
 const double _readoutFontSize = 16;
 const double _readoutFadeIn = 0.18;
@@ -124,9 +146,47 @@ class PlayPauseGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
+    return _EdgedGlyph(
+      size: size,
+      painter: (Color ink) =>
+          _PlayPauseGlyphPainter(playing: playing, color: ink),
+      color: color,
+    );
+  }
+}
+
+class _EdgedGlyph extends StatelessWidget {
+  const _EdgedGlyph({
+    required this.size,
+    required this.painter,
+    required this.color,
+  });
+
+  final double size;
+  final CustomPainter Function(Color ink) painter;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget glyph = CustomPaint(
       size: Size.square(size),
-      painter: _PlayPauseGlyphPainter(playing: playing, color: color),
+      painter: painter(color),
+    );
+    if (!VideoChrome.of(context)) {
+      return glyph;
+    }
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Transform.translate(
+          offset: _edgeOffset,
+          child: CustomPaint(
+            size: Size.square(size),
+            painter: painter(_edgeInk),
+          ),
+        ),
+        glyph,
+      ],
     );
   }
 }
@@ -187,9 +247,10 @@ class TransportGlyphIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size.square(size),
-      painter: _TransportGlyphPainter(glyph: glyph, color: color),
+    return _EdgedGlyph(
+      size: size,
+      painter: (Color ink) => _TransportGlyphPainter(glyph: glyph, color: ink),
+      color: color,
     );
   }
 }
@@ -495,6 +556,7 @@ class TransportTimeLabel extends StatelessWidget {
 TextStyle transportTimeStyle(BuildContext context) =>
     context.textStyles.captionSans.copyWith(
       color: context.colors.ink,
+      shadows: VideoChrome.edgeOf(context),
       fontSize: _timeSize,
       fontWeight: FontWeight.w500,
       fontFeatures: _tabular,
@@ -1075,6 +1137,7 @@ class TransportDock extends StatelessWidget {
     this.onBack,
     this.backLabel = 'Back',
     this.onMore,
+    this.timeline,
   });
 
   final TransportValue value;
@@ -1085,34 +1148,51 @@ class TransportDock extends StatelessWidget {
   final VoidCallback? onBack;
   final String backLabel;
   final VoidCallback? onMore;
+  final Widget? timeline;
 
   Widget _slot(Widget? child) =>
       Expanded(child: Center(child: child ?? const SizedBox.shrink()));
+
+  Widget _timeRow(BuildContext context) {
+    final TextStyle now = transportTimeStyle(context);
+    final Widget position = Text(
+      formatMediaDuration(value.position.inMilliseconds),
+      style: now,
+    );
+    final Widget total = Text(
+      formatMediaDuration(value.total?.inMilliseconds),
+      style: now.copyWith(color: context.colors.muted),
+    );
+    final Widget speed = TransportSpeedButton(tuning: tuning);
+    final Widget? timeline = this.timeline;
+    if (timeline == null) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[position, speed, total],
+      );
+    }
+    return Row(
+      children: <Widget>[
+        position,
+        const SizedBox(width: _timeInset),
+        Expanded(child: timeline),
+        const SizedBox(width: _timeInset),
+        total,
+        speed,
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final VoidCallback? back = onBack;
     final VoidCallback? more = onMore;
-    final TextStyle now = transportTimeStyle(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            Text(
-              formatMediaDuration(value.position.inMilliseconds),
-              style: now,
-            ),
-            TransportSpeedButton(tuning: tuning),
-            Text(
-              formatMediaDuration(value.total?.inMilliseconds),
-              style: now.copyWith(color: context.colors.muted),
-            ),
-          ],
-        ),
-        const SizedBox(height: _dockRowGap),
+        _timeRow(context),
+        const SizedBox(height: transportDockRowGap),
         Row(
           children: <Widget>[
             _slot(
@@ -1139,7 +1219,7 @@ class TransportDock extends StatelessWidget {
                 key: playKey,
                 face: TransportPlayFace.cta,
                 playing: value.isPlaying,
-                diameter: _dockPlayDiameter,
+                diameter: transportDockPlayDiameter,
                 onPressed: value.onToggle,
               ),
             ),
@@ -1230,4 +1310,32 @@ class TransportReadout extends StatelessWidget {
       ),
     );
   }
+}
+
+class VideoChrome extends StatelessWidget {
+  const VideoChrome({super.key, required this.child});
+
+  final Widget child;
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_VideoChromeScope>() != null;
+
+  static List<Shadow>? edgeOf(BuildContext context) =>
+      of(context) ? videoChromeEdge : null;
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: Theme.of(context)
+          .copyWith(extensions: <ThemeExtension<dynamic>>[videoChromeColors]),
+      child: _VideoChromeScope(child: child),
+    );
+  }
+}
+
+class _VideoChromeScope extends InheritedWidget {
+  const _VideoChromeScope({required super.child});
+
+  @override
+  bool updateShouldNotify(_VideoChromeScope oldWidget) => false;
 }

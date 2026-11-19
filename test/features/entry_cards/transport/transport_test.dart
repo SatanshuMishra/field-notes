@@ -406,6 +406,7 @@ void main() {
 
       await mouse.moveTo(_timelineAt(tester, 0.25));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
 
       final Rect clip = tester.getRect(find.byKey(clipKey));
       final Rect time = tester.getRect(
@@ -525,8 +526,8 @@ void main() {
         <String, (LogicalKeyboardKey, Duration)>{
           'J': (LogicalKeyboardKey.keyJ, const Duration(seconds: 20)),
           'L': (LogicalKeyboardKey.keyL, const Duration(seconds: 40)),
-          'Left': (LogicalKeyboardKey.arrowLeft, const Duration(seconds: 25)),
-          'Right': (LogicalKeyboardKey.arrowRight, const Duration(seconds: 35)),
+          'Left': (LogicalKeyboardKey.arrowLeft, const Duration(seconds: 20)),
+          'Right': (LogicalKeyboardKey.arrowRight, const Duration(seconds: 40)),
           'Home': (LogicalKeyboardKey.home, Duration.zero),
           'End': (LogicalKeyboardKey.end, _total),
           'Comma': (
@@ -653,7 +654,7 @@ void main() {
       expect(calls.fullScreens, 1);
     });
 
-    testWidgets('a skip flashes its readout in the viewer and it clears', (
+    testWidgets('a skip flashes its worded label in the viewer and it clears', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(_viewer(_Calls(), tuning: PlaybackTuning()));
@@ -661,10 +662,16 @@ void main() {
 
       await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
       await tester.pump();
-      expect(find.text('-10 s'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(videoSkipLabelKey),
+          matching: find.text('Back 10 seconds'),
+        ),
+        findsOneWidget,
+      );
 
-      await tester.pump(transportReadoutHold);
-      expect(find.text('-10 s'), findsNothing);
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.byKey(videoSkipLabelKey), findsNothing);
     });
 
     testWidgets('frame stepping is refused while playing', (

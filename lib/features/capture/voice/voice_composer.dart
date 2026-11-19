@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/design/feedback/toast.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/app_settings.dart';
@@ -14,12 +13,9 @@ import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/recording_wake_hold.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
-import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/features/today/today_date.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
-import 'package:field_notes/state/settings_section_request.dart';
-import 'package:field_notes/state/shell_navigation.dart';
 
 import 'follows_chosen_input.dart';
 import 'voice_peak_sampler.dart';
@@ -401,21 +397,6 @@ class _VoiceComposerConnectorState
     Navigator.of(context).pop();
   }
 
-  void _openVoiceSettings() {
-    if (_closing || _asking || _phase != VoiceRecorderPhase.idle) {
-      return;
-    }
-    final SettingsSectionRequest request = ref.read(
-      settingsSectionRequestProvider.notifier,
-    );
-    final ShellNavigation navigation = ref.read(
-      shellNavigationProvider.notifier,
-    );
-    _leave();
-    request.request(SettingsTab.voice);
-    navigation.select(ShellDestination.settings);
-  }
-
   void _escape() {
     if (_asking) {
       _keepGoing();
@@ -497,7 +478,6 @@ class _VoiceComposerConnectorState
       letGoKey: voiceDiscardConfirmKey,
       levels: _recorder.level,
       savingText: voiceSavingStatus,
-      onVoiceSettings: _openVoiceSettings,
       hearing: _recorder.hearingNow,
       titleController: _title,
       dayLine: _dayLine(),

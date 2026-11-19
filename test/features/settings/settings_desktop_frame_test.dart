@@ -45,10 +45,10 @@ const double _tolerance = 0.01;
 const Key _settingsButton = ValueKey<String>('settings-button');
 
 const Map<String, double> _desktopLefts = <String, double>{
-  'title': 257,
-  'heading': 257,
-  'server address': 257,
-  'manage devices': 257,
+  'title': 341.5,
+  'heading': 341.5,
+  'server address': 341.5,
+  'manage devices': 341.5,
 };
 
 List<JournalDevice> _devices(DateTime now) => <JournalDevice>[

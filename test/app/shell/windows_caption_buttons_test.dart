@@ -68,6 +68,7 @@ Future<void> _sendState(
   WidgetTester tester, {
   required bool maximized,
   bool active = true,
+  bool fullScreen = false,
 }) async {
   await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .handlePlatformMessage(
@@ -76,6 +77,7 @@ Future<void> _sendState(
           MethodCall(stateChangedMethod, <String, Object?>{
             'maximized': maximized,
             'active': active,
+            'fullScreen': fullScreen,
           }),
         ),
         (ByteData? _) {},
@@ -260,7 +262,11 @@ void main() {
     _useWindow(tester);
     _mockWindow(
       tester,
-      windowState: <String, Object?>{'maximized': true, 'active': false},
+      windowState: <String, Object?>{
+        'maximized': true,
+        'active': false,
+        'fullScreen': false,
+      },
     );
     await tester.pumpWidget(
       _captionApp(WindowsCaptionButtons(channel: WindowStateChannel())),

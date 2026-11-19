@@ -3,12 +3,16 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show FutureProviderFamily;
 
 import '../../../data/sync/media/download_service.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../domain/models/models.dart';
+import '../../../domain/services/media_store.dart';
+import '../../../state/media_provider.dart';
+import '../../capture/video/camera_picture_fill.dart';
 import '../media/live_media.dart';
-import '../media/media_image.dart';
 import '../media/media_placeholders.dart';
 import '../media/media_resolver.dart';
 import '../playback/playback_focus.dart';
@@ -35,6 +39,27 @@ const double _bytesPerMegabyte = 1024 * 1024;
 const EdgeInsets _downloadPanelPadding = EdgeInsets.fromLTRB(16, 14, 16, 12);
 const EdgeInsets _downloadPanelMargin = EdgeInsets.all(12);
 const String videoDownloadedLabel = 'Video downloaded, ready to play';
+const Key videoLoadingRingKey = ValueKey<String>('video-loading-ring');
+const double _loadingRingSize = 28;
+const double _loadingRingStroke = 2.5;
+const double _loadingRingArc = 0.25;
+const double _loadingRingInset = 8;
+
+final FutureProviderFamily<double?, String> videoAspectProvider = FutureProvider
+    .autoDispose
+    .family<double?, String>((Ref ref, String mediaId) async {
+      final MediaStore store = await ref.watch(mediaStoreProvider.future);
+      final MediaBlob? blob = await blobForMediaReference(store, mediaId);
+      final int? width = blob?.width;
+      final int? height = blob?.height;
+      if (width == null || height == null || width <= 0 || height <= 0) {
+        return null;
+      }
+      return width / height;
+    });
+
+double? _usableAspect(double? aspect) =>
+    aspect != null && aspect.isFinite && aspect > 0 ? aspect : null;
 
 String _megabytes(int bytes) => (bytes / _bytesPerMegabyte).toStringAsFixed(1);
 
@@ -72,6 +97,8 @@ final class VideoControlsState {
     required this.tuning,
     this.mediaPath,
     this.onSkip,
+    this.showsPicture = false,
+    this.showsNotice = false,
   });
 
   final bool ready;
@@ -89,6 +116,8 @@ final class VideoControlsState {
   final PlaybackTuning tuning;
   final String? mediaPath;
   final ValueChanged<Duration>? onSkip;
+  final bool showsPicture;
+  final bool showsNotice;
 
   TransportValue get transport => TransportValue(
     position: position,
@@ -117,7 +146,9 @@ final class VideoControlsState {
       other.onScrubEnd == onScrubEnd &&
       identical(other.tuning, tuning) &&
       other.mediaPath == mediaPath &&
-      other.onSkip == onSkip;
+      other.onSkip == onSkip &&
+      other.showsPicture == showsPicture &&
+      other.showsNotice == showsNotice;
 
   @override
   int get hashCode => Object.hash(
@@ -136,6 +167,8 @@ final class VideoControlsState {
     tuning,
     mediaPath,
     onSkip,
+    showsPicture,
+    showsNotice,
   );
 }
 
@@ -722,13 +755,30 @@ class _VideoBodyState extends State<VideoBody> {
 
   bool get _isRenderingVideo =>
       _player != null &&
-      (_state == VideoPlaybackState.playing ||
+      (_state == VideoPlaybackState.ready ||
+          _state == VideoPlaybackState.playing ||
           _state == VideoPlaybackState.paused ||
           _state == VideoPlaybackState.completed);
 
   bool get _hasCapturedPoster => widget.entry.thumbnailMediaId != null;
 
-  bool get _showCapturedPoster => _hasCapturedPoster && !_isRenderingVideo;
+  bool get _showsUnavailable => _phase == _VideoPhase.unavailable;
+
+  bool get _showsDownloadStatus =>
+      !_isRenderingVideo && (_download != null || _downloaded);
+
+  bool get _showsNotice =>
+      _showsUnavailable || _showsDownloadStatus || _claimDenied;
+
+  bool get _loadingPicture =>
+      !_isRenderingVideo &&
+      _download == null &&
+      switch (_phase) {
+        _VideoPhase.preparing ||
+        _VideoPhase.retrying ||
+        _VideoPhase.ready => true,
+        _VideoPhase.waiting || _VideoPhase.unavailable => false,
+      };
 
   Duration? get _total {
     final int? declared = widget.entry.durationMs;
@@ -859,10 +909,14 @@ class _VideoBodyState extends State<VideoBody> {
     super.dispose();
   }
 
-  double get _aspectRatio {
-    final double? hint = widget.aspectRatio;
-    if (hint != null && hint.isFinite && hint > 0) {
-      return hint;
+  double _aspectRatio(double? stillAspect) {
+    final double? stored = _usableAspect(widget.aspectRatio);
+    if (stored != null) {
+      return stored;
+    }
+    final double? still = _usableAspect(stillAspect);
+    if (still != null) {
+      return still;
     }
     final Size? upright = _player?.uprightSize;
     if (upright != null &&
@@ -902,6 +956,8 @@ class _VideoBodyState extends State<VideoBody> {
       tuning: _tuning,
       mediaPath: _mediaFile?.path,
       onSkip: ready ? _skip : null,
+      showsPicture: _isRenderingVideo,
+      showsNotice: _showsNotice,
     );
   }
 
@@ -939,11 +995,24 @@ class _VideoBodyState extends State<VideoBody> {
   Widget build(BuildContext context) {
     final VideoControlsState state = _controlsState;
     _publish(state);
-    final double aspectRatio = _aspectRatio;
+    return VideoStill(
+      resolver: widget.resolver,
+      mediaId: widget.entry.thumbnailMediaId,
+      builder: (BuildContext context, ImageProvider? still, double? aspect) =>
+          _laidOut(state, still, _aspectRatio(aspect)),
+    );
+  }
+
+  Widget _laidOut(
+    VideoControlsState state,
+    ImageProvider? still,
+    double aspectRatio,
+  ) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final Size box = _boxSize(constraints, aspectRatio);
         final Size frame = videoFrameSize(box, aspectRatio);
+        final EntryVideoPlayer? player = _player;
         return SizedBox.fromSize(
           size: box,
           child: ColoredBox(
@@ -951,6 +1020,15 @@ class _VideoBodyState extends State<VideoBody> {
             child: Stack(
               fit: StackFit.expand,
               children: <Widget>[
+                if (still != null)
+                  VideoStillStage(image: still, aspectRatio: aspectRatio),
+                if (player != null)
+                  CameraPictureStage(
+                    pictureAspect: aspectRatio,
+                    picture: player.buildSurface(),
+                    ambient: player.buildSurface(),
+                    ready: _isRenderingVideo,
+                  ),
                 Center(
                   child: SizedBox.fromSize(
                     key: videoFrameKey,
@@ -964,7 +1042,6 @@ class _VideoBodyState extends State<VideoBody> {
                   onToggle: state.onToggle,
                   onSkip: state.onSkip,
                   onFullScreen: widget.onFullScreen,
-                  hideAfter: kVideoControlsHideDelay,
                   model: widget.controlModel,
                   child: widget.controls(context, state),
                 ),
@@ -977,7 +1054,7 @@ class _VideoBodyState extends State<VideoBody> {
   }
 
   Widget _frame() {
-    if (_phase == _VideoPhase.unavailable) {
+    if (_showsUnavailable) {
       return CorruptMediaPlaceholder(
         label: "Can't play this video",
         borderRadius: BorderRadius.zero,
@@ -989,17 +1066,9 @@ class _VideoBodyState extends State<VideoBody> {
 
   List<Widget> _layers() {
     return <Widget>[
-      const NeutralMediaPlaceholder(borderRadius: BorderRadius.zero),
-      _player?.buildSurface() ?? const SizedBox.shrink(),
-      if (_showCapturedPoster)
-        MediaImage(
-          resolver: widget.resolver,
-          mediaId: widget.entry.thumbnailMediaId,
-          errorLabel: 'Video',
-          borderRadius: BorderRadius.zero,
-          fit: BoxFit.contain,
-        ),
-      if (!_isRenderingVideo && (_download != null || _downloaded))
+      if (_loadingPicture)
+        const Center(child: VideoLoadingRing(key: videoLoadingRingKey)),
+      if (_showsDownloadStatus)
         _VideoDownloadStatus(
           progress: _download,
           durationMs: widget.entry.durationMs,
@@ -1012,6 +1081,218 @@ class _VideoBodyState extends State<VideoBody> {
           child: Center(child: VideoTransportBusyNotice()),
         ),
     ];
+  }
+}
+
+typedef VideoStillBuilder = Widget Function(
+  BuildContext context,
+  ImageProvider? still,
+  double? aspect,
+);
+
+class VideoStill extends StatefulWidget {
+  const VideoStill({
+    super.key,
+    required this.resolver,
+    required this.mediaId,
+    required this.builder,
+  });
+
+  final MediaResolver resolver;
+  final String? mediaId;
+  final VideoStillBuilder builder;
+
+  @override
+  State<VideoStill> createState() => _VideoStillState();
+}
+
+class _VideoStillState extends State<VideoStill> {
+  final MediaArrivalWatch _arrivals = MediaArrivalWatch();
+  ImageProvider? _image;
+  ImageStream? _stream;
+  ImageStreamListener? _listener;
+  double? _aspect;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _start();
+  }
+
+  @override
+  void didUpdateWidget(VideoStill oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.mediaId == widget.mediaId &&
+        identical(oldWidget.resolver, widget.resolver)) {
+      return;
+    }
+    _start();
+  }
+
+  @override
+  void dispose() {
+    _arrivals.cancel();
+    _stopListening();
+    super.dispose();
+  }
+
+  void _start() {
+    _arrivals.cancel();
+    _stopListening();
+    _image = null;
+    _aspect = null;
+    _failed = false;
+    final String? id = widget.mediaId;
+    if (id == null || id.isEmpty) {
+      return;
+    }
+    final ResolvedMedia? memo = widget.resolver.resolved(id);
+    if (memo != null) {
+      _take(id, memo);
+      return;
+    }
+    _resolve(id);
+  }
+
+  void _resolve(String id) {
+    widget.resolver
+        .resolve(id)
+        .then(
+          (ResolvedMedia media) => _arrive(id, media),
+          onError: (Object error, StackTrace stackTrace) {
+            debugPrint('Video thumbnail resolve failed: $error');
+            _arrive(id, const ResolvedMedia.missing());
+          },
+        );
+  }
+
+  void _arrive(String id, ResolvedMedia media) {
+    if (!mounted || widget.mediaId != id) {
+      return;
+    }
+    setState(() => _take(id, media));
+  }
+
+  void _take(String id, ResolvedMedia media) {
+    final File? file = media.file;
+    if (!media.isAvailable || file == null) {
+      if (!_arrivals.isWatching) {
+        _arrivals.watch(widget.resolver, id, () => _resolve(id));
+      }
+      return;
+    }
+    _arrivals.cancel();
+    final ImageProvider image = FileImage(file);
+    _image = image;
+    _listen(image);
+  }
+
+  void _listen(ImageProvider image) {
+    final ImageStream stream = image.resolve(ImageConfiguration.empty);
+    final ImageStreamListener listener = ImageStreamListener(
+      (ImageInfo info, bool synchronousCall) {
+        final double width = info.image.width.toDouble();
+        final double height = info.image.height.toDouble();
+        info.dispose();
+        _settle(() => _aspect = height > 0 ? width / height : null);
+      },
+      onError: (Object error, StackTrace? stackTrace) {
+        debugPrint('Video thumbnail decode failed: $error');
+        _settle(() => _failed = true);
+      },
+    );
+    _stream = stream;
+    _listener = listener;
+    stream.addListener(listener);
+  }
+
+  void _settle(VoidCallback change) {
+    if (!mounted) {
+      return;
+    }
+    setState(change);
+  }
+
+  void _stopListening() {
+    final ImageStream? stream = _stream;
+    final ImageStreamListener? listener = _listener;
+    _stream = null;
+    _listener = null;
+    if (stream != null && listener != null) {
+      stream.removeListener(listener);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(
+    context,
+    _failed ? null : _image,
+    _failed ? null : _aspect,
+  );
+}
+
+class VideoStillStage extends StatelessWidget {
+  const VideoStillStage({
+    super.key,
+    required this.image,
+    required this.aspectRatio,
+  });
+
+  final ImageProvider image;
+  final double aspectRatio;
+
+  Widget _drawn() => Image(
+    image: image,
+    fit: BoxFit.cover,
+    gaplessPlayback: true,
+    excludeFromSemantics: true,
+    errorBuilder: (
+      BuildContext context,
+      Object error,
+      StackTrace? stackTrace,
+    ) => const SizedBox.shrink(),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return CameraPictureStage(
+      pictureAspect: aspectRatio,
+      picture: _drawn(),
+      ambient: _drawn(),
+    );
+  }
+}
+
+class VideoLoadingRing extends StatelessWidget {
+  const VideoLoadingRing({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: ExcludeSemantics(
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: Palette.mediaVeil,
+            shape: BoxShape.circle,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(_loadingRingInset),
+            child: SizedBox.square(
+              dimension: _loadingRingSize,
+              child: CustomPaint(
+                painter: VideoDownloadRingPainter(
+                  fraction: _loadingRingArc,
+                  track: Palette.mediaTrack,
+                  arc: Palette.mediaInk,
+                  stroke: _loadingRingStroke,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -1126,24 +1407,26 @@ class VideoDownloadRingPainter extends CustomPainter {
     required this.fraction,
     required this.track,
     required this.arc,
+    this.stroke = _downloadRingStroke,
   });
 
   final double fraction;
   final Color track;
   final Color arc;
+  final double stroke;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Rect bounds = (Offset.zero & size).deflate(_downloadRingStroke / 2);
+    final Rect bounds = (Offset.zero & size).deflate(stroke / 2);
     final Paint trackPaint = Paint()
       ..color = track
       ..style = PaintingStyle.stroke
-      ..strokeWidth = _downloadRingStroke;
+      ..strokeWidth = stroke;
     final Paint arcPaint = Paint()
       ..color = arc
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = _downloadRingStroke;
+      ..strokeWidth = stroke;
     canvas.drawOval(bounds, trackPaint);
     canvas.drawArc(
       bounds,
@@ -1158,5 +1441,6 @@ class VideoDownloadRingPainter extends CustomPainter {
   bool shouldRepaint(VideoDownloadRingPainter oldDelegate) =>
       oldDelegate.fraction != fraction ||
       oldDelegate.track != track ||
-      oldDelegate.arc != arc;
+      oldDelegate.arc != arc ||
+      oldDelegate.stroke != stroke;
 }

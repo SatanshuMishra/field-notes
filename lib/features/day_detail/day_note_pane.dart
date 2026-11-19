@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/flowers/flower_bloom.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -288,21 +287,15 @@ class _OpenFullViewButton extends StatelessWidget {
         child: Center(
           child: HoverFill(
             hovered: hovered,
-            surface: FocusRingSurface.dark,
             borderRadius: _openFullRadius,
-            child: Container(
-              width: _openFullFace,
-              height: _openFullFace,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: Palette.toolbarInk,
-                borderRadius: _openFullRadius,
-                boxShadow: Shadows.toastLift,
-              ),
-              child: const TransportGlyphIcon(
-                glyph: TransportGlyph.fullScreen,
-                color: Palette.onAccent,
-                size: _openFullGlyph,
+            child: SizedBox.square(
+              dimension: _openFullFace,
+              child: Center(
+                child: TransportGlyphIcon(
+                  glyph: TransportGlyph.fullScreen,
+                  color: context.colors.ink,
+                  size: _openFullGlyph,
+                ),
               ),
             ),
           ),

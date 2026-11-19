@@ -65,12 +65,13 @@ class _WindowsWindowFrameState extends State<WindowsWindowFrame> {
             fit: StackFit.passthrough,
             children: <Widget>[
               child!,
-              const Positioned(
-                top: 0,
-                right: 0,
-                child: WindowsCaptionButtons(),
-              ),
-              if (!state.maximized)
+              if (!state.fullScreen)
+                const Positioned(
+                  top: 0,
+                  right: 0,
+                  child: WindowsCaptionButtons(),
+                ),
+              if (!state.maximized && !state.fullScreen)
                 const Positioned(
                   top: 0,
                   left: 0,

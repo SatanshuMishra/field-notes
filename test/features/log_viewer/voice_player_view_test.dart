@@ -25,9 +25,6 @@ import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import '../entry_cards/support/entry_cards_harness.dart';
 import '../entry_cards/support/fake_audio_player.dart';
 
-const Color _played = Color(0xFFE3889A);
-const Color _ink = Color(0xFFF3E6D1);
-
 const double _statusBar = 34;
 const double _gestureBar = 24;
 const int _durationMs = 98000;
@@ -156,7 +153,6 @@ Widget _host(
   required EntryAudioPlayer player,
   required TargetPlatform platform,
   Brightness brightness = Brightness.dark,
-  bool embedded = false,
 }) {
   return MaterialApp(
     key: ValueKey<String>('$platform-$brightness'),
@@ -168,7 +164,6 @@ Widget _host(
         resolver: resolver,
         playerFactory: () => player,
         focus: PlaybackFocus(),
-        embedded: embedded,
       ),
     ),
   );
@@ -197,32 +192,6 @@ Finder _groundBox() {
     ),
   ).first;
 }
-
-Finder _wavePaint() => find.descendant(
-  of: find.byType(ViewerWaveform),
-  matching: find.byType(CustomPaint),
-);
-
-List<RecordedInvocation> _drawnRRects(WidgetTester tester) {
-  final Finder paint = _wavePaint();
-  final CustomPaint custom = tester.widget<CustomPaint>(paint);
-  final TestRecordingCanvas canvas = TestRecordingCanvas();
-  custom.painter!.paint(canvas, tester.getSize(paint));
-  return <RecordedInvocation>[
-    for (final RecordedInvocation call in canvas.invocations)
-      if (call.invocation.memberName == #drawRRect) call,
-  ];
-}
-
-List<int> _barColours(WidgetTester tester) => <int>[
-  for (final RecordedInvocation call in _drawnRRects(tester))
-    (call.invocation.positionalArguments[1] as Paint).color.toARGB32(),
-];
-
-List<RRect> _barShapes(WidgetTester tester) => <RRect>[
-  for (final RecordedInvocation call in _drawnRRects(tester))
-    call.invocation.positionalArguments[0] as RRect,
-];
 
 void main() {
   testWidgets('the phone voice player follows the shared dock', (
@@ -368,37 +337,6 @@ void main() {
     expect(player.seeks, hasLength(dragged));
   });
 
-  testWidgets('the embedded waveform draws 4 px bars with 3 px gaps', (
-    WidgetTester tester,
-  ) async {
-    _mac(tester, size: const Size(756, 900));
-    await tester.pumpWidget(
-      _host(
-        _scene(
-          _Calls(),
-          entry: _voiceEntry(peaks: List<double>.filled(40, 0.5)),
-        ),
-        resolver: _resolverFor(_recording()),
-        player: _SeekingAudioPlayer(),
-        platform: TargetPlatform.macOS,
-        embedded: true,
-      ),
-    );
-    await _settle(tester);
-
-    expect(tester.getSize(_wavePaint()), const Size(700, 140));
-    final List<RRect> bars = _barShapes(tester);
-    expect(bars, hasLength(100));
-    for (int index = 0; index < 100; index++) {
-      final RRect bar = bars[index];
-      expect(bar.left, closeTo(1.5 + 7 * index, 1e-9), reason: 'bar $index');
-      expect(bar.width, closeTo(4, 1e-9), reason: 'bar $index width');
-      expect(bar.height, closeTo(140, 1e-9), reason: 'bar $index height');
-      expect(bar.top, closeTo(0, 1e-9), reason: 'bar $index top');
-    }
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets("the viewer hands the entry's own peaks to the waveform", (
     WidgetTester tester,
   ) async {
@@ -414,32 +352,6 @@ void main() {
     await _settle(tester);
 
     expect(tester.widget<VoiceWaveform>(_wave).peaks, _peaks);
-  });
-
-  testWidgets('the embedded player colours what has played', (
-    WidgetTester tester,
-  ) async {
-    _phone(tester);
-    final _SeekingAudioPlayer player = _SeekingAudioPlayer();
-    await tester.pumpWidget(
-      _host(
-        _scene(_Calls()),
-        resolver: _resolverFor(_recording()),
-        player: player,
-        platform: TargetPlatform.android,
-        embedded: true,
-      ),
-    );
-    await _settle(tester);
-
-    player.emitState(AudioPlaybackState.playing);
-    player.emitPosition(const Duration(milliseconds: _durationMs ~/ 2));
-    await tester.pump();
-
-    final Set<int> playing = _barColours(tester).toSet();
-    expect(playing, contains(_played.toARGB32()));
-    expect(playing, contains(_ink.toARGB32()));
-    expect(playing, contains(_ink.withValues(alpha: 0.28).toARGB32()));
   });
 
   testWidgets('the Mac voice player keeps steps at the window edges', (
@@ -525,10 +437,10 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pump();
-    expect(player.seeks.last, const Duration(seconds: 15));
+    expect(player.seeks.last, const Duration(seconds: 10));
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pump();
-    expect(player.seeks.last, greaterThan(const Duration(seconds: 15)));
+    expect(player.seeks.last, greaterThan(const Duration(seconds: 10)));
     expect(calls.earlier, 0);
     expect(calls.later, 0);
 

@@ -4,6 +4,9 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/features/capture/video/camera_picture_fill.dart'
+    show cameraPictureKey;
+
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart';
 import 'package:field_notes/features/entry_cards/cards/video_scrubber.dart';
@@ -19,6 +22,11 @@ import '../support/video_card_harness.dart';
 const ValueKey<String> _playToggle = ValueKey<String>('video-play-toggle');
 const ValueKey<String> _retryButton = ValueKey<String>('media-retry');
 const ValueKey<String> _surface = ValueKey<String>('fake-video-surface');
+
+Finder _picture() => find.descendant(
+  of: find.byKey(cameraPictureKey),
+  matching: find.byKey(_surface),
+);
 
 const Duration _loadTimeout = Duration(milliseconds: 100);
 const List<Duration> _backoff = <Duration>[
@@ -129,9 +137,9 @@ void main() {
       await tester.pump();
 
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
-      expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
+      expect(find.byType(NeutralMediaPlaceholder), findsNothing);
       expect(built, isEmpty);
-      expect(find.byKey(_surface), findsNothing);
+      expect(_picture(), findsNothing);
       expect(find.text(_busyNotice), findsNothing);
       expect(_enabled(tester, _playToggle), isTrue);
       expect(_seekEnabled(tester), isFalse);
@@ -169,7 +177,7 @@ void main() {
 
       expect(built, hasLength(1));
       expect(built.single.loadCalls, <String>[file.path]);
-      expect(find.byKey(_surface), findsOneWidget);
+      expect(_picture(), findsOneWidget);
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
       expect(_enabled(tester, _playToggle), isTrue);
     });
@@ -215,7 +223,7 @@ void main() {
 
       expect(built, hasLength(4));
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
-      expect(find.byKey(_surface), findsOneWidget);
+      expect(_picture(), findsOneWidget);
     });
 
     testWidgets('a hanging load retries through the timeout instead of going '
@@ -259,7 +267,7 @@ void main() {
 
       expect(built, hasLength(2));
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
-      expect(find.byKey(_surface), findsOneWidget);
+      expect(_picture(), findsOneWidget);
     });
 
     testWidgets('a zero length file goes red with no retries', (
@@ -331,7 +339,7 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.byKey(_surface), findsOneWidget);
+      expect(_picture(), findsOneWidget);
 
       final VideoSlotToken? intruder = slots.acquire(
         onEvicted: () {},
@@ -342,8 +350,8 @@ void main() {
       await tester.pump();
 
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
-      expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
-      expect(find.byKey(_surface), findsNothing);
+      expect(find.byType(NeutralMediaPlaceholder), findsNothing);
+      expect(_picture(), findsNothing);
       expect(built.single.disposeCalls, 1);
       expect(_enabled(tester, _playToggle), isTrue);
       expect(_seekEnabled(tester), isFalse);
@@ -374,7 +382,7 @@ void main() {
       await tester.pump();
 
       expect(built, hasLength(2));
-      expect(find.byKey(_surface), findsOneWidget);
+      expect(_picture(), findsOneWidget);
 
       built[1].emitState(VideoPlaybackState.error);
       await tester.pump();
@@ -445,7 +453,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byKey(_surface), findsOneWidget);
+      expect(_picture(), findsOneWidget);
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
       expect(built.single.disposeCalls, 0);
       expect(_enabled(tester, _playToggle), isTrue);
