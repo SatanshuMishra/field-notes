@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-19T00:27:35.020Z
+Updated: 2026-11-19T00:28:01.125Z
 Next ids: c9 D8 R2 S1
 
 ## Goal
@@ -24,9 +24,7 @@ The run is unattended. The interphase package is handed off: 12 criteria, two of
 
 ## Next step
 
-Run pipeline drive supervisor, pipeline setup with the run home's facts.json, and pipeline run-do-not-flag with no --close; then pipeline drive start and one background pipeline drive wait. When the MSP pull requests are merged into the FEATURE branch, run the one-time headless pass of D5 before the drive's product test.
-
-Needs: D5, D7.
+The drive entered plan and runs it next.
 
 ## Decisions in force
 
