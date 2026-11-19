@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T09:05:28.692Z
+Updated: 2026-11-19T09:30:20.976Z
 Next ids: c6 D1 R1 S1
 
 ## Goal
@@ -17,11 +17,11 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Where things stand
 
-Round two published at https://claude.ai/artifact/KMyaKfwrCB2XcdPisHSpU7 with the diagnosis and the mix to build; Flutter build not started.
+Build spec for the round-two mix is written and passes every interphase check (5 Steps, 14 criteria); its one spec review is running; Flutter build not started.
 
 ## Next step
 
-Build the round-two mix (Flower first one-pen ink, Curls wind, Signed beneath title) in Flutter through the standard lane: an opening cover above the app on a fresh start, skipped on resume and on first launch with onboarding, tap or key skips within 0.25 s, reduce motion shows the still drawing, and paper-coloured launch screens.
+Apply the spec reviewer's fixes, re-render and recheck the spec, run interphase hand-off (tree guard, status handed-off), then pipeline setup with ~/.mitosis/fireplace/peony-opening-animation/facts.json, drive supervisor, drive start and one background drive wait.
 
 ## Decisions in force
 
@@ -33,6 +33,8 @@ Build the round-two mix (Flower first one-pen ink, Curls wind, Signed beneath ti
 
 - Prototype page: https://claude.ai/artifact/Q71f1M1joThu2rWHkUC6k6 holds the four versions, their timings and the shared defaults
 - Round two: https://claude.ai/artifact/KMyaKfwrCB2XcdPisHSpU7 is the reference engine for the build (visible-arc pen schedule, blob washes, plant-unit curl ribbons, title write and blow-away, timings); local source in the session scratchpad peony-opening/peony-ink.html
+- Build spec: docs/specs/peony-opening-animation.md with its .record.json, .items.json, .decisions.md and .mock/ frames; glossary term Opening in GLOSSARY.md and docs/adr/0012-decide-the-opening-once-per-program-start-at-the-entry-point.md
+- Run facts: ~/.mitosis/fireplace/peony-opening-animation/facts.json
 - Peony art: lib/design/flowers/garden_plant_geometry.dart (peonyPlantParts) and lib/design/flowers/petal_art.dart (drift petal)
 - App root and start-up wait: lib/app/app.dart; similar splash: lib/features/updates/ui/update_restart_splash.dart
 - Android launch screen: android/app/src/main/res/drawable/launch_background.xml and values/styles.xml
