@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-19T19:52:34.779Z
+Updated: 2026-11-19T19:53:53.642Z
 Next ids: c6 D3 R2 S2
 
 ## Goal
@@ -21,7 +21,7 @@ Pull request #392 is merged into feat/peony-opening and the drive holds the run:
 
 ## Next step
 
-The drive entered feature-pr and runs it next.
+The drive entered draft-pr and the run has ended: draft FEATURE pull request; unmet checks: msp feature round-1 blocked: U1. After the owner merges it, pipeline drive event --name feature-merged runs clean-up. The project's version was left alone: release tag v1.9.1 on origin is ahead of 1.0.0, the highest version the version files hold.
 
 ## Decisions in force
 
