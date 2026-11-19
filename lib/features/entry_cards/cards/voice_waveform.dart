@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/features/capture/voice/voice_level.dart';
 
 import '../transport/transport_timeline.dart';
 
@@ -18,6 +19,7 @@ const double _minHeight = 0.07;
 const double _highestWeight = 0.65;
 const double _meanWeight = 0.35;
 const double _smallestLargest = 0.001;
+const double _decibelsPerDecade = 20;
 
 const Duration _colourShift = Duration(milliseconds: 150);
 const Curve _colourCurve = Curves.ease;
@@ -55,12 +57,24 @@ double _barValue(List<double> peaks, int index, int count) {
   final double to = math.max(from + 1, (index + 1) * total / count);
   final int first = from.floor();
   final int end = math.min(total, to.ceil());
-  final Iterable<double> share = peaks.getRange(first, end);
+  final List<double> share = <double>[
+    for (final double peak in peaks.getRange(first, end)) _amplitudeOf(peak),
+  ];
   final double highest = share.reduce(math.max);
   final double mean =
       share.fold<double>(0, (double sum, double peak) => sum + peak) /
       (end - first);
   return _highestWeight * highest + _meanWeight * mean;
+}
+
+double _amplitudeOf(double level) {
+  if (level <= 0) {
+    return 0;
+  }
+  final double dbfs =
+      voiceLevelFloorDbfs +
+      level * (voiceLevelCeilingDbfs - voiceLevelFloorDbfs);
+  return math.pow(10, dbfs / _decibelsPerDecade).toDouble();
 }
 
 bool voiceWaveformBarPlayed(int index, int count, double progress) =>
