@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
-Status: active
-Updated: 2026-11-19T06:12:42.219Z
+Status: parked
+Updated: 2026-11-19T06:13:26.837Z
 Next ids: c9 D8 R2 S1
 
 ## Goal
@@ -24,7 +24,9 @@ The run is unattended. The interphase package is handed off: 12 criteria, two of
 
 ## Next step
 
-The drive entered awaiting-merge: pull requests are ready to merge; it resumes on pipeline drive event --name merged.
+The owner merges pull requests #383 to #388 into fix/recorder-player-polish; then sync, resume this thread, run the one-time headless pass of D5 on the FEATURE build, and only then send pipeline drive event --name merged so the drive's product test runs.
+
+Needs: D5, D7.
 
 ## Decisions in force
 
