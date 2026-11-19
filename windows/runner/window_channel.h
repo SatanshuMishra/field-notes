@@ -28,10 +28,17 @@ class WindowChannel {
 
   void SendState();
 
+  bool EnterFullScreen(HWND window);
+
+  bool LeaveFullScreen(HWND window);
+
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
   Win32Window* window_;
   bool maximized_;
   bool active_;
+  bool full_screen_;
+  LONG_PTR windowed_style_;
+  WINDOWPLACEMENT windowed_placement_;
 };
 
 #endif
