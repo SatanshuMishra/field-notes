@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-19T19:55:12.682Z
+Updated: 2026-11-19T20:57:17.436Z
 Next ids: c6 D3 R2 S2
 
 ## Goal
@@ -21,9 +21,7 @@ The run ended in draft-pr: draft FEATURE pull request https://github.com/Satansh
 
 ## Next step
 
-The drive entered draft-pr and the run has ended: draft FEATURE pull request #393; unmet checks: msp feature round-1 blocked: U1. After the owner marks #393 ready and merges it, Sync, resume_thread, and run pipeline drive event --name feature-merged so clean-up runs.
-
-Needs: D2, R1.
+The drive entered clean-up and runs it next.
 
 ## Decisions in force
 
