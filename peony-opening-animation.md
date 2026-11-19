@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-19T19:52:34.331Z
+Updated: 2026-11-19T19:52:34.779Z
 Next ids: c6 D3 R2 S2
 
 ## Goal
@@ -21,7 +21,7 @@ Pull request #392 is merged into feat/peony-opening and the drive holds the run:
 
 ## Next step
 
-The drive entered validate and runs it next.
+The drive entered feature-pr and runs it next.
 
 ## Decisions in force
 
