@@ -1,7 +1,7 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-19T20:57:54.827Z
-Next ids: c6 D3 R2 S2
+Updated: 2026-11-19T22:59:02.134Z
+Next ids: c6 D3 R3 S2
 
 ## Goal
 
@@ -10,20 +10,20 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 ## Done when
 
 - [x] c1 The owner has picked one of the prototyped versions evidence: Owner picked B (Ink sketch) on 2026-11-19 and asked for its drawing, Mac wind and a blow-away title to be reworked and built; the owner then skipped the title for now and asked for a slower drawing; round two at https://claude.ai/artifact/KMyaKfwrCB2XcdPisHSpU7 now preselects the mix being built: Flower first + Curls, no title, the pen at two thirds of its round-two speed
-- [ ] c2 Opening the app fresh plays the picked animation and fades smoothly into Today (or wherever the app opens), with Today built underneath and ready when it shows
+- [x] c2 Opening the app fresh plays the picked animation and fades smoothly into Today (or wherever the app opens), with Today built underneath and ready when it shows evidence: VM lab on the CI release builds of the merged tree (run 44603032735): a fresh start on Windows, macOS and Android, light and dark, plays the pen drawing, three wind curls and blow-away, and Today fades in ready about 2.6 to 2.9 s after the first frame; on Android a tap mid-drawing fades into Today about 0.3 s after the touch, and with animations off the still drawing crossfades in about 0.3 s; frames kept in ~/VMLab/evidence/fireplace/peony-opening; smoothness judged on VM renderers only
 - [x] c3 Returning to the app from the background and the very first launch with onboarding play no animation evidence: on main via #393: test/app/opening_start_test.dart decides the opening once per program start at the entry point and skips it when onboarding shows; all 42 spec checks pass on the merged tree
 - [x] c4 A tap, click or any key skips to Today within a quarter of a second, and with reduce motion on the peony shows still before a short crossfade evidence: on main via #393: test/features/opening/opening_cover_test.dart and its clock-step and decision-arrival tests pass for tap, click and key skips within 0.25 s and the reduce-motion still drawing then 0.3 s crossfade
-- [ ] c5 Android's launch screen and the Mac window open on the paper colour, so no white flash appears before the peony
+- [x] c5 Android's launch screen and the Mac window open on the paper colour, so no white flash appears before the peony evidence: VM lab: the Android splash and launch window and the macOS window open on the light and dark paper with no white frame in any recording (Android screenrecord and macOS screencapture keep every changed frame); frames kept in ~/VMLab/evidence/fireplace/peony-opening
 
 ## Where things stand
 
-The opening is on main through pull request #393 and its pipeline run is cleaned up. What stays open is the VM lab pass on a debug build of main: the opening plays smoothly into Today (c2) and Android, macOS and Windows open on the paper colour with no flash (c5). The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
+The opening is on main through pull request #393, its pipeline run is cleaned up, and the VM lab pass is done: every criterion holds, and the one defect found is the Windows white window in R2. The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
 
 ## Next step
 
-With the owner's go-ahead, run a VM lab pass on a debug build of main, Windows first, then macOS, then Android, one platform at a time: cold-start each and confirm the paper colour shows before the peony with no white or black flash, and that the drawing plays smoothly into a ready Today; tick c2 and c5 with what was seen, retire R1, then close the thread.
+The work is done and the thread can close once the owner decides whether to fix R2, the Windows white window, as a separate change; if yes, give the runner window a paper-coloured background or keep it hidden until Flutter has drawn, then recheck in the VM lab with the high-priority capture.
 
-Needs: R1.
+Needs: R2.
 
 ## Decisions in force
 
@@ -31,7 +31,7 @@ Needs: R1.
 
 ## Open risks
 
-- R1 Spec criterion 5.14 is unproven by the build: the launch flash, real-renderer smoothness and platform screen readers are seen only on VM lab devices after the build. Bears on c5.
+- R2 On Windows the window intermittently fades in pure white before its first paper frame: 3 of 5 lab launches, 0.4 s on the first launch after install and 0.15 s on a dark start; the runner shows the window on the first-frame callback with no window background (windows/runner/win32_window.cpp hbrBackground 0), and it is unconfirmed on real GPU hardware
 
 ## Settled, do not reopen
 
