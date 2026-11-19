@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T10:33:34.442Z
+Updated: 2026-11-19T10:58:58.674Z
 Next ids: c6 D3 R2 S2
 
 ## Goal
@@ -21,7 +21,7 @@ The pipeline drive holds the run on feat/peony-opening (run home ~/.mitosis/fire
 
 ## Next step
 
-Wait for the pipeline drive on feat/peony-opening to rest; then relay its next sentence and pull request links, and park the thread for the owner's merge.
+The drive entered review and runs it next.
 
 ## Decisions in force
 
