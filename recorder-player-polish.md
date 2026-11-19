@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-19T00:27:29.057Z
+Updated: 2026-11-19T00:27:35.020Z
 Next ids: c9 D8 R2 S1
 
 ## Goal
@@ -20,11 +20,13 @@ Fix eight owner-reported issues across the settings page, the voice and video re
 
 ## Where things stand
 
-The run is unattended. The spec and its items file are written and rendered: 12 criteria, two of them unproven and left to lab checks, and 10 Steps in five pull requests; every surface probe, the feasibility check and the complete record check pass, and the spec reviewer's one pass is under way. The glossary terms and ADRs 0010 and 0011 are written, and the run's facts file is in the run home.
+The run is unattended. The interphase package is handed off: 12 criteria, two of them unproven and left to lab checks, 41 acceptance lines and 10 builder Steps in five pull requests. The spec reviewer's 13 issues were each fixed once and the spec now uses the glossary's words, and every check passes. The glossary terms and ADRs 0010 and 0011 are written, and the run's facts file is in the run home.
 
 ## Next step
 
-When the spec reviewer reports, fix each real issue once, switch the spec, record and tasks to the glossary's words (day pop-up for day window, picture fill for glow), re-render and rerun the spec and items checks, then verify the guard, delete the guard file, set the record handed-off, record the hand-off decision and set up and start the pipeline drive.
+Run pipeline drive supervisor, pipeline setup with the run home's facts.json, and pipeline run-do-not-flag with no --close; then pipeline drive start and one background pipeline drive wait. When the MSP pull requests are merged into the FEATURE branch, run the one-time headless pass of D5 before the drive's product test.
+
+Needs: D5, D7.
 
 ## Decisions in force
 
