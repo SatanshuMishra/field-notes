@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
-Status: active
-Updated: 2026-11-19T12:12:09.971Z
+Status: parked
+Updated: 2026-11-19T12:12:34.035Z
 Next ids: c6 D3 R2 S2
 
 ## Goal
@@ -21,7 +21,9 @@ The pipeline drive holds the run on feat/peony-opening (run home ~/.mitosis/fire
 
 ## Next step
 
-The drive entered awaiting-merge: pull requests are ready to merge; it resumes on pipeline drive event --name merged.
+Owner merges https://github.com/SatanshuMishra/field-notes/pull/392 (mitosis/opening into feat/peony-opening) once its platform CI is green; then Sync, resume_thread, and run pipeline drive event --name merged so the drive bumps the version and opens the FEATURE pull request into main.
+
+Needs: D2, R1.
 
 ## Decisions in force
 
