@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T09:56:01.115Z
+Updated: 2026-11-19T09:56:19.249Z
 Next ids: c6 D2 R1 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Where things stand
 
-The pipeline drive holds the run on feat/peony-opening-animation (run home ~/.mitosis/fireplace/peony-opening-animation): mitosis builds the 5 Steps, then reviewers judge and it opens the pull request. Criterion 5.15 (real-device launch and smoothness) stays unproven for the VM lab.
+The pipeline drive holds the run on feat/peony-opening-animation (run home ~/.mitosis/fireplace/peony-opening-animation): mitosis builds the 5 Steps, then reviewers judge and it opens the pull request.
 
 ## Next step
 
