@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -56,6 +57,7 @@ class _OpeningCoverState extends ConsumerState<OpeningCover>
   bool _gone = false;
   Ticker? _ticker;
   Duration _now = Duration.zero;
+  DateTime? _clockAtTickerZero;
   Duration? _openingAt;
   Duration? _exitAt;
   bool _decided = false;
@@ -116,13 +118,14 @@ class _OpeningCoverState extends ConsumerState<OpeningCover>
     if (_exitAt != null || _gone) {
       return;
     }
+    final Duration arrival = _arrival;
     switch (visibility) {
-      case OnboardingVisibility.hidden when _now < _decisionWait:
-        _openingAt = _now;
+      case OnboardingVisibility.hidden when arrival < _decisionWait:
+        _openingAt = arrival;
       case OnboardingVisibility.hidden:
         _exitAt = _decisionWait;
       case OnboardingVisibility.shown:
-        _exitAt = _now;
+        _exitAt = arrival;
     }
   }
 
@@ -130,7 +133,16 @@ class _OpeningCoverState extends ConsumerState<OpeningCover>
     if (_exitAt != null || _gone) {
       return;
     }
-    _exitAt = _now;
+    _exitAt = _arrival;
+  }
+
+  Duration get _arrival {
+    final DateTime? clockAtTickerZero = _clockAtTickerZero;
+    if (clockAtTickerZero == null) {
+      return _now;
+    }
+    final Duration sinceTickerZero = clock.now().difference(clockAtTickerZero);
+    return sinceTickerZero > _now ? sinceTickerZero : _now;
   }
 
   OpeningPlan get _plan => openingPlanFor(context);
@@ -152,6 +164,7 @@ class _OpeningCoverState extends ConsumerState<OpeningCover>
 
   void _onTick(Duration elapsed) {
     _now = elapsed;
+    _clockAtTickerZero = clock.now().subtract(elapsed);
     final Duration? exitAt = _exitAt;
     final Duration? opening = _openingElapsed;
     if (exitAt == null && !_decided && _now >= _decisionWait) {
@@ -252,6 +265,7 @@ class _OpeningCoverState extends ConsumerState<OpeningCover>
   Widget build(BuildContext context) {
     final bool showing = _plays == true && !_gone;
     if (showing && _ticker == null) {
+      _clockAtTickerZero = clock.now();
       _ticker = createTicker(_onTick)..start();
     }
     return Stack(
