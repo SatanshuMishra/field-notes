@@ -1,6 +1,6 @@
 # recorder-player-polish: Settings width, recorder levels and clicks, player and video viewer polish, sound-effect investigation
 Status: active
-Updated: 2026-11-19T03:34:27.846Z
+Updated: 2026-11-19T04:02:35.112Z
 Next ids: c9 D8 R2 S1
 
 ## Goal
@@ -24,7 +24,7 @@ The run is unattended. The interphase package is handed off: 12 criteria, two of
 
 ## Next step
 
-The drive entered diagnose and runs it next.
+The drive entered validate and runs it next.
 
 ## Decisions in force
 
