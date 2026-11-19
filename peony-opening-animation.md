@@ -1,7 +1,7 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-19T23:07:08.789Z
-Next ids: c6 D3 R3 S2
+Updated: 2026-11-19T23:42:34.456Z
+Next ids: c6 D3 R3 S3
 
 ## Goal
 
@@ -17,11 +17,11 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Where things stand
 
-The opening is on main through pull request #393, its pipeline run is cleaned up, and the VM lab pass is done: every criterion holds. The owner asked to fix R2 here: branch fix/windows-white-window shows the window cloaked and reveals it after the next frame lands in the shown window, with a one-second fallback; its source test fails on main and passes with the fix, and the lab check of its CI build is next. The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
+The opening is on main through pull request #393, its pipeline run is cleaned up, and the VM lab pass is done: every criterion holds. The owner asked to fix R2 here: branch fix/windows-white-window has the window erase to the light or dark opening paper until its first paint and paint as soon as it is shown; its source test fails on main and passes with the fix, and the lab check of its CI build is next. The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
 
 ## Next step
 
-Check the CI Windows build of fix/windows-white-window (release run 44634815356) in a VM lab instance over several launches, light and dark and first launch after install; if no white frame shows, open the pull request.
+Check the CI Windows build of fix/windows-white-window (release run 44639882415) in the VM lab over several light and dark launches and a first launch after install; if no white frame shows, open the pull request.
 
 ## Decisions in force
 
@@ -34,6 +34,7 @@ Check the CI Windows build of fix/windows-white-window (release run 44634815356)
 ## Settled, do not reopen
 
 - S1 A pipeline run whose drive has started cannot be amended or set up again; a spec change after that needs a new slug and run home.
+- S2 Hiding the Windows window with DWM cloaking until Flutter's next frame does not stop the white: in the lab it still showed white for one capture frame in 2 of 17 launches after a frame-callback reveal, because Flutter reporting a drawn frame does not mean Windows has composed it.
 
 ## Where the details live
 
