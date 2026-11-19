@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T09:55:46.582Z
+Updated: 2026-11-19T09:55:54.538Z
 Next ids: c6 D2 R1 S1
 
 ## Goal
@@ -21,7 +21,7 @@ Spec handed off (5 Steps, 15 criteria, criterion 5.15 unproven: real-device laun
 
 ## Next step
 
-Run pipeline setup with ~/.mitosis/fireplace/peony-opening-animation/facts.json, then drive supervisor, drive start and one background drive wait.
+The drive entered plan and runs it next.
 
 ## Decisions in force
 
