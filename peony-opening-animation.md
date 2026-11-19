@@ -1,7 +1,7 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T09:30:20.976Z
-Next ids: c6 D1 R1 S1
+Updated: 2026-11-19T09:55:41.484Z
+Next ids: c6 D2 R1 S1
 
 ## Goal
 
@@ -24,6 +24,8 @@ Build spec for the round-two mix is written and passes every interphase check (5
 Apply the spec reviewer's fixes, re-render and recheck the spec, run interphase hand-off (tree guard, status handed-off), then pipeline setup with ~/.mitosis/fireplace/peony-opening-animation/facts.json, drive supervisor, drive start and one background drive wait.
 
 ## Decisions in force
+
+- D1 hand-off: build the opening through the standard-lane pipeline drive: Hand the spec to the pipeline drive; the owner merges the resulting pull request.
 
 ## Open risks
 
