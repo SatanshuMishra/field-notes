@@ -353,9 +353,9 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     final Entry entry = entries[index];
     final Entry? earlier = index > 0 ? entries[index - 1] : null;
     final Entry? later = index + 1 < entries.length ? entries[index + 1] : null;
-    final bool offersFullScreen =
-        entry.type != EntryType.text &&
-        isDesktopPlatform(Theme.of(context).platform);
+    final bool desktop = isDesktopPlatform(Theme.of(context).platform);
+    final bool fullScreen = desktop && _fullScreen;
+    final bool offersFullScreen = desktop && entry.type != EntryType.text;
     return LogViewerScene(
       entry: entry,
       date: widget.date,
@@ -372,8 +372,8 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       onDelete: () => _delete(entry),
       onEdit: entry.type == EntryType.text ? _edit : null,
       onRename: (String? title) => _rename(entry, title),
-      fullScreen: offersFullScreen && _fullScreen,
-      onFullScreen: offersFullScreen ? _toggleFullScreen : null,
+      fullScreen: fullScreen,
+      onFullScreen: offersFullScreen || fullScreen ? _toggleFullScreen : null,
     );
   }
 
