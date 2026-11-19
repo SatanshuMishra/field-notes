@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T10:12:10.226Z
+Updated: 2026-11-19T10:12:28.309Z
 Next ids: c6 D2 R2 S1
 
 ## Goal
@@ -21,7 +21,7 @@ The retimed, title-free spec docs/specs/peony-opening.md passes interphase's che
 
 ## Next step
 
-Apply the spec reviewer's blockers to docs/specs/peony-opening.md, hand it off, and start a new standard-lane drive under slug peony-opening.
+When the spec reviewer reports, apply its blockers to docs/specs/peony-opening.md, hand it off, and start a new standard-lane drive under slug peony-opening.
 
 ## Decisions in force
 
@@ -38,7 +38,7 @@ Apply the spec reviewer's blockers to docs/specs/peony-opening.md, hand it off, 
 - Prototype page: https://claude.ai/artifact/Q71f1M1joThu2rWHkUC6k6 holds the four versions, their timings and the shared defaults
 - Round two: https://claude.ai/artifact/KMyaKfwrCB2XcdPisHSpU7 is the reference engine for the build (visible-arc pen schedule, blob washes, plant-unit curl ribbons, slower pen timings)
 - Build spec: docs/specs/peony-opening.md with its .record.json, .items.json, .decisions.md and .mock/ frames and prototype copy; glossary term Opening in GLOSSARY.md and docs/adr/0012-decide-the-opening-once-per-program-start-at-the-entry-point.md
-- Run facts: ~/.mitosis/fireplace/peony-opening-animation/facts.json
+- Run facts: ~/.mitosis/fireplace/peony-opening/facts.json
 - Peony art: lib/design/flowers/garden_plant_geometry.dart (peonyPlantParts) and lib/design/flowers/petal_art.dart (drift petal)
 - App root and start-up wait: lib/app/app.dart; similar splash: lib/features/updates/ui/update_restart_splash.dart
 - Android launch screen: android/app/src/main/res/drawable/launch_background.xml and values/styles.xml
