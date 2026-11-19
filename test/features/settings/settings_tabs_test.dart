@@ -413,8 +413,13 @@ void main() {
           greaterThan(tester.getRect(rail).right),
         );
         expect(
-          tester.getRect(content).left,
-          moreOrLessEquals(tester.getRect(rule).right + 28 - settingsGutter),
+          tester.getRect(content).center.dx,
+          closeTo(
+            (tester.getRect(rule).right +
+                    tester.getRect(find.byType(SettingsScreen)).right) /
+                2,
+            4,
+          ),
         );
         expect(
           tester.getSize(content).width,
@@ -422,7 +427,7 @@ void main() {
         );
         expect(
           tester.getRect(find.byKey(settingsContentTitleKey)).left,
-          moreOrLessEquals(tester.getRect(rule).right + 28),
+          moreOrLessEquals(tester.getRect(content).left + settingsGutter),
         );
 
         final ScrollableState scrollable = tester.state<ScrollableState>(
