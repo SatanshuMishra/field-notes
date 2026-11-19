@@ -23,6 +23,14 @@ private let cameraPrivacySettingsURL =
 private let soundSettingsURL = "x-apple.systempreferences:com.apple.preference.sound"
 private let notificationSettingsURLPrefix =
   "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id="
+private let openingPaper = NSColor(
+  name: NSColor.Name("openingPaper"),
+  dynamicProvider: { appearance in
+    appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+      ? NSColor(srgbRed: 0x1C / 255.0, green: 0x19 / 255.0, blue: 0x19 / 255.0, alpha: 1)
+      : NSColor(srgbRed: 0xEF / 255.0, green: 0xE2 / 255.0, blue: 0xCE / 255.0, alpha: 1)
+  }
+)
 
 class MainFlutterWindow: NSWindow {
   private var spellCheckBridge: SpellCheckBridge?
@@ -39,6 +47,8 @@ class MainFlutterWindow: NSWindow {
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
+    flutterViewController.backgroundColor = openingPaper
+    self.backgroundColor = openingPaper
     self.contentViewController = flutterViewController
     self.contentMinSize = NSSize(
       width: minimumContentWidth,
