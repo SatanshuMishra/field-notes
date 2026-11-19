@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T09:55:41.484Z
+Updated: 2026-11-19T09:55:46.582Z
 Next ids: c6 D2 R1 S1
 
 ## Goal
@@ -17,11 +17,11 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Where things stand
 
-Build spec for the round-two mix is written and passes every interphase check (5 Steps, 14 criteria); its one spec review is running; Flutter build not started.
+Spec handed off (5 Steps, 15 criteria, criterion 5.15 unproven: real-device launch and smoothness); Flutter build not started.
 
 ## Next step
 
-Apply the spec reviewer's fixes, re-render and recheck the spec, run interphase hand-off (tree guard, status handed-off), then pipeline setup with ~/.mitosis/fireplace/peony-opening-animation/facts.json, drive supervisor, drive start and one background drive wait.
+Run pipeline setup with ~/.mitosis/fireplace/peony-opening-animation/facts.json, then drive supervisor, drive start and one background drive wait.
 
 ## Decisions in force
 
