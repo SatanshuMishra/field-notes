@@ -247,14 +247,14 @@ void main() {
         width: 38,
       );
       _expectHeights(tester, const <double>[
-        0.365 / 0.865,
-        0.765 / 0.865,
-        0.825 / 0.865,
         0.07,
-        0.5 / 0.865,
-        0.265 / 0.865,
+        0.43172611706024816,
         1,
-        0.2 / 0.865,
+        0.07,
+        0.1212121212121212,
+        0.07,
+        0.6842397839364571,
+        0.07,
       ]);
     },
   );
@@ -263,7 +263,16 @@ void main() {
     WidgetTester tester,
   ) async {
     await _pumpWaveform(tester, peaks: const <double>[0.2, 1.0], width: 38);
-    _expectHeights(tester, const <double>[0.2, 0.86, 0.86, 0.86, 1, 1, 1, 1]);
+    _expectHeights(tester, const <double>[
+      0.07,
+      0.8293958012551418,
+      0.8293958012551418,
+      0.8293958012551418,
+      1,
+      1,
+      1,
+      1,
+    ]);
   });
 
   testWidgets('with as many peaks as bars each bar is one peak', (
@@ -275,10 +284,10 @@ void main() {
       width: 38,
     );
     _expectHeights(tester, const <double>[
-      0.5,
+      0.09999999999999999,
       1,
-      0.25,
-      0.75,
+      0.07,
+      0.31622776601683794,
       0.07,
       0.07,
       0.07,
