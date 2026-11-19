@@ -1,7 +1,7 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: active
-Updated: 2026-11-19T10:33:07.256Z
-Next ids: c6 D3 R2 S1
+Updated: 2026-11-19T10:33:34.442Z
+Next ids: c6 D3 R2 S2
 
 ## Goal
 
@@ -32,6 +32,8 @@ Wait for the pipeline drive on feat/peony-opening to rest; then relay its next s
 - R1 Spec criterion 5.14 is unproven by the build: the launch flash, real-renderer smoothness and platform screen readers are seen only on VM lab devices after the build. Bears on c5.
 
 ## Settled, do not reopen
+
+- S1 A pipeline run whose drive has started cannot be amended or set up again; a spec change after that needs a new slug and run home.
 
 ## Where the details live
 
