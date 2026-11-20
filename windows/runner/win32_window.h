@@ -64,7 +64,11 @@ class Win32Window {
 
   void UpdateTheme();
 
+  BOOL UsesDarkAppearance() const;
+
   bool quit_on_close_ = false;
+
+  bool paints_opening_paper_ = true;
 
   Appearance appearance_ = Appearance::kSystem;
 
