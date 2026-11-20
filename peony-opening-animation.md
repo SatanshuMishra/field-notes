@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-19T23:42:34.456Z
+Updated: 2026-11-20T00:06:26.159Z
 Next ids: c6 D3 R3 S3
 
 ## Goal
@@ -17,11 +17,13 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Where things stand
 
-The opening is on main through pull request #393, its pipeline run is cleaned up, and the VM lab pass is done: every criterion holds. The owner asked to fix R2 here: branch fix/windows-white-window has the window erase to the light or dark opening paper until its first paint and paint as soon as it is shown; its source test fails on main and passes with the fix, and the lab check of its CI build is next. The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
+The opening is on main through pull request #393, its pipeline run is cleaned up, and the VM lab pass is done: every criterion holds. The fix for R2 is open as pull request #394 (branch fix/windows-white-window): the Windows window erases to the light or dark opening paper until its first paint. On its CI build in the VM lab, 18 launches (first launch after install, 8 light, 8 dark, a cold start after reboot) showed no white sample. The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
 
 ## Next step
 
-Check the CI Windows build of fix/windows-white-window (release run 44639882415) in the VM lab over several light and dark launches and a first launch after install; if no white frame shows, open the pull request.
+The owner reviews and merges pull request #394, the Windows paper fix for R2; once it is on main, retire R2 and close the thread.
+
+Needs: R2.
 
 ## Decisions in force
 
@@ -44,5 +46,5 @@ Check the CI Windows build of fix/windows-white-window (release run 44639882415)
 - Peony art: lib/design/flowers/garden_plant_geometry.dart (peonyPlantParts) and lib/design/flowers/petal_art.dart (drift petal)
 - App root and start-up wait: lib/app/app.dart; similar splash: lib/features/updates/ui/update_restart_splash.dart
 - Android launch screen: android/app/src/main/res/drawable/launch_background.xml and values/styles.xml
-- Lab evidence: ~/VMLab/evidence/fireplace/peony-opening holds the proof frames for each platform and the two Windows white-window frames
+- Lab evidence: ~/VMLab/evidence/fireplace/peony-opening holds the proof frames for each platform and the two Windows white-window frames; ~/VMLab/evidence/fireplace/windows-white-window holds the light and dark proof sheets of the fix
 - Windows window start-up: windows/runner/flutter_window.cpp shows the window on the first-frame callback; windows/runner/win32_window.cpp registers the window class with no background
