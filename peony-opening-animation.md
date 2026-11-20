@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
 Status: parked
-Updated: 2026-11-20T00:06:40.811Z
+Updated: 2026-11-20T00:37:55.399Z
 Next ids: c6 D3 R3 S3
 
 ## Goal
@@ -17,13 +17,11 @@ Replace the instant cold-start jump to Today with a short opening animation: a p
 
 ## Where things stand
 
-The opening is on main through pull request #393, its pipeline run is cleaned up, and the VM lab pass is done: every criterion holds. The fix for R2 is open as pull request #394 (branch fix/windows-white-window): the Windows window erases to the light or dark opening paper until its first paint. On its CI build in the VM lab, 18 launches (first launch after install, 8 light, 8 dark, a cold start after reboot) showed no white sample. The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
+The opening is on main through pull request #393 and the Windows paper fix through #394, and every criterion holds. On the fix's CI build in the VM lab, 18 Windows launches (first launch after install, 8 light, 8 dark, a cold start after reboot) showed no white sample; real graphics hardware is unchecked. The version was not bumped: pubspec holds 1.0.0 while releases are tagged v1.9.1. The owner chose to keep the stopped first run for now: its branch feat/peony-opening-animation equals main, and its only built work, the native-paper Step at 3d7d59c1 in its worktree, was rebuilt by the new run.
 
 ## Next step
 
-The owner reviews and merges pull request #394, the Windows paper fix for R2; once it is on main, retire R2 and close the thread.
-
-Needs: R2.
+The work is done and the thread can close.
 
 ## Decisions in force
 
@@ -31,7 +29,6 @@ Needs: R2.
 
 ## Open risks
 
-- R2 On Windows the window intermittently fades in pure white before its first paper frame: 3 of 5 lab launches, 0.4 s on the first launch after install and 0.15 s on a dark start; the runner shows the window on the first-frame callback with no window background (windows/runner/win32_window.cpp hbrBackground 0), and it is unconfirmed on real GPU hardware
 
 ## Settled, do not reopen
 
@@ -47,4 +44,4 @@ Needs: R2.
 - App root and start-up wait: lib/app/app.dart; similar splash: lib/features/updates/ui/update_restart_splash.dart
 - Android launch screen: android/app/src/main/res/drawable/launch_background.xml and values/styles.xml
 - Lab evidence: ~/VMLab/evidence/fireplace/peony-opening holds the proof frames for each platform and the two Windows white-window frames; ~/VMLab/evidence/fireplace/windows-white-window holds the light and dark proof sheets of the fix
-- Windows window start-up: windows/runner/flutter_window.cpp shows the window on the first-frame callback; windows/runner/win32_window.cpp registers the window class with no background
+- Windows window start-up: windows/runner/flutter_window.cpp shows the window on the first-frame callback; windows/runner/win32_window.cpp erases the window to the opening paper until its first paint, pinned by test/native/opening_paper_test.dart
