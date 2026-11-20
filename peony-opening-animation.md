@@ -1,6 +1,6 @@
 # peony-opening-animation: Opening animation: a planted peony the wind takes apart before Today fades in
-Status: parked
-Updated: 2026-11-20T00:37:55.399Z
+Status: done
+Updated: 2026-11-20T00:37:57.734Z
 Next ids: c6 D3 R3 S3
 
 ## Goal
