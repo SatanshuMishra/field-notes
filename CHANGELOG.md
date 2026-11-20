@@ -6,6 +6,20 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-11-19
+
+This release opens Field Notes with a short ink drawing of a peony, and the app no longer shows white while it starts.
+
+### New
+
+- When Field Notes starts, a pen draws a peony, the wind blows its petals and leaves away, and Today fades in, ready to use. The drawing follows your light or dark theme.
+- The drawing plays only when Field Notes starts fresh, not when you come back to it, and not the first time while you set it up. Tap, click or press any key to go straight to Today.
+- With reduced motion on, the finished drawing shows still for a moment and then fades into Today.
+
+### Fixed
+
+- Field Notes opens straight onto its paper colour, light or dark, instead of briefly showing white on Android and Windows. The Mac window opens on the paper too.
+
 ## [1.9.1] - 2026-11-19
 
 This release smooths out recording and playback: videos sit in a soft glow of their own colours, every voice player looks and works the same, and clicking empty space stays silent.
